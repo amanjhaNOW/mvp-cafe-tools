@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metric Pulse — KPI Tracker & Reporting</title>
+<style>
+:root {
+  --bg: #f8f9fa; --surface: #fff; --surface2: #f1f3f5; --border: #dee2e6;
+  --text: #212529; --text2: #495057; --text3: #868e96;
+  --primary: #4263eb; --primary-light: #dbe4ff; --primary-dark: #3b5bdb;
+  --green: #2b8a3e; --green-bg: #d3f9d8; --green-light: #ebfbee;
+  --amber: #e67700; --amber-bg: #fff3bf; --amber-light: #fff9db;
+  --red: #c92a2a; --red-bg: #ffe3e3; --red-light: #fff5f5;
+  --shadow: 0 1px 3px rgba(0,0,0,.08); --shadow2: 0 4px 12px rgba(0,0,0,.1);
+  --radius: 10px; --radius-sm: 6px;
+}
+.dark {
+  --bg: #1a1b1e; --surface: #25262b; --surface2: #2c2e33; --border: #373a40;
+  --text: #c1c2c5; --text2: #909296; --text3: #5c5f66;
+  --primary: #5c7cfa; --primary-light: #1c2340; --primary-dark: #748ffc;
+  --green: #51cf66; --green-bg: #0b2e13; --green-light: #0d3317;
+  --amber: #fcc419; --amber-bg: #3d2e00; --amber-light: #473500;
+  --red: #ff6b6b; --red-bg: #3d0a0a; --red-light: #4a1010;
+  --shadow: 0 1px 3px rgba(0,0,0,.3); --shadow2: 0 4px 12px rgba(0,0,0,.4);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+button { cursor:pointer; font-family:inherit; }
+input,select,textarea { font-family:inherit; font-size:14px; }
+
+.app { max-width:1200px; margin:0 auto; padding:20px; }
+
+header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+header h1 { font-size:24px; font-weight:700; display:flex; align-items:center; gap:8px; }
+header h1 span { font-size:28px; }
+.header-actions { display:flex; gap:8px; align-items:center; }
+.header-actions button { padding:8px 14px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:13px; transition:.15s; }
+.header-actions button:hover { background:var(--surface2); }
+.header-actions button.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+.header-actions button.primary:hover { background:var(--primary-dark); }
+
+.tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:2px solid var(--border); padding-bottom:0; }
+.tab { padding:10px 18px; border:none; background:transparent; color:var(--text3); font-size:14px; font-weight:500; border-bottom:2px solid transparent; margin-bottom:-2px; transition:.15s; }
+.tab:hover { color:var(--text2); }
+.tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+
+.view { display:none; }
+.view.active { display:block; }
+
+/* Dashboard */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:24px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
+.stat-card .label { font-size:12px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+.stat-card .value { font-size:28px; font-weight:700; }
+.stat-card .sub { font-size:12px; color:var(--text3); margin-top:4px; }
+
+.rag-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px; }
+.rag-card { border-radius:var(--radius); padding:16px; text-align:center; }
+.rag-card.green { background:var(--green-bg); color:var(--green); border:1px solid var(--green); }
+.rag-card.amber { background:var(--amber-bg); color:var(--amber); border:1px solid var(--amber); }
+.rag-card.red { background:var(--red-bg); color:var(--red); border:1px solid var(--red); }
+.rag-card .rag-count { font-size:32px; font-weight:700; }
+.rag-card .rag-label { font-size:12px; text-transform:uppercase; letter-spacing:.5px; margin-top:4px; }
+
+/* Metric cards */
+.metrics-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+.metric-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); transition:.15s; cursor:pointer; }
+.metric-card:hover { box-shadow:var(--shadow2); transform:translateY(-1px); }
+.metric-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+.metric-name { font-size:16px; font-weight:600; }
+.metric-category { font-size:11px; padding:3px 8px; border-radius:20px; background:var(--primary-light); color:var(--primary); font-weight:500; }
+.metric-value-row { display:flex; align-items:baseline; gap:8px; margin-bottom:8px; }
+.metric-current { font-size:32px; font-weight:700; }
+.metric-unit { font-size:14px; color:var(--text3); }
+.metric-target { font-size:13px; color:var(--text3); }
+.metric-target strong { color:var(--text2); }
+.metric-trend { display:flex; align-items:center; gap:4px; font-size:13px; font-weight:500; margin-bottom:12px; }
+.metric-trend.up { color:var(--green); }
+.metric-trend.down { color:var(--red); }
+.metric-trend.flat { color:var(--text3); }
+.rag-badge { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; }
+.rag-badge.green { background:var(--green); }
+.rag-badge.amber { background:var(--amber); }
+.rag-badge.red { background:var(--red); }
+
+/* Sparkline */
+.sparkline-container { height:50px; margin-top:8px; }
+.sparkline-container svg { width:100%; height:100%; }
+.sparkline-line { fill:none; stroke:var(--primary); stroke-width:2; }
+.sparkline-area { fill:var(--primary-light); opacity:.5; }
+.sparkline-dot { fill:var(--primary); }
+.sparkline-target { stroke:var(--text3); stroke-width:1; stroke-dasharray:4,3; }
+
+/* Modal */
+.modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.5); z-index:100; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--surface); border-radius:var(--radius); padding:28px; width:90%; max-width:560px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow2); }
+.modal h2 { font-size:20px; margin-bottom:20px; }
+.form-group { margin-bottom:16px; }
+.form-group label { display:block; font-size:13px; font-weight:500; color:var(--text2); margin-bottom:6px; }
+.form-group input, .form-group select, .form-group textarea { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); color:var(--text); }
+.form-group textarea { height:80px; resize:vertical; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
+.form-actions button { padding:10px 20px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:14px; }
+.form-actions button.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+.form-actions button.danger { background:var(--red); color:#fff; border-color:var(--red); }
+
+/* Log Entry */
+.log-section { margin-top:16px; }
+.log-entries { max-height:200px; overflow-y:auto; }
+.log-entry { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:1px solid var(--border); font-size:13px; }
+.log-entry:last-child { border-bottom:none; }
+.log-entry .log-date { color:var(--text3); }
+.log-entry .log-value { font-weight:600; }
+.log-entry .log-delete { background:none; border:none; color:var(--text3); font-size:16px; padding:2px 6px; }
+.log-entry .log-delete:hover { color:var(--red); }
+.log-add { display:flex; gap:8px; margin-top:8px; }
+.log-add input { flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); color:var(--text); }
+.log-add button { padding:8px 14px; border-radius:var(--radius-sm); border:1px solid var(--primary); background:var(--primary); color:#fff; font-size:13px; }
+
+/* Report view */
+.report-container { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:32px; box-shadow:var(--shadow); }
+.report-header { text-align:center; margin-bottom:32px; border-bottom:2px solid var(--border); padding-bottom:20px; }
+.report-header h2 { font-size:24px; margin-bottom:4px; }
+.report-header p { color:var(--text3); font-size:14px; }
+.report-section { margin-bottom:28px; }
+.report-section h3 { font-size:16px; margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+.report-table { width:100%; border-collapse:collapse; font-size:13px; }
+.report-table th { text-align:left; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); font-weight:600; }
+.report-table td { padding:10px 12px; border:1px solid var(--border); }
+.report-rag { display:inline-flex; align-items:center; gap:6px; }
+
+/* Search */
+.search-bar { position:relative; margin-bottom:20px; }
+.search-bar input { width:100%; padding:12px 16px 12px 40px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); font-size:14px; }
+.search-bar::before { content:'🔍'; position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:14px; }
+
+/* Filter pills */
+.filter-row { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.filter-pill { padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text2); font-size:13px; cursor:pointer; transition:.15s; }
+.filter-pill:hover { background:var(--surface2); }
+.filter-pill.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+/* Keyboard hints */
+.kbd { display:inline-block; padding:2px 6px; background:var(--surface2); border:1px solid var(--border); border-radius:3px; font-size:11px; font-family:monospace; color:var(--text3); }
+
+/* Print */
+@media print {
+  body { background:#fff!important; }
+  .tabs,.header-actions,.search-bar,.filter-row { display:none!important; }
+  .modal-overlay { display:none!important; }
+  .report-container { border:none; box-shadow:none; padding:0; }
+}
+
+/* Responsive */
+@media (max-width:640px) {
+  .stats-grid { grid-template-columns:repeat(2,1fr); }
+  .metrics-grid { grid-template-columns:1fr; }
+  .rag-summary { grid-template-columns:1fr; }
+  .form-row { grid-template-columns:1fr; }
+}
+
+.empty-state { text-align:center; padding:60px 20px; color:var(--text3); }
+.empty-state .emoji { font-size:48px; margin-bottom:12px; }
+.empty-state p { font-size:15px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1><span>📊</span> Metric Pulse</h1>
+    <div class="header-actions">
+      <button onclick="showSearch()" title="Search (/)"><span>🔍</span></button>
+      <button onclick="exportData()" title="Export (E)">Export</button>
+      <button onclick="importData()" title="Import">Import</button>
+      <button onclick="toggleDark()" title="Dark Mode (D)">🌙</button>
+      <button class="primary" onclick="openMetricModal()" title="New Metric (N)">+ New Metric</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-view="dashboard" onclick="switchView('dashboard')">📈 Dashboard</button>
+    <button class="tab" data-view="metrics" onclick="switchView('metrics')">📋 All Metrics</button>
+    <button class="tab" data-view="report" onclick="switchView('report')">📄 Report</button>
+  </div>
+
+  <!-- Dashboard View -->
+  <div id="view-dashboard" class="view active">
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="rag-summary" id="rag-summary"></div>
+    <h3 style="margin-bottom:14px;font-size:16px;">Metrics Overview</h3>
+    <div class="metrics-grid" id="dashboard-metrics"></div>
+  </div>
+
+  <!-- All Metrics View -->
+  <div id="view-metrics" class="view">
+    <div class="search-bar" id="search-bar" style="display:none;">
+      <input type="text" id="search-input" placeholder="Search metrics..." oninput="renderMetrics()">
+    </div>
+    <div class="filter-row" id="filter-row"></div>
+    <div class="metrics-grid" id="all-metrics"></div>
+  </div>
+
+  <!-- Report View -->
+  <div id="view-report" class="view">
+    <div style="margin-bottom:16px;display:flex;gap:8px;align-items:center;">
+      <select id="report-period" onchange="renderReport()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);">
+        <option value="week">This Week</option>
+        <option value="month" selected>This Month</option>
+        <option value="quarter">This Quarter</option>
+        <option value="all">All Time</option>
+      </select>
+      <button onclick="window.print()" style="padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);">🖨️ Print</button>
+    </div>
+    <div class="report-container" id="report-container"></div>
+  </div>
+</div>
+
+<!-- Metric Modal -->
+<div class="modal-overlay" id="metric-modal">
+  <div class="modal">
+    <h2 id="modal-title">New Metric</h2>
+    <div class="form-group">
+      <label>Metric Name *</label>
+      <input type="text" id="m-name" placeholder="e.g. Weekly Active Users">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Unit</label>
+        <input type="text" id="m-unit" placeholder="e.g. users, %, $, ms">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="m-category">
+          <option value="Growth">Growth</option>
+          <option value="Revenue">Revenue</option>
+          <option value="Engagement">Engagement</option>
+          <option value="Performance">Performance</option>
+          <option value="Quality">Quality</option>
+          <option value="Operations">Operations</option>
+          <option value="Custom">Custom</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Target Value</label>
+        <input type="number" id="m-target" placeholder="e.g. 1000" step="any">
+      </div>
+      <div class="form-group">
+        <label>Direction</label>
+        <select id="m-direction">
+          <option value="higher">Higher is better ↑</option>
+          <option value="lower">Lower is better ↓</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Amber Threshold (%)</label>
+        <input type="number" id="m-amber" placeholder="e.g. 80" value="80">
+      </div>
+      <div class="form-group">
+        <label>Red Threshold (%)</label>
+        <input type="number" id="m-red" placeholder="e.g. 60" value="60">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="m-notes" placeholder="How is this measured? Data source?"></textarea>
+    </div>
+
+    <div class="log-section" id="log-section" style="display:none;">
+      <h3 style="font-size:14px;margin-bottom:8px;">📝 Data Points</h3>
+      <div class="log-add">
+        <input type="date" id="log-date">
+        <input type="number" id="log-value" placeholder="Value" step="any">
+        <button onclick="addLogEntry()">Add</button>
+      </div>
+      <div class="log-entries" id="log-entries"></div>
+    </div>
+
+    <div class="form-actions">
+      <button id="btn-delete" class="danger" style="display:none;margin-right:auto;" onclick="deleteMetric()">Delete</button>
+      <button onclick="closeMetricModal()">Cancel</button>
+      <button class="primary" onclick="saveMetric()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal">
+    <h2>Import Data</h2>
+    <div class="form-group">
+      <label>Paste JSON export</label>
+      <textarea id="import-text" style="height:200px;font-family:monospace;font-size:12px;"></textarea>
+    </div>
+    <div class="form-actions">
+      <button onclick="closeImport()">Cancel</button>
+      <button class="primary" onclick="doImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-import" accept=".json" style="display:none" onchange="handleFileImport(event)">
+
+<script>
+// Data
+let metrics = [];
+let editingId = null;
+let activeFilter = 'All';
+
+const STORAGE_KEY = 'metric-pulse-data';
+const DEMO_DATA = [
+  {
+    id: '1', name: 'Weekly Active Users', unit: 'users', category: 'Growth',
+    target: 5000, direction: 'higher', amberPct: 80, redPct: 60, notes: 'Unique users who performed at least 1 action in the past 7 days',
+    entries: [
+      {date:'2026-03-01',value:2800},{date:'2026-03-08',value:3100},{date:'2026-03-15',value:3400},
+      {date:'2026-03-22',value:3250},{date:'2026-03-29',value:3800},{date:'2026-04-03',value:4200}
+    ]
+  },
+  {
+    id: '2', name: 'Monthly Recurring Revenue', unit: '$', category: 'Revenue',
+    target: 10000, direction: 'higher', amberPct: 80, redPct: 60, notes: 'Subscription revenue, excludes one-time payments',
+    entries: [
+      {date:'2026-01-31',value:4200},{date:'2026-02-28',value:5100},{date:'2026-03-15',value:6800},{date:'2026-03-31',value:7500}
+    ]
+  },
+  {
+    id: '3', name: 'Churn Rate', unit: '%', category: 'Growth',
+    target: 3, direction: 'lower', amberPct: 80, redPct: 60, notes: 'Monthly customer churn. Lower is better.',
+    entries: [
+      {date:'2026-01-31',value:8.2},{date:'2026-02-28',value:6.5},{date:'2026-03-15',value:5.1},{date:'2026-03-31',value:4.2}
+    ]
+  },
+  {
+    id: '4', name: 'NPS Score', unit: 'pts', category: 'Quality',
+    target: 50, direction: 'higher', amberPct: 80, redPct: 60, notes: 'Net Promoter Score from monthly survey',
+    entries: [
+      {date:'2026-02-01',value:32},{date:'2026-03-01',value:38},{date:'2026-03-15',value:42},{date:'2026-04-01',value:45}
+    ]
+  },
+  {
+    id: '5', name: 'Avg Response Time', unit: 'ms', category: 'Performance',
+    target: 200, direction: 'lower', amberPct: 80, redPct: 60, notes: 'P95 API response time',
+    entries: [
+      {date:'2026-03-01',value:450},{date:'2026-03-08',value:380},{date:'2026-03-15',value:310},
+      {date:'2026-03-22',value:280},{date:'2026-03-29',value:240},{date:'2026-04-03',value:220}
+    ]
+  },
+  {
+    id: '6', name: 'Feature Adoption Rate', unit: '%', category: 'Engagement',
+    target: 40, direction: 'higher', amberPct: 80, redPct: 60, notes: 'Percentage of users who used UTM tracking feature',
+    entries: [
+      {date:'2026-03-01',value:12},{date:'2026-03-08',value:18},{date:'2026-03-15',value:24},
+      {date:'2026-03-22',value:28},{date:'2026-03-29',value:31},{date:'2026-04-03',value:35}
+    ]
+  },
+  {
+    id: '7', name: 'Support Tickets / Week', unit: 'tickets', category: 'Operations',
+    target: 15, direction: 'lower', amberPct: 80, redPct: 60, notes: 'Total customer support tickets opened per week',
+    entries: [
+      {date:'2026-03-01',value:42},{date:'2026-03-08',value:35},{date:'2026-03-15',value:28},
+      {date:'2026-03-22',value:22},{date:'2026-03-29',value:19},{date:'2026-04-03',value:17}
+    ]
+  },
+  {
+    id: '8', name: 'Signup Conversion', unit: '%', category: 'Growth',
+    target: 8, direction: 'higher', amberPct: 80, redPct: 60, notes: 'Visitor to signup conversion rate',
+    entries: [
+      {date:'2026-03-01',value:3.2},{date:'2026-03-08',value:4.1},{date:'2026-03-15',value:4.8},
+      {date:'2026-03-22',value:5.5},{date:'2026-03-29',value:6.2},{date:'2026-04-03',value:6.9}
+    ]
+  }
+];
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+function load() {
+  const d = localStorage.getItem(STORAGE_KEY);
+  if (d) { metrics = JSON.parse(d); }
+  else { metrics = JSON.parse(JSON.stringify(DEMO_DATA)); save(); }
+}
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(metrics)); }
+
+// RAG calculation
+function getRAG(metric) {
+  if (!metric.entries.length || !metric.target) return 'none';
+  const latest = metric.entries[metric.entries.length - 1].value;
+  const target = metric.target;
+  let pct;
+  if (metric.direction === 'higher') {
+    pct = (latest / target) * 100;
+  } else {
+    // Lower is better: if actual < target, that's good
+    pct = target === 0 ? 100 : (target / latest) * 100;
+  }
+  if (pct >= 100) return 'green';
+  if (pct >= (metric.amberPct || 80)) return 'green';
+  if (pct >= (metric.redPct || 60)) return 'amber';
+  return 'red';
+}
+
+function getLatest(m) { return m.entries.length ? m.entries[m.entries.length-1].value : null; }
+
+function getTrend(m) {
+  if (m.entries.length < 2) return { dir:'flat', pct:0 };
+  const curr = m.entries[m.entries.length-1].value;
+  const prev = m.entries[m.entries.length-2].value;
+  if (prev === 0) return { dir: curr > 0 ? 'up' : 'flat', pct: 0 };
+  const change = ((curr - prev) / Math.abs(prev)) * 100;
+  const isGood = (metric) => {
+    if (metric.direction === 'lower') return change <= 0;
+    return change >= 0;
+  };
+  return {
+    dir: Math.abs(change) < 0.5 ? 'flat' : (isGood(m) ? 'up' : 'down'),
+    pct: Math.abs(change).toFixed(1)
+  };
+}
+
+function formatVal(v, unit) {
+  if (v === null || v === undefined) return '—';
+  if (unit === '$') return '$' + v.toLocaleString();
+  if (unit === '%') return v.toFixed(1) + '%';
+  return v.toLocaleString() + (unit ? ' ' + unit : '');
+}
+
+// Sparkline SVG
+function sparklineSVG(entries, target, direction) {
+  if (entries.length < 2) return '';
+  const w = 300, h = 50, pad = 4;
+  const vals = entries.map(e => e.value);
+  const allVals = target ? [...vals, target] : vals;
+  const min = Math.min(...allVals) * 0.9;
+  const max = Math.max(...allVals) * 1.1;
+  const range = max - min || 1;
+  const points = vals.map((v, i) => {
+    const x = pad + (i / (vals.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((v - min) / range) * (h - pad * 2);
+    return { x, y };
+  });
+  const line = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+  const area = line + ` L${points[points.length-1].x},${h} L${points[0].x},${h} Z`;
+  let targetLine = '';
+  if (target) {
+    const ty = h - pad - ((target - min) / range) * (h - pad * 2);
+    targetLine = `<line x1="${pad}" y1="${ty}" x2="${w-pad}" y2="${ty}" class="sparkline-target"/>`;
+  }
+  const dot = points[points.length - 1];
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <path d="${area}" class="sparkline-area"/>
+    <path d="${line}" class="sparkline-line"/>
+    ${targetLine}
+    <circle cx="${dot.x}" cy="${dot.y}" r="3" class="sparkline-dot"/>
+  </svg>`;
+}
+
+// Render
+function renderDashboard() {
+  const total = metrics.length;
+  const greens = metrics.filter(m => getRAG(m) === 'green').length;
+  const ambers = metrics.filter(m => getRAG(m) === 'amber').length;
+  const reds = metrics.filter(m => getRAG(m) === 'red').length;
+  const totalEntries = metrics.reduce((s, m) => s + m.entries.length, 0);
+  const cats = [...new Set(metrics.map(m => m.category))];
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card"><div class="label">Total Metrics</div><div class="value">${total}</div><div class="sub">${cats.length} categories</div></div>
+    <div class="stat-card"><div class="label">Data Points</div><div class="value">${totalEntries}</div><div class="sub">Logged entries</div></div>
+    <div class="stat-card"><div class="label">On Track</div><div class="value" style="color:var(--green)">${greens}</div><div class="sub">Meeting target</div></div>
+    <div class="stat-card"><div class="label">Needs Attention</div><div class="value" style="color:var(--amber)">${ambers + reds}</div><div class="sub">${ambers} amber, ${reds} red</div></div>
+  `;
+
+  document.getElementById('rag-summary').innerHTML = `
+    <div class="rag-card green"><div class="rag-count">${greens}</div><div class="rag-label">🟢 On Track</div></div>
+    <div class="rag-card amber"><div class="rag-count">${ambers}</div><div class="rag-label">🟡 At Risk</div></div>
+    <div class="rag-card red"><div class="rag-count">${reds}</div><div class="rag-label">🔴 Off Track</div></div>
+  `;
+
+  renderMetricCards('dashboard-metrics', metrics);
+}
+
+function renderMetricCards(containerId, list) {
+  const container = document.getElementById(containerId);
+  if (!list.length) {
+    container.innerHTML = '<div class="empty-state"><div class="emoji">📊</div><p>No metrics yet. Press <span class="kbd">N</span> to add one.</p></div>';
+    return;
+  }
+  container.innerHTML = list.map(m => {
+    const latest = getLatest(m);
+    const rag = getRAG(m);
+    const trend = getTrend(m);
+    const trendIcon = trend.dir === 'up' ? '↑' : trend.dir === 'down' ? '↓' : '→';
+    const spark = sparklineSVG(m.entries, m.target, m.direction);
+    return `
+      <div class="metric-card" onclick="openMetricModal('${m.id}')">
+        <div class="metric-header">
+          <div class="metric-name"><span class="rag-badge ${rag}"></span>${esc(m.name)}</div>
+          <span class="metric-category">${esc(m.category)}</span>
+        </div>
+        <div class="metric-value-row">
+          <span class="metric-current">${latest !== null ? formatVal(latest, m.unit) : '—'}</span>
+        </div>
+        <div class="metric-target">Target: <strong>${m.target ? formatVal(m.target, m.unit) : 'Not set'}</strong></div>
+        ${trend.dir !== 'flat' ? `<div class="metric-trend ${trend.dir}">${trendIcon} ${trend.pct}% ${trend.dir === 'up' ? (m.direction === 'lower' ? '⚠️' : '') : (m.direction === 'higher' ? '⚠️' : '')}</div>` : ''}
+        <div class="sparkline-container">${spark}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderMetrics() {
+  const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+  let filtered = metrics;
+  if (activeFilter !== 'All') {
+    filtered = filtered.filter(m => m.category === activeFilter);
+  }
+  if (q) {
+    filtered = filtered.filter(m => m.name.toLowerCase().includes(q) || m.category.toLowerCase().includes(q) || (m.notes||'').toLowerCase().includes(q));
+  }
+
+  // Filter pills
+  const cats = ['All', ...new Set(metrics.map(m => m.category))];
+  document.getElementById('filter-row').innerHTML = cats.map(c =>
+    `<button class="filter-pill ${c === activeFilter ? 'active' : ''}" onclick="setFilter('${c}')">${c}</button>`
+  ).join('');
+
+  renderMetricCards('all-metrics', filtered);
+}
+
+function setFilter(cat) { activeFilter = cat; renderMetrics(); }
+
+function renderReport() {
+  const period = document.getElementById('report-period').value;
+  const now = new Date();
+  let from;
+  if (period === 'week') from = new Date(now - 7*86400000);
+  else if (period === 'month') from = new Date(now - 30*86400000);
+  else if (period === 'quarter') from = new Date(now - 90*86400000);
+  else from = new Date('2020-01-01');
+
+  const cats = [...new Set(metrics.map(m => m.category))].sort();
+  let sections = cats.map(cat => {
+    const catMetrics = metrics.filter(m => m.category === cat);
+    const rows = catMetrics.map(m => {
+      const latest = getLatest(m);
+      const rag = getRAG(m);
+      const trend = getTrend(m);
+      const trendStr = trend.dir === 'flat' ? '→' : (trend.dir === 'up' ? `↑ ${trend.pct}%` : `↓ ${trend.pct}%`);
+      const ragEmoji = rag === 'green' ? '🟢' : rag === 'amber' ? '🟡' : rag === 'red' ? '🔴' : '⚪';
+      return `<tr>
+        <td><strong>${esc(m.name)}</strong></td>
+        <td style="text-align:right">${latest !== null ? formatVal(latest, m.unit) : '—'}</td>
+        <td style="text-align:right">${m.target ? formatVal(m.target, m.unit) : '—'}</td>
+        <td style="text-align:center"><span class="report-rag">${ragEmoji}</span></td>
+        <td style="text-align:right">${trendStr}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="report-section">
+      <h3>${cat}</h3>
+      <table class="report-table">
+        <thead><tr><th>Metric</th><th style="text-align:right">Current</th><th style="text-align:right">Target</th><th style="text-align:center">Status</th><th style="text-align:right">Trend</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  const greens = metrics.filter(m => getRAG(m) === 'green').length;
+  const ambers = metrics.filter(m => getRAG(m) === 'amber').length;
+  const reds = metrics.filter(m => getRAG(m) === 'red').length;
+
+  document.getElementById('report-container').innerHTML = `
+    <div class="report-header">
+      <h2>📊 KPI Status Report</h2>
+      <p>${period === 'week' ? 'Weekly' : period === 'month' ? 'Monthly' : period === 'quarter' ? 'Quarterly' : 'All Time'} Report — ${now.toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}</p>
+    </div>
+    <div class="report-section">
+      <h3>Executive Summary</h3>
+      <p style="color:var(--text2);line-height:1.6;">
+        Tracking <strong>${metrics.length} metrics</strong> across ${[...new Set(metrics.map(m=>m.category))].length} categories.
+        <strong style="color:var(--green)">${greens} on track</strong>,
+        <strong style="color:var(--amber)">${ambers} at risk</strong>,
+        <strong style="color:var(--red)">${reds} off track</strong>.
+      </p>
+    </div>
+    ${sections}
+  `;
+}
+
+// Modal
+function openMetricModal(id) {
+  editingId = id || null;
+  const m = id ? metrics.find(x => x.id === id) : null;
+  document.getElementById('modal-title').textContent = m ? 'Edit Metric' : 'New Metric';
+  document.getElementById('m-name').value = m ? m.name : '';
+  document.getElementById('m-unit').value = m ? m.unit : '';
+  document.getElementById('m-category').value = m ? m.category : 'Growth';
+  document.getElementById('m-target').value = m ? (m.target || '') : '';
+  document.getElementById('m-direction').value = m ? m.direction : 'higher';
+  document.getElementById('m-amber').value = m ? (m.amberPct || 80) : 80;
+  document.getElementById('m-red').value = m ? (m.redPct || 60) : 60;
+  document.getElementById('m-notes').value = m ? (m.notes || '') : '';
+  document.getElementById('btn-delete').style.display = m ? 'block' : 'none';
+  document.getElementById('log-section').style.display = m ? 'block' : 'none';
+  document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+
+  if (m) renderLogEntries(m);
+  document.getElementById('metric-modal').classList.add('open');
+  setTimeout(() => document.getElementById('m-name').focus(), 100);
+}
+
+function closeMetricModal() {
+  document.getElementById('metric-modal').classList.remove('open');
+  editingId = null;
+}
+
+function saveMetric() {
+  const name = document.getElementById('m-name').value.trim();
+  if (!name) { alert('Name is required'); return; }
+  const data = {
+    name,
+    unit: document.getElementById('m-unit').value.trim(),
+    category: document.getElementById('m-category').value,
+    target: parseFloat(document.getElementById('m-target').value) || null,
+    direction: document.getElementById('m-direction').value,
+    amberPct: parseInt(document.getElementById('m-amber').value) || 80,
+    redPct: parseInt(document.getElementById('m-red').value) || 60,
+    notes: document.getElementById('m-notes').value.trim()
+  };
+  if (editingId) {
+    const m = metrics.find(x => x.id === editingId);
+    Object.assign(m, data);
+  } else {
+    metrics.push({ id: uid(), ...data, entries: [] });
+  }
+  save(); closeMetricModal(); renderAll();
+}
+
+function deleteMetric() {
+  if (!editingId) return;
+  if (!confirm('Delete this metric and all its data?')) return;
+  metrics = metrics.filter(m => m.id !== editingId);
+  save(); closeMetricModal(); renderAll();
+}
+
+function renderLogEntries(m) {
+  const container = document.getElementById('log-entries');
+  const sorted = [...m.entries].sort((a, b) => b.date.localeCompare(a.date));
+  container.innerHTML = sorted.map((e, i) =>
+    `<div class="log-entry">
+      <span class="log-date">${e.date}</span>
+      <span class="log-value">${formatVal(e.value, m.unit)}</span>
+      <button class="log-delete" onclick="removeLogEntry('${m.id}','${e.date}',${e.value})" title="Remove">×</button>
+    </div>`
+  ).join('') || '<div style="padding:8px;color:var(--text3);font-size:13px;">No data points yet</div>';
+}
+
+function addLogEntry() {
+  if (!editingId) return;
+  const date = document.getElementById('log-date').value;
+  const value = parseFloat(document.getElementById('log-value').value);
+  if (!date || isNaN(value)) { alert('Enter date and value'); return; }
+  const m = metrics.find(x => x.id === editingId);
+  m.entries.push({ date, value });
+  m.entries.sort((a, b) => a.date.localeCompare(b.date));
+  save();
+  renderLogEntries(m);
+  document.getElementById('log-value').value = '';
+  renderAll();
+}
+
+function removeLogEntry(metricId, date, value) {
+  const m = metrics.find(x => x.id === metricId);
+  const idx = m.entries.findIndex(e => e.date === date && e.value === value);
+  if (idx > -1) { m.entries.splice(idx, 1); save(); renderLogEntries(m); renderAll(); }
+}
+
+// Export / Import
+function exportData() {
+  const blob = new Blob([JSON.stringify(metrics, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'metric-pulse-export.json';
+  a.click();
+}
+
+function importData() { document.getElementById('import-modal').classList.add('open'); }
+function closeImport() { document.getElementById('import-modal').classList.remove('open'); }
+function doImport() {
+  try {
+    const data = JSON.parse(document.getElementById('import-text').value);
+    if (Array.isArray(data)) { metrics = data; save(); renderAll(); closeImport(); }
+    else alert('Invalid format');
+  } catch(e) { alert('Invalid JSON: ' + e.message); }
+}
+
+function showSearch() {
+  switchView('metrics');
+  const sb = document.getElementById('search-bar');
+  sb.style.display = sb.style.display === 'none' ? 'block' : 'none';
+  if (sb.style.display === 'block') document.getElementById('search-input').focus();
+}
+
+function toggleDark() { document.body.classList.toggle('dark'); localStorage.setItem('mp-dark', document.body.classList.contains('dark')); }
+
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelector(`.tab[data-view="${view}"]`).classList.add('active');
+  if (view === 'metrics') renderMetrics();
+  if (view === 'report') renderReport();
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function renderAll() { renderDashboard(); renderMetrics(); renderReport(); }
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') { closeMetricModal(); closeImport(); e.target.blur(); }
+    return;
+  }
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openMetricModal(); }
+  if (e.key === '/') { e.preventDefault(); showSearch(); }
+  if (e.key === 'Escape') { closeMetricModal(); closeImport(); }
+  if (e.key === 'd' || e.key === 'D') { e.preventDefault(); toggleDark(); }
+  if (e.key === 'e' || e.key === 'E') { e.preventDefault(); exportData(); }
+  if (e.key === '1') { e.preventDefault(); switchView('dashboard'); }
+  if (e.key === '2') { e.preventDefault(); switchView('metrics'); }
+  if (e.key === '3') { e.preventDefault(); switchView('report'); }
+});
+
+// Init
+load();
+if (localStorage.getItem('mp-dark') === 'true') document.body.classList.add('dark');
+renderAll();
+</script>
+</body>
+</html>

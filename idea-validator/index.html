@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Startup Idea Validator — Validate Before You Build | mvp.cafe</title>
+<meta name="description" content="Get instant validation for your startup idea. Market sizing, competitor analysis, customer personas, and a Build vs Don't Build verdict — all in seconds.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0a0a0a;
+  --bg-card: #111111;
+  --bg-card-hover: #161616;
+  --bg-input: #0e0e0e;
+  --gold: #c4a574;
+  --gold-dim: #a08552;
+  --gold-glow: rgba(196, 165, 116, 0.15);
+  --gold-glow-strong: rgba(196, 165, 116, 0.3);
+  --text: #ffffff;
+  --text-dim: #999999;
+  --text-mid: #cccccc;
+  --border: #222222;
+  --border-gold: rgba(196, 165, 116, 0.3);
+  --green: #4ade80;
+  --red: #f87171;
+  --yellow: #fbbf24;
+  --blue: #60a5fa;
+  --purple: #a78bfa;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ---- Noise texture overlay ---- */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---- Layout ---- */
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- Header ---- */
+header {
+  padding: 60px 0 40px;
+  text-align: center;
+}
+
+.logo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border: 1px solid var(--border-gold);
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 28px;
+  background: var(--gold-glow);
+}
+
+.logo-badge .dot {
+  width: 6px;
+  height: 6px;
+  background: var(--gold);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+}
+
+h1 .gold { color: var(--gold); }
+
+.subtitle {
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  color: var(--text-dim);
+  max-width: 560px;
+  margin: 0 auto;
+  font-weight: 300;
+}
+
+/* ---- Input Area ---- */
+.input-section {
+  margin: 40px 0 20px;
+}
+
+.input-wrapper {
+  position: relative;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.idea-input {
+  width: 100%;
+  padding: 20px 24px;
+  padding-right: 140px;
+  font-size: 16px;
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  resize: none;
+  min-height: 64px;
+  line-height: 1.5;
+}
+
+.idea-input::placeholder { color: #555; }
+
+.idea-input:focus {
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 3px var(--gold-glow), 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.validate-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 12px 28px;
+  background: var(--gold);
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+
+.validate-btn:hover {
+  background: #d4b584;
+  transform: translateY(-50%) scale(1.02);
+  box-shadow: 0 4px 20px var(--gold-glow-strong);
+}
+
+.validate-btn:active { transform: translateY(-50%) scale(0.98); }
+
+.validate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: translateY(-50%);
+}
+
+.validate-btn:disabled:hover {
+  background: var(--gold);
+  box-shadow: none;
+  transform: translateY(-50%);
+}
+
+.examples {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.examples span { color: #666; }
+
+.example-chip {
+  display: inline-block;
+  padding: 4px 12px;
+  margin: 4px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+}
+
+.example-chip:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+  background: var(--gold-glow);
+}
+
+/* ---- Loading ---- */
+.loading-section {
+  display: none;
+  text-align: center;
+  padding: 80px 0;
+}
+
+.loading-section.active { display: block; }
+
+.loading-bar-container {
+  max-width: 400px;
+  margin: 0 auto 24px;
+  height: 3px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.loading-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), #d4b584, var(--gold));
+  border-radius: 4px;
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+.loading-text {
+  font-size: 14px;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+.loading-step {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+/* ---- Results ---- */
+.results-section {
+  display: none;
+  padding-bottom: 100px;
+}
+
+.results-section.active { display: block; }
+
+.results-header {
+  text-align: center;
+  margin-bottom: 48px;
+  padding-top: 20px;
+}
+
+.results-header h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  margin-bottom: 8px;
+}
+
+.results-header .idea-echo {
+  font-size: 15px;
+  color: var(--text-dim);
+  font-style: italic;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Verdict Banner */
+.verdict-banner {
+  border-radius: 20px;
+  padding: 40px;
+  margin-bottom: 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  animation: fadeSlideUp 0.6s ease both;
+}
+
+.verdict-banner.build {
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.08), rgba(74, 222, 128, 0.02));
+  border: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+.verdict-banner.dont-build {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.08), rgba(248, 113, 113, 0.02));
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+.verdict-banner.maybe {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(251, 191, 36, 0.02));
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.verdict-emoji { font-size: 48px; margin-bottom: 12px; }
+
+.verdict-label {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.verdict-banner.build .verdict-label { color: var(--green); }
+.verdict-banner.dont-build .verdict-label { color: var(--red); }
+.verdict-banner.maybe .verdict-label { color: var(--yellow); }
+
+.verdict-score {
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.verdict-score strong {
+  font-size: 20px;
+  color: var(--text);
+}
+
+.verdict-reasoning {
+  font-size: 15px;
+  color: var(--text-mid);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* Section Cards */
+.report-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 24px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.report-card:hover {
+  border-color: var(--border-gold);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+}
+
+.report-card.visible {
+  animation: fadeSlideUp 0.5s ease forwards;
+}
+
+@keyframes fadeSlideUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: var(--gold-glow);
+  border: 1px solid var(--border-gold);
+  flex-shrink: 0;
+}
+
+.card-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.card-subtitle {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Market Size */
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.market-item {
+  text-align: center;
+  padding: 24px 16px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+}
+
+.market-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.market-value {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+
+.market-desc {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+}
+
+/* Competitors Table */
+.competitor-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.competitor-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.competitor-table td {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 14px;
+  vertical-align: top;
+}
+
+.competitor-table tr:last-child td { border-bottom: none; }
+
+.competitor-name {
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.competitor-desc {
+  font-size: 12px;
+  color: #666;
+}
+
+.competitor-pricing {
+  color: var(--gold);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.competitor-weakness {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* Personas */
+.persona-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.persona-card {
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+}
+
+.persona-avatar {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.persona-name {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+
+.persona-role {
+  font-size: 13px;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.persona-detail {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.persona-detail strong {
+  color: var(--text-mid);
+}
+
+/* Revenue Models */
+.revenue-list { list-style: none; }
+
+.revenue-item {
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.revenue-info { flex: 1; }
+
+.revenue-model-name {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.revenue-description {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.revenue-benchmark {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.revenue-price {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.revenue-period {
+  font-size: 11px;
+  color: #666;
+}
+
+/* MVP Scope */
+.mvp-list { list-style: none; counter-reset: mvp; }
+
+.mvp-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  counter-increment: mvp;
+}
+
+.mvp-item:last-child { border-bottom: none; }
+
+.mvp-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--gold-glow);
+  border: 1px solid var(--border-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.mvp-content { flex: 1; }
+
+.mvp-feature {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+
+.mvp-reason {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* Build Estimate */
+.estimate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.estimate-item {
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+  text-align: center;
+}
+
+.estimate-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.estimate-value {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+
+.estimate-note {
+  font-size: 12px;
+  color: #666;
+}
+
+/* CTA at bottom */
+.cta-section {
+  text-align: center;
+  padding: 48px 0;
+  margin-top: 24px;
+}
+
+.cta-section h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+
+.cta-section p {
+  color: var(--text-dim);
+  margin-bottom: 24px;
+  font-size: 15px;
+}
+
+.cta-btn {
+  display: inline-block;
+  padding: 14px 36px;
+  background: var(--gold);
+  color: #000;
+  text-decoration: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all 0.2s;
+}
+
+.cta-btn:hover {
+  background: #d4b584;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px var(--gold-glow-strong);
+}
+
+.try-another-btn {
+  display: inline-block;
+  padding: 12px 28px;
+  background: transparent;
+  color: var(--gold);
+  text-decoration: none;
+  border: 1px solid var(--border-gold);
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+  margin-right: 12px;
+}
+
+.try-another-btn:hover {
+  background: var(--gold-glow);
+}
+
+/* Footer */
+footer {
+  text-align: center;
+  padding: 40px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+}
+
+footer a {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.2s;
+}
+
+footer a:hover { color: var(--gold); }
+
+footer .heart { color: var(--gold); }
+
+/* Mobile */
+@media (max-width: 640px) {
+  header { padding: 40px 0 24px; }
+  .container { padding: 0 16px; }
+  .idea-input { padding: 16px; padding-right: 16px; font-size: 15px; }
+  .validate-btn {
+    position: static;
+    transform: none;
+    width: 100%;
+    margin-top: 12px;
+    padding: 16px;
+    font-size: 15px;
+    border-radius: 12px;
+  }
+  .validate-btn:hover { transform: none; }
+  .validate-btn:active { transform: scale(0.98); }
+  .validate-btn:disabled { transform: none; }
+  .validate-btn:disabled:hover { transform: none; }
+  .market-grid { grid-template-columns: 1fr; }
+  .report-card { padding: 24px 20px; }
+  .competitor-table { display: block; }
+  .competitor-table thead { display: none; }
+  .competitor-table tbody { display: block; }
+  .competitor-table tr {
+    display: block;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .competitor-table tr:last-child { border-bottom: none; }
+  .competitor-table td {
+    display: block;
+    padding: 4px 0;
+    border: none;
+  }
+  .competitor-pricing { display: block; margin-top: 4px; }
+  .revenue-item { flex-direction: column; }
+  .revenue-benchmark { text-align: left; }
+  .estimate-grid { grid-template-columns: 1fr 1fr; }
+  .persona-grid { grid-template-columns: 1fr; }
+  .verdict-banner { padding: 28px 20px; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* Demo badge */
+.demo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--yellow);
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  margin-top: 12px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo-badge"><span class="dot"></span> Startup Idea Validator</div>
+    <h1>Validate your idea<br>before writing <span class="gold">a single line of code</span></h1>
+    <p class="subtitle">Market size, competitors, customer personas, revenue models, and a build-or-kill verdict — generated in seconds.</p>
+  </header>
+
+  <section class="input-section">
+    <div class="input-wrapper">
+      <textarea class="idea-input" id="ideaInput" placeholder="Describe your startup idea in one line..." rows="1" maxlength="300"></textarea>
+      <button class="validate-btn" id="validateBtn" onclick="validateIdea()">Validate →</button>
+    </div>
+    <div class="examples">
+      <span>Try: </span>
+      <button class="example-chip" onclick="setExample(this)">AI tool that writes job applications</button>
+      <button class="example-chip" onclick="setExample(this)">Subscription snack box for pet owners</button>
+      <button class="example-chip" onclick="setExample(this)">Marketplace for freelance CFOs</button>
+    </div>
+  </section>
+
+  <section class="loading-section" id="loadingSection">
+    <div class="loading-bar-container"><div class="loading-bar" id="loadingBar"></div></div>
+    <p class="loading-text"><span class="loading-step" id="loadingStep">Analyzing market landscape...</span></p>
+  </section>
+
+  <section class="results-section" id="resultsSection">
+    <div class="results-header">
+      <h2>Validation Report</h2>
+      <p class="idea-echo" id="ideaEcho"></p>
+      <div class="demo-badge">⚡ AI-powered demo — results are illustrative</div>
+    </div>
+
+    <div id="verdictBanner"></div>
+    <div id="marketCard"></div>
+    <div id="competitorCard"></div>
+    <div id="personaCard"></div>
+    <div id="revenueCard"></div>
+    <div id="mvpCard"></div>
+    <div id="estimateCard"></div>
+
+    <div class="cta-section">
+      <button class="try-another-btn" onclick="resetApp()">← Validate another idea</button>
+      <a href="https://mvp.cafe" target="_blank" class="cta-btn">Get it built at mvp.cafe →</a>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <a href="https://mvp.cafe" target="_blank">Built with <span class="heart">♥</span> by mvp.cafe</a>
+</footer>
+
+<script>
+// ==================== SMART DEMO ENGINE ====================
+// This generates plausible, idea-specific validation reports
+// by analyzing keywords and building contextual output.
+
+// ---- Textarea auto-resize ----
+const textarea = document.getElementById('ideaInput');
+textarea.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = this.scrollHeight + 'px';
+});
+
+textarea.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    validateIdea();
+  }
+});
+
+function setExample(el) {
+  textarea.value = el.textContent;
+  textarea.style.height = 'auto';
+  textarea.style.height = textarea.scrollHeight + 'px';
+  textarea.focus();
+}
+
+function resetApp() {
+  document.getElementById('resultsSection').classList.remove('active');
+  document.getElementById('loadingSection').classList.remove('active');
+  textarea.value = '';
+  textarea.style.height = 'auto';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  textarea.focus();
+}
+
+// ---- Keyword analysis engine ----
+function analyzeIdea(idea) {
+  const lower = idea.toLowerCase();
+  const words = lower.split(/\s+/);
+
+  const categories = {
+    ai: /\b(ai|artificial intelligence|gpt|llm|machine learning|ml|neural|chatbot|copilot|generative|nlp|deep learning|openai|claude|automation)\b/,
+    saas: /\b(saas|software|platform|dashboard|tool|app|crm|erp|analytics|management system)\b/,
+    marketplace: /\b(marketplace|connect|match|matching|freelance|gig|hire|hiring|talent|two-sided)\b/,
+    ecommerce: /\b(shop|store|commerce|e-commerce|ecommerce|sell|selling|subscription box|dtc|d2c|retail|buy|purchase)\b/,
+    fintech: /\b(finance|fintech|payment|banking|invest|insurance|credit|loan|money|wealth|trading|crypto|defi|wallet)\b/,
+    health: /\b(health|medical|doctor|patient|wellness|fitness|mental health|therapy|telemedicine|pharma|clinic|hospital)\b/,
+    education: /\b(education|learn|course|tutor|training|skill|teach|student|school|university|edtech|lms)\b/,
+    food: /\b(food|restaurant|recipe|meal|cooking|delivery|kitchen|chef|grocery|snack|diet|nutrition)\b/,
+    pet: /\b(pet|dog|cat|animal|vet|veterinary|puppy|kitten)\b/,
+    real_estate: /\b(real estate|property|rent|housing|home|apartment|landlord|tenant|mortgage)\b/,
+    hr: /\b(hr|human resource|recruit|hiring|employee|payroll|onboarding|workforce|talent|job|career|resume|application)\b/,
+    social: /\b(social|community|network|creator|influencer|content|media|video|photo|streaming)\b/,
+    logistics: /\b(logistics|shipping|delivery|supply chain|warehouse|fleet|transport|freight)\b/,
+    sustainability: /\b(green|sustainable|carbon|climate|environment|eco|clean energy|solar|recycle|waste)\b/,
+    b2b: /\b(b2b|enterprise|business|corporate|agency|consulting|procurement)\b/,
+  };
+
+  const detected = {};
+  for (const [cat, regex] of Object.entries(categories)) {
+    if (regex.test(lower)) detected[cat] = true;
+  }
+
+  // Target audience detection
+  const audiences = {
+    consumers: /\b(consumer|people|user|everyone|personal|individual|family|parent|kid|teen|senior|woman|man)\b/,
+    smb: /\b(small business|smb|startup|founder|entrepreneur|freelancer|solopreneur|indie|agency|shop owner)\b/,
+    enterprise: /\b(enterprise|corporate|company|organization|team|department|Fortune 500|large)\b/,
+    developers: /\b(developer|engineer|coder|programmer|devops|api|sdk|infrastructure)\b/,
+  };
+
+  const detectedAudience = {};
+  for (const [aud, regex] of Object.entries(audiences)) {
+    if (regex.test(lower)) detectedAudience[aud] = true;
+  }
+
+  return { categories: detected, audience: detectedAudience, words, lower, original: idea };
+}
+
+// ---- Deterministic "random" based on input ----
+function hashStr(str) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i);
+  }
+  return Math.abs(hash);
+}
+
+function seededRandom(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+
+function pickN(arr, n, rng) {
+  const shuffled = [...arr].sort(() => rng() - 0.5);
+  return shuffled.slice(0, n);
+}
+
+function formatMoney(num) {
+  if (num >= 1e12) return '$' + (num / 1e12).toFixed(1) + 'T';
+  if (num >= 1e9) return '$' + (num / 1e9).toFixed(1) + 'B';
+  if (num >= 1e6) return '$' + (num / 1e6).toFixed(0) + 'M';
+  if (num >= 1e3) return '$' + (num / 1e3).toFixed(0) + 'K';
+  return '$' + num;
+}
+
+// ---- Report Generators ----
+
+function generateMarketSize(analysis, rng) {
+  const cats = Object.keys(analysis.categories);
+  const hasAI = analysis.categories.ai;
+  const hasFintech = analysis.categories.fintech;
+  const hasHealth = analysis.categories.health;
+  const hasSaas = analysis.categories.saas;
+  const hasMarketplace = analysis.categories.marketplace;
+  const hasEcommerce = analysis.categories.ecommerce;
+
+  // Base TAM ranges by category (in billions)
+  let tamBase = 15 + rng() * 35; // $15B - $50B default
+  if (hasAI) tamBase = 80 + rng() * 420; // AI markets are massive
+  if (hasFintech) tamBase = 100 + rng() * 200;
+  if (hasHealth) tamBase = 50 + rng() * 250;
+  if (hasEcommerce) tamBase = 40 + rng() * 160;
+  if (hasMarketplace) tamBase = 20 + rng() * 80;
+
+  const tam = tamBase * 1e9;
+  const samPct = 0.05 + rng() * 0.15; // 5-20% of TAM
+  const sam = tam * samPct;
+  const somPct = 0.01 + rng() * 0.04; // 1-5% of SAM
+  const som = sam * somPct;
+
+  const yearBase = 2024 + Math.floor(rng() * 3);
+  const cagr = Math.floor(12 + rng() * 22); // 12-34% CAGR
+
+  const tamDesc = `Global addressable market by ${yearBase + 4}, growing at ${cagr}% CAGR`;
+  const samDesc = `Serviceable segment based on geography and vertical focus`;
+  const somDesc = `Realistic capture in first 2-3 years with lean team`;
+
+  return { tam, sam, som, tamDesc, samDesc, somDesc, cagr };
+}
+
+function generateCompetitors(analysis, rng) {
+  const cats = Object.keys(analysis.categories);
+  const idea = analysis.lower;
+
+  // Build a competitor pool based on categories
+  const competitorPools = {
+    ai: [
+      { name: 'Jasper', desc: 'AI content platform for enterprise teams', pricing: '$49-$125/mo', weakness: 'Expensive for solo users, template-heavy' },
+      { name: 'Copy.ai', desc: 'AI writing and workflow automation', pricing: '$49/mo', weakness: 'Limited customization, generic outputs' },
+      { name: 'Writesonic', desc: 'AI writer with SEO integration', pricing: '$19-$99/mo', weakness: 'Quality inconsistent, slow on long-form' },
+      { name: 'Notion AI', desc: 'AI assistant embedded in workspace', pricing: '$10/mo add-on', weakness: 'Only works within Notion ecosystem' },
+      { name: 'Otter.ai', desc: 'AI meeting transcription and notes', pricing: '$16.99/mo', weakness: 'Accuracy drops with accents, basic analytics' },
+      { name: 'Tome', desc: 'AI-powered presentation builder', pricing: 'Free tier + $16/mo', weakness: 'Limited design flexibility, niche use case' },
+      { name: 'Runway', desc: 'AI creative tools for video/image', pricing: '$15-$76/mo', weakness: 'High compute costs, steep learning curve' },
+      { name: 'Synthesia', desc: 'AI video generation platform', pricing: '$30/mo', weakness: 'Uncanny valley avatars, limited languages' },
+    ],
+    marketplace: [
+      { name: 'Toptal', desc: 'Elite freelance talent network', pricing: '$60-$200+/hr markups', weakness: 'Extremely expensive, slow matching' },
+      { name: 'Upwork', desc: 'Global freelancer marketplace', pricing: '10-20% service fee', weakness: 'Race to bottom pricing, quality varies' },
+      { name: 'Fiverr', desc: 'Task-based freelance marketplace', pricing: '20% seller fee', weakness: 'Perceived as low-quality, gig-focused' },
+      { name: 'Contra', desc: 'Commission-free freelance platform', pricing: 'Free (premium features paid)', weakness: 'Small talent pool, limited enterprise features' },
+      { name: 'Gun.io', desc: 'Vetted developer marketplace', pricing: 'Markup-based', weakness: 'Dev-only, limited non-tech talent' },
+      { name: 'Catalant', desc: 'On-demand business talent', pricing: 'Enterprise pricing', weakness: 'Enterprise-only, long sales cycles' },
+    ],
+    hr: [
+      { name: 'LinkedIn Jobs', desc: 'Professional network job board', pricing: '$170-$500/post', weakness: 'Oversaturated, low signal-to-noise' },
+      { name: 'Lever', desc: 'Modern ATS and talent CRM', pricing: '$3,500-$6,000+/yr', weakness: 'Expensive for SMBs, complex setup' },
+      { name: 'Greenhouse', desc: 'Structured hiring platform', pricing: '$6,000+/yr', weakness: 'Enterprise pricing, overkill for startups' },
+      { name: 'Handshake', desc: 'College recruiting platform', pricing: 'Free basic + enterprise tier', weakness: 'Only early-career talent' },
+      { name: 'Wellfound', desc: 'Startup job board (ex-AngelList)', pricing: 'Free + $250/mo premium', weakness: 'Startup-only audience, declining quality' },
+    ],
+    fintech: [
+      { name: 'Stripe', desc: 'Payment infrastructure for internet', pricing: '2.9% + 30¢ per txn', weakness: 'Complex for non-devs, high international fees' },
+      { name: 'Mercury', desc: 'Banking for startups', pricing: 'Free tier', weakness: 'US-only, limited lending products' },
+      { name: 'Brex', desc: 'Corporate cards and spend management', pricing: 'Free + paid tiers', weakness: 'Pulling back from SMBs, enterprise focus' },
+      { name: 'Ramp', desc: 'Corporate card with spend controls', pricing: 'Free', weakness: 'US-only, credit requirements' },
+      { name: 'Plaid', desc: 'Financial data connectivity API', pricing: 'Per-connection pricing', weakness: 'Data quality issues, pricing opacity' },
+    ],
+    health: [
+      { name: 'Teladoc', desc: 'Virtual healthcare platform', pricing: '$75-$299 per visit', weakness: 'Long wait times, limited chronic care' },
+      { name: 'Headspace', desc: 'Mental health and meditation app', pricing: '$12.99/mo', weakness: 'Content gets repetitive, passive approach' },
+      { name: 'Noom', desc: 'Weight management with coaching', pricing: '$59/mo', weakness: 'Aggressive upsells, coach quality varies' },
+      { name: 'Hims & Hers', desc: 'Telehealth for personal wellness', pricing: '$25-$85/mo', weakness: 'Pharmacy-focused, limited conditions' },
+      { name: 'Calm', desc: 'Sleep and meditation app', pricing: '$14.99/mo', weakness: 'Feature overlap with free alternatives' },
+    ],
+    education: [
+      { name: 'Coursera', desc: 'Online courses from universities', pricing: '$49-$79/mo', weakness: 'Completion rates <10%, passive learning' },
+      { name: 'Udemy', desc: 'Marketplace for online courses', pricing: '$12-$200/course', weakness: 'Quality varies wildly, no curation' },
+      { name: 'Skillshare', desc: 'Creative skills platform', pricing: '$14/mo', weakness: 'Niche to creative fields, low instructor pay' },
+      { name: 'MasterClass', desc: 'Celebrity-taught video courses', pricing: '$10-$23/mo', weakness: 'Entertainment > education, no community' },
+      { name: 'Maven', desc: 'Cohort-based courses by experts', pricing: '$500-$3,000/course', weakness: 'Expensive, limited schedule flexibility' },
+    ],
+    ecommerce: [
+      { name: 'Shopify', desc: 'E-commerce platform for everyone', pricing: '$39-$399/mo', weakness: 'Transaction fees unless using Shopify Pay' },
+      { name: 'Amazon FBA', desc: 'Marketplace with fulfillment', pricing: '15-40% revenue share', weakness: 'No brand ownership, margin squeeze' },
+      { name: 'BigCommerce', desc: 'Open SaaS commerce platform', pricing: '$39-$399/mo', weakness: 'Smaller ecosystem, fewer themes' },
+      { name: 'WooCommerce', desc: 'WordPress e-commerce plugin', pricing: 'Free + hosting/plugins', weakness: 'Needs technical skills, plugin sprawl' },
+      { name: 'Etsy', desc: 'Handmade and vintage marketplace', pricing: '6.5% transaction fee', weakness: 'Over-saturated categories, algorithm changes' },
+    ],
+    food: [
+      { name: 'HelloFresh', desc: 'Meal kit subscription service', pricing: '$8-$12/serving', weakness: 'High churn, packaging waste criticism' },
+      { name: 'DoorDash', desc: 'Food delivery marketplace', pricing: '15-30% merchant fee', weakness: 'Not profitable, high customer acquisition' },
+      { name: 'Blue Apron', desc: 'OG meal kit delivery', pricing: '$8-$10/serving', weakness: 'Declining subscribers, logistics heavy' },
+      { name: 'Instacart', desc: 'Grocery delivery platform', pricing: '$3.99-$7.99 delivery', weakness: 'Thin margins, Uber Eats competition' },
+      { name: 'Mealpal', desc: 'Lunch subscription in cities', pricing: '$6-$7/meal', weakness: 'Limited cities, restaurant selection varies' },
+    ],
+    pet: [
+      { name: 'BarkBox', desc: 'Monthly dog toy & treat box', pricing: '$25-$35/mo', weakness: 'High churn after novelty fades' },
+      { name: 'Chewy', desc: 'Online pet supply retailer', pricing: 'Market pricing', weakness: 'Amazon competition, thin margins' },
+      { name: 'Rover', desc: 'Pet sitting marketplace', pricing: '20% service fee', weakness: 'Trust/safety concerns, seasonal demand' },
+      { name: 'Petco', desc: 'Omni-channel pet retailer', pricing: 'Market pricing', weakness: 'Legacy brand, slow digital transformation' },
+      { name: 'Fi', desc: 'Smart dog collar with GPS', pricing: '$149 + $99/yr', weakness: 'Niche, battery life complaints' },
+    ],
+    social: [
+      { name: 'Discord', desc: 'Community platform with voice/text', pricing: 'Free + $9.99/mo Nitro', weakness: 'Gamer perception, moderation burden' },
+      { name: 'Circle', desc: 'Community platform for creators', pricing: '$49-$399/mo', weakness: 'Expensive, yet another platform' },
+      { name: 'Mighty Networks', desc: 'Community + courses platform', pricing: '$41-$360/mo', weakness: 'Clunky UX, limited customization' },
+      { name: 'Patreon', desc: 'Membership platform for creators', pricing: '5-12% of earnings', weakness: 'High fees, limited community features' },
+      { name: 'Substack', desc: 'Newsletter publishing platform', pricing: '10% of paid subs', weakness: 'Limited beyond newsletters, no DMs' },
+    ],
+    saas: [
+      { name: 'Notion', desc: 'All-in-one workspace', pricing: '$10-$18/user/mo', weakness: 'Can be overwhelming, slow with large DBs' },
+      { name: 'Airtable', desc: 'Spreadsheet-database hybrid', pricing: '$20-$45/user/mo', weakness: 'Gets expensive at scale, limited views' },
+      { name: 'Monday.com', desc: 'Work management platform', pricing: '$9-$19/user/mo', weakness: 'Feature bloat, complex pricing' },
+      { name: 'ClickUp', desc: 'Productivity platform', pricing: 'Free-$19/user/mo', weakness: 'Buggy, tries to do too much' },
+      { name: 'Zapier', desc: 'No-code automation platform', pricing: '$29.99-$103.50/mo', weakness: 'Expensive at volume, fragile connections' },
+    ],
+    logistics: [
+      { name: 'Flexport', desc: 'Digital freight forwarding', pricing: 'Quote-based', weakness: 'High minimums, enterprise-focused' },
+      { name: 'ShipBob', desc: 'E-commerce fulfillment', pricing: 'Per-order pricing', weakness: 'Complex pricing, scaling costs' },
+      { name: 'Project44', desc: 'Supply chain visibility', pricing: 'Enterprise pricing', weakness: 'Expensive, implementation heavy' },
+      { name: 'FarEye', desc: 'Delivery management platform', pricing: 'Custom pricing', weakness: 'Complex integration, enterprise only' },
+      { name: 'Samsara', desc: 'IoT fleet management', pricing: '$25-$40/vehicle/mo', weakness: 'Hardware lock-in, complex setup' },
+    ],
+    sustainability: [
+      { name: 'Pachama', desc: 'Carbon credit verification', pricing: 'Per-credit pricing', weakness: 'Carbon credit scrutiny, limited supply' },
+      { name: 'Watershed', desc: 'Enterprise carbon accounting', pricing: 'Enterprise pricing', weakness: 'Expensive, enterprise-only' },
+      { name: 'Joro', desc: 'Personal carbon tracking app', pricing: '$4.99/mo', weakness: 'Accuracy questioned, limited actionability' },
+      { name: 'Arcadia', desc: 'Clean energy access platform', pricing: 'Free + savings share', weakness: 'Geographic limitations, utility dependencies' },
+      { name: 'Aspiration', desc: 'Sustainable banking', pricing: 'Pay-what-you-want', weakness: 'Greenwashing concerns, limited products' },
+    ],
+    real_estate: [
+      { name: 'Zillow', desc: 'Real estate marketplace', pricing: 'Lead-based pricing', weakness: 'Inaccurate Zestimates, agent-dependent' },
+      { name: 'Opendoor', desc: 'iBuying platform', pricing: '5-8% service charge', weakness: 'High fees, limited markets' },
+      { name: 'Redfin', desc: 'Tech-powered brokerage', pricing: '1-1.5% listing fee', weakness: 'Limited agent availability, less hand-holding' },
+      { name: 'Lofty', desc: 'AI-powered real estate CRM', pricing: '$449/mo', weakness: 'Expensive, steep learning curve' },
+      { name: 'Pacaso', desc: 'Fractional second home ownership', pricing: '12% service fee', weakness: 'High minimums, co-ownership complexity' },
+    ],
+  };
+
+  // Generic fallback pool
+  const genericPool = [
+    { name: 'Notion', desc: 'All-in-one productivity workspace', pricing: '$10-$18/user/mo', weakness: 'Can be overwhelming, slow with large databases' },
+    { name: 'Airtable', desc: 'Flexible database platform', pricing: '$20-$45/user/mo', weakness: 'Gets expensive at scale' },
+    { name: 'Zapier', desc: 'No-code workflow automation', pricing: '$29.99-$103.50/mo', weakness: 'Expensive at volume, fragile integrations' },
+    { name: 'Calendly', desc: 'Scheduling automation tool', pricing: '$12-$20/user/mo', weakness: 'Limited beyond scheduling' },
+    { name: 'Typeform', desc: 'Beautiful form builder', pricing: '$29-$99/mo', weakness: 'Expensive per response, slow load times' },
+    { name: 'Canva', desc: 'Design platform for non-designers', pricing: 'Free-$15/user/mo', weakness: 'Template limitations, export quality' },
+    { name: 'Loom', desc: 'Async video messaging tool', pricing: 'Free-$15/user/mo', weakness: 'Niche use case, storage limits' },
+    { name: 'Slack', desc: 'Team communication platform', pricing: 'Free-$17.50/user/mo', weakness: 'Channel sprawl, notification overload' },
+  ];
+
+  // Collect relevant competitors
+  let pool = [];
+  for (const cat of Object.keys(analysis.categories)) {
+    if (competitorPools[cat]) {
+      pool = pool.concat(competitorPools[cat]);
+    }
+  }
+
+  if (pool.length < 5) {
+    pool = pool.concat(genericPool);
+  }
+
+  // Deduplicate by name
+  const seen = new Set();
+  pool = pool.filter(c => {
+    if (seen.has(c.name)) return false;
+    seen.add(c.name);
+    return true;
+  });
+
+  return pickN(pool, 5, rng);
+}
+
+function generatePersonas(analysis, rng) {
+  const cats = Object.keys(analysis.categories);
+  const idea = analysis.original;
+
+  const personaPool = {
+    smb: [
+      { avatar: '👩‍💼', name: 'Sarah Chen', role: 'Startup Founder, 32', pain: 'Needs to move fast but can\'t afford enterprise tools', budget: '$50-200/mo on tools', channel: 'Twitter, Product Hunt, Indie Hackers' },
+      { avatar: '🧔', name: 'Marcus Rivera', role: 'Agency Owner, 38', pain: 'Managing 15 clients with duct-taped tools', budget: '$200-500/mo on software', channel: 'LinkedIn, podcasts, conferences' },
+      { avatar: '👨‍💻', name: 'Raj Patel', role: 'Solo Developer, 27', pain: 'Wants to focus on building, not admin', budget: '$20-100/mo on tools', channel: 'GitHub, Hacker News, Reddit' },
+    ],
+    enterprise: [
+      { avatar: '👨‍💼', name: 'James O\'Brien', role: 'VP of Operations, 45', pain: 'Legacy systems costing millions to maintain', budget: '$50K-200K/yr departmental', channel: 'Gartner reports, peer referrals, G2' },
+      { avatar: '👩‍💼', name: 'Lisa Tanaka', role: 'Director of Product, 38', pain: 'Needs data to justify build decisions to board', budget: '$20K-100K/yr', channel: 'Industry events, analyst reports' },
+      { avatar: '🧑‍💼', name: 'Michael Brooks', role: 'CTO, Series B Startup, 42', pain: 'Scaling team from 20 to 100 engineers', budget: '$100K-500K/yr on infra', channel: 'CTO Slack groups, Hacker News' },
+    ],
+    consumers: [
+      { avatar: '👩', name: 'Emily Watson', role: 'Working Professional, 29', pain: 'Overwhelmed by choices, wants curated solutions', budget: '$10-50/mo discretionary', channel: 'Instagram, TikTok, YouTube' },
+      { avatar: '👨', name: 'David Kim', role: 'Millennial Parent, 34', pain: 'Time-poor, willing to pay for convenience', budget: '$50-200/mo for services', channel: 'Facebook groups, Reddit, word-of-mouth' },
+      { avatar: '👵', name: 'Patricia Moore', role: 'Empty Nester, 55', pain: 'Tech-curious but frustrated by complexity', budget: '$20-100/mo', channel: 'Facebook, email newsletters, TV ads' },
+    ],
+    developers: [
+      { avatar: '👨‍💻', name: 'Alex Novak', role: 'Senior Dev, FAANG, 30', pain: 'Spends 40% of time on non-coding tasks', budget: 'Expense account up to $500/mo', channel: 'GitHub, Hacker News, dev Twitter' },
+      { avatar: '👩‍💻', name: 'Priya Sharma', role: 'Indie Hacker, 26', pain: 'Wants to ship faster without hiring', budget: '$30-100/mo on dev tools', channel: 'Twitter/X, Product Hunt, r/SaaS' },
+      { avatar: '🧑‍💻', name: 'Jordan Lee', role: 'DevOps Lead, 35', pain: 'Alert fatigue, too many dashboards', budget: 'Team budget $2K-5K/mo', channel: 'Slack communities, conf talks, blogs' },
+    ],
+  };
+
+  // Map detected audiences, or infer from categories
+  let targetAudiences = Object.keys(analysis.audience);
+  if (targetAudiences.length === 0) {
+    if (analysis.categories.saas || analysis.categories.b2b) targetAudiences = ['smb', 'enterprise'];
+    else if (analysis.categories.ai) targetAudiences = ['smb', 'developers'];
+    else if (analysis.categories.ecommerce || analysis.categories.food || analysis.categories.pet) targetAudiences = ['consumers'];
+    else if (analysis.categories.marketplace) targetAudiences = ['smb', 'consumers'];
+    else targetAudiences = ['smb', 'consumers'];
+  }
+
+  let pool = [];
+  for (const aud of targetAudiences) {
+    if (personaPool[aud]) pool = pool.concat(personaPool[aud]);
+  }
+  if (pool.length < 3) pool = pool.concat(personaPool.consumers, personaPool.smb);
+
+  return pickN(pool, 3, rng);
+}
+
+function generateRevenueModels(analysis, rng) {
+  const models = [];
+  const cats = Object.keys(analysis.categories);
+  const hasMarketplace = analysis.categories.marketplace;
+  const hasEcommerce = analysis.categories.ecommerce;
+  const hasSaas = analysis.categories.saas || analysis.categories.ai;
+
+  const allModels = [
+    {
+      name: 'Freemium SaaS',
+      desc: 'Free tier with limited features. Premium unlocks power features, higher limits, and team collaboration.',
+      price: '$' + (pick([19, 29, 39, 49], rng)),
+      period: '/user/mo',
+      tags: ['saas', 'ai', 'education', 'social', 'hr'],
+    },
+    {
+      name: 'Usage-Based Pricing',
+      desc: 'Pay per API call, generation, or transaction. Scales with customer success. Low barrier to entry.',
+      price: '$' + (pick([0.01, 0.02, 0.05, 0.10], rng)).toFixed(2),
+      period: '/unit',
+      tags: ['ai', 'fintech', 'logistics', 'saas'],
+    },
+    {
+      name: 'Subscription Box / Recurring',
+      desc: 'Monthly curated delivery. High LTV if churn is managed. Personalization drives retention.',
+      price: '$' + pick([19, 25, 29, 35, 45], rng),
+      period: '/mo',
+      tags: ['ecommerce', 'food', 'pet', 'health'],
+    },
+    {
+      name: 'Marketplace Commission',
+      desc: 'Take a percentage of each transaction. Two-sided marketplace dynamics create network effects.',
+      price: pick([10, 12, 15, 18, 20], rng) + '%',
+      period: '/transaction',
+      tags: ['marketplace', 'hr', 'real_estate', 'social'],
+    },
+    {
+      name: 'Tiered Plans',
+      desc: 'Good-better-best pricing tiers. Each tier unlocks more features, seats, or capacity.',
+      price: '$' + pick([29, 49, 79, 99], rng) + '-$' + pick([149, 199, 299, 499], rng),
+      period: '/mo',
+      tags: ['saas', 'ai', 'b2b', 'education', 'hr'],
+    },
+    {
+      name: 'Enterprise Licensing',
+      desc: 'Annual contracts with dedicated support, SLAs, and custom integrations. High ACV, long sales cycles.',
+      price: '$' + pick([12, 25, 50, 75, 100], rng) + 'K',
+      period: '/year',
+      tags: ['saas', 'b2b', 'fintech', 'logistics', 'health'],
+    },
+    {
+      name: 'Lead Generation / Referral Fee',
+      desc: 'Free tool that captures high-intent leads. Monetize by connecting users to service providers.',
+      price: '$' + pick([25, 50, 75, 100, 150], rng),
+      period: '/qualified lead',
+      tags: ['real_estate', 'fintech', 'hr', 'health', 'marketplace'],
+    },
+    {
+      name: 'White-Label / API Licensing',
+      desc: 'License your tech to other businesses to embed in their products. High margins, B2B focus.',
+      price: '$' + pick([2, 5, 10, 15], rng) + 'K',
+      period: '/mo',
+      tags: ['ai', 'saas', 'fintech', 'logistics'],
+    },
+    {
+      name: 'Transaction Fee',
+      desc: 'Small fee per transaction processed. Works well at scale with high volume.',
+      price: pick([1.5, 2, 2.5, 2.9, 3.5], rng) + '%',
+      period: '+ $0.30/txn',
+      tags: ['fintech', 'ecommerce', 'marketplace'],
+    },
+    {
+      name: 'Advertising / Sponsored Content',
+      desc: 'Monetize attention with non-intrusive ads or sponsored placements. Needs scale to work.',
+      price: '$' + pick([5, 10, 15, 25], rng),
+      period: '/CPM',
+      tags: ['social', 'education', 'food', 'pet'],
+    },
+  ];
+
+  // Score each model by relevance
+  const scored = allModels.map(m => {
+    let score = rng() * 0.3;
+    for (const cat of cats) {
+      if (m.tags.includes(cat)) score += 1;
+    }
+    return { ...m, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, 4);
+}
+
+function generateMVP(analysis, rng) {
+  const cats = Object.keys(analysis.categories);
+
+  const featurePools = {
+    ai: [
+      { feature: 'Core AI generation engine', reason: 'The product\'s primary value prop — start with one model, optimize later' },
+      { feature: 'Prompt template library', reason: 'Reduce user friction; pre-built templates increase activation 3x' },
+      { feature: 'Output history & favorites', reason: 'Users need to revisit past generations — critical for retention' },
+      { feature: 'Export to common formats', reason: 'Outputs need to flow into existing workflows (PDF, Docs, Markdown)' },
+      { feature: 'Usage dashboard & limits', reason: 'Control costs and create upgrade triggers for monetization' },
+    ],
+    marketplace: [
+      { feature: 'Supply-side onboarding & profiles', reason: 'Marketplace is only as good as its supply — nail this first' },
+      { feature: 'Search & filter with smart matching', reason: 'Demand side needs to find the right match quickly' },
+      { feature: 'Messaging & proposal system', reason: 'Facilitate transactions without leaving the platform' },
+      { feature: 'Reviews & trust signals', reason: 'Trust is the #1 barrier in marketplaces — build it from day 1' },
+      { feature: 'Payment escrow & invoicing', reason: 'Capture the transaction to enable take-rate monetization' },
+    ],
+    saas: [
+      { feature: 'Core workflow automation', reason: 'The primary job-to-be-done — must be 10x better than alternatives' },
+      { feature: 'Team workspace & permissions', reason: 'B2B products need multi-user support from early on' },
+      { feature: 'Dashboard with key metrics', reason: 'Users need to see value — make it visible and shareable' },
+      { feature: 'Integrations (top 3 tools)', reason: 'Connect to where users already work — Slack, email, Sheets' },
+      { feature: 'Self-serve onboarding flow', reason: 'Reduce time-to-value to under 5 minutes for product-led growth' },
+    ],
+    ecommerce: [
+      { feature: 'Product catalog with smart search', reason: 'Discovery is everything — help users find what they want fast' },
+      { feature: 'Seamless checkout flow', reason: 'Every extra step = 10% cart abandonment. Keep it under 3 clicks.' },
+      { feature: 'Subscription management', reason: 'Recurring revenue is the business model — make it dead simple' },
+      { feature: 'Personalization engine', reason: 'Personalized recommendations drive 35% of Amazon\'s revenue' },
+      { feature: 'Mobile-first responsive design', reason: '70%+ of e-commerce traffic is mobile — build for phones first' },
+    ],
+    fintech: [
+      { feature: 'Bank-grade authentication & KYC', reason: 'Regulatory requirement, also builds trust from day 1' },
+      { feature: 'Core transaction engine', reason: 'The primary value — fast, reliable money movement' },
+      { feature: 'Real-time balance & history', reason: 'Users check balances 10x/day. Make it instant and accurate.' },
+      { feature: 'Notification & alert system', reason: 'Proactive alerts reduce fraud anxiety and increase engagement' },
+      { feature: 'Spending insights dashboard', reason: 'Turn data into value — the insight layer drives retention' },
+    ],
+    health: [
+      { feature: 'User health profile & intake', reason: 'Personalization starts with understanding the user\'s context' },
+      { feature: 'Core health tracking/monitoring', reason: 'The primary value loop — track → insight → action' },
+      { feature: 'Provider/content matching', reason: 'Connect users with the right resource at the right time' },
+      { feature: 'Progress visualization', reason: 'Visible progress drives motivation and long-term retention' },
+      { feature: 'Reminders & habit nudges', reason: 'Health outcomes depend on consistency — nudge thoughtfully' },
+    ],
+    education: [
+      { feature: 'Adaptive learning path', reason: 'Personalized progression increases completion 4x vs linear courses' },
+      { feature: 'Interactive exercises & quizzes', reason: 'Active recall beats passive video — make learning active' },
+      { feature: 'Progress tracking & streaks', reason: 'Duolingo proved it: streaks are the most powerful retention mechanic' },
+      { feature: 'Community discussion threads', reason: 'Peer learning increases outcomes 23% (Harvard research)' },
+      { feature: 'Certificate / credential system', reason: 'Tangible outcomes motivate completion and justify pricing' },
+    ],
+    generic: [
+      { feature: 'User onboarding & core workflow', reason: 'Nail the first-run experience — users decide in 30 seconds' },
+      { feature: 'Primary value delivery engine', reason: 'Whatever your "aha moment" is, build the shortest path to it' },
+      { feature: 'User dashboard & activity feed', reason: 'Give users a home base that shows value and encourages return' },
+      { feature: 'Notification & engagement system', reason: 'Bring users back — email, push, or in-app triggers' },
+      { feature: 'Basic analytics & admin panel', reason: 'You can\'t improve what you can\'t measure — instrument from day 1' },
+    ],
+  };
+
+  let pool = [];
+  for (const cat of cats) {
+    if (featurePools[cat]) {
+      pool = pool.concat(featurePools[cat]);
+    }
+  }
+
+  if (pool.length < 4) pool = pool.concat(featurePools.generic);
+
+  // Deduplicate by feature name
+  const seen = new Set();
+  pool = pool.filter(f => {
+    if (seen.has(f.feature)) return false;
+    seen.add(f.feature);
+    return true;
+  });
+
+  return pickN(pool, pick([3, 4, 5], rng), rng);
+}
+
+function generateEstimate(analysis, rng) {
+  const cats = Object.keys(analysis.categories);
+  const isComplex = cats.includes('fintech') || cats.includes('health') || cats.includes('logistics');
+  const isSimple = cats.includes('education') || cats.includes('social') || cats.includes('food');
+
+  let soloWeeks, teamWeeks, soloCost, teamCost;
+
+  if (isComplex) {
+    soloWeeks = Math.floor(12 + rng() * 12);
+    teamWeeks = Math.floor(6 + rng() * 6);
+    soloCost = Math.floor(15000 + rng() * 25000);
+    teamCost = Math.floor(40000 + rng() * 80000);
+  } else if (isSimple) {
+    soloWeeks = Math.floor(4 + rng() * 6);
+    teamWeeks = Math.floor(2 + rng() * 4);
+    soloCost = Math.floor(3000 + rng() * 7000);
+    teamCost = Math.floor(15000 + rng() * 25000);
+  } else {
+    soloWeeks = Math.floor(6 + rng() * 10);
+    teamWeeks = Math.floor(3 + rng() * 6);
+    soloCost = Math.floor(5000 + rng() * 15000);
+    teamCost = Math.floor(20000 + rng() * 50000);
+  }
+
+  return {
+    soloTimeline: soloWeeks + ' weeks',
+    teamTimeline: teamWeeks + ' weeks',
+    soloCost: formatMoney(soloCost),
+    teamCost: formatMoney(teamCost),
+    teamSize: pick(['1 full-stack dev', '2-3 person team', '2 devs + 1 designer'], rng),
+    mvpNote: pick([
+      'Excludes marketing, legal, and infrastructure costs',
+      'Assumes cloud hosting; add ~$50-200/mo for infra',
+      'Based on MVP scope above; full product 3-5x these estimates',
+      'Does not include ongoing maintenance ($1-2K/mo typical)',
+    ], rng),
+  };
+}
+
+function generateVerdict(analysis, rng) {
+  const cats = Object.keys(analysis.categories);
+  const numCats = cats.length;
+  const ideaLen = analysis.original.length;
+
+  // Score based on various heuristics
+  let score = 55 + Math.floor(rng() * 25); // Base: 55-80
+
+  // Bonus for specificity (longer = more specific usually)
+  if (ideaLen > 60) score += 5;
+  if (ideaLen > 100) score += 3;
+
+  // Bonus/penalty by category
+  if (analysis.categories.ai) score += Math.floor(rng() * 8);
+  if (analysis.categories.fintech) score += Math.floor(rng() * 5);
+  if (analysis.categories.health) score += Math.floor(rng() * 5);
+  if (analysis.categories.sustainability) score += 3;
+  if (analysis.categories.social) score -= Math.floor(rng() * 8); // Social is hard
+
+  // Multiple categories = broader idea = slight penalty
+  if (numCats > 3) score -= 5;
+
+  score = Math.max(30, Math.min(92, score));
+
+  let verdict, emoji, verdictClass;
+  let reasons = [];
+
+  if (score >= 72) {
+    verdict = 'BUILD IT';
+    emoji = '🚀';
+    verdictClass = 'build';
+    reasons = [
+      'The market is large enough to support a venture-scale outcome.',
+      'Existing competitors validate demand but leave room for differentiation.',
+      'Clear monetization paths with proven pricing models in the space.',
+      'The problem is real, recurring, and underserved by current solutions.',
+      'MVP can be built quickly to test core assumptions.',
+    ];
+  } else if (score >= 50) {
+    verdict = 'PROCEED WITH CAUTION';
+    emoji = '⚡';
+    verdictClass = 'maybe';
+    reasons = [
+      'Market exists but competitive dynamics require sharp differentiation.',
+      'Revenue potential is there, but customer acquisition may be challenging.',
+      'Consider running a 2-week validation sprint before committing fully.',
+      'The idea has merit, but the "why now?" story needs strengthening.',
+      'Test willingness-to-pay with a landing page before building product.',
+    ];
+  } else {
+    verdict = 'RETHINK THIS';
+    emoji = '🤔';
+    verdictClass = 'dont-build';
+    reasons = [
+      'The market is either too small or too competitive for a new entrant.',
+      'Monetization is unclear — customers may not pay enough to sustain growth.',
+      'Existing solutions are deeply entrenched with strong network effects.',
+      'Consider pivoting to a more specific niche or adjacent problem.',
+      'Interview 20 potential customers before writing any code.',
+    ];
+  }
+
+  const selectedReasons = pickN(reasons, 3, rng);
+
+  return { verdict, emoji, verdictClass, score, reasons: selectedReasons };
+}
+
+// ---- Loading Animation ----
+const loadingSteps = [
+  'Analyzing market landscape...',
+  'Researching competitors...',
+  'Building customer personas...',
+  'Evaluating revenue models...',
+  'Estimating build costs...',
+  'Generating verdict...',
+  'Compiling report...',
+];
+
+async function animateLoading() {
+  const bar = document.getElementById('loadingBar');
+  const step = document.getElementById('loadingStep');
+  const section = document.getElementById('loadingSection');
+  section.classList.add('active');
+
+  for (let i = 0; i < loadingSteps.length; i++) {
+    step.textContent = loadingSteps[i];
+    const progress = ((i + 1) / loadingSteps.length) * 100;
+    bar.style.width = progress + '%';
+    await new Promise(r => setTimeout(r, 400 + Math.random() * 300));
+  }
+
+  await new Promise(r => setTimeout(r, 300));
+  section.classList.remove('active');
+}
+
+// ---- Render Functions ----
+
+function renderVerdict(data) {
+  return `
+    <div class="verdict-banner ${data.verdictClass}" style="animation-delay: 0s">
+      <div class="verdict-emoji">${data.emoji}</div>
+      <div class="verdict-label">${data.verdict}</div>
+      <div class="verdict-score">Confidence Score: <strong>${data.score}/100</strong></div>
+      <div class="verdict-reasoning">${data.reasons.join(' ')}</div>
+    </div>
+  `;
+}
+
+function renderMarket(data) {
+  return `
+    <div class="report-card" style="animation-delay: 0.1s">
+      <div class="card-header">
+        <div class="card-icon">📊</div>
+        <div>
+          <div class="card-title">Market Size</div>
+          <div class="card-subtitle">Total addressable market analysis</div>
+        </div>
+      </div>
+      <div class="market-grid">
+        <div class="market-item">
+          <div class="market-label">TAM</div>
+          <div class="market-value">${formatMoney(data.tam)}</div>
+          <div class="market-desc">${data.tamDesc}</div>
+        </div>
+        <div class="market-item">
+          <div class="market-label">SAM</div>
+          <div class="market-value">${formatMoney(data.sam)}</div>
+          <div class="market-desc">${data.samDesc}</div>
+        </div>
+        <div class="market-item">
+          <div class="market-label">SOM</div>
+          <div class="market-value">${formatMoney(data.som)}</div>
+          <div class="market-desc">${data.somDesc}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCompetitors(data) {
+  const rows = data.map(c => `
+    <tr>
+      <td><span class="competitor-name">${c.name}</span><span class="competitor-desc">${c.desc}</span></td>
+      <td class="competitor-pricing">${c.pricing}</td>
+      <td class="competitor-weakness">${c.weakness}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <div class="report-card" style="animation-delay: 0.2s">
+      <div class="card-header">
+        <div class="card-icon">⚔️</div>
+        <div>
+          <div class="card-title">Competitive Landscape</div>
+          <div class="card-subtitle">Top 5 competitors and their weaknesses</div>
+        </div>
+      </div>
+      <table class="competitor-table">
+        <thead>
+          <tr><th>Company</th><th>Pricing</th><th>Weakness</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderPersonas(data) {
+  const cards = data.map(p => `
+    <div class="persona-card">
+      <div class="persona-avatar">${p.avatar}</div>
+      <div class="persona-name">${p.name}</div>
+      <div class="persona-role">${p.role}</div>
+      <div class="persona-detail"><strong>Pain:</strong> ${p.pain}</div>
+      <div class="persona-detail"><strong>Budget:</strong> ${p.budget}</div>
+      <div class="persona-detail"><strong>Where to find:</strong> ${p.channel}</div>
+    </div>
+  `).join('');
+
+  return `
+    <div class="report-card" style="animation-delay: 0.3s">
+      <div class="card-header">
+        <div class="card-icon">👥</div>
+        <div>
+          <div class="card-title">Customer Personas</div>
+          <div class="card-subtitle">Who would pay for this?</div>
+        </div>
+      </div>
+      <div class="persona-grid">${cards}</div>
+    </div>
+  `;
+}
+
+function renderRevenue(data) {
+  const items = data.map(m => `
+    <li class="revenue-item">
+      <div class="revenue-info">
+        <div class="revenue-model-name">${m.name}</div>
+        <div class="revenue-description">${m.desc}</div>
+      </div>
+      <div class="revenue-benchmark">
+        <div class="revenue-price">${m.price}</div>
+        <div class="revenue-period">${m.period}</div>
+      </div>
+    </li>
+  `).join('');
+
+  return `
+    <div class="report-card" style="animation-delay: 0.4s">
+      <div class="card-header">
+        <div class="card-icon">💰</div>
+        <div>
+          <div class="card-title">Revenue Models</div>
+          <div class="card-subtitle">How to monetize with pricing benchmarks</div>
+        </div>
+      </div>
+      <ul class="revenue-list">${items}</ul>
+    </div>
+  `;
+}
+
+function renderMVP(data) {
+  const items = data.map((m, i) => `
+    <li class="mvp-item">
+      <div class="mvp-number">${i + 1}</div>
+      <div class="mvp-content">
+        <div class="mvp-feature">${m.feature}</div>
+        <div class="mvp-reason">${m.reason}</div>
+      </div>
+    </li>
+  `).join('');
+
+  return `
+    <div class="report-card" style="animation-delay: 0.5s">
+      <div class="card-header">
+        <div class="card-icon">🛠️</div>
+        <div>
+          <div class="card-title">MVP Scope</div>
+          <div class="card-subtitle">Ship this first — nothing more</div>
+        </div>
+      </div>
+      <ul class="mvp-list">${items}</ul>
+    </div>
+  `;
+}
+
+function renderEstimate(data) {
+  return `
+    <div class="report-card" style="animation-delay: 0.6s">
+      <div class="card-header">
+        <div class="card-icon">⏱️</div>
+        <div>
+          <div class="card-title">Build Estimate</div>
+          <div class="card-subtitle">Time and cost to launch MVP</div>
+        </div>
+      </div>
+      <div class="estimate-grid">
+        <div class="estimate-item">
+          <div class="estimate-label">Solo Builder</div>
+          <div class="estimate-value">${data.soloTimeline}</div>
+          <div class="estimate-note">${data.soloCost} estimated cost</div>
+        </div>
+        <div class="estimate-item">
+          <div class="estimate-label">Small Team</div>
+          <div class="estimate-value">${data.teamTimeline}</div>
+          <div class="estimate-note">${data.teamCost} with ${data.teamSize}</div>
+        </div>
+        <div class="estimate-item">
+          <div class="estimate-label">With MVP Cafe</div>
+          <div class="estimate-value">2-4 weeks</div>
+          <div class="estimate-note">From idea to launched product</div>
+        </div>
+        <div class="estimate-item">
+          <div class="estimate-label">Note</div>
+          <div class="estimate-value" style="font-size: 14px; font-family: Inter, sans-serif; color: var(--text-dim);">${data.mvpNote}</div>
+          <div class="estimate-note">&nbsp;</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ---- Main Validation Function ----
+
+async function validateIdea() {
+  const idea = textarea.value.trim();
+  if (!idea) {
+    textarea.focus();
+    return;
+  }
+
+  const btn = document.getElementById('validateBtn');
+  btn.disabled = true;
+
+  // Hide results if showing
+  document.getElementById('resultsSection').classList.remove('active');
+
+  // Show loading
+  await animateLoading();
+
+  // Analyze & generate
+  const analysis = analyzeIdea(idea);
+  const seed = hashStr(idea);
+  const rng = seededRandom(seed);
+
+  const verdict = generateVerdict(analysis, rng);
+  const market = generateMarketSize(analysis, rng);
+  const competitors = generateCompetitors(analysis, rng);
+  const personas = generatePersonas(analysis, rng);
+  const revenue = generateRevenueModels(analysis, rng);
+  const mvp = generateMVP(analysis, rng);
+  const estimate = generateEstimate(analysis, rng);
+
+  // Render
+  document.getElementById('ideaEcho').textContent = `"${idea}"`;
+  document.getElementById('verdictBanner').innerHTML = renderVerdict(verdict);
+  document.getElementById('marketCard').innerHTML = renderMarket(market);
+  document.getElementById('competitorCard').innerHTML = renderCompetitors(competitors);
+  document.getElementById('personaCard').innerHTML = renderPersonas(personas);
+  document.getElementById('revenueCard').innerHTML = renderRevenue(revenue);
+  document.getElementById('mvpCard').innerHTML = renderMVP(mvp);
+  document.getElementById('estimateCard').innerHTML = renderEstimate(estimate);
+
+  // Show results
+  const resultsSection = document.getElementById('resultsSection');
+  resultsSection.classList.add('active');
+
+  // Scroll to results
+  resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Animate cards in sequence
+  const cards = resultsSection.querySelectorAll('.report-card');
+  cards.forEach((card, i) => {
+    setTimeout(() => card.classList.add('visible'), i * 150);
+  });
+
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>

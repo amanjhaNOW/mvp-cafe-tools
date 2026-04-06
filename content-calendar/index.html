@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Planner — Plan, Ship, Grow</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #242734;
+  --surface3: #2e3142;
+  --border: #363950;
+  --text: #e4e6f0;
+  --text2: #9a9cb8;
+  --text3: #6b6d85;
+  --accent: #6c63ff;
+  --accent2: #8b83ff;
+  --green: #22c55e;
+  --green-bg: rgba(34,197,94,.12);
+  --yellow: #eab308;
+  --yellow-bg: rgba(234,179,8,.12);
+  --blue: #3b82f6;
+  --blue-bg: rgba(59,130,246,.12);
+  --red: #ef4444;
+  --red-bg: rgba(239,68,68,.12);
+  --orange: #f97316;
+  --orange-bg: rgba(249,115,22,.12);
+  --pink: #ec4899;
+  --pink-bg: rgba(236,72,153,.12);
+  --cyan: #06b6d4;
+  --cyan-bg: rgba(6,182,212,.12);
+}
+html.light {
+  --bg: #f5f5f9;
+  --surface: #ffffff;
+  --surface2: #f0f0f5;
+  --surface3: #e8e8f0;
+  --border: #d5d5e0;
+  --text: #1a1d27;
+  --text2: #5a5c70;
+  --text3: #8a8c9e;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+button { cursor:pointer; font-family:inherit; }
+input,textarea,select { font-family:inherit; }
+
+/* Layout */
+.app { display:flex; height:100vh; }
+.sidebar { width:260px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; }
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+/* Sidebar */
+.sidebar-header { padding:20px; border-bottom:1px solid var(--border); }
+.sidebar-header h1 { font-size:18px; font-weight:700; }
+.sidebar-header h1 span { color:var(--accent); }
+.sidebar-header p { font-size:12px; color:var(--text2); margin-top:4px; }
+
+.sidebar-nav { flex:1; overflow-y:auto; padding:12px; }
+.nav-section { margin-bottom:16px; }
+.nav-section-title { font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; padding:4px 8px; margin-bottom:4px; }
+.nav-item { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:13px; color:var(--text2); transition:all .15s; }
+.nav-item:hover { background:var(--surface2); color:var(--text); }
+.nav-item.active { background:var(--accent); color:#fff; }
+.nav-item .icon { width:18px; text-align:center; }
+.nav-item .badge { margin-left:auto; background:var(--surface3); padding:1px 6px; border-radius:10px; font-size:11px; }
+.nav-item.active .badge { background:rgba(255,255,255,.2); }
+
+.sidebar-footer { padding:12px; border-top:1px solid var(--border); display:flex; gap:8px; }
+.sidebar-footer button { flex:1; padding:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); border-radius:6px; font-size:12px; transition:all .15s; }
+.sidebar-footer button:hover { background:var(--surface3); color:var(--text); }
+
+/* Top Bar */
+.topbar { display:flex; align-items:center; gap:12px; padding:12px 20px; border-bottom:1px solid var(--border); background:var(--surface); }
+.topbar h2 { font-size:16px; font-weight:600; }
+.topbar-actions { margin-left:auto; display:flex; gap:8px; align-items:center; }
+.btn { padding:7px 14px; border-radius:8px; border:none; font-size:13px; font-weight:500; transition:all .15s; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { background:var(--accent2); }
+.btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-secondary:hover { background:var(--surface3); }
+.btn-sm { padding:5px 10px; font-size:12px; }
+.btn-icon { width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:14px; }
+.btn-icon:hover { background:var(--surface3); color:var(--text); }
+
+/* Search */
+.search-box { position:relative; }
+.search-box input { padding:7px 12px 7px 32px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:13px; width:220px; outline:none; }
+.search-box input:focus { border-color:var(--accent); }
+.search-box::before { content:'🔍'; position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:12px; }
+
+/* Calendar View */
+.calendar-container { flex:1; overflow-y:auto; padding:20px; }
+.calendar-nav { display:flex; align-items:center; gap:16px; margin-bottom:16px; }
+.calendar-nav h3 { font-size:18px; font-weight:600; min-width:200px; }
+.calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--border); border-radius:12px; overflow:hidden; }
+.cal-header { background:var(--surface2); padding:8px; text-align:center; font-size:12px; font-weight:600; color:var(--text2); }
+.cal-day { background:var(--surface); min-height:120px; padding:6px; cursor:pointer; transition:background .15s; position:relative; }
+.cal-day:hover { background:var(--surface2); }
+.cal-day.other-month { opacity:.4; }
+.cal-day.today { box-shadow:inset 0 0 0 2px var(--accent); }
+.cal-day-num { font-size:12px; font-weight:600; color:var(--text2); margin-bottom:4px; }
+.cal-day.today .cal-day-num { color:var(--accent); }
+.cal-post { padding:3px 6px; border-radius:4px; font-size:11px; margin-bottom:2px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cal-post.status-draft { background:var(--yellow-bg); color:var(--yellow); border-left:2px solid var(--yellow); }
+.cal-post.status-scheduled { background:var(--blue-bg); color:var(--blue); border-left:2px solid var(--blue); }
+.cal-post.status-published { background:var(--green-bg); color:var(--green); border-left:2px solid var(--green); }
+.cal-post.status-idea { background:var(--orange-bg); color:var(--orange); border-left:2px solid var(--orange); }
+.cal-more { font-size:10px; color:var(--text3); padding:2px 4px; }
+
+/* List View */
+.list-container { flex:1; overflow-y:auto; padding:20px; }
+.post-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:10px; cursor:pointer; transition:all .15s; }
+.post-card:hover { border-color:var(--accent); transform:translateY(-1px); }
+.post-card-header { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.post-card-title { font-size:14px; font-weight:600; flex:1; }
+.status-badge { padding:3px 8px; border-radius:12px; font-size:11px; font-weight:500; }
+.status-draft { background:var(--yellow-bg); color:var(--yellow); }
+.status-scheduled { background:var(--blue-bg); color:var(--blue); }
+.status-published { background:var(--green-bg); color:var(--green); }
+.status-idea { background:var(--orange-bg); color:var(--orange); }
+.platform-tag { padding:2px 6px; border-radius:4px; font-size:10px; font-weight:600; }
+.platform-linkedin { background:var(--blue-bg); color:var(--blue); }
+.platform-twitter { background:var(--cyan-bg); color:var(--cyan); }
+.platform-blog { background:var(--pink-bg); color:var(--pink); }
+.platform-newsletter { background:var(--orange-bg); color:var(--orange); }
+.post-card-preview { font-size:13px; color:var(--text2); line-height:1.5; margin-bottom:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.post-card-meta { display:flex; align-items:center; gap:12px; font-size:12px; color:var(--text3); }
+.post-card-meta .pillar { padding:2px 6px; border-radius:4px; background:var(--surface3); font-size:10px; }
+
+/* Ideas Backlog */
+.ideas-container { flex:1; overflow-y:auto; padding:20px; }
+.idea-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:8px; display:flex; align-items:flex-start; gap:12px; }
+.idea-priority { width:8px; height:8px; border-radius:50%; margin-top:6px; flex-shrink:0; }
+.idea-priority.high { background:var(--red); }
+.idea-priority.medium { background:var(--yellow); }
+.idea-priority.low { background:var(--green); }
+.idea-content { flex:1; }
+.idea-title { font-size:14px; font-weight:500; margin-bottom:4px; }
+.idea-notes { font-size:12px; color:var(--text2); }
+.idea-actions { display:flex; gap:4px; }
+
+/* Stats */
+.stats-container { flex:1; overflow-y:auto; padding:20px; }
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:24px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; }
+.stat-value { font-size:28px; font-weight:700; }
+.stat-label { font-size:12px; color:var(--text2); margin-top:4px; }
+.stat-sub { font-size:11px; color:var(--text3); margin-top:2px; }
+.streak-display { text-align:center; padding:24px; background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:24px; }
+.streak-number { font-size:48px; font-weight:800; color:var(--accent); }
+.streak-label { font-size:14px; color:var(--text2); }
+.streak-fire { font-size:32px; }
+.chart-section { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:16px; }
+.chart-section h3 { font-size:14px; font-weight:600; margin-bottom:16px; }
+.bar-chart { display:flex; align-items:flex-end; gap:8px; height:140px; padding-top:8px; }
+.bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.bar { width:100%; border-radius:4px 4px 0 0; transition:height .3s; min-height:2px; }
+.bar-label { font-size:10px; color:var(--text3); }
+.bar-value { font-size:10px; color:var(--text2); font-weight:600; }
+.pillar-breakdown { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px; }
+.pillar-item { display:flex; align-items:center; gap:8px; padding:10px; border-radius:8px; background:var(--surface2); }
+.pillar-color { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+.pillar-info { flex:1; }
+.pillar-name { font-size:12px; font-weight:500; }
+.pillar-count { font-size:11px; color:var(--text3); }
+
+/* Pillars Settings */
+.pillars-container { flex:1; overflow-y:auto; padding:20px; }
+.pillar-setting { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; }
+.pillar-setting input[type=color] { width:28px; height:28px; border:none; border-radius:4px; cursor:pointer; }
+.pillar-setting input[type=text] { flex:1; padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text); font-size:13px; outline:none; }
+.pillar-setting input[type=text]:focus { border-color:var(--accent); }
+
+/* Templates */
+.templates-container { flex:1; overflow-y:auto; padding:20px; }
+.template-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:10px; cursor:pointer; transition:all .15s; }
+.template-card:hover { border-color:var(--accent); }
+.template-card h4 { font-size:14px; font-weight:600; margin-bottom:4px; }
+.template-card p { font-size:12px; color:var(--text2); }
+.template-card pre { background:var(--surface2); padding:10px; border-radius:6px; font-size:12px; color:var(--text2); margin-top:8px; white-space:pre-wrap; line-height:1.5; }
+
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:100; opacity:0; pointer-events:none; transition:opacity .2s; }
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:14px; width:560px; max-height:85vh; overflow-y:auto; }
+.modal-header { display:flex; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); }
+.modal-header h3 { flex:1; font-size:16px; font-weight:600; }
+.modal-header button { background:none; border:none; color:var(--text3); font-size:18px; }
+.modal-body { padding:20px; }
+.field { margin-bottom:14px; }
+.field label { display:block; font-size:12px; font-weight:500; color:var(--text2); margin-bottom:4px; }
+.field input, .field select, .field textarea { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:13px; outline:none; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color:var(--accent); }
+.field textarea { min-height:120px; resize:vertical; line-height:1.5; }
+.field-row { display:flex; gap:10px; }
+.field-row .field { flex:1; }
+.tag-input { display:flex; flex-wrap:wrap; gap:4px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); min-height:36px; align-items:center; }
+.tag-input:focus-within { border-color:var(--accent); }
+.tag-input input { border:none; background:none; color:var(--text); font-size:13px; outline:none; flex:1; min-width:80px; padding:2px; }
+.tag { display:flex; align-items:center; gap:2px; padding:2px 6px; border-radius:4px; background:var(--accent); color:#fff; font-size:11px; }
+.tag button { background:none; border:none; color:rgba(255,255,255,.7); font-size:12px; padding:0 2px; cursor:pointer; }
+.modal-footer { display:flex; justify-content:flex-end; gap:8px; padding:16px 20px; border-top:1px solid var(--border); }
+.char-count { font-size:11px; color:var(--text3); text-align:right; margin-top:2px; }
+.char-count.warn { color:var(--yellow); }
+.char-count.over { color:var(--red); }
+
+/* Analytics fields in modal */
+.analytics-row { display:flex; gap:8px; margin-top:8px; }
+.analytics-row .field { flex:1; }
+.analytics-row input { text-align:center; }
+
+/* Heatmap */
+.heatmap { display:flex; gap:2px; flex-wrap:wrap; margin-top:12px; }
+.heatmap-cell { width:14px; height:14px; border-radius:2px; background:var(--surface3); }
+.heatmap-cell.l1 { background:rgba(108,99,255,.2); }
+.heatmap-cell.l2 { background:rgba(108,99,255,.4); }
+.heatmap-cell.l3 { background:rgba(108,99,255,.6); }
+.heatmap-cell.l4 { background:rgba(108,99,255,.85); }
+
+/* Responsive */
+@media(max-width:768px) {
+  .sidebar { display:none; }
+  .cal-day { min-height:80px; }
+  .modal { width:95%; margin:10px; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--surface3); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--border); }
+
+/* Drag */
+.cal-post.dragging { opacity:.5; }
+.cal-day.drag-over { box-shadow:inset 0 0 0 2px var(--accent); }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>📅 Content <span>Planner</span></h1>
+      <p>Plan · Ship · Grow</p>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">Views</div>
+        <div class="nav-item active" data-view="calendar"><span class="icon">📅</span> Calendar</div>
+        <div class="nav-item" data-view="list"><span class="icon">📋</span> All Posts <span class="badge" id="postCount">0</span></div>
+        <div class="nav-item" data-view="ideas"><span class="icon">💡</span> Ideas Backlog <span class="badge" id="ideaCount">0</span></div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Insights</div>
+        <div class="nav-item" data-view="stats"><span class="icon">📊</span> Analytics</div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Settings</div>
+        <div class="nav-item" data-view="pillars"><span class="icon">🏛️</span> Content Pillars</div>
+        <div class="nav-item" data-view="templates"><span class="icon">📝</span> Templates</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <button onclick="toggleTheme()" title="Toggle theme">🌙 Theme</button>
+      <button onclick="exportData()">📤 Export</button>
+      <button onclick="importData()">📥 Import</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <h2 id="viewTitle">Calendar</h2>
+      <div class="topbar-actions">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Search posts... (/)" />
+        </div>
+        <button class="btn btn-primary" onclick="openNewPost()">+ New Post</button>
+      </div>
+    </div>
+
+    <!-- Calendar View -->
+    <div id="view-calendar" class="calendar-container view-content">
+      <div class="calendar-nav">
+        <button class="btn-icon" onclick="changeMonth(-1)">◀</button>
+        <h3 id="calendarTitle"></h3>
+        <button class="btn-icon" onclick="changeMonth(1)">▶</button>
+        <button class="btn btn-sm btn-secondary" onclick="goToToday()">Today</button>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+
+    <!-- List View -->
+    <div id="view-list" class="list-container view-content" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="listFilters">
+        <button class="btn btn-sm btn-secondary filter-btn active" data-filter="all">All</button>
+        <button class="btn btn-sm btn-secondary filter-btn" data-filter="idea">💡 Ideas</button>
+        <button class="btn btn-sm btn-secondary filter-btn" data-filter="draft">📝 Drafts</button>
+        <button class="btn btn-sm btn-secondary filter-btn" data-filter="scheduled">📆 Scheduled</button>
+        <button class="btn btn-sm btn-secondary filter-btn" data-filter="published">✅ Published</button>
+      </div>
+      <div id="postsList"></div>
+    </div>
+
+    <!-- Ideas View -->
+    <div id="view-ideas" class="ideas-container view-content" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="openNewIdea()">+ New Idea</button>
+      </div>
+      <div id="ideasList"></div>
+    </div>
+
+    <!-- Stats View -->
+    <div id="view-stats" class="stats-container view-content" style="display:none">
+      <div id="statsContent"></div>
+    </div>
+
+    <!-- Pillars View -->
+    <div id="view-pillars" class="pillars-container view-content" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <p style="font-size:13px;color:var(--text2)">Content pillars help you maintain a balanced mix of topics.</p>
+        <button class="btn btn-sm btn-primary" onclick="addPillar()">+ Add Pillar</button>
+      </div>
+      <div id="pillarsList"></div>
+    </div>
+
+    <!-- Templates View -->
+    <div id="view-templates" class="templates-container view-content" style="display:none">
+      <div id="templatesList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Post Modal -->
+<div class="modal-overlay" id="postModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="postModalTitle">New Post</h3>
+      <button onclick="closeModal('postModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Title</label>
+        <input type="text" id="postTitle" placeholder="Post title or hook..." />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Platform</label>
+          <select id="postPlatform">
+            <option value="linkedin">LinkedIn</option>
+            <option value="twitter">Twitter</option>
+            <option value="blog">Blog</option>
+            <option value="newsletter">Newsletter</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="postStatus">
+            <option value="idea">💡 Idea</option>
+            <option value="draft">📝 Draft</option>
+            <option value="scheduled">📆 Scheduled</option>
+            <option value="published">✅ Published</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Content Pillar</label>
+          <select id="postPillar"></select>
+        </div>
+        <div class="field">
+          <label>Scheduled Date</label>
+          <input type="date" id="postDate" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Content</label>
+        <textarea id="postContent" placeholder="Write your post content here..."></textarea>
+        <div class="char-count" id="charCount">0 chars</div>
+      </div>
+      <div class="field">
+        <label>Tags (press Enter to add)</label>
+        <div class="tag-input" id="tagInput">
+          <input type="text" id="tagField" placeholder="Add tag..." />
+        </div>
+      </div>
+      <div class="field">
+        <label>Notes (internal, not published)</label>
+        <textarea id="postNotes" placeholder="Any notes, links, references..." style="min-height:60px"></textarea>
+      </div>
+      <div class="field">
+        <label>Engagement (after publishing)</label>
+        <div class="analytics-row">
+          <div class="field"><label style="font-size:11px">👍 Likes</label><input type="number" id="postLikes" min="0" value="0" /></div>
+          <div class="field"><label style="font-size:11px">💬 Comments</label><input type="number" id="postComments" min="0" value="0" /></div>
+          <div class="field"><label style="font-size:11px">🔄 Shares</label><input type="number" id="postShares" min="0" value="0" /></div>
+          <div class="field"><label style="font-size:11px">👁️ Views</label><input type="number" id="postViews" min="0" value="0" /></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="deletePostBtn" onclick="deletePost()" style="margin-right:auto;display:none">🗑️ Delete</button>
+      <button class="btn btn-secondary" onclick="closeModal('postModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePost()">Save Post</button>
+    </div>
+  </div>
+</div>
+
+<!-- Idea Modal -->
+<div class="modal-overlay" id="ideaModal">
+  <div class="modal" style="width:440px">
+    <div class="modal-header">
+      <h3 id="ideaModalTitle">New Idea</h3>
+      <button onclick="closeModal('ideaModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Idea</label>
+        <input type="text" id="ideaTitle" placeholder="Content idea..." />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Priority</label>
+          <select id="ideaPriority">
+            <option value="high">🔴 High</option>
+            <option value="medium">🟡 Medium</option>
+            <option value="low">🟢 Low</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Platform</label>
+          <select id="ideaPlatform">
+            <option value="">Any</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="twitter">Twitter</option>
+            <option value="blog">Blog</option>
+            <option value="newsletter">Newsletter</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="ideaNotes" placeholder="Hook ideas, angles, references..." style="min-height:80px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="deleteIdeaBtn" onclick="deleteIdea()" style="margin-right:auto;display:none">🗑️ Delete</button>
+      <button class="btn btn-secondary" onclick="closeModal('ideaModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveIdea()">Save Idea</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="importFile" accept=".json" style="display:none" />
+
+<script>
+// State
+let state = {
+  posts: [],
+  ideas: [],
+  pillars: [
+    { id:'p1', name:'Building in Public', color:'#6c63ff' },
+    { id:'p2', name:'Product Insights', color:'#3b82f6' },
+    { id:'p3', name:'Career & Job Hunt', color:'#22c55e' },
+    { id:'p4', name:'Technical Deep Dives', color:'#f97316' },
+    { id:'p5', name:'Founder Lessons', color:'#ec4899' },
+    { id:'p6', name:'Industry Trends', color:'#06b6d4' }
+  ],
+  currentView: 'calendar',
+  currentMonth: new Date().getMonth(),
+  currentYear: new Date().getFullYear(),
+  editingPostId: null,
+  editingIdeaId: null,
+  tags: [],
+  listFilter: 'all',
+  searchQuery: ''
+};
+
+const CHAR_LIMITS = { linkedin:3000, twitter:280, blog:99999, newsletter:99999 };
+
+const TEMPLATES = [
+  { name:'LinkedIn — Storytelling Hook', platform:'linkedin', desc:'Personal story → lesson → CTA', template:`I [did something unexpected] last week.\n\nHere's what happened:\n\n[3-5 short paragraphs telling the story]\n\nThe lesson?\n\n[1-2 sentences with the insight]\n\n---\n\nIf you're [target audience], [CTA or question].\n\n#BuildingInPublic #ProductManagement` },
+  { name:'LinkedIn — Listicle', platform:'linkedin', desc:'Numbered insights, easy to skim', template:`[Number] things I learned [doing X] in [timeframe]:\n\n1. [Point] — [one-line explanation]\n2. [Point] — [one-line explanation]\n3. [Point] — [one-line explanation]\n4. [Point] — [one-line explanation]\n5. [Point] — [one-line explanation]\n\nWhich resonates most? Drop a number below 👇\n\n#ProductManagement #BuildingInPublic` },
+  { name:'Twitter — Thread Opener', platform:'twitter', desc:'Hook tweet → thread', template:`[Bold claim or surprising stat] 🧵\n\n---\n\n1/ [First point with context]\n\n2/ [Second point]\n\n3/ [Third point]\n\n4/ [Wrap up + CTA]\n\nRetweet the first tweet if this helped 🙏` },
+  { name:'Twitter — Hot Take', platform:'twitter', desc:'Contrarian opinion that sparks engagement', template:`Unpopular opinion:\n\n[Your contrarian take on industry topic]\n\nHere's why 👇` },
+  { name:'LinkedIn — Build in Public Update', platform:'linkedin', desc:'Share what you shipped this week', template:`Week [X] of building [product name] in public:\n\n📊 Numbers:\n→ [Metric 1]\n→ [Metric 2]\n→ [Metric 3]\n\n🚀 Shipped:\n→ [Feature/thing 1]\n→ [Feature/thing 2]\n\n🧠 Learned:\n→ [Insight]\n\n🎯 Next week:\n→ [Goal]\n\nFollow along → [link]\n\n#BuildingInPublic` },
+  { name:'LinkedIn — Lesson from Failure', platform:'linkedin', desc:'Vulnerability → credibility → wisdom', template:`I failed at [thing] and it taught me everything.\n\n[2-3 paragraphs on what happened]\n\nWhat I'd do differently:\n\n→ [Point 1]\n→ [Point 2]\n→ [Point 3]\n\nFailure isn't the opposite of success. It's the tuition.\n\n#Lessons #ProductManagement` }
+];
+
+// Load
+function loadState() {
+  const saved = localStorage.getItem('contentPlanner');
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    state = { ...state, ...parsed };
+  }
+  // Seed demo data if empty
+  if (state.posts.length === 0) seedDemo();
+}
+
+function saveState() {
+  localStorage.setItem('contentPlanner', JSON.stringify({
+    posts: state.posts,
+    ideas: state.ideas,
+    pillars: state.pillars
+  }));
+}
+
+function seedDemo() {
+  const today = new Date();
+  const d = (offset) => {
+    const dt = new Date(today);
+    dt.setDate(dt.getDate() + offset);
+    return dt.toISOString().split('T')[0];
+  };
+  state.posts = [
+    { id:'demo1', title:'I shipped a product in 13 days. Here\'s the brutally honest breakdown.', platform:'linkedin', status:'published', pillar:'p1', date:d(-5), content:'13 days ago I had an idea.\n\nToday it\'s live, has users, and is generating revenue.\n\nHere\'s exactly how:\n\nDay 1-3: Validation (talked to 12 people)\nDay 4-7: MVP build (no frameworks, vanilla JS)\nDay 8-10: Landing page + waitlist\nDay 11-12: Beta launch to first 20 users\nDay 13: Public launch\n\nThe key? I didn\'t ask for permission. I shipped.\n\n#BuildingInPublic #UTMStamp', tags:['shipping','speed','mvp'], notes:'Got good engagement on this one', likes:142, comments:38, shares:12, views:8500 },
+    { id:'demo2', title:'5 product metrics that actually matter (the rest are vanity)', platform:'linkedin', status:'published', pillar:'p2', date:d(-3), content:'Stop tracking DAU/MAU ratios.\n\nHere are 5 metrics that actually drive decisions:\n\n1. Time to Value — how fast do users get their "aha" moment?\n2. Activation Rate — % who complete core action in first session\n3. Net Revenue Retention — are existing users paying more over time?\n4. Feature Adoption Depth — how many features does avg user touch?\n5. Support Ticket → Feature ratio — is your roadmap reactive or strategic?\n\nVanity metrics make dashboards pretty.\nThese metrics make products better.\n\nWhich do you track? 👇', tags:['metrics','product'], notes:'', likes:89, comments:22, shares:8, views:5200 },
+    { id:'demo3', title:'The "overnight build" experiment — why I ship a project every night', platform:'linkedin', status:'scheduled', pillar:'p1', date:d(2), content:'Every night at 1 AM, my AI assistant builds a complete project while I sleep.\n\n7 days in, I have:\n→ An idea validator\n→ A job pipeline Kanban\n→ An offer comparison tool\n→ A networking CRM\n→ A professional invoice generator\n→ A ship log tracker\n→ A content planner\n\nAll functional. All built overnight.\n\nThe future of shipping is AI-augmented humans.\n\n#BuildingInPublic #AI', tags:['ai','shipping','overnight'], notes:'Write this after day 7', likes:0, comments:0, shares:0, views:0 },
+    { id:'demo4', title:'Thread: How I went from a basement startup to $15M revenue impact', platform:'twitter', status:'draft', pillar:'p5', date:d(4), content:'I started my career in a professor\'s basement while my friends took TCS/Infosys jobs.\n\n10 years later: $15M revenue impact, 4 products 0→1, 30-person team.\n\nHere\'s the unfiltered story 🧵', tags:['career','story','thread'], notes:'Need to expand the thread points', likes:0, comments:0, shares:0, views:0 },
+    { id:'demo5', title:'Why "move fast and break things" is terrible advice for product leaders', platform:'linkedin', status:'idea', pillar:'p2', date:d(7), content:'', tags:['hot-take','product'], notes:'Angle: move fast but break things INTENTIONALLY. Controlled experiments vs chaos.', likes:0, comments:0, shares:0, views:0 }
+  ];
+  state.ideas = [
+    { id:'idea1', title:'Write about the ZYOD QR code story — 50 lines saving $180K', priority:'high', platform:'linkedin', notes:'Great hook: "50 lines of code. $180,000 saved. Here\'s how."' },
+    { id:'idea2', title:'Twitter thread on IoT hardware lessons from Fourzip days', priority:'medium', platform:'twitter', notes:'Custom RTOS, Chinese vendor negotiations, hardware-software gap' },
+    { id:'idea3', title:'LinkedIn post on why PMs should learn to code (with examples)', priority:'medium', platform:'linkedin', notes:'Use real examples from career — scraping, prototyping, debugging' },
+    { id:'idea4', title:'Hot take: Most product roadmaps are just wish lists with dates', priority:'high', platform:'linkedin', notes:'Tie to outcomes-based planning. Use ZYOD as example.' },
+    { id:'idea5', title:'Newsletter: The solo builder\'s tech stack in 2026', priority:'low', platform:'newsletter', notes:'What I use: vanilla JS, Claude, OpenClaw, simple hosting' }
+  ];
+  saveState();
+}
+
+// Views
+function switchView(view) {
+  state.currentView = view;
+  document.querySelectorAll('.view-content').forEach(v => v.style.display = 'none');
+  document.getElementById('view-' + view).style.display = '';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+  const titles = { calendar:'Calendar', list:'All Posts', ideas:'Ideas Backlog', stats:'Analytics', pillars:'Content Pillars', templates:'Templates' };
+  document.getElementById('viewTitle').textContent = titles[view] || view;
+  render();
+}
+
+// Calendar
+function renderCalendar() {
+  const grid = document.getElementById('calendarGrid');
+  const year = state.currentYear, month = state.currentMonth;
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrev = new Date(year, month, 0).getDate();
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  
+  document.getElementById('calendarTitle').textContent = new Date(year, month).toLocaleDateString('en-US', { month:'long', year:'numeric' });
+  
+  let html = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-header">${d}</div>`).join('');
+  
+  // Previous month days
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const day = daysInPrev - i;
+    const m = month === 0 ? 11 : month - 1;
+    const y = month === 0 ? year - 1 : year;
+    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    html += calDayHTML(day, dateStr, true, false);
+  }
+  
+  // Current month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isToday = dateStr === todayStr;
+    html += calDayHTML(day, dateStr, false, isToday);
+  }
+  
+  // Next month
+  const totalCells = firstDay + daysInMonth;
+  const remaining = (7 - (totalCells % 7)) % 7;
+  for (let day = 1; day <= remaining; day++) {
+    const m = month === 11 ? 0 : month + 1;
+    const y = month === 11 ? year + 1 : year;
+    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    html += calDayHTML(day, dateStr, true, false);
+  }
+  
+  grid.innerHTML = html;
+  
+  // Drag events
+  grid.querySelectorAll('.cal-post').forEach(el => {
+    el.draggable = true;
+    el.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', el.dataset.postId); el.classList.add('dragging'); });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+    el.addEventListener('click', e => { e.stopPropagation(); openEditPost(el.dataset.postId); });
+  });
+  grid.querySelectorAll('.cal-day').forEach(el => {
+    el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+    el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+    el.addEventListener('drop', e => {
+      e.preventDefault(); el.classList.remove('drag-over');
+      const postId = e.dataTransfer.getData('text/plain');
+      const post = state.posts.find(p => p.id === postId);
+      if (post) { post.date = el.dataset.date; saveState(); renderCalendar(); }
+    });
+    el.addEventListener('click', () => { openNewPost(el.dataset.date); });
+  });
+}
+
+function calDayHTML(day, dateStr, otherMonth, isToday) {
+  const posts = getFilteredPosts().filter(p => p.date === dateStr);
+  const shown = posts.slice(0, 3);
+  const more = posts.length - 3;
+  return `<div class="cal-day ${otherMonth?'other-month':''} ${isToday?'today':''}" data-date="${dateStr}">
+    <div class="cal-day-num">${day}</div>
+    ${shown.map(p => `<div class="cal-post status-${p.status}" data-post-id="${p.id}" title="${esc(p.title)}">${platformEmoji(p.platform)} ${esc(p.title)}</div>`).join('')}
+    ${more > 0 ? `<div class="cal-more">+${more} more</div>` : ''}
+  </div>`;
+}
+
+function changeMonth(delta) { state.currentMonth += delta; if(state.currentMonth > 11) { state.currentMonth=0; state.currentYear++; } if(state.currentMonth < 0) { state.currentMonth=11; state.currentYear--; } renderCalendar(); }
+function goToToday() { const t = new Date(); state.currentMonth = t.getMonth(); state.currentYear = t.getFullYear(); renderCalendar(); }
+
+// List
+function renderList() {
+  const posts = getFilteredPosts().filter(p => state.listFilter === 'all' || p.status === state.listFilter);
+  posts.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  
+  document.getElementById('postsList').innerHTML = posts.length === 0 
+    ? '<p style="color:var(--text3);text-align:center;padding:40px">No posts found</p>'
+    : posts.map(p => {
+      const pillar = state.pillars.find(pl => pl.id === p.pillar);
+      return `<div class="post-card" onclick="openEditPost('${p.id}')">
+        <div class="post-card-header">
+          <span class="platform-tag platform-${p.platform}">${p.platform.toUpperCase()}</span>
+          <span class="post-card-title">${esc(p.title)}</span>
+          <span class="status-badge status-${p.status}">${statusLabel(p.status)}</span>
+        </div>
+        ${p.content ? `<div class="post-card-preview">${esc(p.content)}</div>` : ''}
+        <div class="post-card-meta">
+          <span>📅 ${p.date || 'No date'}</span>
+          ${pillar ? `<span class="pillar" style="border-left:2px solid ${pillar.color};padding-left:6px">${pillar.name}</span>` : ''}
+          ${p.tags && p.tags.length ? `<span>${p.tags.map(t=>'#'+t).join(' ')}</span>` : ''}
+          ${p.status === 'published' && p.likes ? `<span>👍${p.likes} 💬${p.comments} 🔄${p.shares}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+}
+
+// Ideas
+function renderIdeas() {
+  const ideas = state.ideas.filter(i => !state.searchQuery || i.title.toLowerCase().includes(state.searchQuery.toLowerCase()));
+  document.getElementById('ideasList').innerHTML = ideas.length === 0
+    ? '<p style="color:var(--text3);text-align:center;padding:40px">No ideas yet — add some!</p>'
+    : ideas.map(i => `<div class="idea-card">
+      <div class="idea-priority ${i.priority}"></div>
+      <div class="idea-content" style="cursor:pointer" onclick="openEditIdea('${i.id}')">
+        <div class="idea-title">${esc(i.title)}</div>
+        <div class="idea-notes">${i.platform ? platformEmoji(i.platform)+' '+i.platform : ''} ${i.notes ? '— '+esc(i.notes).substring(0,80) : ''}</div>
+      </div>
+      <div class="idea-actions">
+        <button class="btn btn-sm btn-secondary" onclick="promoteIdea('${i.id}')" title="Convert to post">📝→</button>
+      </div>
+    </div>`).join('');
+}
+
+// Stats
+function renderStats() {
+  const posts = state.posts;
+  const published = posts.filter(p => p.status === 'published');
+  const scheduled = posts.filter(p => p.status === 'scheduled');
+  const drafts = posts.filter(p => p.status === 'draft');
+  const totalLikes = published.reduce((s,p) => s + (p.likes||0), 0);
+  const totalComments = published.reduce((s,p) => s + (p.comments||0), 0);
+  const totalViews = published.reduce((s,p) => s + (p.views||0), 0);
+  
+  // Posting streak
+  const streak = calculateStreak();
+  
+  // Posts per platform
+  const platforms = {};
+  posts.forEach(p => { platforms[p.platform] = (platforms[p.platform]||0) + 1; });
+  
+  // Posts per pillar
+  const pillarCounts = {};
+  posts.forEach(p => { if(p.pillar) pillarCounts[p.pillar] = (pillarCounts[p.pillar]||0) + 1; });
+  
+  // Weekly posts (last 8 weeks)
+  const weeklyData = getWeeklyData();
+  const maxWeekly = Math.max(...weeklyData.map(w => w.count), 1);
+  
+  // Heatmap (last 90 days)
+  const heatmapData = getHeatmapData();
+  
+  let html = `
+    <div class="streak-display">
+      <div class="streak-fire">${streak > 0 ? '🔥' : '❄️'}</div>
+      <div class="streak-number">${streak}</div>
+      <div class="streak-label">${streak === 1 ? 'day' : 'days'} posting streak</div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value">${published.length}</div><div class="stat-label">Published</div></div>
+      <div class="stat-card"><div class="stat-value">${scheduled.length}</div><div class="stat-label">Scheduled</div></div>
+      <div class="stat-card"><div class="stat-value">${drafts.length}</div><div class="stat-label">Drafts</div></div>
+      <div class="stat-card"><div class="stat-value">${state.ideas.length}</div><div class="stat-label">Ideas in Backlog</div></div>
+      <div class="stat-card"><div class="stat-value">${totalLikes.toLocaleString()}</div><div class="stat-label">Total Likes</div></div>
+      <div class="stat-card"><div class="stat-value">${totalComments.toLocaleString()}</div><div class="stat-label">Total Comments</div></div>
+      <div class="stat-card"><div class="stat-value">${totalViews.toLocaleString()}</div><div class="stat-label">Total Views</div></div>
+      <div class="stat-card"><div class="stat-value">${published.length ? (totalLikes/published.length).toFixed(0) : 0}</div><div class="stat-label">Avg Likes/Post</div></div>
+    </div>
+    <div class="chart-section">
+      <h3>📈 Posts per Week (last 8 weeks)</h3>
+      <div class="bar-chart">
+        ${weeklyData.map(w => `<div class="bar-col">
+          <div class="bar-value">${w.count}</div>
+          <div class="bar" style="height:${(w.count/maxWeekly)*100}%;background:var(--accent)"></div>
+          <div class="bar-label">${w.label}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="chart-section">
+      <h3>🎯 Content Pillar Mix</h3>
+      <div class="pillar-breakdown">
+        ${state.pillars.map(p => `<div class="pillar-item">
+          <div class="pillar-color" style="background:${p.color}"></div>
+          <div class="pillar-info">
+            <div class="pillar-name">${p.name}</div>
+            <div class="pillar-count">${pillarCounts[p.id]||0} posts</div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="chart-section">
+      <h3>📊 Platform Distribution</h3>
+      <div class="pillar-breakdown">
+        ${Object.entries(platforms).map(([p,c]) => `<div class="pillar-item">
+          <span style="font-size:16px">${platformEmoji(p)}</span>
+          <div class="pillar-info">
+            <div class="pillar-name">${p}</div>
+            <div class="pillar-count">${c} posts</div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="chart-section">
+      <h3>🗓️ Activity Heatmap (90 days)</h3>
+      <div class="heatmap">
+        ${heatmapData.map(d => `<div class="heatmap-cell ${d.level}" title="${d.date}: ${d.count} post${d.count!==1?'s':''}"></div>`).join('')}
+      </div>
+    </div>`;
+  
+  document.getElementById('statsContent').innerHTML = html;
+}
+
+function calculateStreak() {
+  const published = state.posts.filter(p => p.status === 'published' && p.date);
+  const dates = new Set(published.map(p => p.date));
+  let streak = 0;
+  const d = new Date();
+  while(true) {
+    const ds = d.toISOString().split('T')[0];
+    if (dates.has(ds)) { streak++; d.setDate(d.getDate()-1); }
+    else if (streak === 0) { d.setDate(d.getDate()-1); } // allow today to not have a post yet
+    else break;
+  }
+  return streak;
+}
+
+function getWeeklyData() {
+  const weeks = [];
+  for (let i = 7; i >= 0; i--) {
+    const start = new Date(); start.setDate(start.getDate() - (i*7+6));
+    const end = new Date(); end.setDate(end.getDate() - i*7);
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    const count = state.posts.filter(p => p.date >= startStr && p.date <= endStr).length;
+    weeks.push({ label: start.toLocaleDateString('en-US',{month:'short',day:'numeric'}), count });
+  }
+  return weeks;
+}
+
+function getHeatmapData() {
+  const data = [];
+  const postDates = {};
+  state.posts.forEach(p => { if(p.date) postDates[p.date] = (postDates[p.date]||0)+1; });
+  for (let i = 89; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = d.toISOString().split('T')[0];
+    const count = postDates[ds] || 0;
+    const level = count === 0 ? '' : count === 1 ? 'l1' : count === 2 ? 'l2' : count === 3 ? 'l3' : 'l4';
+    data.push({ date:ds, count, level });
+  }
+  return data;
+}
+
+// Pillars
+function renderPillars() {
+  document.getElementById('pillarsList').innerHTML = state.pillars.map((p,i) => `<div class="pillar-setting">
+    <input type="color" value="${p.color}" onchange="updatePillar(${i},'color',this.value)" />
+    <input type="text" value="${esc(p.name)}" onchange="updatePillar(${i},'name',this.value)" />
+    <button class="btn btn-sm btn-secondary" onclick="removePillar(${i})">✕</button>
+  </div>`).join('');
+}
+
+function updatePillar(i, key, val) { state.pillars[i][key] = val; saveState(); }
+function addPillar() { state.pillars.push({ id:'p'+Date.now(), name:'New Pillar', color:'#888888' }); saveState(); renderPillars(); }
+function removePillar(i) { state.pillars.splice(i,1); saveState(); renderPillars(); }
+
+// Templates
+function renderTemplates() {
+  document.getElementById('templatesList').innerHTML = TEMPLATES.map(t => `<div class="template-card" onclick="useTemplate(${JSON.stringify(t).replace(/"/g,'&quot;').replace(/'/g,'&#39;')})">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span class="platform-tag platform-${t.platform}">${t.platform.toUpperCase()}</span>
+      <h4>${t.name}</h4>
+    </div>
+    <p>${t.desc}</p>
+    <pre>${esc(t.template)}</pre>
+  </div>`).join('');
+}
+
+function useTemplate(t) {
+  openNewPost();
+  document.getElementById('postPlatform').value = t.platform;
+  document.getElementById('postContent').value = t.template;
+  updateCharCount();
+}
+
+// Post Modal
+function openNewPost(date) {
+  state.editingPostId = null;
+  state.tags = [];
+  document.getElementById('postModalTitle').textContent = 'New Post';
+  document.getElementById('deletePostBtn').style.display = 'none';
+  document.getElementById('postTitle').value = '';
+  document.getElementById('postPlatform').value = 'linkedin';
+  document.getElementById('postStatus').value = 'draft';
+  document.getElementById('postDate').value = date || new Date().toISOString().split('T')[0];
+  document.getElementById('postContent').value = '';
+  document.getElementById('postNotes').value = '';
+  document.getElementById('postLikes').value = 0;
+  document.getElementById('postComments').value = 0;
+  document.getElementById('postShares').value = 0;
+  document.getElementById('postViews').value = 0;
+  updatePillarSelect();
+  document.getElementById('postPillar').value = state.pillars[0]?.id || '';
+  renderTags();
+  updateCharCount();
+  openModal('postModal');
+  document.getElementById('postTitle').focus();
+}
+
+function openEditPost(id) {
+  const post = state.posts.find(p => p.id === id);
+  if (!post) return;
+  state.editingPostId = id;
+  state.tags = [...(post.tags||[])];
+  document.getElementById('postModalTitle').textContent = 'Edit Post';
+  document.getElementById('deletePostBtn').style.display = '';
+  document.getElementById('postTitle').value = post.title;
+  document.getElementById('postPlatform').value = post.platform;
+  document.getElementById('postStatus').value = post.status;
+  document.getElementById('postDate').value = post.date || '';
+  document.getElementById('postContent').value = post.content || '';
+  document.getElementById('postNotes').value = post.notes || '';
+  document.getElementById('postLikes').value = post.likes || 0;
+  document.getElementById('postComments').value = post.comments || 0;
+  document.getElementById('postShares').value = post.shares || 0;
+  document.getElementById('postViews').value = post.views || 0;
+  updatePillarSelect();
+  document.getElementById('postPillar').value = post.pillar || '';
+  renderTags();
+  updateCharCount();
+  openModal('postModal');
+}
+
+function savePost() {
+  const title = document.getElementById('postTitle').value.trim();
+  if (!title) { document.getElementById('postTitle').focus(); return; }
+  
+  const data = {
+    title,
+    platform: document.getElementById('postPlatform').value,
+    status: document.getElementById('postStatus').value,
+    pillar: document.getElementById('postPillar').value,
+    date: document.getElementById('postDate').value,
+    content: document.getElementById('postContent').value,
+    notes: document.getElementById('postNotes').value,
+    tags: [...state.tags],
+    likes: parseInt(document.getElementById('postLikes').value) || 0,
+    comments: parseInt(document.getElementById('postComments').value) || 0,
+    shares: parseInt(document.getElementById('postShares').value) || 0,
+    views: parseInt(document.getElementById('postViews').value) || 0
+  };
+  
+  if (state.editingPostId) {
+    const idx = state.posts.findIndex(p => p.id === state.editingPostId);
+    if (idx >= 0) state.posts[idx] = { ...state.posts[idx], ...data };
+  } else {
+    state.posts.push({ id: 'post' + Date.now(), ...data });
+  }
+  
+  saveState();
+  closeModal('postModal');
+  render();
+}
+
+function deletePost() {
+  if (!state.editingPostId) return;
+  if (!confirm('Delete this post?')) return;
+  state.posts = state.posts.filter(p => p.id !== state.editingPostId);
+  saveState();
+  closeModal('postModal');
+  render();
+}
+
+// Idea Modal
+function openNewIdea() {
+  state.editingIdeaId = null;
+  document.getElementById('ideaModalTitle').textContent = 'New Idea';
+  document.getElementById('deleteIdeaBtn').style.display = 'none';
+  document.getElementById('ideaTitle').value = '';
+  document.getElementById('ideaPriority').value = 'medium';
+  document.getElementById('ideaPlatform').value = '';
+  document.getElementById('ideaNotes').value = '';
+  openModal('ideaModal');
+  document.getElementById('ideaTitle').focus();
+}
+
+function openEditIdea(id) {
+  const idea = state.ideas.find(i => i.id === id);
+  if (!idea) return;
+  state.editingIdeaId = id;
+  document.getElementById('ideaModalTitle').textContent = 'Edit Idea';
+  document.getElementById('deleteIdeaBtn').style.display = '';
+  document.getElementById('ideaTitle').value = idea.title;
+  document.getElementById('ideaPriority').value = idea.priority;
+  document.getElementById('ideaPlatform').value = idea.platform || '';
+  document.getElementById('ideaNotes').value = idea.notes || '';
+  openModal('ideaModal');
+}
+
+function saveIdea() {
+  const title = document.getElementById('ideaTitle').value.trim();
+  if (!title) { document.getElementById('ideaTitle').focus(); return; }
+  
+  const data = {
+    title,
+    priority: document.getElementById('ideaPriority').value,
+    platform: document.getElementById('ideaPlatform').value,
+    notes: document.getElementById('ideaNotes').value
+  };
+  
+  if (state.editingIdeaId) {
+    const idx = state.ideas.findIndex(i => i.id === state.editingIdeaId);
+    if (idx >= 0) state.ideas[idx] = { ...state.ideas[idx], ...data };
+  } else {
+    state.ideas.push({ id: 'idea' + Date.now(), ...data });
+  }
+  
+  saveState();
+  closeModal('ideaModal');
+  render();
+}
+
+function deleteIdea() {
+  if (!state.editingIdeaId) return;
+  state.ideas = state.ideas.filter(i => i.id !== state.editingIdeaId);
+  saveState();
+  closeModal('ideaModal');
+  render();
+}
+
+function promoteIdea(id) {
+  const idea = state.ideas.find(i => i.id === id);
+  if (!idea) return;
+  openNewPost();
+  document.getElementById('postTitle').value = idea.title;
+  if (idea.platform) document.getElementById('postPlatform').value = idea.platform;
+  document.getElementById('postNotes').value = idea.notes || '';
+  document.getElementById('postStatus').value = 'draft';
+  // Remove idea after promoting
+  state.ideas = state.ideas.filter(i => i.id !== id);
+  saveState();
+  render();
+}
+
+// Tags
+function renderTags() {
+  const container = document.getElementById('tagInput');
+  const input = document.getElementById('tagField');
+  container.querySelectorAll('.tag').forEach(t => t.remove());
+  state.tags.forEach(t => {
+    const el = document.createElement('span');
+    el.className = 'tag';
+    el.innerHTML = `${esc(t)} <button onclick="removeTag('${esc(t)}')">&times;</button>`;
+    container.insertBefore(el, input);
+  });
+}
+
+function removeTag(tag) { state.tags = state.tags.filter(t => t !== tag); renderTags(); }
+
+// Pillar select
+function updatePillarSelect() {
+  const sel = document.getElementById('postPillar');
+  sel.innerHTML = '<option value="">None</option>' + state.pillars.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+}
+
+// Char count
+function updateCharCount() {
+  const platform = document.getElementById('postPlatform').value;
+  const len = document.getElementById('postContent').value.length;
+  const limit = CHAR_LIMITS[platform];
+  const el = document.getElementById('charCount');
+  el.textContent = `${len.toLocaleString()} / ${limit === 99999 ? '∞' : limit.toLocaleString()} chars`;
+  el.className = 'char-count' + (len > limit ? ' over' : len > limit * 0.9 ? ' warn' : '');
+}
+
+// Modal
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Helpers
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function platformEmoji(p) { return { linkedin:'🔵', twitter:'🐦', blog:'📝', newsletter:'📧' }[p] || '📄'; }
+function statusLabel(s) { return { idea:'💡 Idea', draft:'📝 Draft', scheduled:'📆 Scheduled', published:'✅ Published' }[s] || s; }
+
+function getFilteredPosts() {
+  if (!state.searchQuery) return state.posts;
+  const q = state.searchQuery.toLowerCase();
+  return state.posts.filter(p => p.title.toLowerCase().includes(q) || (p.content||'').toLowerCase().includes(q) || (p.tags||[]).some(t => t.toLowerCase().includes(q)));
+}
+
+// Render
+function render() {
+  document.getElementById('postCount').textContent = state.posts.length;
+  document.getElementById('ideaCount').textContent = state.ideas.length;
+  
+  switch(state.currentView) {
+    case 'calendar': renderCalendar(); break;
+    case 'list': renderList(); break;
+    case 'ideas': renderIdeas(); break;
+    case 'stats': renderStats(); break;
+    case 'pillars': renderPillars(); break;
+    case 'templates': renderTemplates(); break;
+  }
+}
+
+// Theme
+function toggleTheme() {
+  document.documentElement.classList.toggle('light');
+  localStorage.setItem('cpTheme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
+}
+
+// Import/Export
+function exportData() {
+  const data = JSON.stringify({ posts: state.posts, ideas: state.ideas, pillars: state.pillars, exported: new Date().toISOString() }, null, 2);
+  const blob = new Blob([data], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `content-planner-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+}
+
+function importData() { document.getElementById('importFile').click(); }
+
+// Events
+document.getElementById('importFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.posts) state.posts = data.posts;
+      if (data.ideas) state.ideas = data.ideas;
+      if (data.pillars) state.pillars = data.pillars;
+      saveState();
+      render();
+      alert('Imported successfully!');
+    } catch(e) { alert('Invalid file'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => switchView(el.dataset.view));
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  state.searchQuery = e.target.value;
+  render();
+});
+
+document.getElementById('tagField').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const val = e.target.value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
+    if (val && !state.tags.includes(val)) { state.tags.push(val); renderTags(); }
+    e.target.value = '';
+  }
+});
+
+document.getElementById('postContent').addEventListener('input', updateCharCount);
+document.getElementById('postPlatform').addEventListener('change', updateCharCount);
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.listFilter = btn.dataset.filter;
+    renderList();
+  });
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') { closeModal('postModal'); closeModal('ideaModal'); e.target.blur(); }
+    return;
+  }
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openNewPost(); }
+  if (e.key === '/') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+  if (e.key === 'i' || e.key === 'I') { e.preventDefault(); openNewIdea(); }
+  if (e.key === 'Escape') { closeModal('postModal'); closeModal('ideaModal'); }
+  if (e.key === '1') switchView('calendar');
+  if (e.key === '2') switchView('list');
+  if (e.key === '3') switchView('ideas');
+  if (e.key === '4') switchView('stats');
+});
+
+// Init
+loadState();
+if (localStorage.getItem('cpTheme') === 'light') document.documentElement.classList.add('light');
+render();
+</script>
+</body>
+</html>

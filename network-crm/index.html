@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetMap — Networking CRM</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #242736;
+  --border: #2e3144;
+  --text: #e4e6f0;
+  --text2: #9498b0;
+  --accent: #6c63ff;
+  --accent2: #8b83ff;
+  --hot: #ff6b6b;
+  --warm: #ffa94d;
+  --cool: #74c0fc;
+  --cold: #868e96;
+  --green: #51cf66;
+  --danger: #ff6b6b;
+  --radius: 12px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* Header */
+.header { padding: 20px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 100; }
+.logo { font-size: 24px; font-weight: 800; background: linear-gradient(135deg, var(--accent), #ff6b9d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.logo span { font-size: 13px; font-weight: 400; -webkit-text-fill-color: var(--text2); margin-left: 8px; }
+.header-actions { display: flex; gap: 8px; }
+.header-actions button { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all .2s; }
+.header-actions button:hover { background: var(--accent); border-color: var(--accent); }
+.header-actions button.primary { background: var(--accent); border-color: var(--accent); }
+
+/* Stats Bar */
+.stats-bar { display: flex; gap: 16px; padding: 16px 32px; overflow-x: auto; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; min-width: 160px; flex-shrink: 0; }
+.stat-card .label { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card .value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+.stat-card .sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* Controls */
+.controls { display: flex; gap: 12px; padding: 16px 32px; flex-wrap: wrap; align-items: center; }
+.search-box { flex: 1; min-width: 200px; padding: 10px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; outline: none; }
+.search-box:focus { border-color: var(--accent); }
+.filter-btn { padding: 8px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); cursor: pointer; font-size: 13px; transition: all .2s; }
+.filter-btn:hover, .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Grid */
+.contacts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; padding: 0 32px 32px; }
+
+/* Contact Card */
+.contact-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; transition: all .2s; cursor: pointer; position: relative; }
+.contact-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.card-name { font-size: 18px; font-weight: 700; }
+.card-role { font-size: 13px; color: var(--text2); margin-top: 2px; }
+.warmth-badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.warmth-hot { background: rgba(255,107,107,0.15); color: var(--hot); }
+.warmth-warm { background: rgba(255,169,77,0.15); color: var(--warm); }
+.warmth-cool { background: rgba(116,192,252,0.15); color: var(--cool); }
+.warmth-cold { background: rgba(134,142,150,0.15); color: var(--cold); }
+.card-company { font-size: 14px; color: var(--accent2); margin-bottom: 8px; }
+.card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.tag { padding: 3px 8px; background: var(--surface2); border-radius: 6px; font-size: 11px; color: var(--text2); }
+.card-meta { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text2); border-top: 1px solid var(--border); padding-top: 10px; margin-top: 4px; }
+.followup-due { color: var(--danger); font-weight: 600; }
+.followup-ok { color: var(--green); }
+.card-actions { display: flex; gap: 4px; }
+.card-actions button { background: none; border: none; color: var(--text2); cursor: pointer; padding: 4px; font-size: 16px; border-radius: 4px; }
+.card-actions button:hover { color: var(--accent); background: var(--surface2); }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 200; justify-content: center; align-items: flex-start; padding: 40px 16px; overflow-y: auto; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 600px; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.modal h2 { font-size: 20px; margin-bottom: 20px; }
+.form-row { display: flex; gap: 12px; margin-bottom: 14px; }
+.form-group { flex: 1; }
+.form-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: inherit; outline: none; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+.form-group textarea { resize: vertical; min-height: 60px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.modal-actions button { padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); cursor: pointer; font-size: 14px; }
+.modal-actions .save-btn { background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.modal-actions .delete-btn { background: transparent; color: var(--danger); border-color: var(--danger); margin-right: auto; }
+
+/* Interaction Log */
+.interactions { margin-top: 16px; }
+.interactions h3 { font-size: 14px; color: var(--text2); margin-bottom: 8px; }
+.interaction-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; align-items: flex-start; }
+.interaction-item:last-child { border-bottom: none; }
+.interaction-type { padding: 2px 8px; border-radius: 4px; background: var(--surface2); font-size: 11px; text-transform: uppercase; min-width: 60px; text-align: center; flex-shrink: 0; margin-top: 2px; }
+.interaction-date { color: var(--text2); min-width: 80px; flex-shrink: 0; }
+.add-interaction { display: flex; gap: 8px; margin-top: 8px; }
+.add-interaction input, .add-interaction select { padding: 6px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; }
+.add-interaction input { flex: 1; }
+.add-interaction button { padding: 6px 12px; background: var(--accent); border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 12px; }
+
+/* Detail Panel */
+.detail-panel { max-height: 300px; overflow-y: auto; }
+
+/* Empty State */
+.empty-state { text-align: center; padding: 80px 20px; color: var(--text2); }
+.empty-state h3 { font-size: 20px; margin-bottom: 8px; color: var(--text); }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; background: var(--green); color: #000; border-radius: 8px; font-size: 14px; font-weight: 600; z-index: 300; opacity: 0; transform: translateY(10px); transition: all .3s; }
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .header { padding: 16px; }
+  .stats-bar { padding: 12px 16px; }
+  .controls { padding: 12px 16px; }
+  .contacts-grid { padding: 0 16px 16px; grid-template-columns: 1fr; }
+  .form-row { flex-direction: column; gap: 10px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">NetMap <span>Networking CRM</span></div>
+  <div class="header-actions">
+    <button onclick="importData()">📥 Import</button>
+    <button onclick="exportData()">📤 Export</button>
+    <button class="primary" onclick="openModal()">+ Add Contact</button>
+  </div>
+</div>
+
+<div class="stats-bar" id="statsBar"></div>
+
+<div class="controls">
+  <input class="search-box" id="searchBox" placeholder="Search contacts, companies, tags..." oninput="renderContacts()">
+  <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
+  <button class="filter-btn" data-filter="hot" onclick="setFilter('hot',this)">🔥 Hot</button>
+  <button class="filter-btn" data-filter="warm" onclick="setFilter('warm',this)">🌤 Warm</button>
+  <button class="filter-btn" data-filter="cool" onclick="setFilter('cool',this)">❄️ Cool</button>
+  <button class="filter-btn" data-filter="cold" onclick="setFilter('cold',this)">🧊 Cold</button>
+  <button class="filter-btn" data-filter="overdue" onclick="setFilter('overdue',this)">⚠️ Overdue</button>
+</div>
+
+<div class="contacts-grid" id="contactsGrid"></div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="contactModal">
+  <div class="modal">
+    <h2 id="modalTitle">Add Contact</h2>
+    <input type="hidden" id="editId">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Name *</label>
+        <input id="fName" placeholder="Full name">
+      </div>
+      <div class="form-group">
+        <label>Warmth</label>
+        <select id="fWarmth">
+          <option value="warm">🌤 Warm</option>
+          <option value="hot">🔥 Hot</option>
+          <option value="cool">❄️ Cool</option>
+          <option value="cold">🧊 Cold</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Company</label>
+        <input id="fCompany" placeholder="Company name">
+      </div>
+      <div class="form-group">
+        <label>Role / Title</label>
+        <input id="fRole" placeholder="e.g. VP Engineering">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Email</label>
+        <input id="fEmail" type="email" placeholder="email@example.com">
+      </div>
+      <div class="form-group">
+        <label>Phone</label>
+        <input id="fPhone" placeholder="+91 ...">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>LinkedIn</label>
+        <input id="fLinkedin" placeholder="https://linkedin.com/in/...">
+      </div>
+      <div class="form-group">
+        <label>Met Via</label>
+        <select id="fMetVia">
+          <option value="">—</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="referral">Referral</option>
+          <option value="event">Event</option>
+          <option value="cold-outreach">Cold Outreach</option>
+          <option value="recruiter">Recruiter</option>
+          <option value="colleague">Colleague</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tags (comma separated)</label>
+        <input id="fTags" placeholder="recruiter, hiring-manager, mentor, peer">
+      </div>
+      <div class="form-group">
+        <label>Follow-up By</label>
+        <input id="fFollowup" type="date">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="fNotes" rows="3" placeholder="Context, conversation topics, relationship notes..."></textarea>
+      </div>
+    </div>
+
+    <!-- Interactions (edit mode only) -->
+    <div id="interactionsSection" class="interactions" style="display:none;">
+      <h3>Interaction Log</h3>
+      <div id="interactionsList" class="detail-panel"></div>
+      <div class="add-interaction">
+        <select id="iType">
+          <option value="email">📧 Email</option>
+          <option value="call">📞 Call</option>
+          <option value="meeting">🤝 Meeting</option>
+          <option value="linkedin">💼 LinkedIn</option>
+          <option value="whatsapp">💬 WhatsApp</option>
+          <option value="referral">🔗 Referral</option>
+          <option value="other">📝 Other</option>
+        </select>
+        <input id="iNote" placeholder="Quick note about this interaction">
+        <button onclick="addInteraction()">Add</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="delete-btn" id="deleteBtn" style="display:none" onclick="deleteContact()">🗑 Delete</button>
+      <button onclick="closeModal()">Cancel</button>
+      <button class="save-btn" onclick="saveContact()">Save Contact</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'netmap_contacts';
+let contacts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+let currentFilter = 'all';
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(contacts)); }
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const diff = (new Date(dateStr) - new Date()) / (1000*60*60*24);
+  return Math.ceil(diff);
+}
+
+function formatDate(d) {
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function renderStats() {
+  const total = contacts.length;
+  const hot = contacts.filter(c => c.warmth === 'hot').length;
+  const overdue = contacts.filter(c => { const d = daysUntil(c.followup); return d !== null && d < 0; }).length;
+  const thisWeek = contacts.filter(c => { const d = daysUntil(c.followup); return d !== null && d >= 0 && d <= 7; }).length;
+  const totalInteractions = contacts.reduce((s,c) => s + (c.interactions||[]).length, 0);
+  const companies = new Set(contacts.map(c => c.company).filter(Boolean)).size;
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-card"><div class="label">Contacts</div><div class="value">${total}</div><div class="sub">${companies} companies</div></div>
+    <div class="stat-card"><div class="label">🔥 Hot Leads</div><div class="value" style="color:var(--hot)">${hot}</div><div class="sub">Active connections</div></div>
+    <div class="stat-card"><div class="label">⚠️ Overdue</div><div class="value" style="color:${overdue?'var(--danger)':'var(--green)'}">${overdue}</div><div class="sub">Need follow-up</div></div>
+    <div class="stat-card"><div class="label">📅 This Week</div><div class="value" style="color:var(--warm)">${thisWeek}</div><div class="sub">Follow-ups due</div></div>
+    <div class="stat-card"><div class="label">💬 Interactions</div><div class="value">${totalInteractions}</div><div class="sub">Total logged</div></div>
+  `;
+}
+
+function renderContacts() {
+  const query = document.getElementById('searchBox').value.toLowerCase();
+  let filtered = contacts.filter(c => {
+    if (query) {
+      const searchable = [c.name, c.company, c.role, c.email, ...(c.tags||[]), c.notes].filter(Boolean).join(' ').toLowerCase();
+      if (!searchable.includes(query)) return false;
+    }
+    if (currentFilter === 'all') return true;
+    if (currentFilter === 'overdue') { const d = daysUntil(c.followup); return d !== null && d < 0; }
+    return c.warmth === currentFilter;
+  });
+
+  // Sort: overdue first, then by warmth priority, then by name
+  const warmthOrder = { hot: 0, warm: 1, cool: 2, cold: 3 };
+  filtered.sort((a,b) => {
+    const aOverdue = daysUntil(a.followup) !== null && daysUntil(a.followup) < 0 ? 0 : 1;
+    const bOverdue = daysUntil(b.followup) !== null && daysUntil(b.followup) < 0 ? 0 : 1;
+    if (aOverdue !== bOverdue) return aOverdue - bOverdue;
+    if (warmthOrder[a.warmth] !== warmthOrder[b.warmth]) return warmthOrder[a.warmth] - warmthOrder[b.warmth];
+    return a.name.localeCompare(b.name);
+  });
+
+  const grid = document.getElementById('contactsGrid');
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><h3>${contacts.length === 0 ? 'No contacts yet' : 'No matches'}</h3><p>${contacts.length === 0 ? 'Click "+ Add Contact" to get started' : 'Try a different search or filter'}</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(c => {
+    const days = daysUntil(c.followup);
+    let followupHtml = '';
+    if (days !== null) {
+      if (days < 0) followupHtml = `<span class="followup-due">⚠️ ${Math.abs(days)}d overdue</span>`;
+      else if (days === 0) followupHtml = `<span class="followup-due">📌 Today</span>`;
+      else if (days <= 7) followupHtml = `<span style="color:var(--warm)">📅 ${days}d</span>`;
+      else followupHtml = `<span>📅 ${days}d</span>`;
+    }
+    const lastInteraction = (c.interactions||[]).length > 0 ? c.interactions[c.interactions.length - 1] : null;
+    const lastDate = lastInteraction ? formatDate(lastInteraction.date) : 'No interactions';
+    const tags = (c.tags||[]).map(t => `<span class="tag">${t}</span>`).join('');
+
+    return `<div class="contact-card" onclick="openModal('${c.id}')">
+      <div class="card-header">
+        <div><div class="card-name">${esc(c.name)}</div><div class="card-role">${esc(c.role||'')}</div></div>
+        <span class="warmth-badge warmth-${c.warmth}">${c.warmth}</span>
+      </div>
+      ${c.company ? `<div class="card-company">${esc(c.company)}</div>` : ''}
+      ${tags ? `<div class="card-tags">${tags}</div>` : ''}
+      <div class="card-meta">
+        <span>Last: ${lastDate}</span>
+        ${followupHtml}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderContacts();
+}
+
+function openModal(id) {
+  const modal = document.getElementById('contactModal');
+  const isEdit = !!id;
+  document.getElementById('modalTitle').textContent = isEdit ? 'Edit Contact' : 'Add Contact';
+  document.getElementById('deleteBtn').style.display = isEdit ? '' : 'none';
+  document.getElementById('interactionsSection').style.display = isEdit ? '' : 'none';
+  document.getElementById('editId').value = id || '';
+
+  if (isEdit) {
+    const c = contacts.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('fName').value = c.name || '';
+    document.getElementById('fWarmth').value = c.warmth || 'warm';
+    document.getElementById('fCompany').value = c.company || '';
+    document.getElementById('fRole').value = c.role || '';
+    document.getElementById('fEmail').value = c.email || '';
+    document.getElementById('fPhone').value = c.phone || '';
+    document.getElementById('fLinkedin').value = c.linkedin || '';
+    document.getElementById('fMetVia').value = c.metVia || '';
+    document.getElementById('fTags').value = (c.tags||[]).join(', ');
+    document.getElementById('fFollowup').value = c.followup || '';
+    document.getElementById('fNotes').value = c.notes || '';
+    renderInteractions(c);
+  } else {
+    ['fName','fCompany','fRole','fEmail','fPhone','fLinkedin','fTags','fFollowup','fNotes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('fWarmth').value = 'warm';
+    document.getElementById('fMetVia').value = '';
+  }
+  modal.classList.add('open');
+}
+
+function closeModal() { document.getElementById('contactModal').classList.remove('open'); }
+
+function saveContact() {
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { toast('Name is required'); return; }
+
+  const id = document.getElementById('editId').value;
+  const data = {
+    name,
+    warmth: document.getElementById('fWarmth').value,
+    company: document.getElementById('fCompany').value.trim(),
+    role: document.getElementById('fRole').value.trim(),
+    email: document.getElementById('fEmail').value.trim(),
+    phone: document.getElementById('fPhone').value.trim(),
+    linkedin: document.getElementById('fLinkedin').value.trim(),
+    metVia: document.getElementById('fMetVia').value,
+    tags: document.getElementById('fTags').value.split(',').map(t => t.trim()).filter(Boolean),
+    followup: document.getElementById('fFollowup').value,
+    notes: document.getElementById('fNotes').value.trim(),
+    updated: new Date().toISOString()
+  };
+
+  if (id) {
+    const idx = contacts.findIndex(c => c.id === id);
+    if (idx >= 0) { contacts[idx] = { ...contacts[idx], ...data }; }
+  } else {
+    contacts.push({ id: uid(), ...data, interactions: [], created: new Date().toISOString() });
+  }
+
+  save(); render(); closeModal();
+  toast(id ? 'Contact updated' : 'Contact added');
+}
+
+function deleteContact() {
+  const id = document.getElementById('editId').value;
+  if (!confirm('Delete this contact?')) return;
+  contacts = contacts.filter(c => c.id !== id);
+  save(); render(); closeModal();
+  toast('Contact deleted');
+}
+
+function renderInteractions(contact) {
+  const list = document.getElementById('interactionsList');
+  const interactions = contact.interactions || [];
+  if (interactions.length === 0) {
+    list.innerHTML = '<p style="color:var(--text2);font-size:13px;padding:8px 0;">No interactions logged yet</p>';
+    return;
+  }
+  list.innerHTML = [...interactions].reverse().map(i => `
+    <div class="interaction-item">
+      <span class="interaction-type">${i.type}</span>
+      <span class="interaction-date">${formatDate(i.date)}</span>
+      <span>${esc(i.note||'')}</span>
+    </div>
+  `).join('');
+}
+
+function addInteraction() {
+  const id = document.getElementById('editId').value;
+  const c = contacts.find(x => x.id === id);
+  if (!c) return;
+  const type = document.getElementById('iType').value;
+  const note = document.getElementById('iNote').value.trim();
+  if (!c.interactions) c.interactions = [];
+  c.interactions.push({ type, note, date: new Date().toISOString() });
+  c.updated = new Date().toISOString();
+  document.getElementById('iNote').value = '';
+  save(); renderInteractions(c); renderStats();
+  toast('Interaction logged');
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(contacts, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `netmap-export-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('Exported!');
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!Array.isArray(data)) throw new Error('Invalid');
+        const existingIds = new Set(contacts.map(c => c.id));
+        let added = 0;
+        data.forEach(c => {
+          if (!existingIds.has(c.id)) { contacts.push(c); added++; }
+          else {
+            const idx = contacts.findIndex(x => x.id === c.id);
+            if (idx >= 0) contacts[idx] = c;
+          }
+        });
+        save(); render();
+        toast(`Imported ${data.length} contacts (${added} new)`);
+      } catch { toast('Invalid file'); }
+    };
+    reader.readAsText(e.target.files[0]);
+  };
+  input.click();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'n' && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'SELECT') {
+    e.preventDefault(); openModal();
+  }
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+    e.preventDefault(); document.getElementById('searchBox').focus();
+  }
+});
+
+// Click outside modal to close
+document.getElementById('contactModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('contactModal')) closeModal();
+});
+
+function render() { renderStats(); renderContacts(); }
+render();
+
+// Seed demo data if empty
+if (contacts.length === 0) {
+  contacts = [
+    { id: uid(), name: 'Priya Sharma', company: 'Razorpay', role: 'VP Engineering', warmth: 'hot', email: 'priya@example.com', phone: '', linkedin: '', metVia: 'linkedin', tags: ['hiring-manager','fintech'], followup: new Date(Date.now() + 2*86400000).toISOString().slice(0,10), notes: 'Had great chat about product-led growth. Interested in my ZYOD experience.', interactions: [{type:'linkedin', note:'Connected, discussed product roles', date: new Date(Date.now() - 5*86400000).toISOString()}, {type:'call', note:'30 min call, went well', date: new Date(Date.now() - 2*86400000).toISOString()}], created: new Date().toISOString(), updated: new Date().toISOString() },
+    { id: uid(), name: 'Ravi Patel', company: 'Groww', role: 'Head of Product', warmth: 'warm', email: '', phone: '', linkedin: '', metVia: 'referral', tags: ['peer','referral-source'], followup: new Date(Date.now() + 5*86400000).toISOString().slice(0,10), notes: 'Connected via Suresh. Offered to refer me for PM roles.', interactions: [{type:'whatsapp', note:'Intro message, very responsive', date: new Date(Date.now() - 7*86400000).toISOString()}], created: new Date().toISOString(), updated: new Date().toISOString() },
+    { id: uid(), name: 'Sarah Chen', company: 'Notion', role: 'Recruiter', warmth: 'cool', email: 'sarah@example.com', phone: '', linkedin: '', metVia: 'recruiter', tags: ['recruiter','remote'], followup: new Date(Date.now() - 1*86400000).toISOString().slice(0,10), notes: 'Reached out about Senior PM role. Need to respond.', interactions: [{type:'email', note:'Inbound recruiting email', date: new Date(Date.now() - 3*86400000).toISOString()}], created: new Date().toISOString(), updated: new Date().toISOString() }
+  ];
+  save(); render();
+}
+</script>
+</body>
+</html>

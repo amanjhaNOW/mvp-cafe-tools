@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Competitor Radar — Competitive Intelligence Tracker</title>
+<style>
+:root {
+  --bg: #f5f5f5; --surface: #fff; --surface2: #f0f0f0; --text: #1a1a1a; --text2: #666;
+  --border: #e0e0e0; --accent: #4f46e5; --accent2: #7c3aed; --accent-bg: #eef2ff;
+  --green: #10b981; --red: #ef4444; --amber: #f59e0b; --blue: #3b82f6;
+  --green-bg: #ecfdf5; --red-bg: #fef2f2; --amber-bg: #fffbeb; --blue-bg: #eff6ff;
+  --shadow: 0 1px 3px rgba(0,0,0,.08); --shadow2: 0 4px 12px rgba(0,0,0,.1);
+  --radius: 10px; --radius2: 14px;
+}
+.dark {
+  --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #252525; --text: #e5e5e5; --text2: #999;
+  --border: #333; --accent: #818cf8; --accent2: #a78bfa; --accent-bg: #1e1b4b;
+  --green-bg: #052e16; --red-bg: #450a0a; --amber-bg: #451a03; --blue-bg: #172554;
+  --shadow: 0 1px 3px rgba(0,0,0,.3); --shadow2: 0 4px 12px rgba(0,0,0,.4);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+button { cursor:pointer; font-family:inherit; border:none; background:none; color:inherit; }
+input, textarea, select { font-family:inherit; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:14px; width:100%; outline:none; transition:border .2s; }
+input:focus, textarea:focus, select:focus { border-color:var(--accent); }
+textarea { resize:vertical; min-height:60px; }
+
+/* Header */
+.header { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 24px; display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:100; }
+.logo { font-size:20px; font-weight:700; display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.logo span { color:var(--accent); }
+.header-actions { display:flex; gap:8px; margin-left:auto; align-items:center; }
+.search-box { position:relative; width:220px; }
+.search-box input { padding-left:32px; }
+.search-box svg { position:absolute; left:10px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:var(--text2); }
+
+/* Tabs */
+.tabs { display:flex; gap:4px; background:var(--surface2); padding:4px; border-radius:10px; }
+.tab { padding:6px 14px; border-radius:8px; font-size:13px; font-weight:500; color:var(--text2); transition:all .2s; white-space:nowrap; }
+.tab:hover { color:var(--text); }
+.tab.active { background:var(--surface); color:var(--accent); box-shadow:var(--shadow); }
+
+/* Buttons */
+.btn { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:500; display:inline-flex; align-items:center; gap:6px; transition:all .2s; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { opacity:.9; transform:translateY(-1px); }
+.btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-secondary:hover { border-color:var(--accent); }
+.btn-sm { padding:5px 10px; font-size:12px; }
+.btn-icon { width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:8px; }
+.btn-icon:hover { background:var(--surface2); }
+.btn-danger { color:var(--red); }
+.btn-danger:hover { background:var(--red-bg); }
+
+/* Layout */
+.main { padding:20px 24px; max-width:1400px; margin:0 auto; }
+
+/* Cards */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius2); padding:20px; box-shadow:var(--shadow); }
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px; }
+
+/* Competitor Card */
+.comp-card { cursor:pointer; transition:all .2s; position:relative; }
+.comp-card:hover { box-shadow:var(--shadow2); transform:translateY(-2px); }
+.comp-card-header { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+.comp-avatar { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; color:#fff; flex-shrink:0; }
+.comp-name { font-size:16px; font-weight:600; }
+.comp-tagline { font-size:12px; color:var(--text2); margin-top:2px; }
+.comp-meta { display:flex; gap:12px; flex-wrap:wrap; margin:12px 0; }
+.comp-meta-item { font-size:12px; color:var(--text2); display:flex; align-items:center; gap:4px; }
+.comp-tags { display:flex; gap:6px; flex-wrap:wrap; }
+.threat-badge { font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; }
+.threat-high { background:var(--red-bg); color:var(--red); }
+.threat-medium { background:var(--amber-bg); color:var(--amber); }
+.threat-low { background:var(--green-bg); color:var(--green); }
+.threat-watch { background:var(--blue-bg); color:var(--blue); }
+.comp-strengths { margin-top:10px; font-size:12px; }
+.comp-strengths span { color:var(--text2); }
+.comp-card-actions { position:absolute; top:12px; right:12px; display:flex; gap:2px; opacity:0; transition:opacity .2s; }
+.comp-card:hover .comp-card-actions { opacity:1; }
+
+/* Feature Matrix */
+.matrix-wrap { overflow-x:auto; }
+.matrix { width:100%; border-collapse:collapse; font-size:13px; }
+.matrix th, .matrix td { padding:10px 14px; text-align:left; border-bottom:1px solid var(--border); }
+.matrix th { background:var(--surface2); font-weight:600; position:sticky; top:0; white-space:nowrap; }
+.matrix th:first-child { position:sticky; left:0; z-index:2; background:var(--surface2); }
+.matrix td:first-child { position:sticky; left:0; background:var(--surface); font-weight:500; white-space:nowrap; z-index:1; }
+.matrix tr:hover td { background:var(--accent-bg); }
+.matrix .has-feature { color:var(--green); font-weight:600; }
+.matrix .no-feature { color:var(--red); }
+.matrix .partial-feature { color:var(--amber); }
+
+/* Positioning Map */
+.pos-map-container { position:relative; width:100%; aspect-ratio:1; max-width:700px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius2); overflow:hidden; }
+.pos-map-axis { position:absolute; color:var(--text2); font-size:11px; font-weight:500; }
+.pos-map-axis.x-label { bottom:8px; left:50%; transform:translateX(-50%); }
+.pos-map-axis.y-label { left:8px; top:50%; transform:translateY(-50%) rotate(-90deg); transform-origin:center; }
+.pos-map-axis.x-low { bottom:8px; left:12px; }
+.pos-map-axis.x-high { bottom:8px; right:12px; }
+.pos-map-axis.y-low { left:12px; bottom:28px; }
+.pos-map-axis.y-high { left:12px; top:12px; }
+.pos-map-grid { position:absolute; inset:40px; }
+.pos-map-line-h, .pos-map-line-v { position:absolute; background:var(--border); }
+.pos-map-line-h { height:1px; width:100%; top:50%; left:0; }
+.pos-map-line-v { width:1px; height:100%; left:50%; top:0; }
+.pos-dot { position:absolute; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; cursor:grab; transition:box-shadow .2s; z-index:5; transform:translate(-50%,-50%); }
+.pos-dot:hover { box-shadow:0 0 0 4px rgba(79,70,229,.3); z-index:10; }
+.pos-dot-label { position:absolute; top:40px; left:50%; transform:translateX(-50%); font-size:10px; color:var(--text); white-space:nowrap; background:var(--surface); padding:2px 6px; border-radius:4px; border:1px solid var(--border); }
+.pos-quadrant-label { position:absolute; font-size:10px; color:var(--text2); opacity:.5; font-weight:500; }
+
+/* SWOT */
+.swot-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.swot-box { padding:16px; border-radius:var(--radius); min-height:120px; }
+.swot-box h4 { font-size:13px; font-weight:600; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.swot-strengths { background:var(--green-bg); }
+.swot-strengths h4 { color:var(--green); }
+.swot-weaknesses { background:var(--red-bg); }
+.swot-weaknesses h4 { color:var(--red); }
+.swot-opportunities { background:var(--blue-bg); }
+.swot-opportunities h4 { color:var(--blue); }
+.swot-threats { background:var(--amber-bg); }
+.swot-threats h4 { color:var(--amber); }
+.swot-list { list-style:none; font-size:13px; line-height:1.8; }
+.swot-list li::before { content:'•'; margin-right:6px; }
+
+/* Battle Card */
+.battle-card { page-break-inside:avoid; }
+.battle-section { margin-bottom:16px; }
+.battle-section h4 { font-size:13px; font-weight:600; color:var(--accent); margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--border); }
+.battle-table { width:100%; font-size:13px; border-collapse:collapse; }
+.battle-table td { padding:6px 10px; border-bottom:1px solid var(--border); }
+.battle-table td:first-child { font-weight:500; width:35%; color:var(--text2); }
+.win-point { color:var(--green); font-size:13px; line-height:1.8; }
+.lose-point { color:var(--red); font-size:13px; line-height:1.8; }
+
+/* News Log */
+.news-item { padding:12px 0; border-bottom:1px solid var(--border); display:flex; gap:12px; align-items:flex-start; }
+.news-item:last-child { border-bottom:none; }
+.news-date { font-size:11px; color:var(--text2); white-space:nowrap; min-width:70px; padding-top:2px; }
+.news-type { font-size:10px; font-weight:600; padding:2px 6px; border-radius:4px; white-space:nowrap; }
+.news-type.pricing { background:var(--amber-bg); color:var(--amber); }
+.news-type.feature { background:var(--green-bg); color:var(--green); }
+.news-type.funding { background:var(--blue-bg); color:var(--blue); }
+.news-type.hire { background:var(--accent-bg); color:var(--accent); }
+.news-type.partnership { background:#faf5ff; color:#9333ea; }
+.dark .news-type.partnership { background:#2e1065; }
+.news-content { font-size:13px; flex:1; }
+.news-source { font-size:11px; color:var(--text2); margin-top:2px; }
+
+/* Stats */
+.stats-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-bottom:20px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; text-align:center; }
+.stat-value { font-size:24px; font-weight:700; color:var(--accent); }
+.stat-label { font-size:11px; color:var(--text2); margin-top:4px; }
+
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; visibility:hidden; transition:all .2s; }
+.modal-overlay.open { opacity:1; visibility:visible; }
+.modal { background:var(--surface); border-radius:var(--radius2); width:100%; max-width:640px; max-height:85vh; overflow-y:auto; padding:24px; box-shadow:var(--shadow2); }
+.modal-lg { max-width:900px; }
+.modal h3 { font-size:18px; font-weight:600; margin-bottom:16px; }
+.form-group { margin-bottom:14px; }
+.form-group label { display:block; font-size:12px; font-weight:500; color:var(--text2); margin-bottom:4px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
+
+/* Detail View */
+.detail-header { display:flex; align-items:flex-start; gap:16px; margin-bottom:24px; }
+.detail-avatar { width:60px; height:60px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700; color:#fff; flex-shrink:0; }
+.detail-title { font-size:22px; font-weight:700; }
+.detail-tagline { color:var(--text2); margin-top:2px; }
+.detail-tabs { display:flex; gap:4px; margin-bottom:20px; flex-wrap:wrap; }
+.detail-tab { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:500; color:var(--text2); background:var(--surface2); }
+.detail-tab.active { background:var(--accent-bg); color:var(--accent); }
+
+/* Feature Input */
+.feature-row { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+.feature-row input { flex:1; }
+.feature-status-btn { width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:14px; border:1px solid var(--border); flex-shrink:0; }
+
+/* Empty State */
+.empty { text-align:center; padding:60px 20px; color:var(--text2); }
+.empty-icon { font-size:48px; margin-bottom:12px; }
+.empty h3 { font-size:18px; color:var(--text); margin-bottom:8px; }
+
+/* Responsive */
+@media(max-width:768px) {
+  .header { padding:10px 14px; gap:8px; flex-wrap:wrap; }
+  .search-box { width:100%; order:10; }
+  .main { padding:14px; }
+  .card-grid { grid-template-columns:1fr; }
+  .form-row, .form-row-3 { grid-template-columns:1fr; }
+  .swot-grid { grid-template-columns:1fr; }
+  .pos-map-container { aspect-ratio:auto; height:400px; }
+}
+
+/* Print */
+@media print {
+  .header, .modal-overlay { display:none; }
+  .main { padding:0; }
+  body { background:#fff; }
+  .card { box-shadow:none; border:1px solid #ddd; }
+}
+
+/* Kbd hints */
+.kbd { font-size:10px; background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-family:monospace; color:var(--text2); margin-left:4px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--text2); }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">📡 <span>Competitor Radar</span></div>
+  <div class="tabs" id="mainTabs">
+    <button class="tab active" data-view="overview" onclick="switchView('overview')">Overview<span class="kbd">1</span></button>
+    <button class="tab" data-view="matrix" onclick="switchView('matrix')">Feature Matrix<span class="kbd">2</span></button>
+    <button class="tab" data-view="map" onclick="switchView('map')">Position Map<span class="kbd">3</span></button>
+    <button class="tab" data-view="battlecards" onclick="switchView('battlecards')">Battle Cards<span class="kbd">4</span></button>
+    <button class="tab" data-view="news" onclick="switchView('news')">Intel Feed<span class="kbd">5</span></button>
+  </div>
+  <div class="header-actions">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="searchInput" placeholder="Search... (/)" onkeyup="handleSearch(this.value)">
+    </div>
+    <button class="btn btn-primary" onclick="openAddCompetitor()">+ Add<span class="kbd">N</span></button>
+    <button class="btn-icon" onclick="toggleDark()" title="Toggle dark mode (D)">🌓</button>
+    <button class="btn-icon" onclick="exportData()" title="Export (E)">📤</button>
+    <button class="btn-icon" onclick="importData()" title="Import">📥</button>
+  </div>
+</div>
+
+<div class="main" id="mainContent"></div>
+
+<!-- Add/Edit Competitor Modal -->
+<div class="modal-overlay" id="compModal">
+  <div class="modal modal-lg">
+    <h3 id="compModalTitle">Add Competitor</h3>
+    <input type="hidden" id="compId">
+    <div class="form-row">
+      <div class="form-group"><label>Company Name *</label><input id="compName" placeholder="e.g. Mailchimp"></div>
+      <div class="form-group"><label>Website</label><input id="compUrl" placeholder="https://..."></div>
+    </div>
+    <div class="form-group"><label>Tagline / One-liner</label><input id="compTagline" placeholder="What they say they do"></div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Threat Level</label>
+        <select id="compThreat"><option value="high">🔴 High</option><option value="medium" selected>🟡 Medium</option><option value="low">🟢 Low</option><option value="watch">🔵 Watch</option></select>
+      </div>
+      <div class="form-group"><label>Pricing (starting)</label><input id="compPricing" placeholder="e.g. $29/mo"></div>
+      <div class="form-group"><label>Founded</label><input id="compFounded" placeholder="e.g. 2020"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Funding</label><input id="compFunding" placeholder="e.g. Series A - $10M"></div>
+      <div class="form-group"><label>Team Size</label><input id="compTeamSize" placeholder="e.g. 50-100"></div>
+    </div>
+    <div class="form-group"><label>Target Audience</label><input id="compAudience" placeholder="Who they sell to"></div>
+    <div class="form-group"><label>Key Strengths (one per line)</label><textarea id="compStrengths" rows="3" placeholder="Brand recognition&#10;Large customer base&#10;Deep integrations"></textarea></div>
+    <div class="form-group"><label>Key Weaknesses (one per line)</label><textarea id="compWeaknesses" rows="3" placeholder="Expensive at scale&#10;Slow to ship&#10;Legacy tech"></textarea></div>
+    <div class="form-group"><label>Opportunities Against Them (one per line)</label><textarea id="compOpportunities" rows="2" placeholder="Underserved SMB segment&#10;Better UX possible"></textarea></div>
+    <div class="form-group"><label>Threats From Them (one per line)</label><textarea id="compThreats" rows="2" placeholder="Could add our features&#10;Bigger marketing budget"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Position X (Market Reach: 0-100)</label><input type="number" id="compPosX" min="0" max="100" value="50"></div>
+      <div class="form-group"><label>Position Y (Product Depth: 0-100)</label><input type="number" id="compPosY" min="0" max="100" value="50"></div>
+    </div>
+    <div class="form-group"><label>Color</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;" id="colorPicker"></div>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea id="compNotes" rows="2" placeholder="General notes, strategy observations..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('compModal')">Cancel<span class="kbd">Esc</span></button>
+      <button class="btn btn-primary" onclick="saveCompetitor()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Feature Modal -->
+<div class="modal-overlay" id="featureModal">
+  <div class="modal">
+    <h3>Manage Features</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Add features to compare across competitors. Set status per competitor in their edit form.</p>
+    <div id="featureList"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <input id="newFeatureName" placeholder="New feature name..." onkeydown="if(event.key==='Enter')addFeature()">
+      <input id="newFeatureCategory" placeholder="Category" style="width:140px;" onkeydown="if(event.key==='Enter')addFeature()">
+      <button class="btn btn-primary btn-sm" onclick="addFeature()">Add</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('featureModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- News Modal -->
+<div class="modal-overlay" id="newsModal">
+  <div class="modal">
+    <h3 id="newsModalTitle">Add Intel</h3>
+    <input type="hidden" id="newsId">
+    <div class="form-group"><label>Competitor</label>
+      <select id="newsCompetitor"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Type</label>
+        <select id="newsType"><option value="feature">🚀 Feature</option><option value="pricing">💰 Pricing</option><option value="funding">💎 Funding</option><option value="hire">👤 Hire</option><option value="partnership">🤝 Partnership</option></select>
+      </div>
+      <div class="form-group"><label>Date</label><input type="date" id="newsDate"></div>
+    </div>
+    <div class="form-group"><label>Update</label><textarea id="newsContent" rows="3" placeholder="What happened?"></textarea></div>
+    <div class="form-group"><label>Source URL</label><input id="newsSource" placeholder="https://..."></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('newsModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNews()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail View Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal modal-lg" id="detailContent"></div>
+</div>
+
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
+
+<script>
+const COLORS = ['#4f46e5','#7c3aed','#ec4899','#ef4444','#f59e0b','#10b981','#3b82f6','#6366f1','#8b5cf6','#14b8a6','#f97316','#06b6d4'];
+const STORAGE_KEY = 'competitor-radar-data';
+
+let state = {
+  competitors: [],
+  features: [],
+  news: [],
+  currentView: 'overview',
+  searchQuery: '',
+  selectedColor: COLORS[0]
+};
+
+function init() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try { state = { ...state, ...JSON.parse(saved) }; } catch(e) {}
+  }
+  if (!state.competitors.length) seedData();
+  initColorPicker();
+  render();
+  if (localStorage.getItem('cr-dark') === 'true') document.body.classList.add('dark');
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ competitors: state.competitors, features: state.features, news: state.news }));
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+function seedData() {
+  // Seed with UTMStamp competitors
+  state.features = [
+    { id: uid(), name: 'Email Signature Templates', category: 'Core' },
+    { id: uid(), name: 'UTM Tracking', category: 'Analytics' },
+    { id: uid(), name: 'Click Analytics', category: 'Analytics' },
+    { id: uid(), name: 'Team Management', category: 'Admin' },
+    { id: uid(), name: 'Google Workspace Integration', category: 'Integrations' },
+    { id: uid(), name: 'Campaign Banners', category: 'Marketing' },
+    { id: uid(), name: 'A/B Testing', category: 'Analytics' },
+    { id: uid(), name: 'API Access', category: 'Developer' },
+    { id: uid(), name: 'White Label', category: 'Enterprise' },
+    { id: uid(), name: 'Video Signatures', category: 'Core' },
+    { id: uid(), name: 'CRM Integration', category: 'Integrations' },
+    { id: uid(), name: 'Centralized Deployment', category: 'Admin' },
+  ];
+
+  const fIds = state.features.map(f => f.id);
+  
+  state.competitors = [
+    {
+      id: uid(), name: 'Exclaimer', tagline: 'Enterprise email signature management', url: 'https://exclaimer.com',
+      threat: 'high', pricing: '$2/user/mo', founded: '2001', funding: 'PE Backed (Insight Partners)', teamSize: '200+',
+      audience: 'Mid-market & Enterprise', color: '#ef4444',
+      strengths: ['Market leader in enterprise','Deep M365/Google integrations','25+ years in market','Strong channel partnerships'],
+      weaknesses: ['Expensive for small teams','Complex setup','No free tier','Slow innovation cycle'],
+      opportunities: ['SMBs priced out','Simpler alternative for startups','UTM tracking gap'],
+      threats: ['Could add UTM features','Massive marketing budget','Established brand trust'],
+      posX: 85, posY: 75, notes: 'The 800lb gorilla. Enterprise-focused, priced accordingly.',
+      featureStatus: Object.fromEntries(fIds.map((f,i) => [f, [1,0,0,1,1,1,0,1,1,0,1,1][i] === 1 ? 'yes' : i===1?'no':'no']))
+    },
+    {
+      id: uid(), name: 'WiseStamp', tagline: 'Professional email signatures made easy', url: 'https://wisestamp.com',
+      threat: 'high', pricing: '$5.80/mo', founded: '2009', funding: 'Bootstrapped', teamSize: '30-50',
+      audience: 'SMBs and Freelancers', color: '#f59e0b',
+      strengths: ['Strong SEO presence','Easy to use','Good template variety','Social media integration'],
+      weaknesses: ['Limited analytics','No real UTM tracking','Dated UI','Basic team features'],
+      opportunities: ['Analytics gap is huge','Build-in-public angle resonates vs corp feel','Better DX'],
+      threats: ['Could copy UTM feature quickly','Larger user base','More templates'],
+      posX: 60, posY: 45, notes: 'Closest direct competitor for SMB. Weak on analytics which is our edge.',
+      featureStatus: Object.fromEntries(fIds.map((f,i) => [f, [1,0,0,0,1,0,0,0,0,0,0,0][i] === 1 ? 'yes' : 'no']))
+    },
+    {
+      id: uid(), name: 'Opensense', tagline: 'Email signature marketing platform', url: 'https://opensense.com',
+      threat: 'medium', pricing: 'Custom (Enterprise)', founded: '2016', funding: 'Series B - $35M', teamSize: '80-120',
+      audience: 'Enterprise sales teams', color: '#3b82f6',
+      strengths: ['Advanced analytics','Salesforce integration','ABM features','Strong enterprise sales'],
+      weaknesses: ['No self-serve','Enterprise-only pricing','Complex onboarding','Not for small teams'],
+      opportunities: ['PLG angle — they have none','SMB market untouched by them','Faster setup'],
+      threats: ['Could move downmarket','Better funded','Patent risks'],
+      posX: 70, posY: 80, notes: 'Enterprise play. Not a direct threat to UTMStamp SMB focus but watch for downmarket move.',
+      featureStatus: Object.fromEntries(fIds.map((f,i) => [f, [1,1,1,1,1,1,1,1,1,0,1,1][i] === 1 ? 'yes' : 'no']))
+    },
+    {
+      id: uid(), name: 'Newoldstamp', tagline: 'Email signature generator for teams', url: 'https://newoldstamp.com',
+      threat: 'medium', pricing: '$8/user/mo', founded: '2015', funding: 'Bootstrapped', teamSize: '20-30',
+      audience: 'Small businesses', color: '#10b981',
+      strengths: ['Clean templates','Good team features','Analytics dashboard','Reasonable pricing'],
+      weaknesses: ['Limited UTM support','Small brand awareness','Basic API','No free plan'],
+      opportunities: ['Out-feature them on analytics','Free tier advantage','Build in public visibility'],
+      threats: ['Similar positioning','Could improve analytics','Active development'],
+      posX: 45, posY: 50, notes: 'Most similar positioning to UTMStamp. Need to differentiate on analytics + UTM depth.',
+      featureStatus: Object.fromEntries(fIds.map((f,i) => [f, [1,0,1,1,1,1,0,0,0,0,0,1][i] === 1 ? 'yes' : i===1?'partial':'no']))
+    },
+    {
+      id: uid(), name: 'Sigstr (Terminus)', tagline: 'Email signature marketing at scale', url: 'https://terminus.com',
+      threat: 'low', pricing: 'Enterprise only', founded: '2015', funding: 'Acquired by Terminus', teamSize: 'Part of Terminus',
+      audience: 'B2B Enterprise (ABM)', color: '#8b5cf6',
+      strengths: ['ABM integration','Part of larger platform','Enterprise relationships','IP-based targeting'],
+      weaknesses: ['No standalone product anymore','Enterprise-only','Bloated platform','No SMB play'],
+      opportunities: ['Standalone alternative for non-ABM users','Simpler is better','Cost advantage'],
+      threats: ['Terminus ecosystem lock-in','Could unbundle again'],
+      posX: 80, posY: 60, notes: 'Absorbed into Terminus ABM platform. Not a direct threat but worth monitoring.',
+      featureStatus: Object.fromEntries(fIds.map((f,i) => [f, [1,1,1,1,1,1,0,1,1,0,1,1][i] === 1 ? 'yes' : 'no']))
+    },
+    {
+      id: uid(), name: 'UTMStamp (Us)', tagline: 'Every Signature. Every Click. Tracked.', url: 'https://utmstamp.com',
+      threat: 'watch', pricing: 'Free forever + Pro', founded: '2026', funding: 'Bootstrapped', teamSize: '1',
+      audience: 'Marketing teams & growth-focused SMBs', color: '#4f46e5',
+      strengths: ['Built-in UTM tracking','Free tier','Built in public','Fast shipping','Modern stack'],
+      weaknesses: ['New entrant','Small team','Limited brand awareness','Early feature set'],
+      opportunities: ['First-mover on UTM+signatures','PLG flywheel','Content-driven growth','API-first'],
+      threats: ['Incumbents could copy','Resource constraints','Market education needed'],
+      posX: 35, posY: 55, notes: 'Us! Niche = UTM tracking in signatures. Ship fast, own the analytics angle.',
+      featureStatus: Object.fromEntries(fIds.map((f,i) => [f, [1,1,1,1,0,1,0,0,0,0,0,0][i] === 1 ? 'yes' : i===4?'partial':'no']))
+    }
+  ];
+
+  // Fix feature statuses
+  state.competitors.forEach(c => {
+    const newStatus = {};
+    state.features.forEach((f, i) => {
+      const old = c.featureStatus[fIds[i]];
+      newStatus[f.id] = old || 'no';
+    });
+    c.featureStatus = newStatus;
+  });
+
+  state.news = [
+    { id: uid(), competitorId: state.competitors[0].id, type: 'feature', date: '2026-03-15', content: 'Exclaimer launched AI-powered signature design wizard', source: '' },
+    { id: uid(), competitorId: state.competitors[1].id, type: 'pricing', date: '2026-03-20', content: 'WiseStamp increased pricing by 20% across all tiers', source: '' },
+    { id: uid(), competitorId: state.competitors[2].id, type: 'funding', date: '2026-02-28', content: 'Opensense raised Series B at $35M valuation from Craft Ventures', source: '' },
+    { id: uid(), competitorId: state.competitors[0].id, type: 'partnership', date: '2026-03-25', content: 'Exclaimer announced deeper HubSpot CRM integration', source: '' },
+    { id: uid(), competitorId: state.competitors[3].id, type: 'feature', date: '2026-03-30', content: 'Newoldstamp added basic click tracking to Pro plan', source: '' },
+  ];
+  save();
+}
+
+function initColorPicker() {
+  const cp = document.getElementById('colorPicker');
+  cp.innerHTML = COLORS.map(c => `<button onclick="state.selectedColor='${c}';initColorPicker()" style="width:28px;height:28px;border-radius:8px;background:${c};border:2px solid ${state.selectedColor===c?'var(--text)':'transparent'};flex-shrink:0;cursor:pointer;"></button>`).join('');
+}
+
+function render() {
+  const v = state.currentView;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+  const main = document.getElementById('mainContent');
+  
+  switch(v) {
+    case 'overview': renderOverview(main); break;
+    case 'matrix': renderMatrix(main); break;
+    case 'map': renderMap(main); break;
+    case 'battlecards': renderBattleCards(main); break;
+    case 'news': renderNews(main); break;
+  }
+}
+
+function getFiltered() {
+  const q = state.searchQuery.toLowerCase();
+  if (!q) return state.competitors;
+  return state.competitors.filter(c => 
+    c.name.toLowerCase().includes(q) || c.tagline?.toLowerCase().includes(q) || c.audience?.toLowerCase().includes(q)
+  );
+}
+
+function renderOverview(el) {
+  const comps = getFiltered();
+  const threats = { high:0, medium:0, low:0, watch:0 };
+  comps.forEach(c => threats[c.threat]++);
+
+  el.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-value">${state.competitors.length}</div><div class="stat-label">Competitors Tracked</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--red)">${threats.high}</div><div class="stat-label">High Threat</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--amber)">${threats.medium}</div><div class="stat-label">Medium Threat</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--green)">${threats.low}</div><div class="stat-label">Low Threat</div></div>
+      <div class="stat-card"><div class="stat-value">${state.features.length}</div><div class="stat-label">Features Compared</div></div>
+      <div class="stat-card"><div class="stat-value">${state.news.length}</div><div class="stat-label">Intel Updates</div></div>
+    </div>
+    ${comps.length ? `<div class="card-grid">${comps.map(c => compCard(c)).join('')}</div>` : 
+    '<div class="empty"><div class="empty-icon">📡</div><h3>No competitors yet</h3><p>Add your first competitor to start tracking</p></div>'}
+  `;
+}
+
+function compCard(c) {
+  const initial = c.name.charAt(0).toUpperCase();
+  return `
+    <div class="card comp-card" onclick="showDetail('${c.id}')">
+      <div class="comp-card-actions">
+        <button class="btn-icon btn-sm" onclick="event.stopPropagation();editCompetitor('${c.id}')" title="Edit">✏️</button>
+        <button class="btn-icon btn-sm btn-danger" onclick="event.stopPropagation();deleteCompetitor('${c.id}')" title="Delete">🗑️</button>
+      </div>
+      <div class="comp-card-header">
+        <div class="comp-avatar" style="background:${c.color}">${initial}</div>
+        <div>
+          <div class="comp-name">${esc(c.name)}</div>
+          <div class="comp-tagline">${esc(c.tagline||'')}</div>
+        </div>
+      </div>
+      <div class="comp-tags">
+        <span class="threat-badge threat-${c.threat}">${c.threat.toUpperCase()}</span>
+        ${c.pricing ? `<span class="comp-meta-item">💰 ${esc(c.pricing)}</span>` : ''}
+        ${c.teamSize ? `<span class="comp-meta-item">👥 ${esc(c.teamSize)}</span>` : ''}
+        ${c.founded ? `<span class="comp-meta-item">📅 ${esc(c.founded)}</span>` : ''}
+      </div>
+      ${c.strengths?.length ? `<div class="comp-strengths"><span>Strengths:</span> ${c.strengths.slice(0,2).map(s=>esc(s)).join(', ')}${c.strengths.length>2?' +more':''}</div>` : ''}
+    </div>`;
+}
+
+function renderMatrix(el) {
+  const comps = getFiltered().filter(c => c.name !== 'UTMStamp (Us)');
+  const us = state.competitors.find(c => c.name === 'UTMStamp (Us)');
+  const all = us ? [us, ...comps] : comps;
+  
+  const categories = [...new Set(state.features.map(f => f.category))];
+  
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2 style="font-size:18px;">Feature Comparison Matrix</h2>
+      <button class="btn btn-secondary" onclick="openFeatureManager()">⚙️ Manage Features</button>
+    </div>
+    <div class="card">
+      <div class="matrix-wrap">
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              ${all.map(c => `<th style="color:${c.color}">${esc(c.name.replace(' (Us)',''))}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${categories.map(cat => `
+              <tr><td colspan="${all.length+1}" style="background:var(--accent-bg);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);">${esc(cat)}</td></tr>
+              ${state.features.filter(f=>f.category===cat).map(f => `
+                <tr>
+                  <td>${esc(f.name)}</td>
+                  ${all.map(c => {
+                    const s = c.featureStatus?.[f.id] || 'no';
+                    if(s==='yes') return '<td class="has-feature">✅ Yes</td>';
+                    if(s==='partial') return '<td class="partial-feature">⚡ Partial</td>';
+                    return '<td class="no-feature">❌ No</td>';
+                  }).join('')}
+                </tr>
+              `).join('')}
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function renderMap(el) {
+  const comps = getFiltered();
+  el.innerHTML = `
+    <div style="margin-bottom:16px;"><h2 style="font-size:18px;">Market Positioning Map</h2><p style="font-size:13px;color:var(--text2);">Drag dots to reposition. X = Market Reach, Y = Product Depth.</p></div>
+    <div class="pos-map-container" id="posMap">
+      <div class="pos-map-grid">
+        <div class="pos-map-line-h"></div>
+        <div class="pos-map-line-v"></div>
+      </div>
+      <span class="pos-quadrant-label" style="top:50px;right:50px;">Leaders</span>
+      <span class="pos-quadrant-label" style="top:50px;left:50px;">Niche Players</span>
+      <span class="pos-quadrant-label" style="bottom:50px;right:50px;">Mass Market</span>
+      <span class="pos-quadrant-label" style="bottom:50px;left:50px;">Emerging</span>
+      <span class="pos-map-axis x-label">Market Reach →</span>
+      <span class="pos-map-axis y-label" style="writing-mode:vertical-rl;transform:rotate(180deg);left:4px;">Product Depth →</span>
+      ${comps.map(c => `
+        <div class="pos-dot" id="dot-${c.id}" style="background:${c.color};left:${c.posX}%;top:${100-c.posY}%;"
+          onmousedown="startDrag(event,'${c.id}')" ontouchstart="startDrag(event,'${c.id}')">
+          ${c.name.charAt(0)}
+          <span class="pos-dot-label">${esc(c.name.replace(' (Us)',''))}</span>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+let dragId = null;
+function startDrag(e, id) {
+  e.preventDefault();
+  dragId = id;
+  const onMove = (ev) => {
+    const map = document.getElementById('posMap');
+    const rect = map.getBoundingClientRect();
+    const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+    const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+    let x = ((clientX - rect.left) / rect.width) * 100;
+    let y = (1 - (clientY - rect.top) / rect.height) * 100;
+    x = Math.max(5, Math.min(95, x));
+    y = Math.max(5, Math.min(95, y));
+    const comp = state.competitors.find(c => c.id === dragId);
+    if (comp) {
+      comp.posX = Math.round(x);
+      comp.posY = Math.round(y);
+      const dot = document.getElementById('dot-' + dragId);
+      if (dot) { dot.style.left = x + '%'; dot.style.top = (100-y) + '%'; }
+    }
+  };
+  const onUp = () => {
+    save();
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onUp);
+    dragId = null;
+  };
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  document.addEventListener('touchmove', onMove);
+  document.addEventListener('touchend', onUp);
+}
+
+function renderBattleCards(el) {
+  const comps = getFiltered().filter(c => c.name !== 'UTMStamp (Us)');
+  const us = state.competitors.find(c => c.name === 'UTMStamp (Us)');
+  
+  if (!comps.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">⚔️</div><h3>No competitors for battle cards</h3></div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <div style="margin-bottom:16px;"><h2 style="font-size:18px;">Battle Cards</h2><p style="font-size:13px;color:var(--text2);">Quick reference cards for competitive conversations, sales calls, and interviews.</p></div>
+    <div style="display:grid;gap:16px;">
+      ${comps.map(c => {
+        const ourFeatures = us ? state.features.filter(f => us.featureStatus?.[f.id] === 'yes' && c.featureStatus?.[f.id] !== 'yes').map(f => f.name) : [];
+        const theirFeatures = us ? state.features.filter(f => c.featureStatus?.[f.id] === 'yes' && us.featureStatus?.[f.id] !== 'yes').map(f => f.name) : [];
+        
+        return `
+        <div class="card battle-card">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <div class="comp-avatar" style="background:${c.color};width:36px;height:36px;font-size:15px;">${c.name.charAt(0)}</div>
+            <div>
+              <div style="font-size:16px;font-weight:600;">vs ${esc(c.name)}</div>
+              <span class="threat-badge threat-${c.threat}" style="margin-top:2px;">${c.threat.toUpperCase()} THREAT</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="battle-section">
+              <h4>🏆 Where We Win</h4>
+              ${(c.weaknesses||[]).map(w => `<div class="win-point">✅ ${esc(w)}</div>`).join('')}
+              ${ourFeatures.slice(0,3).map(f => `<div class="win-point">✅ We have: ${esc(f)}</div>`).join('')}
+              ${!c.weaknesses?.length && !ourFeatures.length ? '<div style="color:var(--text2);font-size:13px;">Add their weaknesses to populate</div>' : ''}
+            </div>
+            <div class="battle-section">
+              <h4>⚠️ Where They Win</h4>
+              ${(c.strengths||[]).map(s => `<div class="lose-point">🔸 ${esc(s)}</div>`).join('')}
+              ${theirFeatures.slice(0,3).map(f => `<div class="lose-point">🔸 They have: ${esc(f)}</div>`).join('')}
+            </div>
+          </div>
+          <div class="battle-section" style="margin-top:12px;">
+            <h4>💬 Talk Track</h4>
+            <div style="font-size:13px;background:var(--surface2);padding:12px;border-radius:8px;line-height:1.6;">
+              ${c.weaknesses?.length ? 
+                `"Unlike ${esc(c.name)}, we ${c.weaknesses[0]?.toLowerCase().includes('expensive') || c.weaknesses[0]?.toLowerCase().includes('pricing') ? 'offer a free tier so you can start without risk' : 'focus on simplicity and speed — you can be set up in minutes, not days'}. ${ourFeatures.length ? `Plus, we have ${ourFeatures[0]} which they don't offer.` : 'Our approach is built for modern teams who value speed.'}"` :
+                `<em>Add strengths/weaknesses to auto-generate talk track</em>`}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            ${c.url ? `<a href="${esc(c.url)}" target="_blank" class="btn btn-secondary btn-sm">🔗 Website</a>` : ''}
+            <span style="font-size:12px;color:var(--text2);display:flex;align-items:center;">💰 ${esc(c.pricing||'Unknown')} · 👥 ${esc(c.teamSize||'Unknown')} · 📅 ${esc(c.founded||'Unknown')}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderNews(el) {
+  const allNews = [...state.news].sort((a,b) => b.date.localeCompare(a.date));
+  const filtered = state.searchQuery ? allNews.filter(n => {
+    const comp = state.competitors.find(c => c.id === n.competitorId);
+    return n.content.toLowerCase().includes(state.searchQuery.toLowerCase()) || comp?.name.toLowerCase().includes(state.searchQuery.toLowerCase());
+  }) : allNews;
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div><h2 style="font-size:18px;">Intel Feed</h2><p style="font-size:13px;color:var(--text2);">Track competitor moves, launches, and market shifts.</p></div>
+      <button class="btn btn-primary" onclick="openAddNews()">+ Add Intel</button>
+    </div>
+    <div class="card">
+      ${filtered.length ? filtered.map(n => {
+        const comp = state.competitors.find(c => c.id === n.competitorId);
+        return `
+          <div class="news-item">
+            <div class="news-date">${n.date}</div>
+            <span class="news-type ${n.type}">${{feature:'🚀 Feature',pricing:'💰 Pricing',funding:'💎 Funding',hire:'👤 Hire',partnership:'🤝 Partner'}[n.type]||n.type}</span>
+            <div class="news-content">
+              <strong style="color:${comp?.color||'inherit'}">${esc(comp?.name||'Unknown')}</strong> — ${esc(n.content)}
+              ${n.source ? `<div class="news-source"><a href="${esc(n.source)}" target="_blank" style="color:var(--accent);">Source →</a></div>` : ''}
+            </div>
+            <button class="btn-icon btn-sm btn-danger" onclick="deleteNews('${n.id}')" title="Delete">🗑️</button>
+          </div>`;
+      }).join('') : '<div class="empty" style="padding:30px;"><div class="empty-icon">📰</div><h3>No intel yet</h3><p>Add competitive updates to track market movements</p></div>'}
+    </div>`;
+}
+
+// CRUD Operations
+function openAddCompetitor() {
+  document.getElementById('compModalTitle').textContent = 'Add Competitor';
+  document.getElementById('compId').value = '';
+  ['compName','compUrl','compTagline','compPricing','compFounded','compFunding','compTeamSize','compAudience','compNotes'].forEach(id => document.getElementById(id).value = '');
+  ['compStrengths','compWeaknesses','compOpportunities','compThreats'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('compThreat').value = 'medium';
+  document.getElementById('compPosX').value = 50;
+  document.getElementById('compPosY').value = 50;
+  state.selectedColor = COLORS[Math.floor(Math.random()*COLORS.length)];
+  initColorPicker();
+  openModal('compModal');
+}
+
+function editCompetitor(id) {
+  const c = state.competitors.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('compModalTitle').textContent = 'Edit Competitor';
+  document.getElementById('compId').value = c.id;
+  document.getElementById('compName').value = c.name;
+  document.getElementById('compUrl').value = c.url||'';
+  document.getElementById('compTagline').value = c.tagline||'';
+  document.getElementById('compThreat').value = c.threat;
+  document.getElementById('compPricing').value = c.pricing||'';
+  document.getElementById('compFounded').value = c.founded||'';
+  document.getElementById('compFunding').value = c.funding||'';
+  document.getElementById('compTeamSize').value = c.teamSize||'';
+  document.getElementById('compAudience').value = c.audience||'';
+  document.getElementById('compStrengths').value = (c.strengths||[]).join('\n');
+  document.getElementById('compWeaknesses').value = (c.weaknesses||[]).join('\n');
+  document.getElementById('compOpportunities').value = (c.opportunities||[]).join('\n');
+  document.getElementById('compThreats').value = (c.threats||[]).join('\n');
+  document.getElementById('compPosX').value = c.posX||50;
+  document.getElementById('compPosY').value = c.posY||50;
+  document.getElementById('compNotes').value = c.notes||'';
+  state.selectedColor = c.color;
+  initColorPicker();
+  openModal('compModal');
+}
+
+function saveCompetitor() {
+  const name = document.getElementById('compName').value.trim();
+  if (!name) return alert('Name is required');
+  
+  const parseLines = (id) => document.getElementById(id).value.split('\n').map(s=>s.trim()).filter(Boolean);
+  
+  const data = {
+    name, url: document.getElementById('compUrl').value.trim(),
+    tagline: document.getElementById('compTagline').value.trim(),
+    threat: document.getElementById('compThreat').value,
+    pricing: document.getElementById('compPricing').value.trim(),
+    founded: document.getElementById('compFounded').value.trim(),
+    funding: document.getElementById('compFunding').value.trim(),
+    teamSize: document.getElementById('compTeamSize').value.trim(),
+    audience: document.getElementById('compAudience').value.trim(),
+    strengths: parseLines('compStrengths'),
+    weaknesses: parseLines('compWeaknesses'),
+    opportunities: parseLines('compOpportunities'),
+    threats: parseLines('compThreats'),
+    posX: parseInt(document.getElementById('compPosX').value)||50,
+    posY: parseInt(document.getElementById('compPosY').value)||50,
+    color: state.selectedColor,
+    notes: document.getElementById('compNotes').value.trim(),
+  };
+
+  const id = document.getElementById('compId').value;
+  if (id) {
+    const idx = state.competitors.findIndex(c => c.id === id);
+    if (idx >= 0) state.competitors[idx] = { ...state.competitors[idx], ...data };
+  } else {
+    data.id = uid();
+    data.featureStatus = {};
+    state.competitors.push(data);
+  }
+  save(); closeModal('compModal'); render();
+}
+
+function deleteCompetitor(id) {
+  if (!confirm('Delete this competitor?')) return;
+  state.competitors = state.competitors.filter(c => c.id !== id);
+  state.news = state.news.filter(n => n.competitorId !== id);
+  save(); render();
+}
+
+// Features
+function openFeatureManager() {
+  renderFeatureList();
+  openModal('featureModal');
+}
+
+function renderFeatureList() {
+  const categories = [...new Set(state.features.map(f => f.category))];
+  document.getElementById('featureList').innerHTML = categories.map(cat => `
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;margin-bottom:4px;">${esc(cat)}</div>
+      ${state.features.filter(f=>f.category===cat).map(f => `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+          <span style="flex:1;font-size:13px;">${esc(f.name)}</span>
+          <div style="display:flex;gap:2px;">
+            ${state.competitors.map(c => {
+              const s = c.featureStatus?.[f.id]||'no';
+              const next = s==='no'?'partial':s==='partial'?'yes':'no';
+              const icon = s==='yes'?'✅':s==='partial'?'⚡':'❌';
+              return `<button class="feature-status-btn" onclick="toggleFeatureStatus('${c.id}','${f.id}','${next}')" title="${esc(c.name)}: ${s}" style="font-size:10px;">${icon}</button>`;
+            }).join('')}
+          </div>
+          <button class="btn-icon btn-sm btn-danger" onclick="deleteFeature('${f.id}')" style="font-size:11px;">×</button>
+        </div>
+      `).join('')}
+    </div>
+  `).join('') || '<p style="color:var(--text2);font-size:13px;">No features yet</p>';
+}
+
+function addFeature() {
+  const name = document.getElementById('newFeatureName').value.trim();
+  const category = document.getElementById('newFeatureCategory').value.trim() || 'General';
+  if (!name) return;
+  state.features.push({ id: uid(), name, category });
+  document.getElementById('newFeatureName').value = '';
+  save(); renderFeatureList();
+}
+
+function deleteFeature(id) {
+  state.features = state.features.filter(f => f.id !== id);
+  state.competitors.forEach(c => { if(c.featureStatus) delete c.featureStatus[id]; });
+  save(); renderFeatureList();
+}
+
+function toggleFeatureStatus(compId, featId, newStatus) {
+  const comp = state.competitors.find(c => c.id === compId);
+  if (comp) {
+    if (!comp.featureStatus) comp.featureStatus = {};
+    comp.featureStatus[featId] = newStatus;
+    save(); renderFeatureList();
+  }
+}
+
+// News
+function openAddNews() {
+  document.getElementById('newsModalTitle').textContent = 'Add Intel';
+  document.getElementById('newsId').value = '';
+  document.getElementById('newsContent').value = '';
+  document.getElementById('newsSource').value = '';
+  document.getElementById('newsDate').value = new Date().toISOString().slice(0,10);
+  const sel = document.getElementById('newsCompetitor');
+  sel.innerHTML = state.competitors.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  openModal('newsModal');
+}
+
+function saveNews() {
+  const content = document.getElementById('newsContent').value.trim();
+  if (!content) return alert('Content required');
+  const data = {
+    id: document.getElementById('newsId').value || uid(),
+    competitorId: document.getElementById('newsCompetitor').value,
+    type: document.getElementById('newsType').value,
+    date: document.getElementById('newsDate').value,
+    content,
+    source: document.getElementById('newsSource').value.trim()
+  };
+  const idx = state.news.findIndex(n => n.id === data.id);
+  if (idx >= 0) state.news[idx] = data; else state.news.push(data);
+  save(); closeModal('newsModal'); render();
+}
+
+function deleteNews(id) {
+  state.news = state.news.filter(n => n.id !== id);
+  save(); render();
+}
+
+// Detail View
+function showDetail(id) {
+  const c = state.competitors.find(x => x.id === id);
+  if (!c) return;
+  
+  const newsForComp = state.news.filter(n => n.competitorId === id).sort((a,b) => b.date.localeCompare(a.date));
+  
+  document.getElementById('detailContent').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div class="detail-header">
+        <div class="detail-avatar" style="background:${c.color}">${c.name.charAt(0)}</div>
+        <div>
+          <div class="detail-title">${esc(c.name)}</div>
+          <div class="detail-tagline">${esc(c.tagline||'')}</div>
+          <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
+            <span class="threat-badge threat-${c.threat}">${c.threat.toUpperCase()}</span>
+            ${c.url ? `<a href="${esc(c.url)}" target="_blank" style="font-size:12px;color:var(--accent);">🔗 ${c.url}</a>` : ''}
+          </div>
+        </div>
+      </div>
+      <button class="btn-icon" onclick="closeModal('detailModal')" style="font-size:18px;">✕</button>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-value" style="font-size:16px;">${esc(c.pricing||'?')}</div><div class="stat-label">Pricing</div></div>
+      <div class="stat-card"><div class="stat-value" style="font-size:16px;">${esc(c.teamSize||'?')}</div><div class="stat-label">Team Size</div></div>
+      <div class="stat-card"><div class="stat-value" style="font-size:16px;">${esc(c.founded||'?')}</div><div class="stat-label">Founded</div></div>
+      <div class="stat-card"><div class="stat-value" style="font-size:16px;">${esc(c.funding||'?')}</div><div class="stat-label">Funding</div></div>
+    </div>
+
+    ${c.audience ? `<div style="font-size:13px;color:var(--text2);margin-bottom:16px;"><strong>Target:</strong> ${esc(c.audience)}</div>` : ''}
+
+    <div class="swot-grid" style="margin-bottom:20px;">
+      <div class="swot-box swot-strengths"><h4>💪 Strengths</h4><ul class="swot-list">${(c.strengths||[]).map(s=>`<li>${esc(s)}</li>`).join('')||'<li style="color:var(--text2)">None added</li>'}</ul></div>
+      <div class="swot-box swot-weaknesses"><h4>🎯 Weaknesses</h4><ul class="swot-list">${(c.weaknesses||[]).map(s=>`<li>${esc(s)}</li>`).join('')||'<li style="color:var(--text2)">None added</li>'}</ul></div>
+      <div class="swot-box swot-opportunities"><h4>🚀 Opportunities</h4><ul class="swot-list">${(c.opportunities||[]).map(s=>`<li>${esc(s)}</li>`).join('')||'<li style="color:var(--text2)">None added</li>'}</ul></div>
+      <div class="swot-box swot-threats"><h4>⚠️ Threats</h4><ul class="swot-list">${(c.threats||[]).map(s=>`<li>${esc(s)}</li>`).join('')||'<li style="color:var(--text2)">None added</li>'}</ul></div>
+    </div>
+
+    ${c.notes ? `<div class="card" style="margin-bottom:20px;"><h4 style="font-size:13px;color:var(--text2);margin-bottom:6px;">📝 Notes</h4><p style="font-size:13px;line-height:1.6;">${esc(c.notes)}</p></div>` : ''}
+
+    ${newsForComp.length ? `
+      <div class="card">
+        <h4 style="font-size:14px;margin-bottom:12px;">📰 Recent Intel (${newsForComp.length})</h4>
+        ${newsForComp.slice(0,5).map(n => `
+          <div class="news-item">
+            <div class="news-date">${n.date}</div>
+            <span class="news-type ${n.type}">${{feature:'🚀',pricing:'💰',funding:'💎',hire:'👤',partnership:'🤝'}[n.type]||''} ${n.type}</span>
+            <div class="news-content">${esc(n.content)}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+  `;
+  openModal('detailModal');
+}
+
+// Utils
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function switchView(v) { state.currentView = v; render(); }
+function handleSearch(q) { state.searchQuery = q; render(); }
+
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('cr-dark', document.body.classList.contains('dark'));
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify({ competitors: state.competitors, features: state.features, news: state.news }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'competitor-radar-export.json'; a.click();
+}
+
+function importData() { document.getElementById('importFile').click(); }
+function handleImport(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (d.competitors) state.competitors = d.competitors;
+      if (d.features) state.features = d.features;
+      if (d.news) state.news = d.news;
+      save(); render();
+      alert('Import successful!');
+    } catch(err) { alert('Invalid file'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') { e.target.blur(); return; }
+    return;
+  }
+  switch(e.key) {
+    case '1': switchView('overview'); break;
+    case '2': switchView('matrix'); break;
+    case '3': switchView('map'); break;
+    case '4': switchView('battlecards'); break;
+    case '5': switchView('news'); break;
+    case 'n': case 'N': e.preventDefault(); openAddCompetitor(); break;
+    case '/': e.preventDefault(); document.getElementById('searchInput').focus(); break;
+    case 'd': case 'D': toggleDark(); break;
+    case 'e': case 'E': exportData(); break;
+    case 'Escape':
+      ['compModal','featureModal','newsModal','detailModal'].forEach(m => closeModal(m));
+      break;
+  }
+});
+
+// Click outside modal to close
+['compModal','featureModal','newsModal','detailModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal-overlay')) closeModal(id);
+  });
+});
+
+init();
+</script>
+</body>
+</html>

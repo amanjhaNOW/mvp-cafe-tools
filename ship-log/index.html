@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ship Log — Build in Public Tracker</title>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --surface2: #1a1a25;
+  --surface3: #22222f;
+  --border: #2a2a3a;
+  --text: #e8e8f0;
+  --text2: #9090a8;
+  --accent: #6c5ce7;
+  --accent2: #a29bfe;
+  --green: #00b894;
+  --green2: #55efc4;
+  --orange: #fdcb6e;
+  --red: #ff6b6b;
+  --blue: #74b9ff;
+  --pink: #fd79a8;
+  --gradient: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  --radius: 12px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+[data-theme="light"] {
+  --bg: #f5f5fa;
+  --surface: #ffffff;
+  --surface2: #f0f0f5;
+  --surface3: #e8e8f0;
+  --border: #d0d0dd;
+  --text: #1a1a2e;
+  --text2: #6060780;
+  --shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+a { color: var(--accent2); text-decoration:none; }
+button { cursor:pointer; font-family:inherit; }
+input,textarea,select { font-family:inherit; }
+
+/* Header */
+.header { background:var(--surface); border-bottom:1px solid var(--border); padding:16px 24px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+.header-left { display:flex; align-items:center; gap:12px; }
+.logo { font-size:24px; font-weight:800; background:var(--gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.logo-icon { font-size:28px; }
+.streak-badge { background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:6px 14px; font-size:13px; display:flex; align-items:center; gap:6px; }
+.streak-badge .fire { font-size:16px; }
+.streak-num { font-weight:700; color:var(--orange); }
+.header-actions { display:flex; gap:8px; }
+.btn { padding:8px 16px; border-radius:8px; border:none; font-size:13px; font-weight:600; transition:all .2s; }
+.btn-primary { background:var(--gradient); color:#fff; }
+.btn-primary:hover { opacity:.9; transform:translateY(-1px); }
+.btn-ghost { background:transparent; color:var(--text2); border:1px solid var(--border); }
+.btn-ghost:hover { background:var(--surface2); color:var(--text); }
+.btn-sm { padding:6px 12px; font-size:12px; }
+.btn-icon { width:36px; height:36px; display:flex; align-items:center; justify-content:center; padding:0; font-size:18px; }
+
+/* Layout */
+.layout { display:flex; min-height:calc(100vh - 60px); }
+.sidebar { width:280px; background:var(--surface); border-right:1px solid var(--border); padding:20px; flex-shrink:0; overflow-y:auto; }
+.main { flex:1; padding:24px; max-width:900px; overflow-y:auto; }
+
+/* Stats cards */
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; text-align:center; }
+.stat-num { font-size:28px; font-weight:800; }
+.stat-label { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
+.stat-green .stat-num { color:var(--green); }
+.stat-orange .stat-num { color:var(--orange); }
+.stat-accent .stat-num { color:var(--accent2); }
+.stat-pink .stat-num { color:var(--pink); }
+
+/* Contribution graph */
+.contrib-section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:24px; }
+.contrib-title { font-size:14px; font-weight:600; margin-bottom:12px; color:var(--text2); }
+.contrib-graph { display:flex; gap:3px; overflow-x:auto; padding-bottom:8px; }
+.contrib-week { display:flex; flex-direction:column; gap:3px; }
+.contrib-day { width:14px; height:14px; border-radius:3px; background:var(--surface2); cursor:pointer; transition:all .15s; position:relative; }
+.contrib-day:hover { transform:scale(1.3); z-index:2; }
+.contrib-day[data-level="1"] { background:rgba(108,92,231,0.25); }
+.contrib-day[data-level="2"] { background:rgba(108,92,231,0.5); }
+.contrib-day[data-level="3"] { background:rgba(108,92,231,0.75); }
+.contrib-day[data-level="4"] { background:rgba(108,92,231,1); }
+.contrib-labels { display:flex; justify-content:space-between; margin-top:8px; font-size:10px; color:var(--text2); }
+.contrib-legend { display:flex; align-items:center; gap:4px; font-size:10px; color:var(--text2); margin-top:8px; }
+.contrib-legend .contrib-day { cursor:default; width:12px; height:12px; }
+.contrib-legend .contrib-day:hover { transform:none; }
+.contrib-tooltip { position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); background:#1a1a2e; color:#fff; padding:6px 10px; border-radius:6px; font-size:11px; white-space:nowrap; pointer-events:none; z-index:10; display:none; }
+.contrib-day:hover .contrib-tooltip { display:block; }
+
+/* Sidebar sections */
+.sidebar-section { margin-bottom:24px; }
+.sidebar-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--text2); margin-bottom:12px; }
+.filter-btn { display:block; width:100%; text-align:left; padding:8px 12px; border:none; background:none; color:var(--text2); font-size:13px; border-radius:8px; transition:all .15s; cursor:pointer; }
+.filter-btn:hover { background:var(--surface2); color:var(--text); }
+.filter-btn.active { background:var(--accent); color:#fff; }
+.filter-count { float:right; font-size:11px; opacity:.6; }
+.tag-list { display:flex; flex-wrap:wrap; gap:6px; }
+.tag { padding:4px 10px; border-radius:12px; font-size:11px; font-weight:600; background:var(--surface2); color:var(--text2); cursor:pointer; transition:all .15s; border:1px solid transparent; }
+.tag:hover, .tag.active { border-color:var(--accent); color:var(--accent2); background:rgba(108,92,231,0.1); }
+
+/* Log entries */
+.log-entry { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:16px; transition:all .2s; position:relative; }
+.log-entry:hover { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+.log-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+.log-date { font-size:12px; color:var(--text2); }
+.log-day-num { font-size:11px; background:var(--accent); color:#fff; padding:2px 8px; border-radius:10px; font-weight:700; }
+.log-title { font-size:18px; font-weight:700; margin-bottom:8px; }
+.log-desc { font-size:14px; color:var(--text2); line-height:1.6; margin-bottom:12px; }
+.log-meta { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.log-tag { padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600; }
+.log-tag.shipped { background:rgba(0,184,148,0.15); color:var(--green2); }
+.log-tag.wip { background:rgba(253,203,110,0.15); color:var(--orange); }
+.log-tag.idea { background:rgba(116,185,255,0.15); color:var(--blue); }
+.log-tag.killed { background:rgba(255,107,107,0.15); color:var(--red); }
+.log-tag.learning { background:rgba(253,121,168,0.15); color:var(--pink); }
+.log-metrics { display:flex; gap:16px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+.log-metric { font-size:12px; color:var(--text2); }
+.log-metric strong { color:var(--text); }
+.log-tags-list { display:flex; gap:4px; flex-wrap:wrap; }
+.log-tags-list .tag { font-size:10px; padding:2px 6px; cursor:default; }
+.log-actions { display:flex; gap:6px; }
+.log-link { font-size:12px; color:var(--accent2); cursor:pointer; }
+.log-link:hover { text-decoration:underline; }
+
+/* Share card */
+.share-card-container { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:1000; }
+.share-card-container.active { display:flex; }
+.share-card-wrapper { position:relative; }
+.share-card { width:600px; background:linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); border-radius:20px; padding:40px; color:#fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.share-card .sc-badge { display:inline-block; background:rgba(108,92,231,0.3); border:1px solid rgba(108,92,231,0.5); border-radius:20px; padding:4px 12px; font-size:12px; color:var(--accent2); margin-bottom:16px; }
+.share-card .sc-title { font-size:28px; font-weight:800; margin-bottom:8px; line-height:1.2; }
+.share-card .sc-desc { font-size:15px; color:rgba(255,255,255,0.7); line-height:1.5; margin-bottom:20px; }
+.share-card .sc-stats { display:flex; gap:24px; margin-bottom:20px; }
+.share-card .sc-stat { text-align:center; }
+.share-card .sc-stat-num { font-size:24px; font-weight:800; color:var(--accent2); }
+.share-card .sc-stat-label { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.5); }
+.share-card .sc-footer { display:flex; justify-content:space-between; align-items:center; padding-top:16px; border-top:1px solid rgba(255,255,255,0.1); }
+.share-card .sc-author { font-size:13px; color:rgba(255,255,255,0.6); }
+.share-card .sc-brand { font-size:14px; font-weight:700; background:var(--gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.share-close { position:absolute; top:-12px; right:-12px; width:36px; height:36px; border-radius:50%; background:var(--surface); border:1px solid var(--border); color:var(--text); font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.share-btns { display:flex; gap:8px; margin-top:16px; justify-content:center; }
+
+/* Modal */
+.modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:1000; }
+.modal-overlay.active { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:16px; width:560px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow); }
+.modal-header { padding:20px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.modal-title { font-size:18px; font-weight:700; }
+.modal-close { background:none; border:none; color:var(--text2); font-size:20px; cursor:pointer; }
+.modal-body { padding:24px; }
+.form-group { margin-bottom:16px; }
+.form-label { display:block; font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+.form-input { width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:14px; outline:none; transition:border-color .2s; }
+.form-input:focus { border-color:var(--accent); }
+textarea.form-input { resize:vertical; min-height:80px; }
+.form-row { display:flex; gap:12px; }
+.form-row .form-group { flex:1; }
+.form-tags-input { display:flex; flex-wrap:wrap; gap:6px; padding:8px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); min-height:40px; align-items:center; cursor:text; }
+.form-tags-input input { border:none; background:none; color:var(--text); font-size:13px; outline:none; flex:1; min-width:80px; }
+.form-tags-input .tag { cursor:pointer; }
+.modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+.status-options { display:flex; gap:8px; }
+.status-opt { padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:none; color:var(--text2); font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
+.status-opt:hover { border-color:var(--accent); }
+.status-opt.active { border-color:var(--accent); background:rgba(108,92,231,0.15); color:var(--accent2); }
+
+/* Post generator */
+.post-modal .modal { width:640px; }
+.post-output { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:16px; font-size:14px; line-height:1.6; white-space:pre-wrap; min-height:200px; max-height:400px; overflow-y:auto; }
+.post-format-btns { display:flex; gap:8px; margin-bottom:12px; }
+
+/* Settings */
+.settings-section { margin-bottom:24px; }
+.settings-title { font-size:14px; font-weight:600; margin-bottom:12px; }
+
+/* Empty state */
+.empty { text-align:center; padding:60px 20px; }
+.empty-icon { font-size:48px; margin-bottom:16px; }
+.empty-title { font-size:20px; font-weight:700; margin-bottom:8px; }
+.empty-desc { color:var(--text2); font-size:14px; }
+
+/* Responsive */
+@media (max-width:900px) {
+  .layout { flex-direction:column; }
+  .sidebar { width:100%; border-right:none; border-bottom:1px solid var(--border); padding:16px; }
+  .stats-grid { grid-template-columns:repeat(2,1fr); }
+  .share-card { width:90vw; padding:24px; }
+  .share-card .sc-title { font-size:22px; }
+}
+@media (max-width:600px) {
+  .stats-grid { grid-template-columns:1fr 1fr; }
+  .header { padding:12px 16px; }
+  .main { padding:16px; }
+  .modal { width:95vw; }
+}
+
+/* Search */
+.search-bar { position:relative; margin-bottom:16px; }
+.search-bar input { width:100%; padding:10px 14px 10px 36px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:13px; outline:none; }
+.search-bar input:focus { border-color:var(--accent); }
+.search-bar .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text2); font-size:14px; }
+
+/* Toast */
+.toast { position:fixed; bottom:24px; right:24px; background:var(--green); color:#fff; padding:12px 20px; border-radius:8px; font-size:13px; font-weight:600; z-index:2000; transform:translateY(100px); opacity:0; transition:all .3s; }
+.toast.show { transform:translateY(0); opacity:1; }
+
+/* Keyboard hints */
+.kbd { display:inline-block; padding:2px 6px; border-radius:4px; background:var(--surface3); border:1px solid var(--border); font-size:10px; font-family:monospace; color:var(--text2); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span class="logo-icon">🚀</span>
+    <span class="logo">Ship Log</span>
+    <div class="streak-badge">
+      <span class="fire">🔥</span>
+      <span class="streak-num" id="streakCount">0</span>
+      <span>day streak</span>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost btn-icon" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+    <button class="btn btn-ghost btn-icon" onclick="showSettings()" title="Settings">⚙️</button>
+    <button class="btn btn-ghost" onclick="exportData()">📤 Export</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()">📥 Import</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    <button class="btn btn-primary" onclick="showNewEntry()">+ New Entry</button>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search logs... ( / )" oninput="filterEntries()">
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Status</div>
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All <span class="filter-count" id="countAll">0</span></button>
+      <button class="filter-btn" data-filter="shipped" onclick="setFilter('shipped',this)">🟢 Shipped <span class="filter-count" id="countShipped">0</span></button>
+      <button class="filter-btn" data-filter="wip" onclick="setFilter('wip',this)">🟡 In Progress <span class="filter-count" id="countWip">0</span></button>
+      <button class="filter-btn" data-filter="idea" onclick="setFilter('idea',this)">🔵 Idea <span class="filter-count" id="countIdea">0</span></button>
+      <button class="filter-btn" data-filter="learning" onclick="setFilter('learning',this)">🩷 Learning <span class="filter-count" id="countLearning">0</span></button>
+      <button class="filter-btn" data-filter="killed" onclick="setFilter('killed',this)">🔴 Killed <span class="filter-count" id="countKilled">0</span></button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Tags</div>
+      <div class="tag-list" id="tagList"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Keyboard</div>
+      <div style="font-size:12px;color:var(--text2);line-height:2">
+        <kbd class="kbd">N</kbd> New entry<br>
+        <kbd class="kbd">/</kbd> Search<br>
+        <kbd class="kbd">G</kbd> Generate post<br>
+        <kbd class="kbd">Esc</kbd> Close modal
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card stat-green">
+        <div class="stat-num" id="statShipped">0</div>
+        <div class="stat-label">Shipped</div>
+      </div>
+      <div class="stat-card stat-orange">
+        <div class="stat-num" id="statStreak">0</div>
+        <div class="stat-label">Day Streak</div>
+      </div>
+      <div class="stat-card stat-accent">
+        <div class="stat-num" id="statTotal">0</div>
+        <div class="stat-label">Total Entries</div>
+      </div>
+      <div class="stat-card stat-pink">
+        <div class="stat-num" id="statThisWeek">0</div>
+        <div class="stat-label">This Week</div>
+      </div>
+    </div>
+
+    <!-- Contribution Graph -->
+    <div class="contrib-section">
+      <div class="contrib-title">Shipping Activity</div>
+      <div class="contrib-graph" id="contribGraph"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="contrib-labels" id="contribLabels"></div>
+        <div class="contrib-legend">
+          Less
+          <div class="contrib-day" data-level="0"></div>
+          <div class="contrib-day" data-level="1"></div>
+          <div class="contrib-day" data-level="2"></div>
+          <div class="contrib-day" data-level="3"></div>
+          <div class="contrib-day" data-level="4"></div>
+          More
+        </div>
+      </div>
+    </div>
+
+    <!-- Entries -->
+    <div id="entriesList"></div>
+    <div class="empty" id="emptyState" style="display:none">
+      <div class="empty-icon">🚀</div>
+      <div class="empty-title">No entries yet</div>
+      <div class="empty-desc">Start logging what you ship. Press <kbd class="kbd">N</kbd> to create your first entry.</div>
+    </div>
+  </div>
+</div>
+
+<!-- New/Edit Entry Modal -->
+<div class="modal-overlay" id="entryModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">New Ship Log</div>
+      <button class="modal-close" onclick="closeModal('entryModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <div class="form-group">
+        <label class="form-label">What did you ship?</label>
+        <input class="form-input" id="entryTitle" placeholder="e.g. Landing page redesign, API v2, Bug fix marathon">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Details</label>
+        <textarea class="form-input" id="entryDesc" rows="3" placeholder="What you built, why it matters, what you learned..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input class="form-input" type="date" id="entryDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <div class="status-options" id="statusOptions">
+            <button class="status-opt active" data-status="shipped" onclick="pickStatus(this)">🟢 Shipped</button>
+            <button class="status-opt" data-status="wip" onclick="pickStatus(this)">🟡 WIP</button>
+            <button class="status-opt" data-status="idea" onclick="pickStatus(this)">🔵 Idea</button>
+            <button class="status-opt" data-status="learning" onclick="pickStatus(this)">🩷 Learning</button>
+            <button class="status-opt" data-status="killed" onclick="pickStatus(this)">🔴 Killed</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Hours Spent</label>
+          <input class="form-input" type="number" id="entryHours" placeholder="0" min="0" step="0.5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Link (optional)</label>
+          <input class="form-input" id="entryLink" placeholder="https://...">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tags (press Enter to add)</label>
+        <div class="form-tags-input" id="tagsInputContainer" onclick="document.getElementById('tagsInput').focus()">
+          <input type="text" id="tagsInput" placeholder="Add tags...">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Key Metrics (optional)</label>
+        <textarea class="form-input" id="entryMetrics" rows="2" placeholder="e.g. 500 users signed up, 3s → 0.5s load time, $2K MRR"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('entryModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEntry()">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Share Card Modal -->
+<div class="share-card-container" id="shareModal">
+  <div class="share-card-wrapper">
+    <button class="share-close" onclick="closeModal('shareModal')">&times;</button>
+    <div class="share-card" id="shareCard">
+      <div class="sc-badge">🚀 Ship Log</div>
+      <div class="sc-title" id="scTitle"></div>
+      <div class="sc-desc" id="scDesc"></div>
+      <div class="sc-stats" id="scStats"></div>
+      <div class="sc-footer">
+        <span class="sc-author" id="scAuthor"></span>
+        <span class="sc-brand">Ship Log</span>
+      </div>
+    </div>
+    <div class="share-btns">
+      <button class="btn btn-primary" onclick="copyShareCard()">📋 Copy as Image</button>
+      <button class="btn btn-ghost" onclick="copyShareText()">📝 Copy as Text</button>
+    </div>
+  </div>
+</div>
+
+<!-- Post Generator Modal -->
+<div class="modal-overlay post-modal" id="postModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Generate Social Post</div>
+      <button class="modal-close" onclick="closeModal('postModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Choose Entry</label>
+        <select class="form-input" id="postEntry" onchange="generatePost()">
+          <option value="">Select an entry...</option>
+          <option value="__weekly">📊 Weekly Summary</option>
+          <option value="__streak">🔥 Streak Update</option>
+        </select>
+      </div>
+      <div class="post-format-btns">
+        <button class="btn btn-sm btn-ghost active" data-format="twitter" onclick="setPostFormat('twitter',this)">𝕏 Twitter</button>
+        <button class="btn btn-sm btn-ghost" data-format="linkedin" onclick="setPostFormat('linkedin',this)">💼 LinkedIn</button>
+        <button class="btn btn-sm btn-ghost" data-format="thread" onclick="setPostFormat('thread',this)">🧵 Thread</button>
+      </div>
+      <div class="post-output" id="postOutput">Select an entry to generate a post...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('postModal')">Close</button>
+      <button class="btn btn-primary" onclick="copyPost()">📋 Copy Post</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Settings</div>
+      <button class="modal-close" onclick="closeModal('settingsModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-section">
+        <div class="settings-title">Profile</div>
+        <div class="form-group">
+          <label class="form-label">Your Name</label>
+          <input class="form-input" id="settingsName" placeholder="Your name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Twitter Handle</label>
+          <input class="form-input" id="settingsTwitter" placeholder="@handle">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tagline</label>
+          <input class="form-input" id="settingsTagline" placeholder="Building in public...">
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title">Danger Zone</div>
+        <button class="btn btn-ghost" style="color:var(--red);border-color:var(--red)" onclick="if(confirm('Delete ALL entries?')){localStorage.removeItem('shiplog_entries');location.reload()}">🗑️ Delete All Entries</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('settingsModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// State
+let entries = JSON.parse(localStorage.getItem('shiplog_entries') || '[]');
+let settings = JSON.parse(localStorage.getItem('shiplog_settings') || '{"name":"","twitter":"","tagline":"Building in public"}');
+let currentFilter = 'all';
+let currentTag = null;
+let currentPostFormat = 'twitter';
+let currentTags = [];
+
+// Init
+function init() {
+  if (entries.length === 0) seedDemo();
+  renderAll();
+  buildContribGraph();
+}
+
+function seedDemo() {
+  const today = new Date();
+  const demos = [
+    { title:'Ship Log — Build Diary', desc:'Built a "building in public" tracker. Log what you ship, generate social posts, track your streak. Dogfooding starts now.', status:'shipped', hours:4, tags:['tool','meta','overnight-build'], metrics:'Day 1 of tracking' },
+    { title:'UTMStamp Landing v2', desc:'Rewrote the hero section. Cleaner copy, social proof above fold, faster CTA. Conversion should jump.', status:'shipped', hours:6, tags:['utmstamp','landing','copywriting'], metrics:'Load time: 1.2s → 0.8s' },
+    { title:'LinkedIn Content System', desc:'Built a content pipeline: topic bank → draft → review → schedule. 3 posts/week cadence locked in.', status:'shipped', hours:3, tags:['content','linkedin','system'], metrics:'12 posts queued' },
+    { title:'Resume PDF Auto-gen', desc:'Script that generates a tailored resume PDF from a master doc + job description. Puppeteer + custom CSS.', status:'shipped', hours:5, tags:['job-hunt','automation','pdf'], metrics:'30s per tailored resume' },
+    { title:'AI Feature Prioritizer', desc:'Weighted scoring model that takes features + constraints and outputs a prioritized roadmap. ICE + RICE hybrid.', status:'wip', hours:2, tags:['tool','product','ai'], metrics:'' },
+    { title:'Portfolio Site Concept', desc:'Decided against building a portfolio site right now. The work speaks louder than a pretty page. Focus on shipping.', status:'killed', hours:1, tags:['personal','reflection'], metrics:'' },
+    { title:'Lesson: Ship > Polish', desc:'Spent 2 hours polishing a button animation nobody will notice. Meanwhile the core feature was half-done. Lesson learned: ship the thing, polish later.', status:'learning', hours:0, tags:['lesson','shipping','focus'], metrics:'' },
+  ];
+  demos.forEach((d, i) => {
+    const date = new Date(today);
+    date.setDate(date.getDate() - (demos.length - 1 - i));
+    entries.push({
+      id: crypto.randomUUID(),
+      title: d.title,
+      desc: d.desc,
+      date: date.toISOString().split('T')[0],
+      status: d.status,
+      hours: d.hours,
+      link: '',
+      tags: d.tags,
+      metrics: d.metrics,
+      created: date.toISOString()
+    });
+  });
+  saveEntries();
+}
+
+function saveEntries() {
+  localStorage.setItem('shiplog_entries', JSON.stringify(entries));
+}
+
+function renderAll() {
+  renderEntries();
+  renderStats();
+  renderTags();
+  updateCounts();
+  buildContribGraph();
+}
+
+// Entries
+function renderEntries() {
+  const container = document.getElementById('entriesList');
+  const empty = document.getElementById('emptyState');
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  
+  let filtered = [...entries].sort((a,b) => b.date.localeCompare(a.date));
+  
+  if (currentFilter !== 'all') filtered = filtered.filter(e => e.status === currentFilter);
+  if (currentTag) filtered = filtered.filter(e => e.tags && e.tags.includes(currentTag));
+  if (search) filtered = filtered.filter(e => 
+    e.title.toLowerCase().includes(search) || 
+    e.desc.toLowerCase().includes(search) ||
+    (e.tags && e.tags.some(t => t.toLowerCase().includes(search)))
+  );
+
+  if (filtered.length === 0) {
+    container.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Group by date and assign day numbers
+  const allDates = [...new Set(entries.filter(e=>e.status==='shipped').map(e=>e.date))].sort();
+  
+  container.innerHTML = filtered.map(entry => {
+    const dayNum = allDates.indexOf(entry.date) + 1;
+    const dateObj = new Date(entry.date + 'T00:00:00');
+    const dateStr = dateObj.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+    const statusLabels = { shipped:'Shipped', wip:'In Progress', idea:'Idea', learning:'Learning', killed:'Killed' };
+    
+    return `<div class="log-entry" data-id="${entry.id}">
+      <div class="log-header">
+        <div class="log-date">${dateStr}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${entry.status === 'shipped' && dayNum > 0 ? `<span class="log-day-num">Day ${dayNum}</span>` : ''}
+          <span class="log-tag ${entry.status}">${statusLabels[entry.status]}</span>
+        </div>
+      </div>
+      <div class="log-title">${esc(entry.title)}</div>
+      <div class="log-desc">${esc(entry.desc)}</div>
+      <div class="log-meta">
+        ${entry.tags && entry.tags.length ? `<div class="log-tags-list">${entry.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+      </div>
+      ${entry.hours || entry.metrics || entry.link ? `<div class="log-metrics">
+        ${entry.hours ? `<span class="log-metric"><strong>${entry.hours}h</strong> spent</span>` : ''}
+        ${entry.metrics ? `<span class="log-metric">${esc(entry.metrics)}</span>` : ''}
+        ${entry.link ? `<a href="${esc(entry.link)}" target="_blank" class="log-link">🔗 Link</a>` : ''}
+      </div>` : ''}
+      <div class="log-actions" style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-sm btn-ghost" onclick="editEntry('${entry.id}')">✏️ Edit</button>
+        <button class="btn btn-sm btn-ghost" onclick="shareEntry('${entry.id}')">🎴 Share Card</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteEntry('${entry.id}')" style="color:var(--red)">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function esc(s) { 
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Stats
+function renderStats() {
+  const shipped = entries.filter(e => e.status === 'shipped').length;
+  const total = entries.length;
+  const streak = calcStreak();
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const thisWeek = entries.filter(e => new Date(e.date) >= weekAgo).length;
+
+  document.getElementById('statShipped').textContent = shipped;
+  document.getElementById('statStreak').textContent = streak;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statThisWeek').textContent = thisWeek;
+  document.getElementById('streakCount').textContent = streak;
+}
+
+function calcStreak() {
+  const shippedDates = [...new Set(entries.filter(e => e.status === 'shipped').map(e => e.date))].sort().reverse();
+  if (shippedDates.length === 0) return 0;
+  
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  
+  if (shippedDates[0] !== today && shippedDates[0] !== yesterday) return 0;
+  
+  let streak = 1;
+  for (let i = 1; i < shippedDates.length; i++) {
+    const curr = new Date(shippedDates[i-1]);
+    const prev = new Date(shippedDates[i]);
+    const diff = (curr - prev) / 86400000;
+    if (diff === 1) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function updateCounts() {
+  const counts = { all:entries.length, shipped:0, wip:0, idea:0, learning:0, killed:0 };
+  entries.forEach(e => { if (counts[e.status] !== undefined) counts[e.status]++; });
+  Object.keys(counts).forEach(k => {
+    const el = document.getElementById('count' + k.charAt(0).toUpperCase() + k.slice(1));
+    if (el) el.textContent = counts[k];
+  });
+}
+
+// Tags
+function renderTags() {
+  const allTags = {};
+  entries.forEach(e => (e.tags||[]).forEach(t => allTags[t] = (allTags[t]||0) + 1));
+  const sorted = Object.entries(allTags).sort((a,b) => b[1]-a[1]);
+  document.getElementById('tagList').innerHTML = sorted.map(([t,c]) => 
+    `<span class="tag ${currentTag===t?'active':''}" onclick="toggleTag('${t}')">${esc(t)} (${c})</span>`
+  ).join('');
+}
+
+function toggleTag(tag) {
+  currentTag = currentTag === tag ? null : tag;
+  renderAll();
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+}
+
+function filterEntries() { renderEntries(); }
+
+// Contribution graph
+function buildContribGraph() {
+  const graph = document.getElementById('contribGraph');
+  const today = new Date();
+  const weeks = 20;
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - (weeks * 7) + (7 - startDate.getDay()));
+  
+  // Count entries per date
+  const dateCounts = {};
+  entries.forEach(e => { dateCounts[e.date] = (dateCounts[e.date]||0) + 1; });
+  const maxCount = Math.max(1, ...Object.values(dateCounts));
+  
+  let html = '';
+  const months = [];
+  let lastMonth = -1;
+  
+  for (let w = 0; w < weeks; w++) {
+    html += '<div class="contrib-week">';
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + w * 7 + d);
+      if (date > today) {
+        html += '<div class="contrib-day" style="opacity:0"></div>';
+        continue;
+      }
+      const dateStr = date.toISOString().split('T')[0];
+      const count = dateCounts[dateStr] || 0;
+      const level = count === 0 ? 0 : Math.min(4, Math.ceil(count / maxCount * 4));
+      const dateLabel = date.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      
+      if (date.getMonth() !== lastMonth && d === 0) {
+        months.push({ week:w, label:date.toLocaleDateString('en-US',{month:'short'}) });
+        lastMonth = date.getMonth();
+      }
+      
+      html += `<div class="contrib-day" data-level="${level}" data-date="${dateStr}" onclick="showDayEntries('${dateStr}')">
+        <div class="contrib-tooltip">${count} ${count===1?'entry':'entries'} on ${dateLabel}</div>
+      </div>`;
+    }
+    html += '</div>';
+  }
+  graph.innerHTML = html;
+}
+
+function showDayEntries(date) {
+  document.getElementById('searchInput').value = '';
+  currentFilter = 'all';
+  currentTag = null;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-filter="all"]').classList.add('active');
+  // Scroll to entries from that date
+  renderEntries();
+  const entry = document.querySelector(`.log-entry`);
+  if (entry) entry.scrollIntoView({ behavior:'smooth' });
+}
+
+// Entry CRUD
+function showNewEntry() {
+  document.getElementById('editId').value = '';
+  document.getElementById('modalTitle').textContent = 'New Ship Log';
+  document.getElementById('entryTitle').value = '';
+  document.getElementById('entryDesc').value = '';
+  document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('entryHours').value = '';
+  document.getElementById('entryLink').value = '';
+  document.getElementById('entryMetrics').value = '';
+  currentTags = [];
+  renderFormTags();
+  pickStatus(document.querySelector('[data-status="shipped"]'));
+  openModal('entryModal');
+  setTimeout(() => document.getElementById('entryTitle').focus(), 100);
+}
+
+function editEntry(id) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  document.getElementById('editId').value = id;
+  document.getElementById('modalTitle').textContent = 'Edit Entry';
+  document.getElementById('entryTitle').value = entry.title;
+  document.getElementById('entryDesc').value = entry.desc;
+  document.getElementById('entryDate').value = entry.date;
+  document.getElementById('entryHours').value = entry.hours || '';
+  document.getElementById('entryLink').value = entry.link || '';
+  document.getElementById('entryMetrics').value = entry.metrics || '';
+  currentTags = [...(entry.tags || [])];
+  renderFormTags();
+  pickStatus(document.querySelector(`[data-status="${entry.status}"]`));
+  openModal('entryModal');
+}
+
+function saveEntry() {
+  const id = document.getElementById('editId').value;
+  const title = document.getElementById('entryTitle').value.trim();
+  const desc = document.getElementById('entryDesc').value.trim();
+  const date = document.getElementById('entryDate').value;
+  const status = document.querySelector('.status-opt.active')?.dataset.status || 'shipped';
+  const hours = parseFloat(document.getElementById('entryHours').value) || 0;
+  const link = document.getElementById('entryLink').value.trim();
+  const metrics = document.getElementById('entryMetrics').value.trim();
+
+  if (!title) { toast('Title is required'); return; }
+  if (!date) { toast('Date is required'); return; }
+
+  if (id) {
+    const entry = entries.find(e => e.id === id);
+    if (entry) {
+      Object.assign(entry, { title, desc, date, status, hours, link, tags:currentTags, metrics });
+    }
+  } else {
+    entries.push({
+      id: crypto.randomUUID(),
+      title, desc, date, status, hours, link, tags: currentTags, metrics,
+      created: new Date().toISOString()
+    });
+  }
+  saveEntries();
+  closeModal('entryModal');
+  renderAll();
+  toast(id ? 'Entry updated!' : 'Entry logged! 🚀');
+}
+
+function deleteEntry(id) {
+  if (!confirm('Delete this entry?')) return;
+  entries = entries.filter(e => e.id !== id);
+  saveEntries();
+  renderAll();
+  toast('Entry deleted');
+}
+
+// Tags input
+function renderFormTags() {
+  const container = document.getElementById('tagsInputContainer');
+  const input = document.getElementById('tagsInput');
+  container.innerHTML = '';
+  currentTags.forEach(t => {
+    const span = document.createElement('span');
+    span.className = 'tag';
+    span.textContent = t + ' ×';
+    span.onclick = () => { currentTags = currentTags.filter(x=>x!==t); renderFormTags(); };
+    container.appendChild(span);
+  });
+  container.appendChild(input);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('tagsInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const val = e.target.value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
+      if (val && !currentTags.includes(val)) {
+        currentTags.push(val);
+        renderFormTags();
+      }
+      e.target.value = '';
+    }
+  });
+});
+
+function pickStatus(btn) {
+  document.querySelectorAll('.status-opt').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Share card
+function shareEntry(id) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  
+  const shippedDates = [...new Set(entries.filter(e=>e.status==='shipped').map(e=>e.date))].sort();
+  const dayNum = shippedDates.indexOf(entry.date) + 1;
+  
+  document.getElementById('scTitle').textContent = entry.title;
+  document.getElementById('scDesc').textContent = entry.desc || '';
+  
+  let statsHtml = '';
+  if (dayNum > 0) statsHtml += `<div class="sc-stat"><div class="sc-stat-num">${dayNum}</div><div class="sc-stat-label">Ship Day</div></div>`;
+  if (entry.hours) statsHtml += `<div class="sc-stat"><div class="sc-stat-num">${entry.hours}h</div><div class="sc-stat-label">Spent</div></div>`;
+  const streak = calcStreak();
+  if (streak > 0) statsHtml += `<div class="sc-stat"><div class="sc-stat-num">🔥${streak}</div><div class="sc-stat-label">Streak</div></div>`;
+  document.getElementById('scStats').innerHTML = statsHtml;
+  
+  document.getElementById('scAuthor').textContent = settings.name ? `by ${settings.name}` : '';
+  
+  openModal('shareModal');
+}
+
+let _shareEntryId = null;
+function shareEntry(id) {
+  _shareEntryId = id;
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  const shippedDates = [...new Set(entries.filter(e=>e.status==='shipped').map(e=>e.date))].sort();
+  const dayNum = shippedDates.indexOf(entry.date) + 1;
+  document.getElementById('scTitle').textContent = entry.title;
+  document.getElementById('scDesc').textContent = entry.desc || '';
+  let statsHtml = '';
+  if (dayNum > 0) statsHtml += `<div class="sc-stat"><div class="sc-stat-num">${dayNum}</div><div class="sc-stat-label">Ship Day</div></div>`;
+  if (entry.hours) statsHtml += `<div class="sc-stat"><div class="sc-stat-num">${entry.hours}h</div><div class="sc-stat-label">Spent</div></div>`;
+  const streak = calcStreak();
+  if (streak > 0) statsHtml += `<div class="sc-stat"><div class="sc-stat-num">🔥${streak}</div><div class="sc-stat-label">Streak</div></div>`;
+  document.getElementById('scStats').innerHTML = statsHtml;
+  document.getElementById('scAuthor').textContent = settings.name ? `by ${settings.name}` : '';
+  openModal('shareModal');
+}
+
+async function copyShareCard() {
+  try {
+    const card = document.getElementById('shareCard');
+    // Use html2canvas if available, otherwise copy text
+    const text = `🚀 ${document.getElementById('scTitle').textContent}\n\n${document.getElementById('scDesc').textContent}`;
+    await navigator.clipboard.writeText(text);
+    toast('Card text copied! (Use screenshot for image)');
+  } catch(e) { toast('Copy failed — try screenshot'); }
+}
+
+function copyShareText() {
+  const entry = entries.find(e => e.id === _shareEntryId);
+  if (!entry) return;
+  const streak = calcStreak();
+  const text = `🚀 Shipped: ${entry.title}\n\n${entry.desc}\n\n${entry.hours ? `⏱️ ${entry.hours}h` : ''}${entry.metrics ? ` | 📊 ${entry.metrics}` : ''}${streak ? `\n🔥 ${streak}-day shipping streak` : ''}\n\n#buildinpublic`;
+  navigator.clipboard.writeText(text);
+  toast('Post text copied!');
+}
+
+// Post generator
+function showPostGenerator() {
+  const select = document.getElementById('postEntry');
+  // Clear old options after the first 3
+  while (select.options.length > 3) select.remove(3);
+  entries.filter(e=>e.status==='shipped').sort((a,b)=>b.date.localeCompare(a.date)).forEach(e => {
+    const opt = document.createElement('option');
+    opt.value = e.id;
+    opt.textContent = `${e.date} — ${e.title}`;
+    select.appendChild(opt);
+  });
+  document.getElementById('postOutput').textContent = 'Select an entry to generate a post...';
+  openModal('postModal');
+}
+
+function setPostFormat(fmt, btn) {
+  currentPostFormat = fmt;
+  document.querySelectorAll('.post-format-btns .btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  generatePost();
+}
+
+function generatePost() {
+  const val = document.getElementById('postEntry').value;
+  if (!val) return;
+  const output = document.getElementById('postOutput');
+  const streak = calcStreak();
+  const handle = settings.twitter || '@you';
+  
+  if (val === '__weekly') {
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
+    const weekEntries = entries.filter(e => new Date(e.date) >= weekAgo && e.status==='shipped');
+    if (currentPostFormat === 'twitter') {
+      output.textContent = `🚀 Week in review — shipped ${weekEntries.length} things:\n\n${weekEntries.map((e,i) => `${i+1}. ${e.title}`).join('\n')}\n\n${streak ? `🔥 ${streak}-day streak and counting\n\n` : ''}Building in public isn't about perfection.\nIt's about momentum.\n\n#buildinpublic`;
+    } else if (currentPostFormat === 'linkedin') {
+      output.textContent = `This week I shipped ${weekEntries.length} things.\n\nNot perfect. Not polished. Shipped.\n\n${weekEntries.map((e,i) => `${i+1}. ${e.title}${e.hours ? ` (${e.hours}h)` : ''}`).join('\n')}\n\nTotal hours: ${weekEntries.reduce((s,e)=>s+(e.hours||0),0)}h\n${streak ? `Current streak: ${streak} days 🔥\n` : ''}\nBuilding in public means showing the work, not just the wins.\n\nWhat did you ship this week?\n\n#buildinpublic #shipping #productmanagement`;
+    } else {
+      output.textContent = `🧵 Weekly ship thread:\n\n---\n\n${weekEntries.map((e,i) => `${i+1}/${weekEntries.length}\n\n${e.title}\n\n${e.desc}\n\n${e.hours ? `⏱️ ${e.hours}h` : ''}${e.metrics ? ` | 📊 ${e.metrics}` : ''}`).join('\n\n---\n\n')}\n\n---\n\n${weekEntries.length+1}/${weekEntries.length+1}\n\nThat's ${weekEntries.length} things shipped this week.\n${streak ? `🔥 ${streak}-day streak.\n` : ''}\nFollow along → ${handle}\n\n#buildinpublic`;
+    }
+    return;
+  }
+  
+  if (val === '__streak') {
+    if (currentPostFormat === 'twitter') {
+      output.textContent = `🔥 ${streak}-day shipping streak.\n\nEvery day I build something. Ship something. Learn something.\n\nNot for clout. For compound growth.\n\nDay ${streak} — still going.\n\n#buildinpublic`;
+    } else {
+      output.textContent = `${streak} days of shipping. Every. Single. Day.\n\nHere's what I've learned about building in public:\n\n1. Streaks beat sprints. Showing up daily > heroic all-nighters.\n2. Ship > Perfect. Working code beats beautiful mockups.\n3. Share the ugly. People connect with the struggle.\n\nDay ${streak} — not stopping.\n\nWhat's your shipping streak?\n\n#buildinpublic #consistency #productmanagement`;
+    }
+    return;
+  }
+  
+  const entry = entries.find(e => e.id === val);
+  if (!entry) return;
+  
+  if (currentPostFormat === 'twitter') {
+    output.textContent = `🚀 Shipped: ${entry.title}\n\n${entry.desc}\n\n${entry.hours ? `⏱️ ${entry.hours}h` : ''}${entry.metrics ? `\n📊 ${entry.metrics}` : ''}${streak ? `\n🔥 ${streak}-day streak` : ''}\n\n#buildinpublic`;
+  } else if (currentPostFormat === 'linkedin') {
+    output.textContent = `I shipped something today: ${entry.title}\n\n${entry.desc}\n\n${entry.hours ? `Time invested: ${entry.hours} hours\n` : ''}${entry.metrics ? `Results: ${entry.metrics}\n` : ''}${streak ? `\nCurrently on a ${streak}-day shipping streak 🔥\n` : ''}\nThe lesson? Start before you're ready. Ship before it's perfect.\n\nWhat are you building today?\n\n#buildinpublic #shipping #productmanagement`;
+  } else {
+    output.textContent = `🧵 Thread: How I built ${entry.title}\n\n---\n\n1/4\nThe problem:\nI needed ${entry.title.toLowerCase()}. Nothing out there fit.\nSo I built it.\n\n---\n\n2/4\nThe build:\n${entry.desc}\n\n---\n\n3/4\nThe result:\n${entry.hours ? `⏱️ ${entry.hours}h from idea to shipped\n` : ''}${entry.metrics ? `📊 ${entry.metrics}\n` : ''}Shipped. Done. Moving on.\n\n---\n\n4/4\nThe takeaway:\nBuilding stuff > Talking about building stuff.\n\n${streak ? `🔥 Day ${streak} of shipping daily.\n` : ''}Follow along → ${handle}\n\n#buildinpublic`;
+  }
+}
+
+function copyPost() {
+  const text = document.getElementById('postOutput').textContent;
+  navigator.clipboard.writeText(text);
+  toast('Post copied!');
+}
+
+// Settings
+function showSettings() {
+  document.getElementById('settingsName').value = settings.name || '';
+  document.getElementById('settingsTwitter').value = settings.twitter || '';
+  document.getElementById('settingsTagline').value = settings.tagline || '';
+  openModal('settingsModal');
+}
+
+function saveSettings() {
+  settings.name = document.getElementById('settingsName').value.trim();
+  settings.twitter = document.getElementById('settingsTwitter').value.trim();
+  settings.tagline = document.getElementById('settingsTagline').value.trim();
+  localStorage.setItem('shiplog_settings', JSON.stringify(settings));
+  closeModal('settingsModal');
+  toast('Settings saved!');
+}
+
+// Import/Export
+function exportData() {
+  const data = { entries, settings, exportDate: new Date().toISOString(), version: 1 };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `shiplog-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  toast('Exported!');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.entries) {
+        if (confirm(`Import ${data.entries.length} entries? This will replace current data.`)) {
+          entries = data.entries;
+          if (data.settings) settings = data.settings;
+          saveEntries();
+          localStorage.setItem('shiplog_settings', JSON.stringify(settings));
+          renderAll();
+          toast(`Imported ${entries.length} entries!`);
+        }
+      }
+    } catch(e) { toast('Invalid file'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// Theme
+function toggleTheme() {
+  const current = document.documentElement.dataset.theme;
+  document.documentElement.dataset.theme = current === 'light' ? '' : 'light';
+  localStorage.setItem('shiplog_theme', document.documentElement.dataset.theme);
+}
+if (localStorage.getItem('shiplog_theme') === 'light') document.documentElement.dataset.theme = 'light';
+
+// Modal helpers
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+// Toast
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') { 
+      document.querySelectorAll('.modal-overlay.active, .share-card-container.active').forEach(m => m.classList.remove('active'));
+    }
+    return;
+  }
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); showNewEntry(); }
+  if (e.key === '/') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+  if (e.key === 'g' || e.key === 'G') { e.preventDefault(); showPostGenerator(); }
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.active, .share-card-container.active').forEach(m => m.classList.remove('active'));
+  }
+});
+
+// Boot
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roadmap Hero — Product Roadmap Builder</title>
+<style>
+:root {
+  --bg: #f8f9fa; --surface: #ffffff; --surface2: #f1f3f5; --border: #dee2e6;
+  --text: #212529; --text2: #495057; --text3: #868e96; --accent: #4263eb;
+  --accent2: #5c7cfa; --accent-bg: #edf2ff; --green: #37b24d; --green-bg: #ebfbee;
+  --orange: #f76707; --orange-bg: #fff4e6; --red: #e03131; --red-bg: #fff5f5;
+  --purple: #7048e8; --purple-bg: #f3f0ff; --teal: #0ca678; --teal-bg: #e6fcf5;
+  --pink: #e64980; --pink-bg: #fff0f6; --yellow: #f59f00; --yellow-bg: #fff9db;
+  --shadow: 0 1px 3px rgba(0,0,0,.08); --shadow2: 0 4px 12px rgba(0,0,0,.1);
+  --radius: 8px; --radius-sm: 4px;
+}
+.dark {
+  --bg: #1a1b1e; --surface: #25262b; --surface2: #2c2e33; --border: #373a40;
+  --text: #c1c2c5; --text2: #909296; --text3: #5c5f66; --accent: #5c7cfa;
+  --accent2: #748ffc; --accent-bg: #1c2340; --green-bg: #1a2e1f; --orange-bg: #2e1f0a;
+  --red-bg: #2e1515; --purple-bg: #1f1535; --teal-bg: #0a2e25; --pink-bg: #2e151f;
+  --yellow-bg: #2e2a0a; --shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+button { cursor:pointer; border:none; background:none; font-family:inherit; color:var(--text); }
+input,select,textarea { font-family:inherit; font-size:14px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; outline:none; width:100%; }
+input:focus,select:focus,textarea:focus { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-bg); }
+textarea { resize:vertical; min-height:60px; }
+
+/* Header */
+.header { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 24px; display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:100; }
+.logo { font-size:20px; font-weight:700; color:var(--accent); display:flex; align-items:center; gap:8px; }
+.logo span { font-size:24px; }
+.header-actions { display:flex; gap:8px; margin-left:auto; align-items:center; }
+.btn { padding:8px 16px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; transition:all .15s; display:inline-flex; align-items:center; gap:6px; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { background:var(--accent2); }
+.btn-ghost { color:var(--text2); }
+.btn-ghost:hover { background:var(--surface2); }
+.btn-sm { padding:4px 10px; font-size:12px; }
+
+/* Tabs */
+.tabs { display:flex; gap:4px; background:var(--surface2); padding:3px; border-radius:var(--radius); }
+.tab { padding:6px 14px; border-radius:6px; font-size:13px; font-weight:500; color:var(--text2); transition:all .15s; }
+.tab.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
+.tab:hover:not(.active) { color:var(--text); }
+
+/* Layout */
+.main { padding:24px; max-width:1400px; margin:0 auto; }
+
+/* Stats */
+.stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:24px; }
+.stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
+.stat-value { font-size:28px; font-weight:700; }
+.stat-label { font-size:12px; color:var(--text3); margin-top:2px; }
+
+/* Toolbar */
+.toolbar { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center; }
+.search-box { max-width:260px; position:relative; }
+.search-box input { padding-left:32px; }
+.search-box::before { content:'🔍'; position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:13px; }
+.filter-group { display:flex; gap:4px; }
+.filter-btn { padding:4px 12px; border-radius:20px; font-size:12px; background:var(--surface2); color:var(--text2); border:1px solid transparent; }
+.filter-btn.active { background:var(--accent-bg); color:var(--accent); border-color:var(--accent); }
+
+/* Now/Next/Later View */
+.nnl-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+.nnl-col { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; min-height:400px; }
+.nnl-header { padding:14px 16px; font-weight:600; font-size:14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); }
+.nnl-header .count { background:var(--surface2); padding:2px 8px; border-radius:10px; font-size:12px; color:var(--text3); font-weight:400; }
+.now-header { border-top:3px solid var(--green); }
+.next-header { border-top:3px solid var(--accent); }
+.later-header { border-top:3px solid var(--purple); }
+.nnl-body { padding:8px; min-height:300px; }
+.nnl-body.drag-over { background:var(--accent-bg); }
+
+/* Feature Card */
+.feature-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px; margin-bottom:8px; cursor:pointer; transition:all .15s; position:relative; }
+.feature-card:hover { box-shadow:var(--shadow2); transform:translateY(-1px); }
+.feature-card.dragging { opacity:.5; }
+.fc-title { font-weight:600; font-size:14px; margin-bottom:6px; }
+.fc-desc { font-size:12px; color:var(--text2); margin-bottom:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.fc-meta { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.fc-tag { font-size:11px; padding:2px 8px; border-radius:10px; font-weight:500; }
+.fc-effort-low { background:var(--green-bg); color:var(--green); }
+.fc-effort-med { background:var(--orange-bg); color:var(--orange); }
+.fc-effort-high { background:var(--red-bg); color:var(--red); }
+.fc-impact-high { background:var(--green-bg); color:var(--green); }
+.fc-impact-med { background:var(--yellow-bg); color:var(--yellow); }
+.fc-impact-low { background:var(--surface2); color:var(--text3); }
+.fc-theme { font-size:11px; padding:2px 8px; border-radius:10px; }
+.fc-rice { font-size:11px; font-weight:700; color:var(--accent); background:var(--accent-bg); padding:2px 8px; border-radius:10px; }
+.fc-status { width:8px; height:8px; border-radius:50%; position:absolute; top:12px; right:12px; }
+.status-planning { background:var(--text3); }
+.status-in-progress { background:var(--accent); }
+.status-done { background:var(--green); }
+.status-blocked { background:var(--red); }
+
+/* Timeline View */
+.timeline-container { overflow-x:auto; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); }
+.timeline-header { display:flex; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--surface); z-index:5; }
+.tl-label-col { min-width:200px; padding:10px 16px; font-weight:600; font-size:13px; border-right:1px solid var(--border); flex-shrink:0; }
+.tl-months { display:flex; flex:1; }
+.tl-month { min-width:120px; padding:10px 12px; font-size:12px; font-weight:500; color:var(--text2); text-align:center; border-right:1px solid var(--border); flex:1; }
+.tl-month.current { background:var(--accent-bg); color:var(--accent); font-weight:600; }
+.timeline-row { display:flex; border-bottom:1px solid var(--border); min-height:48px; align-items:center; }
+.timeline-row:hover { background:var(--surface2); }
+.tl-row-label { min-width:200px; padding:8px 16px; font-size:13px; font-weight:500; border-right:1px solid var(--border); flex-shrink:0; display:flex; align-items:center; gap:8px; cursor:pointer; }
+.tl-row-label .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.tl-bar-area { display:flex; flex:1; position:relative; height:48px; }
+.tl-bar { position:absolute; height:28px; top:10px; border-radius:14px; font-size:11px; font-weight:500; color:#fff; display:flex; align-items:center; padding:0 10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:30px; cursor:pointer; }
+
+/* List View */
+.list-table { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.list-table th { padding:10px 14px; font-size:12px; font-weight:600; color:var(--text3); text-align:left; background:var(--surface2); border-bottom:1px solid var(--border); cursor:pointer; user-select:none; }
+.list-table th:hover { color:var(--text); }
+.list-table td { padding:10px 14px; font-size:13px; border-bottom:1px solid var(--border); }
+.list-table tr:hover td { background:var(--surface2); }
+.sort-arrow { font-size:10px; margin-left:4px; }
+
+/* RICE Prioritization View */
+.rice-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.rice-chart { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+.rice-chart h3 { font-size:14px; margin-bottom:16px; color:var(--text2); }
+.rice-bar-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.rice-bar-name { font-size:13px; width:150px; flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rice-bar { height:28px; border-radius:14px; display:flex; align-items:center; padding:0 10px; font-size:12px; font-weight:600; color:#fff; min-width:40px; transition:width .3s; }
+.rice-list { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.rice-list-header { padding:14px 16px; font-weight:600; font-size:14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; }
+.rice-item { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; cursor:pointer; }
+.rice-item:hover { background:var(--surface2); }
+.rice-rank { width:28px; height:28px; border-radius:50%; background:var(--accent-bg); color:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+.rice-item-info { flex:1; min-width:0; }
+.rice-item-name { font-weight:500; font-size:14px; }
+.rice-item-scores { font-size:12px; color:var(--text3); margin-top:2px; }
+.rice-total { font-weight:700; font-size:16px; color:var(--accent); flex-shrink:0; }
+
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s; }
+.modal-overlay.show { opacity:1; pointer-events:auto; }
+.modal { background:var(--surface); border-radius:12px; width:95%; max-width:600px; max-height:85vh; overflow-y:auto; box-shadow:var(--shadow2); }
+.modal-header { padding:20px 24px 0; display:flex; justify-content:space-between; align-items:center; }
+.modal-header h2 { font-size:18px; }
+.modal-close { font-size:20px; color:var(--text3); padding:4px 8px; }
+.modal-body { padding:20px 24px; }
+.modal-footer { padding:12px 24px 20px; display:flex; gap:8px; justify-content:flex-end; }
+.form-group { margin-bottom:14px; }
+.form-group label { display:block; font-size:12px; font-weight:600; color:var(--text2); margin-bottom:4px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+/* Themes */
+.theme-colors { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+.theme-dot { width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:all .15s; }
+.theme-dot.selected { border-color:var(--text); transform:scale(1.2); }
+
+/* Stakeholder View */
+.share-view { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:32px; }
+.share-title { font-size:24px; font-weight:700; margin-bottom:4px; }
+.share-subtitle { color:var(--text2); margin-bottom:24px; }
+.share-section { margin-bottom:24px; }
+.share-section h3 { font-size:16px; font-weight:600; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.share-feature { padding:10px 0; border-bottom:1px solid var(--surface2); display:flex; gap:12px; align-items:flex-start; }
+.share-feature:last-child { border-bottom:none; }
+.share-dot { width:10px; height:10px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+
+/* Toast */
+.toast { position:fixed; bottom:24px; right:24px; background:var(--text); color:var(--bg); padding:12px 20px; border-radius:var(--radius); font-size:13px; z-index:300; opacity:0; transform:translateY(10px); transition:all .3s; pointer-events:none; }
+.toast.show { opacity:1; transform:translateY(0); }
+
+/* Keyboard hints */
+.kbd { background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:1px 6px; font-size:11px; font-family:monospace; color:var(--text3); }
+
+/* Responsive */
+@media(max-width:900px) {
+  .nnl-grid { grid-template-columns:1fr; }
+  .rice-grid { grid-template-columns:1fr; }
+  .stats { grid-template-columns:repeat(2,1fr); }
+  .header { padding:12px 16px; flex-wrap:wrap; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo"><span>🗺️</span> Roadmap Hero</div>
+  <div class="tabs" id="viewTabs">
+    <button class="tab active" data-view="nnl">Now / Next / Later</button>
+    <button class="tab" data-view="timeline">Timeline</button>
+    <button class="tab" data-view="list">List</button>
+    <button class="tab" data-view="rice">RICE Score</button>
+    <button class="tab" data-view="share">Stakeholder</button>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost btn-sm" onclick="showHelp()" title="Keyboard shortcuts">⌨️</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportData()">📤 Export</button>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importInput').click()">📥 Import</button>
+    <input type="file" id="importInput" accept=".json" style="display:none" onchange="importData(event)">
+    <button class="btn btn-ghost btn-sm" onclick="toggleDark()">🌙</button>
+    <button class="btn btn-primary btn-sm" onclick="openModal()">+ Feature</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="stats" id="stats"></div>
+  <div class="toolbar">
+    <div class="search-box"><input type="text" id="searchInput" placeholder="Search features..." oninput="render()"></div>
+    <div class="filter-group" id="themeFilters"></div>
+    <div class="filter-group" id="statusFilters"></div>
+  </div>
+  <div id="viewContainer"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Add Feature</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Feature Name *</label>
+        <input type="text" id="fName" placeholder="e.g. Team analytics dashboard">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="fDesc" placeholder="What does this feature do and why?"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Horizon</label>
+          <select id="fHorizon"><option value="now">Now (0-4 weeks)</option><option value="next">Next (1-3 months)</option><option value="later">Later (3-6 months)</option></select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="fStatus"><option value="planning">Planning</option><option value="in-progress">In Progress</option><option value="done">Done</option><option value="blocked">Blocked</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Effort</label>
+          <select id="fEffort"><option value="low">Low (days)</option><option value="medium">Medium (1-2 weeks)</option><option value="high">High (weeks+)</option></select>
+        </div>
+        <div class="form-group">
+          <label>Impact</label>
+          <select id="fImpact"><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Theme</label>
+        <select id="fTheme"></select>
+      </div>
+      <div class="form-group">
+        <label>RICE Scoring</label>
+        <div class="form-row-3">
+          <div><label style="font-size:11px">Reach (users/qtr)</label><input type="number" id="fReach" min="0" value="100" placeholder="100"></div>
+          <div><label style="font-size:11px">Impact (0.25-3)</label><select id="fRiceImpact"><option value="3">3 - Massive</option><option value="2">2 - High</option><option value="1" selected>1 - Medium</option><option value="0.5">0.5 - Low</option><option value="0.25">0.25 - Minimal</option></select></div>
+          <div><label style="font-size:11px">Confidence (%)</label><select id="fConfidence"><option value="100">100% - High</option><option value="80" selected>80% - Medium</option><option value="50">50% - Low</option></select></div>
+        </div>
+        <div style="margin-top:8px"><label style="font-size:11px">Effort (person-weeks)</label><input type="number" id="fRiceEffort" min="0.5" step="0.5" value="2" placeholder="2"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Start Date</label><input type="date" id="fStart"></div>
+        <div class="form-group"><label>End Date</label><input type="date" id="fEnd"></div>
+      </div>
+      <div class="form-group">
+        <label>Tags (comma-separated)</label>
+        <input type="text" id="fTags" placeholder="e.g. mvp, analytics, growth">
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="fNotes" placeholder="Additional context, links, dependencies..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="deleteBtn" onclick="deleteFeature()" style="margin-right:auto;color:var(--red);display:none">🗑️ Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveFeature()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal-overlay" id="helpOverlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><h2>Keyboard Shortcuts</h2><button class="modal-close" onclick="document.getElementById('helpOverlay').classList.remove('show')">✕</button></div>
+    <div class="modal-body" style="font-size:13px;line-height:2">
+      <kbd class="kbd">N</kbd> New feature &nbsp;
+      <kbd class="kbd">/</kbd> Search &nbsp;
+      <kbd class="kbd">1-5</kbd> Switch views<br>
+      <kbd class="kbd">D</kbd> Toggle dark mode &nbsp;
+      <kbd class="kbd">E</kbd> Export &nbsp;
+      <kbd class="kbd">Esc</kbd> Close modal<br>
+      <kbd class="kbd">←→</kbd> Navigate timeline months
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// === DATA ===
+const THEMES = [
+  { id:'growth', name:'Growth', color:'#37b24d', bg:'#ebfbee' },
+  { id:'analytics', name:'Analytics', color:'#4263eb', bg:'#edf2ff' },
+  { id:'ux', name:'UX/Design', color:'#e64980', bg:'#fff0f6' },
+  { id:'infra', name:'Infrastructure', color:'#868e96', bg:'#f1f3f5' },
+  { id:'monetization', name:'Monetization', color:'#f76707', bg:'#fff4e6' },
+  { id:'integration', name:'Integrations', color:'#7048e8', bg:'#f3f0ff' },
+  { id:'ai', name:'AI/ML', color:'#0ca678', bg:'#e6fcf5' }
+];
+
+const STATUS_MAP = {
+  'planning':{ label:'Planning', color:'var(--text3)' },
+  'in-progress':{ label:'In Progress', color:'var(--accent)' },
+  'done':{ label:'Done', color:'var(--green)' },
+  'blocked':{ label:'Blocked', color:'var(--red)' }
+};
+
+const DEMO_FEATURES = [
+  { id:genId(), name:'UTM parameter builder UI', desc:'Visual builder for creating and managing UTM parameters with templates and presets', horizon:'now', status:'in-progress', effort:'medium', impact:'high', theme:'ux', reach:500, riceImpact:2, confidence:100, riceEffort:2, start:'2026-04-01', end:'2026-04-14', tags:['mvp','core'], notes:'Core feature for v1 launch' },
+  { id:genId(), name:'Click analytics dashboard', desc:'Real-time analytics showing click-through rates, top performers, and trends over time', horizon:'now', status:'planning', effort:'high', impact:'high', theme:'analytics', reach:400, riceImpact:3, confidence:80, riceEffort:4, start:'2026-04-07', end:'2026-04-28', tags:['analytics','core'], notes:'Key differentiator. Show per-signature and per-campaign metrics.' },
+  { id:genId(), name:'Google Workspace integration', desc:'Auto-push signatures to Google Workspace accounts. One-click deployment for entire teams.', horizon:'now', status:'in-progress', effort:'high', impact:'high', theme:'integration', reach:300, riceImpact:3, confidence:80, riceEffort:3, start:'2026-04-01', end:'2026-04-21', tags:['integration','enterprise'], notes:'Coming soon feature on landing page' },
+  { id:genId(), name:'Signature template marketplace', desc:'Curated gallery of professional signature templates categorized by industry and style', horizon:'next', status:'planning', effort:'medium', impact:'medium', theme:'growth', reach:1000, riceImpact:1, confidence:80, riceEffort:2, start:'2026-05-01', end:'2026-05-14', tags:['templates','growth'], notes:'User-generated templates in v2' },
+  { id:genId(), name:'Team management & roles', desc:'Admin panel for team signature management with role-based permissions and approval workflows', horizon:'next', status:'planning', effort:'high', impact:'high', theme:'growth', reach:200, riceImpact:2, confidence:80, riceEffort:5, start:'2026-05-01', end:'2026-06-01', tags:['enterprise','teams'], notes:'Key for B2B pricing tier' },
+  { id:genId(), name:'Campaign banner system', desc:'Dynamic promotional banners in signatures with scheduling, A/B testing, and click tracking', horizon:'next', status:'planning', effort:'medium', impact:'high', theme:'monetization', reach:300, riceImpact:2, confidence:50, riceEffort:3, start:'2026-05-15', end:'2026-06-07', tags:['campaigns','monetization'], notes:'High monetization potential for marketing teams' },
+  { id:genId(), name:'Video signature embeds', desc:'Embed short video thumbnails in email signatures with click-to-play functionality', horizon:'later', status:'planning', effort:'high', impact:'medium', theme:'ux', reach:200, riceImpact:1, confidence:50, riceEffort:4, start:'2026-07-01', end:'2026-07-28', tags:['innovation','premium'], notes:'Premium feature. Email client compatibility needs research.' },
+  { id:genId(), name:'AI signature writer', desc:'Generate professional bios and taglines from LinkedIn profile or resume using AI', horizon:'later', status:'planning', effort:'medium', impact:'medium', theme:'ai', reach:500, riceImpact:1, confidence:50, riceEffort:2, start:'2026-07-01', end:'2026-07-14', tags:['ai','growth'], notes:'Good for activation — reduces blank-page problem' },
+  { id:genId(), name:'Outlook/M365 integration', desc:'Native integration with Microsoft 365 for enterprise signature deployment', horizon:'later', status:'planning', effort:'high', impact:'high', theme:'integration', reach:400, riceImpact:2, confidence:50, riceEffort:5, start:'2026-08-01', end:'2026-09-01', tags:['enterprise','integration'], notes:'Opens up enterprise market' },
+  { id:genId(), name:'Zapier/webhook connector', desc:'Allow users to trigger signature changes, track events, and integrate with their stack via Zapier', horizon:'next', status:'planning', effort:'low', impact:'medium', theme:'integration', reach:100, riceImpact:1, confidence:80, riceEffort:1, start:'2026-05-20', end:'2026-05-27', tags:['integration','automation'], notes:'Low effort, high activation for power users' },
+  { id:genId(), name:'Custom domain tracking', desc:'Let users track clicks on their own domain instead of utmstamp.com for brand trust', horizon:'next', status:'planning', effort:'low', impact:'medium', theme:'infra', reach:150, riceImpact:1, confidence:100, riceEffort:1, start:'2026-06-01', end:'2026-06-07', tags:['enterprise','branding'], notes:'Table stakes for enterprise' },
+  { id:genId(), name:'Performance monitoring & uptime', desc:'Internal monitoring for signature rendering, click tracking latency, and uptime SLA', horizon:'now', status:'done', effort:'low', impact:'low', theme:'infra', reach:50, riceImpact:0.5, confidence:100, riceEffort:0.5, start:'2026-03-20', end:'2026-03-25', tags:['infra','ops'], notes:'Basic monitoring in place. Expand later.' }
+];
+
+function genId() { return Math.random().toString(36).substr(2,9); }
+
+let features = [];
+let currentView = 'nnl';
+let editingId = null;
+let activeTheme = null;
+let activeStatus = null;
+let sortCol = null;
+let sortDir = 1;
+let timelineOffset = 0;
+
+function load() {
+  const saved = localStorage.getItem('roadmap-hero-data');
+  if (saved) { features = JSON.parse(saved); }
+  else { features = DEMO_FEATURES; save(); }
+  if (localStorage.getItem('roadmap-hero-dark')==='1') document.body.classList.add('dark');
+}
+
+function save() { localStorage.setItem('roadmap-hero-data', JSON.stringify(features)); }
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('roadmap-hero-dark', document.body.classList.contains('dark')?'1':'0');
+}
+
+function getFiltered() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  return features.filter(f => {
+    if (q && !f.name.toLowerCase().includes(q) && !(f.desc||'').toLowerCase().includes(q) && !(f.tags||[]).some(t=>t.toLowerCase().includes(q))) return false;
+    if (activeTheme && f.theme !== activeTheme) return false;
+    if (activeStatus && f.status !== activeStatus) return false;
+    return true;
+  });
+}
+
+function riceScore(f) {
+  const e = f.riceEffort || 1;
+  return Math.round(((f.reach||0) * (f.riceImpact||1) * ((f.confidence||80)/100)) / e);
+}
+
+// === RENDER ===
+function render() {
+  renderStats();
+  renderThemeFilters();
+  renderStatusFilters();
+  const c = document.getElementById('viewContainer');
+  if (currentView === 'nnl') renderNNL(c);
+  else if (currentView === 'timeline') renderTimeline(c);
+  else if (currentView === 'list') renderList(c);
+  else if (currentView === 'rice') renderRICE(c);
+  else if (currentView === 'share') renderShare(c);
+}
+
+function renderStats() {
+  const total = features.length;
+  const now = features.filter(f=>f.horizon==='now').length;
+  const inProg = features.filter(f=>f.status==='in-progress').length;
+  const done = features.filter(f=>f.status==='done').length;
+  const blocked = features.filter(f=>f.status==='blocked').length;
+  const avgRice = total ? Math.round(features.reduce((s,f)=>s+riceScore(f),0)/total) : 0;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-value">${total}</div><div class="stat-label">Total Features</div></div>
+    <div class="stat"><div class="stat-value" style="color:var(--green)">${now}</div><div class="stat-label">Now (In Scope)</div></div>
+    <div class="stat"><div class="stat-value" style="color:var(--accent)">${inProg}</div><div class="stat-label">In Progress</div></div>
+    <div class="stat"><div class="stat-value" style="color:var(--green)">${done}</div><div class="stat-label">Done</div></div>
+    <div class="stat"><div class="stat-value" style="color:var(--red)">${blocked}</div><div class="stat-label">Blocked</div></div>
+    <div class="stat"><div class="stat-value" style="color:var(--purple)">${avgRice}</div><div class="stat-label">Avg RICE Score</div></div>
+  `;
+}
+
+function renderThemeFilters() {
+  document.getElementById('themeFilters').innerHTML = THEMES.map(t =>
+    `<button class="filter-btn ${activeTheme===t.id?'active':''}" style="${activeTheme===t.id?`background:${t.bg};color:${t.color};border-color:${t.color}`:''}" onclick="activeTheme=activeTheme==='${t.id}'?null:'${t.id}';render()">${t.name}</button>`
+  ).join('');
+}
+
+function renderStatusFilters() {
+  document.getElementById('statusFilters').innerHTML = Object.entries(STATUS_MAP).map(([k,v]) =>
+    `<button class="filter-btn ${activeStatus===k?'active':''}" onclick="activeStatus=activeStatus==='${k}'?null:'${k}';render()">${v.label}</button>`
+  ).join('');
+}
+
+function featureCard(f) {
+  const theme = THEMES.find(t=>t.id===f.theme);
+  const rice = riceScore(f);
+  return `<div class="feature-card" draggable="true" data-id="${f.id}" onclick="openModal('${f.id}')" ondragstart="onDragStart(event,'${f.id}')" ondragend="onDragEnd(event)">
+    <div class="fc-status status-${f.status}"></div>
+    <div class="fc-title">${esc(f.name)}</div>
+    ${f.desc?`<div class="fc-desc">${esc(f.desc)}</div>`:''}
+    <div class="fc-meta">
+      <span class="fc-tag fc-effort-${f.effort}">${f.effort} effort</span>
+      <span class="fc-tag fc-impact-${f.impact}">${f.impact} impact</span>
+      ${theme?`<span class="fc-tag fc-theme" style="background:${theme.bg};color:${theme.color}">${theme.name}</span>`:''}
+      <span class="fc-rice">RICE: ${rice}</span>
+    </div>
+  </div>`;
+}
+
+function renderNNL(c) {
+  const ff = getFiltered();
+  const now = ff.filter(f=>f.horizon==='now');
+  const next = ff.filter(f=>f.horizon==='next');
+  const later = ff.filter(f=>f.horizon==='later');
+  c.innerHTML = `<div class="nnl-grid">
+    <div class="nnl-col"><div class="nnl-header now-header">🟢 Now <span class="count">${now.length}</span></div><div class="nnl-body" data-horizon="now" ondragover="onDragOver(event)" ondrop="onDrop(event,'now')" ondragenter="event.currentTarget.classList.add('drag-over')" ondragleave="event.currentTarget.classList.remove('drag-over')">${now.map(featureCard).join('')}</div></div>
+    <div class="nnl-col"><div class="nnl-header next-header">🔵 Next <span class="count">${next.length}</span></div><div class="nnl-body" data-horizon="next" ondragover="onDragOver(event)" ondrop="onDrop(event,'next')" ondragenter="event.currentTarget.classList.add('drag-over')" ondragleave="event.currentTarget.classList.remove('drag-over')">${next.map(featureCard).join('')}</div></div>
+    <div class="nnl-col"><div class="nnl-header later-header">🟣 Later <span class="count">${later.length}</span></div><div class="nnl-body" data-horizon="later" ondragover="onDragOver(event)" ondrop="onDrop(event,'later')" ondragenter="event.currentTarget.classList.add('drag-over')" ondragleave="event.currentTarget.classList.remove('drag-over')">${later.map(featureCard).join('')}</div></div>
+  </div>`;
+}
+
+function renderTimeline(c) {
+  const ff = getFiltered().filter(f=>f.start&&f.end);
+  const today = new Date();
+  const baseMonth = new Date(today.getFullYear(), today.getMonth() + timelineOffset, 1);
+  const months = [];
+  for (let i=0; i<6; i++) {
+    const d = new Date(baseMonth.getFullYear(), baseMonth.getMonth()+i, 1);
+    months.push(d);
+  }
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const firstDay = months[0].getTime();
+  const lastDay = new Date(months[5].getFullYear(), months[5].getMonth()+1, 0).getTime();
+  const totalDays = (lastDay - firstDay) / 86400000;
+
+  const barColors = { now:'var(--green)', next:'var(--accent)', later:'var(--purple)' };
+
+  let monthHeaders = months.map(m => {
+    const isCurrent = m.getMonth()===today.getMonth() && m.getFullYear()===today.getFullYear();
+    return `<div class="tl-month ${isCurrent?'current':''}">${monthNames[m.getMonth()]} ${m.getFullYear()}</div>`;
+  }).join('');
+
+  let rows = ff.map(f => {
+    const s = new Date(f.start).getTime();
+    const e = new Date(f.end).getTime();
+    const left = Math.max(0, (s - firstDay)/86400000/totalDays*100);
+    const width = Math.min(100-left, (e-Math.max(s,firstDay))/86400000/totalDays*100);
+    const theme = THEMES.find(t=>t.id===f.theme);
+    const color = barColors[f.horizon] || 'var(--accent)';
+    return `<div class="timeline-row">
+      <div class="tl-row-label" onclick="openModal('${f.id}')"><div class="dot" style="background:${color}"></div>${esc(f.name)}</div>
+      <div class="tl-bar-area"><div class="tl-bar" style="left:${left}%;width:${Math.max(width,2)}%;background:${color}" onclick="openModal('${f.id}')">${esc(f.name)}</div></div>
+    </div>`;
+  }).join('');
+
+  c.innerHTML = `<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+    <button class="btn btn-ghost btn-sm" onclick="timelineOffset-=3;render()">◀ Earlier</button>
+    <button class="btn btn-ghost btn-sm" onclick="timelineOffset=0;render()">Today</button>
+    <button class="btn btn-ghost btn-sm" onclick="timelineOffset+=3;render()">Later ▶</button>
+  </div>
+  <div class="timeline-container">
+    <div class="timeline-header"><div class="tl-label-col">Feature</div><div class="tl-months">${monthHeaders}</div></div>
+    ${rows || '<div style="padding:40px;text-align:center;color:var(--text3)">No features with dates set. Add start/end dates to see them here.</div>'}
+  </div>`;
+}
+
+function renderList(c) {
+  let ff = getFiltered();
+  if (sortCol) {
+    ff.sort((a,b) => {
+      let va, vb;
+      if (sortCol==='rice') { va=riceScore(a); vb=riceScore(b); }
+      else if (sortCol==='name') { va=a.name.toLowerCase(); vb=b.name.toLowerCase(); }
+      else { va=a[sortCol]||''; vb=b[sortCol]||''; }
+      if (va<vb) return -1*sortDir;
+      if (va>vb) return 1*sortDir;
+      return 0;
+    });
+  }
+  const arrow = col => sortCol===col ? `<span class="sort-arrow">${sortDir===1?'▲':'▼'}</span>` : '';
+  c.innerHTML = `<table class="list-table">
+    <thead><tr>
+      <th onclick="toggleSort('name')">Name ${arrow('name')}</th>
+      <th onclick="toggleSort('horizon')">Horizon ${arrow('horizon')}</th>
+      <th onclick="toggleSort('status')">Status ${arrow('status')}</th>
+      <th onclick="toggleSort('effort')">Effort ${arrow('effort')}</th>
+      <th onclick="toggleSort('impact')">Impact ${arrow('impact')}</th>
+      <th onclick="toggleSort('theme')">Theme ${arrow('theme')}</th>
+      <th onclick="toggleSort('rice')" style="text-align:right">RICE ${arrow('rice')}</th>
+    </tr></thead>
+    <tbody>${ff.map(f => {
+      const theme = THEMES.find(t=>t.id===f.theme);
+      const st = STATUS_MAP[f.status];
+      return `<tr onclick="openModal('${f.id}')" style="cursor:pointer">
+        <td><strong>${esc(f.name)}</strong></td>
+        <td>${f.horizon}</td>
+        <td><span style="color:${st.color}">● ${st.label}</span></td>
+        <td><span class="fc-tag fc-effort-${f.effort}">${f.effort}</span></td>
+        <td><span class="fc-tag fc-impact-${f.impact}">${f.impact}</span></td>
+        <td>${theme?`<span class="fc-tag fc-theme" style="background:${theme.bg};color:${theme.color}">${theme.name}</span>`:'-'}</td>
+        <td style="text-align:right;font-weight:700;color:var(--accent)">${riceScore(f)}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function renderRICE(c) {
+  const ff = [...getFiltered()].sort((a,b) => riceScore(b)-riceScore(a));
+  const maxRice = ff.length ? riceScore(ff[0]) : 1;
+  
+  const bars = ff.slice(0,10).map(f => {
+    const score = riceScore(f);
+    const pct = (score/maxRice)*100;
+    const theme = THEMES.find(t=>t.id===f.theme);
+    const color = theme ? theme.color : 'var(--accent)';
+    return `<div class="rice-bar-row">
+      <div class="rice-bar-name">${esc(f.name)}</div>
+      <div style="flex:1"><div class="rice-bar" style="width:${Math.max(pct,5)}%;background:${color}">${score}</div></div>
+    </div>`;
+  }).join('');
+
+  const listItems = ff.map((f,i) => {
+    const score = riceScore(f);
+    return `<div class="rice-item" onclick="openModal('${f.id}')">
+      <div class="rice-rank">${i+1}</div>
+      <div class="rice-item-info">
+        <div class="rice-item-name">${esc(f.name)}</div>
+        <div class="rice-item-scores">R:${f.reach||0} · I:${f.riceImpact||1} · C:${f.confidence||80}% · E:${f.riceEffort||1}pw</div>
+      </div>
+      <div class="rice-total">${score}</div>
+    </div>`;
+  }).join('');
+
+  c.innerHTML = `<div class="rice-grid">
+    <div>
+      <div class="rice-chart"><h3>📊 Top 10 by RICE Score</h3>${bars}</div>
+    </div>
+    <div>
+      <div class="rice-list">
+        <div class="rice-list-header">Prioritized Backlog <span style="color:var(--text3);font-weight:400">${ff.length} features</span></div>
+        ${listItems}
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:16px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
+    <h3 style="font-size:14px;margin-bottom:8px">📐 RICE Formula</h3>
+    <div style="font-size:13px;color:var(--text2)">
+      <strong>Score = (Reach × Impact × Confidence) ÷ Effort</strong><br>
+      Reach: users per quarter · Impact: 0.25–3 scale · Confidence: 50–100% · Effort: person-weeks
+    </div>
+  </div>`;
+}
+
+function renderShare(c) {
+  const horizons = [
+    { key:'now', label:'🟢 Now — Current Sprint (0-4 weeks)', features:features.filter(f=>f.horizon==='now') },
+    { key:'next', label:'🔵 Next — Up Next (1-3 months)', features:features.filter(f=>f.horizon==='next') },
+    { key:'later', label:'🟣 Later — Future (3-6 months)', features:features.filter(f=>f.horizon==='later') }
+  ];
+  const dotColor = { now:'var(--green)', next:'var(--accent)', later:'var(--purple)' };
+
+  let sections = horizons.map(h => {
+    if (!h.features.length) return '';
+    const items = h.features.map(f => {
+      const st = STATUS_MAP[f.status];
+      return `<div class="share-feature">
+        <div class="share-dot" style="background:${dotColor[h.key]}"></div>
+        <div style="flex:1">
+          <div style="font-weight:500">${esc(f.name)} <span style="color:${st.color};font-size:12px">● ${st.label}</span></div>
+          ${f.desc?`<div style="font-size:13px;color:var(--text2);margin-top:2px">${esc(f.desc)}</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="share-section"><h3>${h.label}</h3>${items}</div>`;
+  }).join('');
+
+  const total = features.length;
+  const done = features.filter(f=>f.status==='done').length;
+
+  c.innerHTML = `<div class="share-view">
+    <div class="share-title">Product Roadmap</div>
+    <div class="share-subtitle">Last updated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} · ${total} features · ${done} shipped</div>
+    ${sections}
+    <div style="margin-top:24px;padding:16px;background:var(--surface2);border-radius:var(--radius);text-align:center;font-size:13px;color:var(--text3)">
+      Built with Roadmap Hero 🗺️
+    </div>
+  </div>`;
+}
+
+// === DRAG & DROP ===
+let dragId = null;
+function onDragStart(e, id) { dragId = id; e.target.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; }
+function onDragEnd(e) { dragId=null; e.target.classList.remove('dragging'); document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over')); }
+function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect='move'; }
+function onDrop(e, horizon) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragId) return;
+  const f = features.find(f=>f.id===dragId);
+  if (f) { f.horizon = horizon; save(); render(); toast(`Moved to ${horizon}`); }
+}
+
+// === SORT ===
+function toggleSort(col) {
+  if (sortCol===col) sortDir *= -1;
+  else { sortCol=col; sortDir=1; }
+  render();
+}
+
+// === MODAL ===
+function openModal(id) {
+  editingId = id || null;
+  const modal = document.getElementById('modalOverlay');
+  const title = document.getElementById('modalTitle');
+  const del = document.getElementById('deleteBtn');
+  
+  // Populate theme select
+  document.getElementById('fTheme').innerHTML = THEMES.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+
+  if (id) {
+    const f = features.find(f=>f.id===id);
+    if (!f) return;
+    title.textContent = 'Edit Feature';
+    del.style.display = 'inline-flex';
+    document.getElementById('fName').value = f.name;
+    document.getElementById('fDesc').value = f.desc||'';
+    document.getElementById('fHorizon').value = f.horizon;
+    document.getElementById('fStatus').value = f.status;
+    document.getElementById('fEffort').value = f.effort;
+    document.getElementById('fImpact').value = f.impact;
+    document.getElementById('fTheme').value = f.theme||THEMES[0].id;
+    document.getElementById('fReach').value = f.reach||100;
+    document.getElementById('fRiceImpact').value = f.riceImpact||1;
+    document.getElementById('fConfidence').value = f.confidence||80;
+    document.getElementById('fRiceEffort').value = f.riceEffort||2;
+    document.getElementById('fStart').value = f.start||'';
+    document.getElementById('fEnd').value = f.end||'';
+    document.getElementById('fTags').value = (f.tags||[]).join(', ');
+    document.getElementById('fNotes').value = f.notes||'';
+  } else {
+    title.textContent = 'Add Feature';
+    del.style.display = 'none';
+    document.getElementById('fName').value = '';
+    document.getElementById('fDesc').value = '';
+    document.getElementById('fHorizon').value = 'now';
+    document.getElementById('fStatus').value = 'planning';
+    document.getElementById('fEffort').value = 'medium';
+    document.getElementById('fImpact').value = 'medium';
+    document.getElementById('fTheme').value = THEMES[0].id;
+    document.getElementById('fReach').value = 100;
+    document.getElementById('fRiceImpact').value = '1';
+    document.getElementById('fConfidence').value = '80';
+    document.getElementById('fRiceEffort').value = 2;
+    document.getElementById('fStart').value = '';
+    document.getElementById('fEnd').value = '';
+    document.getElementById('fTags').value = '';
+    document.getElementById('fNotes').value = '';
+  }
+  modal.classList.add('show');
+  setTimeout(()=>document.getElementById('fName').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  editingId = null;
+}
+
+function saveFeature() {
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { toast('Name is required'); return; }
+  const data = {
+    name,
+    desc: document.getElementById('fDesc').value.trim(),
+    horizon: document.getElementById('fHorizon').value,
+    status: document.getElementById('fStatus').value,
+    effort: document.getElementById('fEffort').value,
+    impact: document.getElementById('fImpact').value,
+    theme: document.getElementById('fTheme').value,
+    reach: parseInt(document.getElementById('fReach').value)||100,
+    riceImpact: parseFloat(document.getElementById('fRiceImpact').value)||1,
+    confidence: parseInt(document.getElementById('fConfidence').value)||80,
+    riceEffort: parseFloat(document.getElementById('fRiceEffort').value)||2,
+    start: document.getElementById('fStart').value,
+    end: document.getElementById('fEnd').value,
+    tags: document.getElementById('fTags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    notes: document.getElementById('fNotes').value.trim()
+  };
+  if (editingId) {
+    const i = features.findIndex(f=>f.id===editingId);
+    if (i>=0) features[i] = { ...features[i], ...data };
+    toast('Feature updated');
+  } else {
+    features.push({ id:genId(), ...data });
+    toast('Feature added');
+  }
+  save(); closeModal(); render();
+}
+
+function deleteFeature() {
+  if (!editingId) return;
+  if (!confirm('Delete this feature?')) return;
+  features = features.filter(f=>f.id!==editingId);
+  save(); closeModal(); render();
+  toast('Feature deleted');
+}
+
+// === IMPORT/EXPORT ===
+function exportData() {
+  const blob = new Blob([JSON.stringify(features,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `roadmap-hero-${new Date().toISOString().split('T')[0]}.json`;
+  a.click(); toast('Exported!');
+}
+
+function importData(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) { features = data; save(); render(); toast(`Imported ${data.length} features`); }
+    } catch { toast('Invalid JSON file'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function showHelp() { document.getElementById('helpOverlay').classList.add('show'); }
+
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+// === KEYBOARD ===
+document.addEventListener('keydown', e => {
+  if (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') {
+    if (e.key==='Escape') { closeModal(); e.target.blur(); }
+    return;
+  }
+  if (e.key==='n'||e.key==='N') { e.preventDefault(); openModal(); }
+  else if (e.key==='/') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+  else if (e.key==='d'||e.key==='D') toggleDark();
+  else if (e.key==='e'||e.key==='E') exportData();
+  else if (e.key==='Escape') { closeModal(); document.getElementById('helpOverlay').classList.remove('show'); }
+  else if (e.key>='1'&&e.key<='5') {
+    const views = ['nnl','timeline','list','rice','share'];
+    currentView = views[parseInt(e.key)-1];
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===currentView));
+    render();
+  }
+  else if (e.key==='ArrowLeft') { timelineOffset-=1; render(); }
+  else if (e.key==='ArrowRight') { timelineOffset+=1; render(); }
+});
+
+// === VIEW TABS ===
+document.getElementById('viewTabs').addEventListener('click', e => {
+  if (!e.target.classList.contains('tab')) return;
+  currentView = e.target.dataset.view;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t===e.target));
+  render();
+});
+
+// === INIT ===
+load();
+render();
+</script>
+</body>
+</html>

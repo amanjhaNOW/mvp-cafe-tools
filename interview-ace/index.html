@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interview Ace — PM Interview Prep & Practice</title>
+<style>
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #242836; --surface3: #2e3345;
+  --text: #e8eaed; --text2: #9aa0b0; --text3: #6b7280;
+  --accent: #6366f1; --accent2: #818cf8; --accent-bg: rgba(99,102,241,0.12);
+  --green: #22c55e; --green-bg: rgba(34,197,94,0.12);
+  --yellow: #eab308; --yellow-bg: rgba(234,179,8,0.12);
+  --red: #ef4444; --red-bg: rgba(239,68,68,0.12);
+  --orange: #f97316; --orange-bg: rgba(249,115,22,0.12);
+  --blue: #3b82f6; --blue-bg: rgba(59,130,246,0.12);
+  --pink: #ec4899; --pink-bg: rgba(236,72,153,0.12);
+  --border: #2e3345; --radius: 12px; --radius-sm: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+button { cursor: pointer; border: none; font-family: inherit; font-size: 0.875rem; }
+input, textarea, select { font-family: inherit; font-size: 0.875rem; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; outline: none; }
+input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+textarea { resize: vertical; }
+::selection { background: var(--accent); color: white; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+
+/* Layout */
+.app { display: flex; height: 100vh; }
+.sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); }
+.sidebar-header h1 { font-size: 1.25rem; margin-bottom: 2px; }
+.sidebar-header h1 span { color: var(--accent); }
+.sidebar-header p { font-size: 0.75rem; color: var(--text2); }
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 12px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm); color: var(--text2); cursor: pointer; margin-bottom: 2px; transition: all 0.15s; font-size: 0.875rem; }
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--accent-bg); color: var(--accent2); font-weight: 600; }
+.nav-item .badge { margin-left: auto; background: var(--surface3); padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
+.nav-item.active .badge { background: var(--accent); color: white; }
+.nav-section { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); padding: 16px 12px 6px; font-weight: 700; }
+.sidebar-footer { padding: 12px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.sidebar-footer button { flex: 1; padding: 8px; border-radius: var(--radius-sm); background: var(--surface2); color: var(--text2); font-size: 0.75rem; }
+.sidebar-footer button:hover { background: var(--surface3); color: var(--text); }
+
+/* Main */
+.main { flex: 1; overflow-y: auto; padding: 32px; }
+.main-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.main-header h2 { font-size: 1.5rem; }
+.btn { padding: 8px 16px; border-radius: var(--radius-sm); font-weight: 600; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-secondary { background: var(--surface2); color: var(--text2); }
+.btn-secondary:hover { background: var(--surface3); color: var(--text); }
+.btn-danger { background: var(--red); color: white; }
+.btn-danger:hover { opacity: 0.9; }
+.btn-sm { padding: 5px 10px; font-size: 0.75rem; }
+.btn-icon { background: var(--surface2); color: var(--text2); width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.btn-icon:hover { background: var(--surface3); color: var(--text); }
+
+/* Stats Grid */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.stat-card .label { font-size: 0.75rem; color: var(--text2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card .value { font-size: 1.75rem; font-weight: 700; }
+.stat-card .sub { font-size: 0.75rem; color: var(--text3); margin-top: 4px; }
+
+/* Question Cards */
+.question-list { display: flex; flex-direction: column; gap: 8px; }
+.q-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 16px; }
+.q-card:hover { border-color: var(--accent); transform: translateX(4px); }
+.q-card .q-conf { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex-shrink: 0; }
+.q-card .q-body { flex: 1; min-width: 0; }
+.q-card .q-text { font-weight: 500; margin-bottom: 4px; }
+.q-card .q-meta { font-size: 0.75rem; color: var(--text2); display: flex; gap: 12px; flex-wrap: wrap; }
+.q-card .q-meta span { display: flex; align-items: center; gap: 4px; }
+.q-card .q-actions { display: flex; gap: 6px; opacity: 0; transition: opacity 0.15s; }
+.q-card:hover .q-actions { opacity: 1; }
+
+.conf-0 { background: var(--surface3); color: var(--text3); }
+.conf-1 { background: var(--red-bg); color: var(--red); }
+.conf-2 { background: var(--orange-bg); color: var(--orange); }
+.conf-3 { background: var(--yellow-bg); color: var(--yellow); }
+.conf-4 { background: var(--blue-bg); color: var(--blue); }
+.conf-5 { background: var(--green-bg); color: var(--green); }
+
+/* Category pills */
+.cat-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
+.cat-strategy { background: var(--accent-bg); color: var(--accent2); }
+.cat-metrics { background: var(--blue-bg); color: var(--blue); }
+.cat-execution { background: var(--green-bg); color: var(--green); }
+.cat-leadership { background: var(--orange-bg); color: var(--orange); }
+.cat-behavioral { background: var(--pink-bg); color: var(--pink); }
+.cat-technical { background: var(--yellow-bg); color: var(--yellow); }
+.cat-custom { background: var(--surface3); color: var(--text2); }
+
+/* Company pills */
+.company-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; background: var(--surface3); color: var(--text2); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); width: 90%; max-width: 720px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); }
+.modal-header h3 { font-size: 1.1rem; }
+.modal-body { padding: 24px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px; border-top: 1px solid var(--border); }
+
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 0.8rem; color: var(--text2); margin-bottom: 6px; font-weight: 600; }
+.form-group input, .form-group textarea, .form-group select { width: 100%; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* STAR Builder */
+.star-section { margin-bottom: 16px; }
+.star-section .star-label { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; }
+.star-section .star-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; }
+.star-s .star-icon { background: var(--accent-bg); color: var(--accent2); }
+.star-t .star-icon { background: var(--blue-bg); color: var(--blue); }
+.star-a .star-icon { background: var(--green-bg); color: var(--green); }
+.star-r .star-icon { background: var(--yellow-bg); color: var(--yellow); }
+
+/* Practice Mode */
+.practice-container { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 40px 20px; }
+.practice-question { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; text-align: center; max-width: 640px; width: 100%; }
+.practice-question .category { margin-bottom: 12px; }
+.practice-question .text { font-size: 1.3rem; font-weight: 600; line-height: 1.5; }
+.practice-question .company { margin-top: 12px; color: var(--text2); font-size: 0.85rem; }
+.timer-ring { position: relative; width: 180px; height: 180px; }
+.timer-ring svg { transform: rotate(-90deg); }
+.timer-ring circle { fill: none; stroke-width: 6; }
+.timer-ring .track { stroke: var(--surface3); }
+.timer-ring .progress { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 0.5s linear, stroke 0.3s; }
+.timer-ring .progress.warning { stroke: var(--yellow); }
+.timer-ring .progress.danger { stroke: var(--red); }
+.timer-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.timer-text .time { font-size: 2.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.timer-text .label { font-size: 0.75rem; color: var(--text2); }
+.practice-controls { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.practice-controls .btn { padding: 12px 24px; font-size: 1rem; }
+.confidence-rate { display: flex; gap: 8px; margin-top: 16px; }
+.confidence-rate button { width: 48px; height: 48px; border-radius: 50%; font-weight: 700; font-size: 1rem; border: 2px solid transparent; }
+.confidence-rate button:hover { transform: scale(1.15); }
+
+/* Company Section */
+.company-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.company-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; cursor: pointer; transition: all 0.15s; }
+.company-card:hover { border-color: var(--accent); }
+.company-card h4 { margin-bottom: 4px; }
+.company-card .role { font-size: 0.85rem; color: var(--text2); margin-bottom: 12px; }
+.company-card .c-stats { display: flex; gap: 16px; font-size: 0.8rem; color: var(--text3); }
+.company-card .c-stats span { display: flex; align-items: center; gap: 4px; }
+
+/* Search & Filter Bar */
+.filter-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.filter-bar input { flex: 1; min-width: 200px; }
+.filter-bar select { min-width: 140px; }
+
+/* Detail View */
+.detail-view { max-width: 800px; }
+.detail-header { margin-bottom: 24px; }
+.detail-header .back { color: var(--text2); font-size: 0.85rem; cursor: pointer; margin-bottom: 12px; display: inline-flex; align-items: center; gap: 4px; }
+.detail-header .back:hover { color: var(--accent); }
+.detail-header h2 { margin-bottom: 8px; line-height: 1.4; }
+.detail-meta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.detail-body { display: flex; flex-direction: column; gap: 24px; }
+
+/* Notes */
+.notes-area { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.notes-area h4 { margin-bottom: 12px; font-size: 0.9rem; }
+.notes-area textarea { width: 100%; min-height: 100px; }
+
+/* Tips section */
+.tips-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.tips-card h4 { margin-bottom: 12px; font-size: 0.9rem; color: var(--accent2); }
+.tips-card ul { list-style: none; padding: 0; }
+.tips-card li { padding: 6px 0; color: var(--text2); font-size: 0.85rem; display: flex; gap: 8px; }
+.tips-card li::before { content: '💡'; flex-shrink: 0; }
+
+/* Analytics */
+.chart-container { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.chart-container h4 { margin-bottom: 16px; font-size: 0.9rem; }
+.bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 160px; padding-top: 8px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bar-fill { width: 100%; border-radius: 4px 4px 0 0; transition: height 0.5s; min-height: 2px; }
+.bar-label { font-size: 0.65rem; color: var(--text3); text-align: center; writing-mode: vertical-rl; transform: rotate(180deg); max-height: 60px; overflow: hidden; }
+.bar-value { font-size: 0.7rem; font-weight: 600; color: var(--text2); }
+
+.heatmap { display: flex; gap: 2px; flex-wrap: wrap; }
+.heat-cell { width: 14px; height: 14px; border-radius: 2px; }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 20px; font-size: 0.85rem; z-index: 200; transform: translateY(100px); opacity: 0; transition: all 0.3s; }
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* Kbd hints */
+.kbd { display: inline-flex; align-items: center; justify-content: center; background: var(--surface3); border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 700; color: var(--text3); min-width: 20px; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+.empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+.empty-state h3 { color: var(--text2); margin-bottom: 8px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { padding: 16px; }
+  .form-row { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>🎯 Interview <span>Ace</span></h1>
+      <p>PM Interview Prep & Practice</p>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Prepare</div>
+      <div class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">📊 Dashboard <span class="badge" id="totalBadge">0</span></div>
+      <div class="nav-item" data-view="questions" onclick="switchView('questions')">❓ Question Bank <span class="badge" id="qBadge">0</span></div>
+      <div class="nav-item" data-view="companies" onclick="switchView('companies')">🏢 Companies <span class="badge" id="cBadge">0</span></div>
+      <div class="nav-section">Practice</div>
+      <div class="nav-item" data-view="practice" onclick="switchView('practice')">⏱️ Practice Mode</div>
+      <div class="nav-item" data-view="history" onclick="switchView('history')">📈 Practice Log</div>
+      <div class="nav-section">Tools</div>
+      <div class="nav-item" data-view="frameworks" onclick="switchView('frameworks')">🧠 PM Frameworks</div>
+    </div>
+    <div class="sidebar-footer">
+      <button onclick="exportData()" title="Export">📤 Export</button>
+      <button onclick="importData()" title="Import">📥 Import</button>
+      <button onclick="showShortcuts()" title="Shortcuts">⌨️</button>
+    </div>
+  </div>
+  <div class="main" id="mainContent"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal"></div>
+</div>
+<div class="toast" id="toast"></div>
+<input type="file" id="importInput" style="display:none" accept=".json" onchange="handleImport(event)">
+
+<script>
+// ─── Data ───
+const CATEGORIES = [
+  { id: 'strategy', name: 'Product Strategy', icon: '🎯', cls: 'cat-strategy' },
+  { id: 'metrics', name: 'Metrics & Analytics', icon: '📊', cls: 'cat-metrics' },
+  { id: 'execution', name: 'Execution & Delivery', icon: '🚀', cls: 'cat-execution' },
+  { id: 'leadership', name: 'Leadership & Stakeholders', icon: '👥', cls: 'cat-leadership' },
+  { id: 'behavioral', name: 'Behavioral & Culture', icon: '💬', cls: 'cat-behavioral' },
+  { id: 'technical', name: 'Technical & Design', icon: '⚙️', cls: 'cat-technical' },
+];
+
+const DEFAULT_QUESTIONS = [
+  // Strategy
+  { q: "How would you define the product vision for a new product in an established company?", cat: 'strategy', difficulty: 'hard' },
+  { q: "Tell me about a time you had to kill a feature or product. How did you decide?", cat: 'strategy', difficulty: 'hard' },
+  { q: "How do you prioritize when everything is a priority?", cat: 'strategy', difficulty: 'medium' },
+  { q: "How would you build a product roadmap from scratch?", cat: 'strategy', difficulty: 'medium' },
+  { q: "Describe how you'd enter a new market with an existing product.", cat: 'strategy', difficulty: 'hard' },
+  { q: "What's your framework for evaluating build vs. buy decisions?", cat: 'strategy', difficulty: 'medium' },
+  { q: "How do you balance user needs vs. business needs?", cat: 'strategy', difficulty: 'medium' },
+  { q: "Walk me through how you'd create a product strategy for a marketplace.", cat: 'strategy', difficulty: 'hard' },
+  { q: "How would you think about pricing strategy for a new SaaS product?", cat: 'strategy', difficulty: 'hard' },
+  { q: "How do you decide when to pivot vs. persevere?", cat: 'strategy', difficulty: 'hard' },
+  // Metrics
+  { q: "What metrics would you track for a two-sided marketplace?", cat: 'metrics', difficulty: 'medium' },
+  { q: "How would you measure the success of a feature launch?", cat: 'metrics', difficulty: 'easy' },
+  { q: "Walk me through setting up a North Star metric for a B2B SaaS.", cat: 'metrics', difficulty: 'medium' },
+  { q: "How would you design an A/B test for a checkout flow change?", cat: 'metrics', difficulty: 'medium' },
+  { q: "Your DAU is dropping 5% week-over-week. Walk me through your investigation.", cat: 'metrics', difficulty: 'hard' },
+  { q: "How do you distinguish correlation from causation in product metrics?", cat: 'metrics', difficulty: 'medium' },
+  { q: "What's your approach to setting OKRs for a product team?", cat: 'metrics', difficulty: 'easy' },
+  { q: "How would you measure ROI of a product investment?", cat: 'metrics', difficulty: 'medium' },
+  // Execution
+  { q: "How do you handle scope creep during a sprint?", cat: 'execution', difficulty: 'easy' },
+  { q: "Tell me about a time a launch went wrong. What did you do?", cat: 'execution', difficulty: 'medium' },
+  { q: "How do you manage technical debt in your roadmap?", cat: 'execution', difficulty: 'medium' },
+  { q: "Describe your ideal product development process from idea to launch.", cat: 'execution', difficulty: 'easy' },
+  { q: "How do you ensure quality when shipping fast?", cat: 'execution', difficulty: 'medium' },
+  { q: "Walk me through how you'd run a product launch for a B2B tool.", cat: 'execution', difficulty: 'medium' },
+  { q: "How do you handle competing deadlines from different stakeholders?", cat: 'execution', difficulty: 'medium' },
+  { q: "How do you write effective PRDs?", cat: 'execution', difficulty: 'easy' },
+  // Leadership
+  { q: "How do you get buy-in from skeptical engineers?", cat: 'leadership', difficulty: 'medium' },
+  { q: "Tell me about a time you disagreed with your CEO on product direction.", cat: 'leadership', difficulty: 'hard' },
+  { q: "How do you manage a team of PMs with different experience levels?", cat: 'leadership', difficulty: 'hard' },
+  { q: "How do you influence without authority?", cat: 'leadership', difficulty: 'medium' },
+  { q: "Describe your approach to running effective product reviews.", cat: 'leadership', difficulty: 'medium' },
+  { q: "How do you handle a PM on your team who's underperforming?", cat: 'leadership', difficulty: 'hard' },
+  { q: "How do you build trust with a new engineering team?", cat: 'leadership', difficulty: 'easy' },
+  { q: "How do you scale yourself as a product leader?", cat: 'leadership', difficulty: 'hard' },
+  // Behavioral
+  { q: "Tell me about your biggest product failure and what you learned.", cat: 'behavioral', difficulty: 'medium' },
+  { q: "Describe a time you had to make a decision with incomplete data.", cat: 'behavioral', difficulty: 'medium' },
+  { q: "Tell me about a time you exceeded expectations on a project.", cat: 'behavioral', difficulty: 'easy' },
+  { q: "How do you stay updated on industry trends?", cat: 'behavioral', difficulty: 'easy' },
+  { q: "Describe a situation where you had to say no to a powerful stakeholder.", cat: 'behavioral', difficulty: 'hard' },
+  { q: "Tell me about a time you turned a dissatisfied customer into an advocate.", cat: 'behavioral', difficulty: 'medium' },
+  { q: "How do you handle ambiguity in your role?", cat: 'behavioral', difficulty: 'medium' },
+  { q: "What's the most innovative thing you've done in your career?", cat: 'behavioral', difficulty: 'medium' },
+  // Technical
+  { q: "How do you evaluate technical feasibility of a feature?", cat: 'technical', difficulty: 'medium' },
+  { q: "How deep should a PM go into technical architecture?", cat: 'technical', difficulty: 'easy' },
+  { q: "How do you approach API design decisions with your team?", cat: 'technical', difficulty: 'medium' },
+  { q: "Walk me through how you'd design a notification system.", cat: 'technical', difficulty: 'hard' },
+  { q: "How do you handle a situation where engineers say something can't be built?", cat: 'technical', difficulty: 'medium' },
+  { q: "What's your approach to evaluating AI/ML features for a product?", cat: 'technical', difficulty: 'hard' },
+  { q: "How do you think about scalability when designing features?", cat: 'technical', difficulty: 'medium' },
+  { q: "How would you design a system for real-time tracking of 10K vehicles?", cat: 'technical', difficulty: 'hard' },
+];
+
+const FRAMEWORKS = [
+  { name: "RICE Scoring", desc: "Reach × Impact × Confidence / Effort — for prioritization", details: "Rate each: Reach (users/quarter), Impact (0.25-3×), Confidence (50-100%), Effort (person-months). Higher = do first.", color: "var(--accent)" },
+  { name: "STAR Method", desc: "Situation → Task → Action → Result — for behavioral answers", details: "Situation: Set the scene (30s). Task: Your specific responsibility (15s). Action: What YOU did, step by step (60s). Result: Quantified outcome + learning (30s).", color: "var(--green)" },
+  { name: "Hypothesis-Driven PM", desc: "We believe [X] will cause [Y]. We'll measure [Z].", details: "Structure: 'We believe that [feature/change] for [users] will [outcome]. We'll know this is true when [metric] changes by [amount] within [timeframe].'", color: "var(--blue)" },
+  { name: "Jobs To Be Done", desc: "When [situation], I want to [motivation], so I can [outcome].", details: "Focus on the job the user is hiring your product to do, not the feature. Example: 'When I'm commuting, I want to catch up on news, so I can feel informed at work.'", color: "var(--orange)" },
+  { name: "ICE Scoring", desc: "Impact × Confidence × Ease — simpler prioritization", details: "Rate 1-10 each: Impact (if it works, how big?), Confidence (will it work?), Ease (how fast/cheap?). Average or multiply.", color: "var(--pink)" },
+  { name: "North Star Metric", desc: "Single metric that captures core value delivery", details: "Must: reflect customer value, lead revenue (not lag), be actionable by teams. Examples: Airbnb = nights booked, Spotify = time listening, Slack = messages sent.", color: "var(--yellow)" },
+  { name: "Opportunity Solution Tree", desc: "Outcome → Opportunities → Solutions → Experiments", details: "Start with desired outcome. Map customer opportunities (pain points). Brainstorm solutions for each. Design experiments to test. Prevents jumping to solutions.", color: "var(--accent2)" },
+  { name: "Kano Model", desc: "Must-have / Performance / Delighter categorization", details: "Must-have: Expected, causes dissatisfaction if missing. Performance: More = better (linear satisfaction). Delighter: Unexpected, causes excitement. Over time, delighters become must-haves.", color: "var(--green)" },
+];
+
+let state = {
+  questions: [],
+  companies: [],
+  practiceLog: [],
+  currentView: 'dashboard',
+  selectedQuestion: null,
+  selectedCompany: null,
+};
+
+function init() {
+  const saved = localStorage.getItem('interview-ace-data');
+  if (saved) {
+    state = { ...state, ...JSON.parse(saved) };
+  } else {
+    seedData();
+  }
+  render();
+}
+
+function seedData() {
+  state.questions = DEFAULT_QUESTIONS.map((q, i) => ({
+    id: 'q' + (i + 1),
+    text: q.q,
+    category: q.cat,
+    difficulty: q.difficulty,
+    confidence: 0,
+    star: { s: '', t: '', a: '', r: '' },
+    notes: '',
+    companies: [],
+    practiceCount: 0,
+    lastPracticed: null,
+    created: Date.now(),
+  }));
+  state.companies = [
+    { id: 'c1', name: 'Demo Company', role: 'Head of Product', stage: 'Interview Prep', notes: 'Example company — replace with real targets', interviewDate: '', questionIds: [], created: Date.now() },
+  ];
+  save();
+}
+
+function save() {
+  localStorage.setItem('interview-ace-data', JSON.stringify(state));
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ─── Rendering ───
+function switchView(view) {
+  state.currentView = view;
+  state.selectedQuestion = null;
+  state.selectedCompany = null;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+  render();
+}
+
+function render() {
+  document.getElementById('totalBadge').textContent = state.questions.length;
+  document.getElementById('qBadge').textContent = state.questions.length;
+  document.getElementById('cBadge').textContent = state.companies.length;
+  const main = document.getElementById('mainContent');
+  const views = { dashboard: renderDashboard, questions: renderQuestions, companies: renderCompanies, practice: renderPractice, history: renderHistory, frameworks: renderFrameworks };
+  if (state.selectedQuestion) { main.innerHTML = renderQuestionDetail(state.selectedQuestion); return; }
+  if (state.selectedCompany) { main.innerHTML = renderCompanyDetail(state.selectedCompany); return; }
+  main.innerHTML = (views[state.currentView] || renderDashboard)();
+}
+
+function getCatInfo(id) { return CATEGORIES.find(c => c.id === id) || { id, name: id, icon: '❓', cls: 'cat-custom' }; }
+function confClass(c) { return 'conf-' + Math.min(c || 0, 5); }
+function diffColor(d) { return d === 'easy' ? 'var(--green)' : d === 'medium' ? 'var(--yellow)' : 'var(--red)'; }
+function timeAgo(ts) { if (!ts) return 'Never'; const d = Date.now() - ts; if (d < 3600000) return Math.floor(d/60000) + 'm ago'; if (d < 86400000) return Math.floor(d/3600000) + 'h ago'; return Math.floor(d/86400000) + 'd ago'; }
+
+function renderDashboard() {
+  const total = state.questions.length;
+  const practiced = state.questions.filter(q => q.practiceCount > 0).length;
+  const avgConf = total ? (state.questions.reduce((s,q) => s + (q.confidence||0), 0) / total).toFixed(1) : '0';
+  const withAnswer = state.questions.filter(q => q.star.s || q.star.a).length;
+  const totalPractice = state.practiceLog.length;
+  const weakest = CATEGORIES.map(c => {
+    const qs = state.questions.filter(q => q.category === c.id);
+    const avg = qs.length ? qs.reduce((s,q) => s + (q.confidence||0), 0) / qs.length : 0;
+    return { ...c, avg, count: qs.length };
+  }).sort((a,b) => a.avg - b.avg);
+
+  const recentPractice = state.practiceLog.slice(-7);
+
+  return `
+    <div class="main-header"><h2>📊 Dashboard</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="openAddQuestion()">+ Add Question</button>
+        <button class="btn btn-secondary" onclick="switchView('practice')">⏱️ Practice</button>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">Total Questions</div><div class="value">${total}</div><div class="sub">${withAnswer} with STAR answers</div></div>
+      <div class="stat-card"><div class="label">Practiced</div><div class="value">${practiced}/${total}</div><div class="sub">${total-practiced} unpracticed</div></div>
+      <div class="stat-card"><div class="label">Avg Confidence</div><div class="value" style="color:${parseFloat(avgConf)>=3.5?'var(--green)':parseFloat(avgConf)>=2?'var(--yellow)':'var(--red)'}">${avgConf}/5</div><div class="sub">${totalPractice} total sessions</div></div>
+      <div class="stat-card"><div class="label">Companies</div><div class="value">${state.companies.length}</div><div class="sub">Interview targets</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+      <div class="chart-container">
+        <h4>Confidence by Category</h4>
+        <div class="bar-chart">
+          ${weakest.map(c => {
+            const h = Math.max(c.avg / 5 * 140, 4);
+            const cat = getCatInfo(c.id);
+            return `<div class="bar-col">
+              <div class="bar-value">${c.avg.toFixed(1)}</div>
+              <div class="bar-fill" style="height:${h}px;background:${c.id==='strategy'?'var(--accent)':c.id==='metrics'?'var(--blue)':c.id==='execution'?'var(--green)':c.id==='leadership'?'var(--orange)':c.id==='behavioral'?'var(--pink)':'var(--yellow)'}"></div>
+              <div class="bar-label">${cat.name.split(' ')[0]}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="chart-container">
+        <h4>🔥 Weakest Areas — Focus Here</h4>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          ${weakest.slice(0,4).map(c => {
+            const cat = getCatInfo(c.id);
+            const pct = (c.avg/5*100).toFixed(0);
+            return `<div style="display:flex;align-items:center;gap:12px">
+              <span style="font-size:1.2rem">${cat.icon}</span>
+              <div style="flex:1">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:0.85rem">${cat.name}</span><span style="font-size:0.8rem;color:var(--text3)">${c.avg.toFixed(1)}/5 (${c.count} Qs)</span></div>
+                <div style="background:var(--surface3);height:6px;border-radius:3px"><div style="background:${pct<40?'var(--red)':pct<70?'var(--yellow)':'var(--green)'};height:100%;border-radius:3px;width:${pct}%"></div></div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+    <h3 style="margin-bottom:12px">🎯 Questions Needing Attention</h3>
+    <div class="question-list">
+      ${state.questions.filter(q => q.confidence < 3).sort((a,b) => (a.confidence||0) - (b.confidence||0)).slice(0,8).map(renderQCard).join('')}
+    </div>
+  `;
+}
+
+function renderQCard(q) {
+  const cat = getCatInfo(q.category);
+  return `<div class="q-card" onclick="viewQuestion('${q.id}')">
+    <div class="q-conf ${confClass(q.confidence)}">${q.confidence||'—'}</div>
+    <div class="q-body">
+      <div class="q-text">${q.text}</div>
+      <div class="q-meta">
+        <span class="cat-pill ${cat.cls}">${cat.icon} ${cat.name}</span>
+        <span style="color:${diffColor(q.difficulty)}">${q.difficulty}</span>
+        ${q.practiceCount ? `<span>🔄 ${q.practiceCount}×</span>` : ''}
+        ${q.lastPracticed ? `<span>🕐 ${timeAgo(q.lastPracticed)}</span>` : ''}
+        ${q.star.s || q.star.a ? '<span>✍️ Has answer</span>' : ''}
+      </div>
+    </div>
+    <div class="q-actions">
+      <button class="btn-icon btn-sm" onclick="event.stopPropagation();startPracticeSingle('${q.id}')" title="Practice">⏱️</button>
+      <button class="btn-icon btn-sm" onclick="event.stopPropagation();deleteQuestion('${q.id}')" title="Delete">🗑️</button>
+    </div>
+  </div>`;
+}
+
+function renderQuestions() {
+  return `
+    <div class="main-header"><h2>❓ Question Bank</h2>
+      <button class="btn btn-primary" onclick="openAddQuestion()">+ Add Question</button>
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="qSearch" placeholder="Search questions... (/)" oninput="render()">
+      <select id="qCatFilter" onchange="render()">
+        <option value="">All Categories</option>
+        ${CATEGORIES.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('')}
+      </select>
+      <select id="qConfFilter" onchange="render()">
+        <option value="">All Confidence</option>
+        <option value="0">Not rated</option>
+        <option value="1">1 — Weak</option>
+        <option value="2">2 — Shaky</option>
+        <option value="3">3 — OK</option>
+        <option value="4">4 — Good</option>
+        <option value="5">5 — Nailed</option>
+      </select>
+      <select id="qDiffFilter" onchange="render()">
+        <option value="">All Difficulty</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </div>
+    <div class="question-list">
+      ${getFilteredQuestions().map(renderQCard).join('') || '<div class="empty-state"><div class="icon">🔍</div><h3>No matching questions</h3></div>'}
+    </div>
+  `;
+}
+
+function getFilteredQuestions() {
+  const search = (document.getElementById('qSearch')?.value || '').toLowerCase();
+  const cat = document.getElementById('qCatFilter')?.value || '';
+  const conf = document.getElementById('qConfFilter')?.value || '';
+  const diff = document.getElementById('qDiffFilter')?.value || '';
+  return state.questions.filter(q => {
+    if (search && !q.text.toLowerCase().includes(search)) return false;
+    if (cat && q.category !== cat) return false;
+    if (conf !== '' && String(q.confidence||0) !== conf) return false;
+    if (diff && q.difficulty !== diff) return false;
+    return true;
+  });
+}
+
+function renderQuestionDetail(id) {
+  const q = state.questions.find(x => x.id === id);
+  if (!q) return '<p>Question not found</p>';
+  const cat = getCatInfo(q.category);
+  const linkedCompanies = state.companies.filter(c => c.questionIds.includes(q.id));
+  return `<div class="detail-view">
+    <div class="detail-header">
+      <div class="back" onclick="state.selectedQuestion=null;render()">← Back to ${state.currentView === 'companies' ? 'Companies' : 'Questions'}</div>
+      <h2>${q.text}</h2>
+      <div class="detail-meta">
+        <span class="cat-pill ${cat.cls}">${cat.icon} ${cat.name}</span>
+        <span style="color:${diffColor(q.difficulty)};font-size:0.85rem">${q.difficulty}</span>
+        <span class="q-conf ${confClass(q.confidence)}" style="display:inline-flex;width:28px;height:28px;font-size:0.75rem">${q.confidence||'—'}</span>
+        ${q.practiceCount ? `<span style="font-size:0.85rem;color:var(--text2)">🔄 Practiced ${q.practiceCount}× | Last: ${timeAgo(q.lastPracticed)}</span>` : '<span style="font-size:0.85rem;color:var(--text3)">Not practiced yet</span>'}
+      </div>
+    </div>
+    <div class="detail-body">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="startPracticeSingle('${q.id}')">⏱️ Practice This</button>
+        <button class="btn btn-secondary" onclick="openEditQuestion('${q.id}')">✏️ Edit</button>
+        <button class="btn btn-secondary" onclick="deleteQuestion('${q.id}')">🗑️ Delete</button>
+      </div>
+      <div>
+        <h3 style="margin-bottom:12px">✍️ STAR Answer</h3>
+        <div class="star-section star-s"><div class="star-label"><div class="star-icon">S</div> Situation</div>
+          <textarea rows="3" placeholder="Set the scene — where, when, what was happening..." onchange="updateStar('${q.id}','s',this.value)">${q.star.s}</textarea>
+        </div>
+        <div class="star-section star-t"><div class="star-label"><div class="star-icon">T</div> Task</div>
+          <textarea rows="2" placeholder="What was YOUR specific responsibility?" onchange="updateStar('${q.id}','t',this.value)">${q.star.t}</textarea>
+        </div>
+        <div class="star-section star-a"><div class="star-label"><div class="star-icon">A</div> Action</div>
+          <textarea rows="4" placeholder="What did YOU do? Be specific — steps, decisions, tools..." onchange="updateStar('${q.id}','a',this.value)">${q.star.a}</textarea>
+        </div>
+        <div class="star-section star-r"><div class="star-label"><div class="star-icon">R</div> Result</div>
+          <textarea rows="3" placeholder="Quantified outcome — numbers, %, impact. What did you learn?" onchange="updateStar('${q.id}','r',this.value)">${q.star.r}</textarea>
+        </div>
+      </div>
+      ${linkedCompanies.length ? `<div><h4 style="margin-bottom:8px">🏢 Linked Companies</h4>${linkedCompanies.map(c => `<span class="company-pill" style="cursor:pointer" onclick="viewCompany('${c.id}')">${c.name}</span>`).join(' ')}</div>` : ''}
+      <div class="notes-area">
+        <h4>📝 Notes</h4>
+        <textarea rows="4" placeholder="Additional prep notes, key points to remember, specific examples..." onchange="updateNotes('${q.id}',this.value)">${q.notes}</textarea>
+      </div>
+      <div class="tips-card">
+        <h4>Tips for ${cat.name} Questions</h4>
+        <ul>${getTips(q.category).map(t => `<li>${t}</li>`).join('')}</ul>
+      </div>
+    </div>
+  </div>`;
+}
+
+function getTips(cat) {
+  const tips = {
+    strategy: ["Always tie back to business outcomes, not just user needs", "Show you think in 6-12 month horizons, not just sprints", "Mention trade-offs explicitly — 'we chose X over Y because...'", "Reference frameworks (RICE, ICE, Kano) but don't be robotic about it"],
+    metrics: ["Lead with the North Star metric, then supporting metrics", "Always mention guardrail metrics ('we tracked X to make sure we didn't break Y')", "Show you understand statistical significance for A/B tests", "Tie metrics to business outcomes, not just vanity numbers"],
+    execution: ["Show you understand dev trade-offs (speed vs quality vs scope)", "Mention specific tools and processes you've used", "Emphasize communication — how you kept stakeholders aligned", "Talk about what you'd do differently next time"],
+    leadership: ["Use 'we' for team wins, 'I' for your specific contributions", "Show empathy — understanding engineering constraints, design needs", "Demonstrate you can manage up (CEO, C-suite) and down (junior PMs)", "Conflict resolution: show you seek understanding before arguing"],
+    behavioral: ["Be honest about failures — interviewers smell BS", "Quantify results wherever possible", "Keep stories concise — 2 minutes max", "End with what you LEARNED, not just what happened"],
+    technical: ["Show you can go deep but know when to defer to engineers", "Mention scalability, security, and performance as considerations", "Demonstrate you understand system design basics", "Show how technical decisions impact user experience"],
+  };
+  return tips[cat] || ["Prepare specific examples from your experience", "Quantify outcomes wherever possible", "Show structured thinking"];
+}
+
+function updateStar(qId, field, value) {
+  const q = state.questions.find(x => x.id === qId);
+  if (q) { q.star[field] = value; save(); }
+}
+function updateNotes(qId, value) {
+  const q = state.questions.find(x => x.id === qId);
+  if (q) { q.notes = value; save(); }
+}
+
+// ─── Companies ───
+function renderCompanies() {
+  return `
+    <div class="main-header"><h2>🏢 Companies</h2>
+      <button class="btn btn-primary" onclick="openAddCompany()">+ Add Company</button>
+    </div>
+    <div class="company-grid">
+      ${state.companies.map(c => {
+        const qCount = c.questionIds.length;
+        const avgConf = qCount ? (c.questionIds.map(id => state.questions.find(q=>q.id===id)).filter(Boolean).reduce((s,q) => s+(q.confidence||0), 0) / qCount).toFixed(1) : '—';
+        return `<div class="company-card" onclick="viewCompany('${c.id}')">
+          <h4>${c.name}</h4>
+          <div class="role">${c.role || 'Role TBD'}</div>
+          <div class="c-stats">
+            <span>❓ ${qCount} questions</span>
+            <span>📊 Avg: ${avgConf}</span>
+            <span>${c.stage || ''}</span>
+          </div>
+        </div>`;
+      }).join('') || '<div class="empty-state"><div class="icon">🏢</div><h3>No companies yet</h3><p>Add companies you\'re interviewing with</p></div>'}
+    </div>
+  `;
+}
+
+function renderCompanyDetail(id) {
+  const c = state.companies.find(x => x.id === id);
+  if (!c) return '<p>Company not found</p>';
+  const linkedQs = c.questionIds.map(qid => state.questions.find(q=>q.id===qid)).filter(Boolean);
+  return `<div class="detail-view">
+    <div class="detail-header">
+      <div class="back" onclick="state.selectedCompany=null;render()">← Back to Companies</div>
+      <h2>${c.name}</h2>
+      <div class="detail-meta">
+        <span style="color:var(--text2)">${c.role || 'Role TBD'}</span>
+        ${c.stage ? `<span class="company-pill">${c.stage}</span>` : ''}
+        ${c.interviewDate ? `<span style="color:var(--text2)">📅 ${c.interviewDate}</span>` : ''}
+      </div>
+    </div>
+    <div class="detail-body">
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="openLinkQuestions('${c.id}')">+ Link Questions</button>
+        <button class="btn btn-secondary" onclick="openEditCompany('${c.id}')">✏️ Edit</button>
+        <button class="btn btn-secondary" onclick="deleteCompany('${c.id}')">🗑️ Delete</button>
+        ${linkedQs.length ? `<button class="btn btn-secondary" onclick="startCompanyPractice('${c.id}')">⏱️ Practice All</button>` : ''}
+      </div>
+      <div class="notes-area">
+        <h4>📝 Company Notes</h4>
+        <textarea rows="4" placeholder="Research notes, culture, recent news, interviewer names..." onchange="updateCompanyNotes('${c.id}',this.value)">${c.notes||''}</textarea>
+      </div>
+      <div>
+        <h3 style="margin-bottom:12px">Linked Questions (${linkedQs.length})</h3>
+        <div class="question-list">
+          ${linkedQs.map(renderQCard).join('') || '<div class="empty-state"><div class="icon">❓</div><h3>No linked questions</h3><p>Link questions specific to this company</p></div>'}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function updateCompanyNotes(cId, value) {
+  const c = state.companies.find(x => x.id === cId);
+  if (c) { c.notes = value; save(); }
+}
+
+// ─── Practice Mode ───
+let practiceState = { active: false, queue: [], current: 0, timer: 0, interval: null, maxTime: 120, paused: false };
+
+function renderPractice() {
+  if (practiceState.active) return renderPracticeActive();
+  return `
+    <div class="main-header"><h2>⏱️ Practice Mode</h2></div>
+    <div style="max-width:600px;margin:0 auto">
+      <div class="stat-card" style="margin-bottom:24px;text-align:center">
+        <div class="label">Practice Settings</div>
+        <div style="display:flex;flex-direction:column;gap:16px;margin-top:16px">
+          <div class="form-group" style="text-align:left">
+            <label>Category</label>
+            <select id="practCat">
+              <option value="">All Categories (Random)</option>
+              ${CATEGORIES.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="text-align:left">
+            <label>Focus On</label>
+            <select id="practFocus">
+              <option value="all">All Questions</option>
+              <option value="weak">Weak (Confidence ≤ 2)</option>
+              <option value="unpracticed">Never Practiced</option>
+              <option value="hard">Hard Difficulty</option>
+            </select>
+          </div>
+          <div class="form-group" style="text-align:left">
+            <label>Timer (seconds)</label>
+            <select id="practTime">
+              <option value="90">90s — Quick</option>
+              <option value="120" selected>120s — Standard</option>
+              <option value="180">180s — Extended</option>
+              <option value="300">300s — Deep Dive</option>
+            </select>
+          </div>
+          <div class="form-group" style="text-align:left">
+            <label>Number of Questions</label>
+            <select id="practCount">
+              <option value="5">5 Questions</option>
+              <option value="10" selected>10 Questions</option>
+              <option value="20">20 Questions</option>
+              <option value="0">All Matching</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:16px;font-size:1.1rem" onclick="startPractice()">🚀 Start Practice Session</button>
+    </div>
+  `;
+}
+
+function renderPracticeActive() {
+  const q = practiceState.queue[practiceState.current];
+  if (!q) return renderPracticeComplete();
+  const cat = getCatInfo(q.category);
+  const pct = Math.max(0, practiceState.timer / practiceState.maxTime);
+  const circumference = 2 * Math.PI * 82;
+  const offset = circumference * (1 - pct);
+  const strokeClass = pct > 0.5 ? '' : pct > 0.2 ? 'warning' : 'danger';
+  const mins = Math.floor(practiceState.timer / 60);
+  const secs = practiceState.timer % 60;
+
+  return `
+    <div class="practice-container">
+      <div style="font-size:0.85rem;color:var(--text2)">Question ${practiceState.current + 1} of ${practiceState.queue.length}</div>
+      <div class="practice-question">
+        <div class="category"><span class="cat-pill ${cat.cls}">${cat.icon} ${cat.name}</span> <span style="color:${diffColor(q.difficulty)};font-size:0.8rem;margin-left:8px">${q.difficulty}</span></div>
+        <div class="text">${q.text}</div>
+      </div>
+      <div class="timer-ring">
+        <svg width="180" height="180">
+          <circle class="track" cx="90" cy="90" r="82"/>
+          <circle class="progress ${strokeClass}" cx="90" cy="90" r="82" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
+        </svg>
+        <div class="timer-text">
+          <div class="time">${mins}:${secs.toString().padStart(2,'0')}</div>
+          <div class="label">${practiceState.paused ? 'PAUSED' : 'remaining'}</div>
+        </div>
+      </div>
+      <div class="practice-controls">
+        <button class="btn btn-secondary" onclick="togglePause()">${practiceState.paused ? '▶️ Resume' : '⏸️ Pause'}</button>
+        <button class="btn btn-secondary" onclick="showAnswer()">👁️ Show Answer</button>
+        <button class="btn btn-secondary" onclick="skipQuestion()">⏭️ Skip</button>
+        <button class="btn btn-danger" style="padding:12px 24px" onclick="endPractice()">✖ End</button>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:0.85rem;color:var(--text2);margin-bottom:8px">Rate your confidence:</div>
+        <div class="confidence-rate">
+          ${[1,2,3,4,5].map(n => `<button class="conf-${n}" style="background:${n<=2?'var(--red-bg)':n===3?'var(--yellow-bg)':'var(--green-bg)'};color:${n<=2?'var(--red)':n===3?'var(--yellow)':'var(--green)'}" onclick="rateAndNext(${n})" title="${['','Weak','Shaky','OK','Good','Nailed'][n]}">${n}</button>`).join('')}
+        </div>
+      </div>
+      ${q.star.s||q.star.a ? `<div id="answerReveal" style="display:none;width:100%;max-width:640px">
+        <div class="tips-card" style="text-align:left">
+          <h4>Your STAR Answer</h4>
+          ${q.star.s ? `<p style="margin:8px 0"><strong style="color:var(--accent)">S:</strong> ${q.star.s}</p>` : ''}
+          ${q.star.t ? `<p style="margin:8px 0"><strong style="color:var(--blue)">T:</strong> ${q.star.t}</p>` : ''}
+          ${q.star.a ? `<p style="margin:8px 0"><strong style="color:var(--green)">A:</strong> ${q.star.a}</p>` : ''}
+          ${q.star.r ? `<p style="margin:8px 0"><strong style="color:var(--yellow)">R:</strong> ${q.star.r}</p>` : ''}
+        </div>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function renderPracticeComplete() {
+  const sessionQs = practiceState.queue;
+  const avgConf = sessionQs.length ? (sessionQs.reduce((s,q) => s + (q.confidence||0), 0) / sessionQs.length).toFixed(1) : '0';
+  return `
+    <div class="practice-container">
+      <div style="font-size:3rem">🎉</div>
+      <h2>Practice Complete!</h2>
+      <div class="stats-grid" style="max-width:400px">
+        <div class="stat-card" style="text-align:center"><div class="label">Questions</div><div class="value">${sessionQs.length}</div></div>
+        <div class="stat-card" style="text-align:center"><div class="label">Avg Confidence</div><div class="value">${avgConf}/5</div></div>
+      </div>
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-primary" onclick="practiceState.active=false;render()">📊 Back to Settings</button>
+        <button class="btn btn-secondary" onclick="switchView('questions')">❓ Review Questions</button>
+      </div>
+    </div>
+  `;
+}
+
+function startPractice() {
+  const cat = document.getElementById('practCat').value;
+  const focus = document.getElementById('practFocus').value;
+  const time = parseInt(document.getElementById('practTime').value);
+  const count = parseInt(document.getElementById('practCount').value);
+
+  let pool = [...state.questions];
+  if (cat) pool = pool.filter(q => q.category === cat);
+  if (focus === 'weak') pool = pool.filter(q => (q.confidence||0) <= 2);
+  if (focus === 'unpracticed') pool = pool.filter(q => !q.practiceCount);
+  if (focus === 'hard') pool = pool.filter(q => q.difficulty === 'hard');
+
+  if (!pool.length) { toast('No questions match your filters!'); return; }
+
+  // Shuffle
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i+1)); [pool[i],pool[j]] = [pool[j],pool[i]]; }
+  if (count > 0) pool = pool.slice(0, count);
+
+  practiceState = { active: true, queue: pool, current: 0, timer: time, interval: null, maxTime: time, paused: false };
+  startTimer();
+  render();
+}
+
+function startPracticeSingle(qId) {
+  const q = state.questions.find(x => x.id === qId);
+  if (!q) return;
+  practiceState = { active: true, queue: [q], current: 0, timer: 120, interval: null, maxTime: 120, paused: false };
+  switchView('practice');
+  startTimer();
+  render();
+}
+
+function startCompanyPractice(cId) {
+  const c = state.companies.find(x => x.id === cId);
+  if (!c || !c.questionIds.length) return;
+  const qs = c.questionIds.map(id => state.questions.find(q=>q.id===id)).filter(Boolean);
+  for (let i = qs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i+1)); [qs[i],qs[j]] = [qs[j],qs[i]]; }
+  practiceState = { active: true, queue: qs, current: 0, timer: 120, interval: null, maxTime: 120, paused: false };
+  switchView('practice');
+  startTimer();
+  render();
+}
+
+function startTimer() {
+  clearInterval(practiceState.interval);
+  practiceState.interval = setInterval(() => {
+    if (!practiceState.paused && practiceState.timer > 0) {
+      practiceState.timer--;
+      render();
+    }
+  }, 1000);
+}
+
+function togglePause() { practiceState.paused = !practiceState.paused; render(); }
+function showAnswer() { const el = document.getElementById('answerReveal'); if (el) el.style.display = 'block'; }
+
+function rateAndNext(confidence) {
+  const q = practiceState.queue[practiceState.current];
+  if (q) {
+    const realQ = state.questions.find(x => x.id === q.id);
+    if (realQ) {
+      realQ.confidence = confidence;
+      realQ.practiceCount = (realQ.practiceCount || 0) + 1;
+      realQ.lastPracticed = Date.now();
+    }
+    state.practiceLog.push({ qId: q.id, confidence, time: practiceState.maxTime - practiceState.timer, date: Date.now() });
+    save();
+  }
+  nextQuestion();
+}
+
+function skipQuestion() { nextQuestion(); }
+function nextQuestion() {
+  practiceState.current++;
+  practiceState.timer = practiceState.maxTime;
+  practiceState.paused = false;
+  if (practiceState.current >= practiceState.queue.length) {
+    clearInterval(practiceState.interval);
+  }
+  render();
+}
+
+function endPractice() {
+  clearInterval(practiceState.interval);
+  practiceState.active = false;
+  practiceState.current = practiceState.queue.length; // show complete screen
+  render();
+}
+
+// ─── History ───
+function renderHistory() {
+  const logs = [...state.practiceLog].reverse();
+  const byDay = {};
+  logs.forEach(l => {
+    const d = new Date(l.date).toLocaleDateString();
+    if (!byDay[d]) byDay[d] = [];
+    byDay[d].push(l);
+  });
+  return `
+    <div class="main-header"><h2>📈 Practice Log</h2></div>
+    ${Object.keys(byDay).length ? Object.entries(byDay).map(([day, entries]) => `
+      <div style="margin-bottom:24px">
+        <h4 style="color:var(--text2);margin-bottom:8px">${day} — ${entries.length} questions</h4>
+        <div class="question-list">
+          ${entries.map(e => {
+            const q = state.questions.find(x => x.id === e.qId);
+            return `<div class="q-card" style="cursor:default">
+              <div class="q-conf ${confClass(e.confidence)}">${e.confidence}</div>
+              <div class="q-body">
+                <div class="q-text">${q ? q.text : 'Deleted question'}</div>
+                <div class="q-meta"><span>⏱️ ${e.time}s answer time</span></div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    `).join('') : '<div class="empty-state"><div class="icon">📈</div><h3>No practice history yet</h3><p>Start a practice session to build your log</p></div>'}
+  `;
+}
+
+// ─── Frameworks ───
+function renderFrameworks() {
+  return `
+    <div class="main-header"><h2>🧠 PM Frameworks</h2></div>
+    <p style="color:var(--text2);margin-bottom:24px">Quick reference for common PM interview frameworks. Use these to structure your answers.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px">
+      ${FRAMEWORKS.map(f => `
+        <div class="tips-card" style="border-left:3px solid ${f.color}">
+          <h4 style="color:${f.color}">${f.name}</h4>
+          <p style="color:var(--text2);font-size:0.85rem;margin:8px 0">${f.desc}</p>
+          <p style="font-size:0.8rem;color:var(--text3);line-height:1.5">${f.details}</p>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ─── Modals ───
+function openModal(html) { document.getElementById('modal').innerHTML = html; document.getElementById('modalOverlay').classList.add('open'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+
+function openAddQuestion() {
+  openModal(`
+    <div class="modal-header"><h3>Add Question</h3><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Question</label><textarea id="newQText" rows="3" placeholder="Enter interview question..."></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Category</label><select id="newQCat">${CATEGORIES.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Difficulty</label><select id="newQDiff"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="addQuestion()">Add Question</button></div>
+  `);
+  setTimeout(() => document.getElementById('newQText')?.focus(), 100);
+}
+
+function addQuestion() {
+  const text = document.getElementById('newQText').value.trim();
+  if (!text) { toast('Question text is required'); return; }
+  state.questions.push({
+    id: 'q' + Date.now(),
+    text,
+    category: document.getElementById('newQCat').value,
+    difficulty: document.getElementById('newQDiff').value,
+    confidence: 0, star: { s:'', t:'', a:'', r:'' }, notes: '', companies: [],
+    practiceCount: 0, lastPracticed: null, created: Date.now(),
+  });
+  save(); closeModal(); render(); toast('Question added!');
+}
+
+function openEditQuestion(id) {
+  const q = state.questions.find(x => x.id === id);
+  if (!q) return;
+  openModal(`
+    <div class="modal-header"><h3>Edit Question</h3><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Question</label><textarea id="editQText" rows="3">${q.text}</textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Category</label><select id="editQCat">${CATEGORIES.map(c => `<option value="${c.id}" ${q.category===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Difficulty</label><select id="editQDiff"><option value="easy" ${q.difficulty==='easy'?'selected':''}>Easy</option><option value="medium" ${q.difficulty==='medium'?'selected':''}>Medium</option><option value="hard" ${q.difficulty==='hard'?'selected':''}>Hard</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveEditQuestion('${id}')">Save</button></div>
+  `);
+}
+
+function saveEditQuestion(id) {
+  const q = state.questions.find(x => x.id === id);
+  if (!q) return;
+  q.text = document.getElementById('editQText').value.trim();
+  q.category = document.getElementById('editQCat').value;
+  q.difficulty = document.getElementById('editQDiff').value;
+  save(); closeModal(); render(); toast('Question updated!');
+}
+
+function deleteQuestion(id) {
+  if (!confirm('Delete this question?')) return;
+  state.questions = state.questions.filter(q => q.id !== id);
+  state.companies.forEach(c => { c.questionIds = c.questionIds.filter(qid => qid !== id); });
+  state.selectedQuestion = null;
+  save(); render(); toast('Question deleted');
+}
+
+function openAddCompany() {
+  openModal(`
+    <div class="modal-header"><h3>Add Company</h3><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Company Name</label><input id="newCName" placeholder="e.g., Razorpay"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Role</label><input id="newCRole" placeholder="e.g., Head of Product"></div>
+        <div class="form-group"><label>Stage</label><select id="newCStage"><option>Researching</option><option>Applied</option><option>Phone Screen</option><option selected>Interview Prep</option><option>Interviewing</option><option>Offer</option></select></div>
+      </div>
+      <div class="form-group"><label>Interview Date (optional)</label><input type="date" id="newCDate"></div>
+      <div class="form-group"><label>Notes</label><textarea id="newCNotes" rows="3" placeholder="Research, culture, prep notes..."></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="addCompany()">Add</button></div>
+  `);
+  setTimeout(() => document.getElementById('newCName')?.focus(), 100);
+}
+
+function addCompany() {
+  const name = document.getElementById('newCName').value.trim();
+  if (!name) { toast('Company name is required'); return; }
+  state.companies.push({
+    id: 'c' + Date.now(), name,
+    role: document.getElementById('newCRole').value.trim(),
+    stage: document.getElementById('newCStage').value,
+    interviewDate: document.getElementById('newCDate').value,
+    notes: document.getElementById('newCNotes').value,
+    questionIds: [], created: Date.now(),
+  });
+  save(); closeModal(); render(); toast('Company added!');
+}
+
+function openEditCompany(id) {
+  const c = state.companies.find(x => x.id === id);
+  if (!c) return;
+  openModal(`
+    <div class="modal-header"><h3>Edit Company</h3><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Company Name</label><input id="editCName" value="${c.name}"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Role</label><input id="editCRole" value="${c.role||''}"></div>
+        <div class="form-group"><label>Stage</label><select id="editCStage">${['Researching','Applied','Phone Screen','Interview Prep','Interviewing','Offer'].map(s=>`<option ${c.stage===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-group"><label>Interview Date</label><input type="date" id="editCDate" value="${c.interviewDate||''}"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveEditCompany('${id}')">Save</button></div>
+  `);
+}
+
+function saveEditCompany(id) {
+  const c = state.companies.find(x => x.id === id);
+  if (!c) return;
+  c.name = document.getElementById('editCName').value.trim();
+  c.role = document.getElementById('editCRole').value.trim();
+  c.stage = document.getElementById('editCStage').value;
+  c.interviewDate = document.getElementById('editCDate').value;
+  save(); closeModal(); render(); toast('Company updated!');
+}
+
+function deleteCompany(id) {
+  if (!confirm('Delete this company?')) return;
+  state.companies = state.companies.filter(c => c.id !== id);
+  state.selectedCompany = null;
+  save(); render(); toast('Company deleted');
+}
+
+function openLinkQuestions(cId) {
+  const c = state.companies.find(x => x.id === cId);
+  if (!c) return;
+  const html = `
+    <div class="modal-header"><h3>Link Questions to ${c.name}</h3><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+      <input type="text" id="linkSearch" placeholder="Search questions..." oninput="filterLinkQuestions()" style="width:100%;margin-bottom:12px">
+      <div id="linkList">
+        ${state.questions.map(q => {
+          const cat = getCatInfo(q.category);
+          const checked = c.questionIds.includes(q.id);
+          return `<label style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:var(--radius-sm);cursor:pointer;margin-bottom:4px;background:${checked?'var(--accent-bg)':'transparent'}">
+            <input type="checkbox" value="${q.id}" ${checked?'checked':''} onchange="toggleLinkQ('${cId}','${q.id}',this.checked)">
+            <span class="cat-pill ${cat.cls}" style="flex-shrink:0">${cat.icon}</span>
+            <span style="font-size:0.85rem">${q.text}</span>
+          </label>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal();render()">Done</button></div>
+  `;
+  openModal(html);
+}
+
+function toggleLinkQ(cId, qId, checked) {
+  const c = state.companies.find(x => x.id === cId);
+  if (!c) return;
+  if (checked && !c.questionIds.includes(qId)) c.questionIds.push(qId);
+  if (!checked) c.questionIds = c.questionIds.filter(id => id !== qId);
+  save();
+}
+
+function filterLinkQuestions() {
+  const search = document.getElementById('linkSearch').value.toLowerCase();
+  document.querySelectorAll('#linkList label').forEach(el => {
+    el.style.display = el.textContent.toLowerCase().includes(search) ? '' : 'none';
+  });
+}
+
+function viewQuestion(id) { state.selectedQuestion = id; render(); }
+function viewCompany(id) { state.selectedCompany = id; state.currentView = 'companies'; render(); }
+
+// ─── Shortcuts ───
+function showShortcuts() {
+  openModal(`
+    <div class="modal-header"><h3>⌨️ Keyboard Shortcuts</h3><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:0.85rem">
+        <span class="kbd">N</span><span>New Question</span>
+        <span class="kbd">/</span><span>Focus Search</span>
+        <span class="kbd">P</span><span>Practice Mode</span>
+        <span class="kbd">1-5</span><span>Switch Views</span>
+        <span class="kbd">Esc</span><span>Close Modal / Go Back</span>
+        <span class="kbd">Space</span><span>Pause/Resume Timer (in practice)</span>
+      </div>
+    </div>
+  `);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  const overlay = document.getElementById('modalOverlay');
+  if (overlay.classList.contains('open')) {
+    if (e.key === 'Escape') closeModal();
+    return;
+  }
+  if (e.key === 'Escape') {
+    if (state.selectedQuestion) { state.selectedQuestion = null; render(); }
+    else if (state.selectedCompany) { state.selectedCompany = null; render(); }
+    return;
+  }
+  if (e.key === 'n' || e.key === 'N') { openAddQuestion(); e.preventDefault(); }
+  if (e.key === '/') { switchView('questions'); setTimeout(() => document.getElementById('qSearch')?.focus(), 50); e.preventDefault(); }
+  if (e.key === 'p' || e.key === 'P') { switchView('practice'); e.preventDefault(); }
+  if (e.key === '1') switchView('dashboard');
+  if (e.key === '2') switchView('questions');
+  if (e.key === '3') switchView('companies');
+  if (e.key === '4') switchView('practice');
+  if (e.key === '5') switchView('history');
+  if (e.key === ' ' && practiceState.active) { togglePause(); e.preventDefault(); }
+});
+
+// ─── Import/Export ───
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `interview-ace-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('Data exported!');
+}
+
+function importData() { document.getElementById('importInput').click(); }
+function handleImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      state = { ...state, ...data };
+      save(); render();
+      toast('Data imported!');
+    } catch { toast('Invalid JSON file'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ─── Init ───
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Journal — Track, Review, Learn</title>
+<style>
+:root {
+  --bg: #f8f9fa; --surface: #ffffff; --surface2: #f1f3f5; --border: #dee2e6;
+  --text: #212529; --text2: #495057; --text3: #868e96; --accent: #4263eb;
+  --accent2: #5c7cfa; --accent-bg: #edf2ff; --green: #2b8a3e; --green-bg: #ebfbee;
+  --red: #c92a2a; --red-bg: #fff5f5; --amber: #e67700; --amber-bg: #fff9db;
+  --purple: #7048e8; --purple-bg: #f3f0ff; --teal: #0c8599; --teal-bg: #e6fcf5;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08); --shadow2: 0 4px 12px rgba(0,0,0,0.1);
+  --radius: 10px; --radius-sm: 6px;
+}
+.dark {
+  --bg: #1a1b1e; --surface: #25262b; --surface2: #2c2e33; --border: #373a40;
+  --text: #f1f3f5; --text2: #adb5bd; --text3: #868e96; --accent: #5c7cfa;
+  --accent2: #748ffc; --accent-bg: #1c2541; --green: #51cf66; --green-bg: #1a2e1a;
+  --red: #ff6b6b; --red-bg: #2e1a1a; --amber: #ffd43b; --amber-bg: #2e2a1a;
+  --purple: #9775fa; --purple-bg: #2a1f4e; --teal: #3bc9db; --teal-bg: #1a2e2e;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3); --shadow2: 0 4px 12px rgba(0,0,0,0.4);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.3s, color 0.3s; }
+button { cursor:pointer; border:none; font-family:inherit; font-size:inherit; }
+input, textarea, select { font-family:inherit; font-size:inherit; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; width:100%; transition: border-color 0.2s; }
+input:focus, textarea:focus, select:focus { outline:none; border-color:var(--accent); }
+textarea { resize:vertical; min-height:60px; }
+
+/* Layout */
+.app { display:flex; min-height:100vh; }
+.sidebar { width:240px; background:var(--surface); border-right:1px solid var(--border); padding:20px 0; display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; z-index:10; transition: transform 0.3s; }
+.sidebar.collapsed { transform: translateX(-240px); }
+.main { flex:1; margin-left:240px; padding:24px 32px; transition: margin-left 0.3s; }
+.main.expanded { margin-left:0; }
+
+/* Sidebar */
+.logo { padding:0 20px 20px; border-bottom:1px solid var(--border); margin-bottom:12px; }
+.logo h1 { font-size:18px; display:flex; align-items:center; gap:8px; }
+.logo p { font-size:12px; color:var(--text3); margin-top:4px; }
+.nav-item { padding:10px 20px; cursor:pointer; display:flex; align-items:center; gap:10px; color:var(--text2); font-size:14px; transition: all 0.15s; border-left:3px solid transparent; }
+.nav-item:hover { background:var(--surface2); color:var(--text); }
+.nav-item.active { background:var(--accent-bg); color:var(--accent); border-left-color:var(--accent); font-weight:600; }
+.nav-item .badge { margin-left:auto; background:var(--accent); color:white; font-size:11px; padding:2px 7px; border-radius:10px; font-weight:600; }
+.sidebar-footer { margin-top:auto; padding:12px 20px; border-top:1px solid var(--border); }
+.sidebar-footer button { background:none; color:var(--text3); font-size:12px; padding:6px 0; display:flex; align-items:center; gap:6px; width:100%; }
+.sidebar-footer button:hover { color:var(--text); }
+
+/* Header */
+.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+.header h2 { font-size:22px; }
+.header-actions { display:flex; gap:8px; align-items:center; }
+.search-box { position:relative; }
+.search-box input { padding-left:32px; width:220px; height:36px; }
+.search-box::before { content:'🔍'; position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:14px; }
+.btn { padding:8px 16px; border-radius:var(--radius-sm); font-weight:500; font-size:14px; display:inline-flex; align-items:center; gap:6px; transition: all 0.15s; }
+.btn-primary { background:var(--accent); color:white; }
+.btn-primary:hover { background:var(--accent2); }
+.btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-secondary:hover { background:var(--border); }
+.btn-sm { padding:5px 10px; font-size:12px; }
+.btn-icon { width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); background:var(--surface2); border:1px solid var(--border); }
+.btn-icon:hover { background:var(--border); }
+
+/* Cards */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); transition: box-shadow 0.2s; }
+.card:hover { box-shadow:var(--shadow2); }
+.card-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:16px; }
+
+/* Decision Cards */
+.decision-card { cursor:pointer; position:relative; }
+.decision-card .card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+.decision-card .card-title { font-size:16px; font-weight:600; line-height:1.3; flex:1; margin-right:8px; }
+.decision-card .card-meta { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+.decision-card .card-context { font-size:13px; color:var(--text2); line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.decision-card .card-footer { display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+
+/* Tags & Badges */
+.tag { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.tag-product { background:var(--accent-bg); color:var(--accent); }
+.tag-career { background:var(--green-bg); color:var(--green); }
+.tag-personal { background:var(--purple-bg); color:var(--purple); }
+.tag-business { background:var(--amber-bg); color:var(--amber); }
+.tag-technical { background:var(--teal-bg); color:var(--teal); }
+.tag-team { background:var(--red-bg); color:var(--red); }
+
+.status-badge { font-size:11px; font-weight:600; padding:3px 8px; border-radius:4px; }
+.status-pending { background:var(--amber-bg); color:var(--amber); }
+.status-decided { background:var(--accent-bg); color:var(--accent); }
+.status-review { background:var(--purple-bg); color:var(--purple); }
+.status-good { background:var(--green-bg); color:var(--green); }
+.status-bad { background:var(--red-bg); color:var(--red); }
+.status-mixed { background:var(--amber-bg); color:var(--amber); }
+
+.confidence-bar { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text3); }
+.confidence-dots { display:flex; gap:3px; }
+.confidence-dot { width:8px; height:8px; border-radius:50%; background:var(--border); }
+.confidence-dot.filled { background:var(--accent); }
+
+/* Stats */
+.stats-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:12px; margin-bottom:24px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; text-align:center; }
+.stat-value { font-size:28px; font-weight:700; color:var(--accent); }
+.stat-label { font-size:12px; color:var(--text3); margin-top:4px; }
+
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:100; padding:20px; }
+.modal-overlay.active { display:flex; }
+.modal { background:var(--surface); border-radius:var(--radius); width:100%; max-width:680px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow2); }
+.modal-header { padding:20px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:var(--surface); z-index:1; }
+.modal-header h3 { font-size:18px; }
+.modal-body { padding:24px; }
+.modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; position:sticky; bottom:0; background:var(--surface); }
+
+/* Form */
+.form-group { margin-bottom:16px; }
+.form-group label { display:block; font-size:13px; font-weight:600; color:var(--text2); margin-bottom:6px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+/* Options List */
+.options-list { display:flex; flex-direction:column; gap:8px; }
+.option-item { display:flex; gap:8px; align-items:center; }
+.option-item input { flex:1; }
+.option-item .chosen-indicator { width:24px; height:24px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; transition: all 0.15s; flex-shrink:0; }
+.option-item .chosen-indicator.active { border-color:var(--green); background:var(--green-bg); color:var(--green); }
+.option-item button { flex-shrink:0; }
+
+/* Detail View */
+.detail-view { max-width:800px; }
+.detail-header { margin-bottom:24px; }
+.detail-title { font-size:24px; font-weight:700; margin-bottom:12px; }
+.detail-meta { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.detail-section { margin-bottom:24px; }
+.detail-section h4 { font-size:14px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; }
+.detail-section .content { font-size:15px; line-height:1.7; color:var(--text2); white-space:pre-wrap; }
+.options-display { display:flex; flex-direction:column; gap:6px; }
+.option-display-item { padding:10px 14px; border-radius:var(--radius-sm); background:var(--surface2); border:1px solid var(--border); font-size:14px; display:flex; align-items:center; gap:8px; }
+.option-display-item.chosen { border-color:var(--green); background:var(--green-bg); }
+.option-display-item .check { color:var(--green); font-weight:700; }
+
+/* Review Section */
+.review-box { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-top:16px; }
+.review-box h4 { margin-bottom:12px; }
+.outcome-scale { display:flex; gap:4px; margin:12px 0; }
+.outcome-btn { width:40px; height:40px; border-radius:var(--radius-sm); border:2px solid var(--border); background:var(--surface); display:flex; align-items:center; justify-content:center; font-size:16px; transition: all 0.15s; }
+.outcome-btn:hover { border-color:var(--accent); }
+.outcome-btn.selected { border-color:var(--accent); background:var(--accent-bg); }
+
+/* Timeline */
+.timeline { display:flex; flex-direction:column; gap:0; }
+.timeline-item { display:flex; gap:16px; padding:16px 0; position:relative; }
+.timeline-item:not(:last-child)::after { content:''; position:absolute; left:19px; top:52px; bottom:0; width:2px; background:var(--border); }
+.timeline-dot { width:40px; height:40px; border-radius:50%; background:var(--accent-bg); color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; z-index:1; }
+.timeline-content { flex:1; }
+.timeline-date { font-size:12px; color:var(--text3); }
+.timeline-title { font-weight:600; margin:4px 0; }
+.timeline-desc { font-size:13px; color:var(--text2); }
+
+/* Charts */
+.chart-container { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+.bar-chart { display:flex; align-items:flex-end; gap:8px; height:160px; padding-top:20px; }
+.bar-group { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end; }
+.bar { width:100%; max-width:48px; border-radius:4px 4px 0 0; transition: height 0.5s ease; min-height:2px; }
+.bar-label { font-size:10px; color:var(--text3); text-align:center; white-space:nowrap; }
+.bar-value { font-size:11px; font-weight:600; color:var(--text2); }
+
+/* Heatmap */
+.heatmap { display:flex; flex-direction:column; gap:2px; }
+.heatmap-row { display:flex; gap:2px; align-items:center; }
+.heatmap-label { width:28px; font-size:10px; color:var(--text3); text-align:right; margin-right:4px; }
+.heatmap-cell { width:14px; height:14px; border-radius:2px; background:var(--surface2); }
+.heatmap-cell.l1 { background:var(--accent-bg); }
+.heatmap-cell.l2 { background:var(--accent); opacity:0.4; }
+.heatmap-cell.l3 { background:var(--accent); opacity:0.7; }
+.heatmap-cell.l4 { background:var(--accent); }
+
+/* Filters */
+.filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.filter-chip { padding:6px 14px; border-radius:20px; font-size:12px; font-weight:500; background:var(--surface2); color:var(--text2); border:1px solid var(--border); transition: all 0.15s; }
+.filter-chip:hover { border-color:var(--accent); color:var(--accent); }
+.filter-chip.active { background:var(--accent); color:white; border-color:var(--accent); }
+
+/* Empty state */
+.empty { text-align:center; padding:60px 20px; color:var(--text3); }
+.empty .icon { font-size:48px; margin-bottom:16px; }
+.empty h3 { color:var(--text2); margin-bottom:8px; }
+
+/* Keyboard hint */
+.kbd { display:inline-flex; align-items:center; padding:2px 6px; border-radius:4px; background:var(--surface2); border:1px solid var(--border); font-size:11px; font-family:monospace; color:var(--text3); }
+
+/* Responsive */
+@media (max-width:768px) {
+  .sidebar { transform:translateX(-240px); }
+  .sidebar.open { transform:translateX(0); }
+  .main { margin-left:0; padding:16px; }
+  .card-grid { grid-template-columns:1fr; }
+  .form-row, .form-row-3 { grid-template-columns:1fr; }
+  .stats-grid { grid-template-columns:repeat(2,1fr); }
+  .header h2 { font-size:18px; }
+  .search-box input { width:160px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="logo">
+      <h1>🧭 Decision Journal</h1>
+      <p>Track · Review · Learn</p>
+    </div>
+    <div class="nav-item active" data-view="decisions" onclick="switchView('decisions')">
+      <span>📋</span> All Decisions <span class="badge" id="navCount">0</span>
+    </div>
+    <div class="nav-item" data-view="pending" onclick="switchView('pending')">
+      <span>⏳</span> Pending Review
+    </div>
+    <div class="nav-item" data-view="timeline" onclick="switchView('timeline')">
+      <span>📅</span> Timeline
+    </div>
+    <div class="nav-item" data-view="insights" onclick="switchView('insights')">
+      <span>📊</span> Insights
+    </div>
+    <div class="nav-item" data-view="frameworks" onclick="switchView('frameworks')">
+      <span>🧠</span> Frameworks
+    </div>
+    <div class="sidebar-footer">
+      <button onclick="toggleDark()">🌓 Toggle Dark Mode <kbd class="kbd" style="margin-left:auto">D</kbd></button>
+      <button onclick="exportData()">📥 Export JSON <kbd class="kbd" style="margin-left:auto">E</kbd></button>
+      <button onclick="document.getElementById('importInput').click()">📤 Import JSON</button>
+      <input type="file" id="importInput" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main" id="main">
+    <!-- Decisions View -->
+    <div id="view-decisions">
+      <div class="header">
+        <h2>All Decisions</h2>
+        <div class="header-actions">
+          <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search decisions..." oninput="renderDecisions()">
+          </div>
+          <button class="btn btn-primary" onclick="openNewDecision()">+ New Decision <kbd class="kbd" style="margin-left:6px;background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.3);color:white">N</kbd></button>
+        </div>
+      </div>
+      <div class="filters" id="filters"></div>
+      <div class="card-grid" id="decisionGrid"></div>
+    </div>
+
+    <!-- Pending Review -->
+    <div id="view-pending" style="display:none">
+      <div class="header">
+        <h2>⏳ Pending Review</h2>
+        <p style="color:var(--text3);font-size:14px">Decisions made 7+ days ago that haven't been reviewed yet</p>
+      </div>
+      <div class="card-grid" id="pendingGrid"></div>
+    </div>
+
+    <!-- Timeline -->
+    <div id="view-timeline" style="display:none">
+      <div class="header"><h2>📅 Decision Timeline</h2></div>
+      <div class="timeline" id="timelineView"></div>
+    </div>
+
+    <!-- Insights -->
+    <div id="view-insights" style="display:none">
+      <div class="header"><h2>📊 Insights & Patterns</h2></div>
+      <div class="stats-grid" id="statsGrid"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px" id="chartsRow"></div>
+      <div class="chart-container" id="heatmapContainer" style="margin-bottom:24px"></div>
+      <div class="card" id="patternsCard"></div>
+    </div>
+
+    <!-- Frameworks -->
+    <div id="view-frameworks" style="display:none">
+      <div class="header"><h2>🧠 Decision Frameworks</h2></div>
+      <div class="card-grid" id="frameworksGrid"></div>
+    </div>
+
+    <!-- Detail View -->
+    <div id="view-detail" style="display:none">
+      <div class="detail-view" id="detailContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New/Edit Decision Modal -->
+<div class="modal-overlay" id="decisionModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">New Decision</h3>
+      <button class="btn-icon" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Decision Title *</label>
+        <input type="text" id="fTitle" placeholder="What decision are you making?">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Category</label>
+          <select id="fCategory">
+            <option value="Product">🎯 Product</option>
+            <option value="Career">💼 Career</option>
+            <option value="Business">📈 Business</option>
+            <option value="Technical">⚙️ Technical</option>
+            <option value="Team">👥 Team</option>
+            <option value="Personal">🧘 Personal</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Importance</label>
+          <select id="fImportance">
+            <option value="High">🔴 High — Hard to reverse</option>
+            <option value="Medium" selected>🟡 Medium — Somewhat reversible</option>
+            <option value="Low">🟢 Low — Easily reversible</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Context — Why is this decision needed now?</label>
+        <textarea id="fContext" rows="3" placeholder="What's the situation? What triggered this decision?"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Options Considered</label>
+        <div class="options-list" id="optionsList"></div>
+        <button class="btn btn-sm btn-secondary" onclick="addOption()" style="margin-top:8px">+ Add Option</button>
+      </div>
+      <div class="form-group">
+        <label>Reasoning — Why this choice?</label>
+        <textarea id="fReasoning" rows="3" placeholder="What's driving your decision? What tradeoffs are you making?"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Expected Outcome</label>
+          <textarea id="fExpected" rows="2" placeholder="What do you expect will happen?"></textarea>
+        </div>
+        <div class="form-group">
+          <label>What Could Go Wrong?</label>
+          <textarea id="fRisks" rows="2" placeholder="What's the downside risk?"></textarea>
+        </div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>Confidence (1-5)</label>
+          <select id="fConfidence">
+            <option value="1">1 — Gut feeling</option>
+            <option value="2">2 — Some data</option>
+            <option value="3" selected>3 — Reasonable confidence</option>
+            <option value="4">4 — Strong evidence</option>
+            <option value="5">5 — Near certain</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="fStatus">
+            <option value="Pending">⏳ Pending</option>
+            <option value="Decided" selected>✅ Decided</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Review By</label>
+          <input type="date" id="fReviewDate">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Tags (comma-separated)</label>
+        <input type="text" id="fTags" placeholder="e.g., utmstamp, pricing, mvp">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel <kbd class="kbd">Esc</kbd></button>
+      <button class="btn btn-primary" onclick="saveDecision()">Save Decision</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== DATA ====================
+const CATEGORIES = ['Product','Career','Business','Technical','Team','Personal'];
+const CAT_ICONS = {Product:'🎯',Career:'💼',Business:'📈',Technical:'⚙️',Team:'👥',Personal:'🧘'};
+const CAT_CLASSES = {Product:'tag-product',Career:'tag-career',Business:'tag-business',Technical:'tag-technical',Team:'tag-team',Personal:'tag-personal'};
+
+const FRAMEWORKS = [
+  { name:'Reversibility Test', icon:'🔄', desc:'Is this a one-way door or two-way door? One-way doors (irreversible) deserve deep analysis. Two-way doors (reversible) — just decide and iterate.', steps:['Can I undo this in < 1 week?','What\'s the cost of being wrong?','What\'s the cost of deciding slowly?','If easily reversible → decide now, iterate later'] },
+  { name:'10/10/10 Rule', icon:'⏰', desc:'How will you feel about this decision in 10 minutes? 10 months? 10 years? Helps escape emotional short-term thinking.', steps:['Write how you\'ll feel in 10 minutes','Write how you\'ll feel in 10 months','Write how you\'ll feel in 10 years','If 10-year answer is clear → follow it'] },
+  { name:'Regret Minimization', icon:'👴', desc:'Jeff Bezos framework: Project yourself to age 80. Which choice minimizes regret? When in doubt, choose the path of growth.', steps:['Imagine yourself at 80 looking back','Which option would you regret NOT taking?','Fear of failure vs fear of inaction','Choose the option that minimizes long-term regret'] },
+  { name:'Second-Order Thinking', icon:'🎯', desc:'First-order: What happens next? Second-order: And then what? Third-order: And THEN what? Most people stop at first order.', steps:['What\'s the immediate result? (1st order)','What happens because of that? (2nd order)','What does THAT cause? (3rd order)','Are the 2nd/3rd order effects acceptable?'] },
+  { name:'Eisenhower Matrix', icon:'📊', desc:'Urgent + Important = Do now. Important + Not urgent = Schedule. Urgent + Not important = Delegate. Neither = Drop.', steps:['Is this urgent? (deadline pressure)','Is this important? (meaningful impact)','Place in the 2×2 matrix','Act accordingly: Do / Schedule / Delegate / Drop'] },
+  { name:'Pre-Mortem', icon:'💀', desc:'Imagine the decision failed spectacularly. Work backwards: why did it fail? This surfaces risks your optimism is hiding.', steps:['Assume you chose this option and it FAILED','Write down: Why did it fail?','What warning signs did you ignore?','Can you mitigate those risks now?'] },
+  { name:'RICE Score', icon:'📐', desc:'Product prioritization: Reach × Impact × Confidence ÷ Effort. Forces you to quantify instead of going by gut.', steps:['Reach: How many people affected? (per quarter)','Impact: How much per person? (0.25/0.5/1/2/3)','Confidence: How sure? (100%/80%/50%)','Effort: Person-months needed. Score = R×I×C÷E'] },
+  { name:'Opportunity Cost', icon:'💰', desc:'Every yes is a no to something else. What are you giving up? The best decision isn\'t just good — it\'s better than alternatives.', steps:['List what you\'re saying YES to','List what you\'re saying NO to (by choosing this)','Compare the value of yes vs. value of missed nos','Is the gap big enough to be confident?'] },
+];
+
+let decisions = [];
+let editingId = null;
+let currentView = 'decisions';
+let activeFilter = 'All';
+
+// ==================== STORAGE ====================
+function load() {
+  try { decisions = JSON.parse(localStorage.getItem('dj_decisions') || '[]'); } catch(e) { decisions = []; }
+}
+function save() {
+  localStorage.setItem('dj_decisions', JSON.stringify(decisions));
+}
+
+// ==================== SEED DATA ====================
+function seedData() {
+  if (decisions.length > 0) return;
+  const now = Date.now();
+  const day = 86400000;
+  decisions = [
+    {
+      id: crypto.randomUUID(), title: 'Build UTMStamp as a free-first SaaS', category: 'Product', importance: 'High',
+      context: 'Need to validate demand for email signature UTM tracking. Market has established players (Exclaimer, WiseStamp) but none focus purely on UTM attribution.',
+      options: [{text:'Freemium SaaS with generous free tier',chosen:true},{text:'Paid-only from day one',chosen:false},{text:'Open source with hosted premium',chosen:false}],
+      reasoning: 'Product-led growth is the only viable strategy as a solo founder. Need volume of users to prove the concept. Free tier creates word of mouth. Can always add paid tiers later.',
+      expected: 'Get 100+ signups in first month from build-in-public audience. Convert 5-10% to paid within 3 months.',
+      risks: 'Free users may never convert. Server costs could grow faster than revenue. Might attract wrong audience.',
+      confidence: 4, status: 'Decided', tags: ['utmstamp','pricing','strategy'],
+      date: new Date(now - 14*day).toISOString(), reviewDate: new Date(now - 2*day).toISOString().split('T')[0],
+      review: { outcome: 4, reflection: 'Good call. 200+ signups in 2 weeks. Free tier is driving organic growth. Need to watch conversion closely.', reviewedAt: new Date(now - 2*day).toISOString() }
+    },
+    {
+      id: crypto.randomUUID(), title: 'Leave ZYOD and go job hunting', category: 'Career', importance: 'High',
+      context: '3 years at ZYOD, built Manufacturing OS from scratch. $15M revenue impact. But growth has plateaued — role isn\'t evolving. Time to find next challenge.',
+      options: [{text:'Leave and hunt for Head of Product roles',chosen:true},{text:'Stay another year and negotiate bigger scope',chosen:false},{text:'Go full-time on UTMStamp',chosen:false}],
+      reasoning: 'UTMStamp isn\'t generating revenue yet — can\'t support full-time. ZYOD role is comfortable but not growing. Head of Product at a growth-stage company is the right next step for career trajectory.',
+      expected: 'Land a HoP role within 2-3 months. Salary upgrade + equity. Keep UTMStamp as side project.',
+      risks: 'Job market is competitive. Might take longer than expected. Savings need to last 4-6 months.',
+      confidence: 3, status: 'Decided', tags: ['career','job-hunt','zyod'],
+      date: new Date(now - 30*day).toISOString(), reviewDate: new Date(now + 15*day).toISOString().split('T')[0],
+      review: null
+    },
+    {
+      id: crypto.randomUUID(), title: 'Ship in 13 days or take a month to polish', category: 'Product', importance: 'Medium',
+      context: 'UTMStamp MVP is feature-complete but rough around the edges. Could spend 2 more weeks polishing UI, adding tests, improving docs. Or ship now.',
+      options: [{text:'Ship now, iterate in public',chosen:true},{text:'Polish for 2 more weeks',chosen:false}],
+      reasoning: '"Ship fast, learn faster" — AJ philosophy. Real user feedback > assumptions about what needs polish. The build-in-public narrative is stronger with speed.',
+      expected: 'Launch gets attention due to speed story. Users reveal what ACTUALLY needs fixing vs what I assumed.',
+      risks: 'First impressions matter. Bugs could turn off early adopters. But small audience = forgiving.',
+      confidence: 4, status: 'Decided', tags: ['utmstamp','shipping','speed'],
+      date: new Date(now - 20*day).toISOString(), reviewDate: new Date(now - 5*day).toISOString().split('T')[0],
+      review: { outcome: 5, reflection: 'Best decision. The "13 days" story became the content itself. Multiple LinkedIn posts, credibility boost. Users gave feedback I never would have predicted.', reviewedAt: new Date(now - 5*day).toISOString() }
+    },
+    {
+      id: crypto.randomUUID(), title: 'Use LinkedIn as primary content channel', category: 'Business', importance: 'Medium',
+      context: 'Building in public needs a platform. Options: Twitter, LinkedIn, blog, newsletter, YouTube.',
+      options: [{text:'LinkedIn primary + Twitter secondary',chosen:true},{text:'Twitter-first',chosen:false},{text:'Blog + newsletter',chosen:false},{text:'YouTube',chosen:false}],
+      reasoning: 'Target audience (product leaders, founders) is more active on LinkedIn. My network is already there. LinkedIn algorithm favors text + image posts — easy to produce. Twitter is noisier, harder to break through.',
+      expected: 'Build to 5K followers in 3 months. Generate inbound interest for UTMStamp and job opportunities.',
+      risks: 'LinkedIn algorithm changes. Platform risk. Content might not resonate.',
+      confidence: 3, status: 'Decided', tags: ['content','linkedin','marketing'],
+      date: new Date(now - 25*day).toISOString(), reviewDate: new Date(now + 5*day).toISOString().split('T')[0],
+      review: null
+    },
+    {
+      id: crypto.randomUUID(), title: 'Add team signature deployment to UTMStamp', category: 'Product', importance: 'Medium',
+      context: 'Individual users are signing up but real value (and monetization) is in teams. Sales/marketing teams need centralized signature management.',
+      options: [{text:'Build team features next',chosen:true},{text:'Focus on analytics first',chosen:false},{text:'Build Google Workspace integration',chosen:false}],
+      reasoning: 'Team features = B2B = higher ACV. Analytics alone doesn\'t justify paid tier. Teams with 10+ people will pay for centralized control.',
+      expected: 'Team feature drives first paying customers. Target: 3 paying teams within 6 weeks.',
+      risks: 'Team features are complex — admin roles, permissions, bulk management. Might take longer than expected. Could over-engineer.',
+      confidence: 3, status: 'Pending', tags: ['utmstamp','roadmap','teams'],
+      date: new Date(now - 3*day).toISOString(), reviewDate: new Date(now + 14*day).toISOString().split('T')[0],
+      review: null
+    },
+    {
+      id: crypto.randomUUID(), title: 'Negotiate salary vs equity weight in next role', category: 'Career', importance: 'High',
+      context: 'Getting to later stages with a few companies. Need to decide negotiation strategy: prioritize base salary or push for more equity.',
+      options: [{text:'Push for higher base (financial safety)',chosen:false},{text:'Accept lower base for meaningful equity',chosen:false},{text:'Aim for balanced package with guaranteed base + options vesting',chosen:true}],
+      reasoning: 'Need financial stability (savings runway is limited). But also want upside. Best approach: ensure base covers expenses comfortably, then negotiate equity on top.',
+      expected: 'Land a package with 20-30% salary bump + meaningful equity stake.',
+      risks: 'Equity might be worthless if company doesn\'t grow. Might have to compromise on one side.',
+      confidence: 2, status: 'Pending', tags: ['career','negotiation','compensation'],
+      date: new Date(now - 5*day).toISOString(), reviewDate: new Date(now + 30*day).toISOString().split('T')[0],
+      review: null
+    },
+    {
+      id: crypto.randomUUID(), title: 'Open-source the overnight build tools', category: 'Business', importance: 'Low',
+      context: 'The overnight builds (Idea Validator, Job Pipeline, etc.) are complete standalone tools. Could open source them for developer credibility.',
+      options: [{text:'Open source on GitHub with MIT license',chosen:false},{text:'Keep private, use as portfolio pieces',chosen:true},{text:'Bundle as a paid toolkit',chosen:false}],
+      reasoning: 'For now, these work better as portfolio proof. "I built 14 tools in 14 nights" is a stronger story than random GitHub repos. Can always open source later.',
+      expected: 'Use in interviews and LinkedIn content. Show execution speed.',
+      risks: 'Missing out on open source community + contributions. But time cost of maintaining OSS repos is real.',
+      confidence: 3, status: 'Decided', tags: ['portfolio','open-source','brand'],
+      date: new Date(now - 7*day).toISOString(), reviewDate: new Date(now + 21*day).toISOString().split('T')[0],
+      review: null
+    }
+  ];
+  save();
+}
+
+// ==================== RENDER ====================
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+  ['decisions','pending','timeline','insights','frameworks','detail'].forEach(v => {
+    document.getElementById('view-'+v).style.display = v === view ? '' : 'none';
+  });
+  if (view === 'decisions') renderDecisions();
+  else if (view === 'pending') renderPending();
+  else if (view === 'timeline') renderTimeline();
+  else if (view === 'insights') renderInsights();
+  else if (view === 'frameworks') renderFrameworks();
+}
+
+function renderDecisions() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let filtered = decisions.filter(d => {
+    if (q && !d.title.toLowerCase().includes(q) && !d.context.toLowerCase().includes(q) && !(d.tags||[]).some(t=>t.toLowerCase().includes(q))) return false;
+    if (activeFilter !== 'All' && d.category !== activeFilter) return false;
+    return true;
+  });
+  filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  // Filters
+  const counts = {All: decisions.length};
+  CATEGORIES.forEach(c => counts[c] = decisions.filter(d=>d.category===c).length);
+  document.getElementById('filters').innerHTML = ['All',...CATEGORIES].map(c =>
+    `<button class="filter-chip ${activeFilter===c?'active':''}" onclick="activeFilter='${c}';renderDecisions()">${c==='All'?'All':CAT_ICONS[c]+' '+c} ${counts[c]||0}</button>`
+  ).join('');
+
+  document.getElementById('navCount').textContent = decisions.length;
+
+  if (filtered.length === 0) {
+    document.getElementById('decisionGrid').innerHTML = `<div class="empty"><div class="icon">🧭</div><h3>${q ? 'No matches' : 'No decisions yet'}</h3><p>${q ? 'Try a different search' : 'Press N to log your first decision'}</p></div>`;
+    return;
+  }
+  document.getElementById('decisionGrid').innerHTML = filtered.map(d => {
+    const conf = Array.from({length:5},(_,i)=>`<div class="confidence-dot ${i<d.confidence?'filled':''}"></div>`).join('');
+    const statusClass = d.review ? (d.review.outcome >= 4 ? 'status-good' : d.review.outcome >= 3 ? 'status-mixed' : 'status-bad') : (d.status === 'Pending' ? 'status-pending' : 'status-decided');
+    const statusLabel = d.review ? (d.review.outcome >= 4 ? '✅ Good Call' : d.review.outcome >= 3 ? '🤷 Mixed' : '❌ Bad Call') : (d.status === 'Pending' ? '⏳ Pending' : '✅ Decided');
+    return `<div class="card decision-card" onclick="showDetail('${d.id}')">
+      <div class="card-header">
+        <div class="card-title">${esc(d.title)}</div>
+        <span class="status-badge ${statusClass}">${statusLabel}</span>
+      </div>
+      <div class="card-meta">
+        <span class="tag ${CAT_CLASSES[d.category]}">${CAT_ICONS[d.category]} ${d.category}</span>
+        <span style="font-size:11px;color:var(--text3)">${timeAgo(d.date)}</span>
+        ${d.importance==='High'?'<span style="font-size:11px;color:var(--red)">🔴 High Impact</span>':''}
+      </div>
+      <div class="card-context">${esc(d.context)}</div>
+      <div class="card-footer">
+        <div class="confidence-bar"><div class="confidence-dots">${conf}</div> <span>${d.confidence}/5</span></div>
+        <span style="font-size:12px;color:var(--text3)">${(d.options||[]).filter(o=>o.chosen).length?'Chosen: '+ esc((d.options||[]).find(o=>o.chosen)?.text||'').substring(0,30)+'...':''}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderPending() {
+  const now = Date.now();
+  const week = 7 * 86400000;
+  const pending = decisions.filter(d => !d.review && (now - new Date(d.date).getTime()) > week).sort((a,b) => new Date(a.date) - new Date(b.date));
+  if (pending.length === 0) {
+    document.getElementById('pendingGrid').innerHTML = '<div class="empty"><div class="icon">✨</div><h3>All caught up!</h3><p>No decisions pending review. Decisions become reviewable after 7 days.</p></div>';
+    return;
+  }
+  document.getElementById('pendingGrid').innerHTML = pending.map(d => {
+    const daysAgo = Math.floor((now - new Date(d.date).getTime()) / 86400000);
+    return `<div class="card decision-card" onclick="showDetail('${d.id}')">
+      <div class="card-header"><div class="card-title">${esc(d.title)}</div><span class="tag ${CAT_CLASSES[d.category]}">${CAT_ICONS[d.category]} ${d.category}</span></div>
+      <div style="font-size:13px;color:var(--amber);margin-top:8px">⏰ Decided ${daysAgo} days ago — time to review</div>
+      <div class="card-context" style="margin-top:8px">${esc(d.expected || d.context)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTimeline() {
+  const sorted = [...decisions].sort((a,b) => new Date(b.date) - new Date(a.date));
+  if (sorted.length === 0) {
+    document.getElementById('timelineView').innerHTML = '<div class="empty"><div class="icon">📅</div><h3>No timeline yet</h3><p>Decisions will appear here chronologically</p></div>';
+    return;
+  }
+  document.getElementById('timelineView').innerHTML = sorted.map(d => {
+    const icon = d.review ? (d.review.outcome >= 4 ? '✅' : d.review.outcome >= 3 ? '🤷' : '❌') : (d.status === 'Pending' ? '⏳' : '🧭');
+    return `<div class="timeline-item" style="cursor:pointer" onclick="showDetail('${d.id}')">
+      <div class="timeline-dot">${icon}</div>
+      <div class="timeline-content">
+        <div class="timeline-date">${new Date(d.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+        <div class="timeline-title">${esc(d.title)}</div>
+        <div class="timeline-desc"><span class="tag ${CAT_CLASSES[d.category]}" style="font-size:10px">${d.category}</span> · Confidence: ${d.confidence}/5${d.review?' · Outcome: '+d.review.outcome+'/5':''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderInsights() {
+  const total = decisions.length;
+  const reviewed = decisions.filter(d => d.review).length;
+  const avgConf = total ? (decisions.reduce((s,d)=>s+d.confidence,0)/total).toFixed(1) : 0;
+  const avgOutcome = reviewed ? (decisions.filter(d=>d.review).reduce((s,d)=>s+d.review.outcome,0)/reviewed).toFixed(1) : '—';
+  const goodCalls = decisions.filter(d=>d.review&&d.review.outcome>=4).length;
+  const pending = decisions.filter(d=>d.status==='Pending').length;
+
+  document.getElementById('statsGrid').innerHTML = [
+    {v:total,l:'Total Decisions',c:'var(--accent)'},
+    {v:reviewed,l:'Reviewed',c:'var(--purple)'},
+    {v:avgConf,l:'Avg Confidence',c:'var(--teal)'},
+    {v:avgOutcome,l:'Avg Outcome',c:'var(--green)'},
+    {v:goodCalls,l:'Good Calls',c:'var(--green)'},
+    {v:pending,l:'Pending',c:'var(--amber)'},
+  ].map(s=>`<div class="stat-card"><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('');
+
+  // Category bar chart
+  const catCounts = {};
+  CATEGORIES.forEach(c => catCounts[c] = decisions.filter(d=>d.category===c).length);
+  const maxCat = Math.max(1,...Object.values(catCounts));
+  const catChart = `<div class="chart-container"><h4 style="margin-bottom:12px;font-size:14px;color:var(--text2)">Decisions by Category</h4><div class="bar-chart">${
+    CATEGORIES.map(c => `<div class="bar-group"><div class="bar-value">${catCounts[c]}</div><div class="bar" style="height:${(catCounts[c]/maxCat)*100}%;background:var(--accent)"></div><div class="bar-label">${CAT_ICONS[c]}</div></div>`).join('')
+  }</div></div>`;
+
+  // Confidence vs Outcome scatter (as bars)
+  const confGroups = {};
+  decisions.filter(d=>d.review).forEach(d => {
+    if (!confGroups[d.confidence]) confGroups[d.confidence] = [];
+    confGroups[d.confidence].push(d.review.outcome);
+  });
+  const confChart = `<div class="chart-container"><h4 style="margin-bottom:12px;font-size:14px;color:var(--text2)">Avg Outcome by Confidence Level</h4><div class="bar-chart">${
+    [1,2,3,4,5].map(c => {
+      const outcomes = confGroups[c] || [];
+      const avg = outcomes.length ? (outcomes.reduce((a,b)=>a+b,0)/outcomes.length) : 0;
+      return `<div class="bar-group"><div class="bar-value">${avg?avg.toFixed(1):'—'}</div><div class="bar" style="height:${(avg/5)*100}%;background:var(--green)"></div><div class="bar-label">Conf ${c}</div></div>`;
+    }).join('')
+  }</div></div>`;
+
+  document.getElementById('chartsRow').innerHTML = catChart + confChart;
+
+  // Heatmap (last 12 weeks)
+  const now = new Date();
+  const weeks = 12;
+  const startDate = new Date(now);
+  startDate.setDate(startDate.getDate() - (weeks*7) - startDate.getDay());
+  let heatmapHtml = '<h4 style="margin-bottom:12px;font-size:14px;color:var(--text2)">Decision Activity (12 weeks)</h4><div class="heatmap">';
+  const dayLabels = ['S','M','T','W','T','F','S'];
+  for (let dow=0;dow<7;dow++) {
+    heatmapHtml += `<div class="heatmap-row"><div class="heatmap-label">${dayLabels[dow]}</div>`;
+    for (let w=0;w<weeks;w++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + w*7 + dow);
+      const ds = d.toISOString().split('T')[0];
+      const count = decisions.filter(dec => dec.date.startsWith(ds)).length;
+      const level = count === 0 ? '' : count === 1 ? 'l1' : count === 2 ? 'l2' : count === 3 ? 'l3' : 'l4';
+      heatmapHtml += `<div class="heatmap-cell ${level}" title="${ds}: ${count} decisions"></div>`;
+    }
+    heatmapHtml += '</div>';
+  }
+  heatmapHtml += '</div>';
+  document.getElementById('heatmapContainer').innerHTML = heatmapHtml;
+
+  // Patterns
+  let patterns = '<h4 style="margin-bottom:12px;font-size:14px;color:var(--text2)">🔍 Patterns & Observations</h4><ul style="color:var(--text2);font-size:14px;line-height:1.8;padding-left:20px">';
+  const highImportance = decisions.filter(d=>d.importance==='High');
+  const highReviewed = highImportance.filter(d=>d.review);
+  if (highReviewed.length > 0) {
+    const avgHigh = (highReviewed.reduce((s,d)=>s+d.review.outcome,0)/highReviewed.length).toFixed(1);
+    patterns += `<li>High-importance decisions average <strong>${avgHigh}/5</strong> outcome score</li>`;
+  }
+  const topCat = CATEGORIES.reduce((a,b)=>catCounts[a]>catCounts[b]?a:b);
+  patterns += `<li>Most decisions are in <strong>${topCat}</strong> (${catCounts[topCat]} total)</li>`;
+  if (reviewed > 0) {
+    const overConf = decisions.filter(d=>d.review && d.confidence >= 4 && d.review.outcome <= 2).length;
+    const underConf = decisions.filter(d=>d.review && d.confidence <= 2 && d.review.outcome >= 4).length;
+    if (overConf > 0) patterns += `<li>⚠️ ${overConf} decision(s) where you were overconfident (high confidence, low outcome)</li>`;
+    if (underConf > 0) patterns += `<li>🌟 ${underConf} decision(s) where you underestimated yourself (low confidence, great outcome)</li>`;
+  }
+  const unreviewedOld = decisions.filter(d=>!d.review && (Date.now() - new Date(d.date).getTime()) > 14*86400000).length;
+  if (unreviewedOld > 0) patterns += `<li>📋 ${unreviewedOld} decision(s) older than 2 weeks still unreviewed</li>`;
+  patterns += '</ul>';
+  document.getElementById('patternsCard').innerHTML = patterns;
+}
+
+function renderFrameworks() {
+  document.getElementById('frameworksGrid').innerHTML = FRAMEWORKS.map(f =>
+    `<div class="card"><h3 style="margin-bottom:8px">${f.icon} ${f.name}</h3><p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:12px">${f.desc}</p><h4 style="font-size:12px;color:var(--text3);margin-bottom:8px">STEPS</h4><ol style="font-size:13px;color:var(--text2);padding-left:18px;line-height:1.8">${f.steps.map(s=>`<li>${s}</li>`).join('')}</ol></div>`
+  ).join('');
+}
+
+// ==================== DETAIL VIEW ====================
+function showDetail(id) {
+  const d = decisions.find(x => x.id === id);
+  if (!d) return;
+  const conf = Array.from({length:5},(_,i)=>`<div class="confidence-dot ${i<d.confidence?'filled':''}"></div>`).join('');
+  const statusClass = d.review ? (d.review.outcome >= 4 ? 'status-good' : d.review.outcome >= 3 ? 'status-mixed' : 'status-bad') : (d.status === 'Pending' ? 'status-pending' : 'status-decided');
+  const statusLabel = d.review ? (d.review.outcome >= 4 ? '✅ Good Call' : d.review.outcome >= 3 ? '🤷 Mixed' : '❌ Bad Call') : (d.status === 'Pending' ? '⏳ Pending' : '✅ Decided');
+
+  let html = `
+    <button class="btn btn-secondary btn-sm" onclick="switchView('decisions')" style="margin-bottom:16px">← Back</button>
+    <div class="detail-header">
+      <div class="detail-title">${esc(d.title)}</div>
+      <div class="detail-meta">
+        <span class="tag ${CAT_CLASSES[d.category]}">${CAT_ICONS[d.category]} ${d.category}</span>
+        <span class="status-badge ${statusClass}">${statusLabel}</span>
+        <span style="font-size:13px;color:var(--text3)">${new Date(d.date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</span>
+        ${d.importance==='High'?'<span style="font-size:12px;color:var(--red)">🔴 High Impact</span>':d.importance==='Low'?'<span style="font-size:12px;color:var(--green)">🟢 Low Impact</span>':'<span style="font-size:12px;color:var(--amber)">🟡 Medium Impact</span>'}
+      </div>
+      <div class="confidence-bar" style="margin-top:10px"><span>Confidence:</span><div class="confidence-dots">${conf}</div><span>${d.confidence}/5</span></div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-sm btn-secondary" onclick="openEditDecision('${d.id}')">✏️ Edit</button>
+        <button class="btn btn-sm btn-secondary" style="color:var(--red)" onclick="deleteDecision('${d.id}')">🗑 Delete</button>
+      </div>
+    </div>`;
+
+  if (d.context) html += `<div class="detail-section"><h4>📋 Context</h4><div class="content">${esc(d.context)}</div></div>`;
+
+  if (d.options && d.options.length) {
+    html += `<div class="detail-section"><h4>🔀 Options Considered</h4><div class="options-display">${
+      d.options.map(o => `<div class="option-display-item ${o.chosen?'chosen':''}">${o.chosen?'<span class="check">✓</span>':'<span style="color:var(--text3)">○</span>'} ${esc(o.text)}</div>`).join('')
+    }</div></div>`;
+  }
+
+  if (d.reasoning) html += `<div class="detail-section"><h4>🧠 Reasoning</h4><div class="content">${esc(d.reasoning)}</div></div>`;
+  if (d.expected) html += `<div class="detail-section"><h4>🎯 Expected Outcome</h4><div class="content">${esc(d.expected)}</div></div>`;
+  if (d.risks) html += `<div class="detail-section"><h4>⚠️ Risks & Downsides</h4><div class="content">${esc(d.risks)}</div></div>`;
+
+  if (d.tags && d.tags.length) {
+    html += `<div class="detail-section"><h4>🏷️ Tags</h4><div style="display:flex;gap:6px;flex-wrap:wrap">${d.tags.map(t=>`<span style="padding:3px 10px;border-radius:20px;font-size:12px;background:var(--surface2);color:var(--text2)">${esc(t)}</span>`).join('')}</div></div>`;
+  }
+
+  // Review section
+  html += `<div class="review-box">`;
+  if (d.review) {
+    const outcomeDots = Array.from({length:5},(_,i)=>`<div class="outcome-btn ${i+1===d.review.outcome?'selected':''}" style="pointer-events:none">${i+1<=2?'😬':i+1===3?'🤷':i+1===4?'👍':'🎯'}</div>`).join('');
+    html += `<h4>📝 Review (${new Date(d.review.reviewedAt).toLocaleDateString()})</h4>
+      <div style="margin:12px 0"><strong>Outcome:</strong> ${d.review.outcome}/5</div>
+      <div class="outcome-scale">${outcomeDots}</div>
+      <div class="content" style="margin-top:12px">${esc(d.review.reflection)}</div>
+      <button class="btn btn-sm btn-secondary" onclick="openReview('${d.id}')" style="margin-top:12px">Update Review</button>`;
+  } else {
+    const daysAgo = Math.floor((Date.now() - new Date(d.date).getTime()) / 86400000);
+    if (daysAgo >= 7) {
+      html += `<h4>📝 Time to Review</h4><p style="font-size:13px;color:var(--text2);margin:8px 0">This decision was made ${daysAgo} days ago. How did it turn out?</p>
+        <button class="btn btn-primary" onclick="openReview('${d.id}')">Write Review</button>`;
+    } else {
+      html += `<h4>📝 Review</h4><p style="font-size:13px;color:var(--text3)">Review will be available in ${7-daysAgo} days (7 days after decision)</p>`;
+    }
+  }
+  html += '</div>';
+
+  document.getElementById('detailContent').innerHTML = html;
+  switchView('detail');
+}
+
+// ==================== REVIEW MODAL ====================
+let reviewingId = null;
+let reviewOutcome = 3;
+
+function openReview(id) {
+  reviewingId = id;
+  const d = decisions.find(x => x.id === id);
+  reviewOutcome = d.review ? d.review.outcome : 3;
+  const existingReflection = d.review ? d.review.reflection : '';
+
+  const html = `<div class="modal-overlay active" id="reviewModal" onclick="if(event.target===this)closeReviewModal()">
+    <div class="modal" style="max-width:500px">
+      <div class="modal-header"><h3>📝 Review Decision</h3><button class="btn-icon" onclick="closeReviewModal()">✕</button></div>
+      <div class="modal-body">
+        <p style="font-weight:600;margin-bottom:16px">${esc(d.title)}</p>
+        <div class="form-group">
+          <label>How did it turn out? (1-5)</label>
+          <div class="outcome-scale" id="reviewScale">
+            ${[1,2,3,4,5].map(i=>`<div class="outcome-btn ${i===reviewOutcome?'selected':''}" onclick="setReviewOutcome(${i})">${i<=2?'😬':i===3?'🤷':i===4?'👍':'🎯'}</div>`).join('')}
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:4px"><span>Bad call</span><span>Mixed</span><span>Great call</span></div>
+        </div>
+        <div class="form-group">
+          <label>Reflection — What happened? What did you learn?</label>
+          <textarea id="reviewReflection" rows="4" placeholder="How did it play out vs expectations? What would you do differently?">${esc(existingReflection)}</textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeReviewModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveReview()">Save Review</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function setReviewOutcome(n) {
+  reviewOutcome = n;
+  document.querySelectorAll('#reviewScale .outcome-btn').forEach((btn,i) => btn.classList.toggle('selected', i+1===n));
+}
+
+function saveReview() {
+  const d = decisions.find(x => x.id === reviewingId);
+  if (!d) return;
+  d.review = {
+    outcome: reviewOutcome,
+    reflection: document.getElementById('reviewReflection').value.trim(),
+    reviewedAt: new Date().toISOString()
+  };
+  save();
+  closeReviewModal();
+  showDetail(reviewingId);
+}
+
+function closeReviewModal() {
+  const m = document.getElementById('reviewModal');
+  if (m) m.remove();
+  reviewingId = null;
+}
+
+// ==================== MODAL ====================
+function openNewDecision() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'New Decision';
+  document.getElementById('fTitle').value = '';
+  document.getElementById('fCategory').value = 'Product';
+  document.getElementById('fImportance').value = 'Medium';
+  document.getElementById('fContext').value = '';
+  document.getElementById('fReasoning').value = '';
+  document.getElementById('fExpected').value = '';
+  document.getElementById('fRisks').value = '';
+  document.getElementById('fConfidence').value = '3';
+  document.getElementById('fStatus').value = 'Decided';
+  document.getElementById('fTags').value = '';
+  const reviewDate = new Date();
+  reviewDate.setDate(reviewDate.getDate() + 14);
+  document.getElementById('fReviewDate').value = reviewDate.toISOString().split('T')[0];
+  // Reset options
+  document.getElementById('optionsList').innerHTML = '';
+  addOption(); addOption();
+  document.getElementById('decisionModal').classList.add('active');
+  setTimeout(()=>document.getElementById('fTitle').focus(),100);
+}
+
+function openEditDecision(id) {
+  const d = decisions.find(x=>x.id===id);
+  if (!d) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Decision';
+  document.getElementById('fTitle').value = d.title;
+  document.getElementById('fCategory').value = d.category;
+  document.getElementById('fImportance').value = d.importance;
+  document.getElementById('fContext').value = d.context || '';
+  document.getElementById('fReasoning').value = d.reasoning || '';
+  document.getElementById('fExpected').value = d.expected || '';
+  document.getElementById('fRisks').value = d.risks || '';
+  document.getElementById('fConfidence').value = d.confidence;
+  document.getElementById('fStatus').value = d.status;
+  document.getElementById('fTags').value = (d.tags||[]).join(', ');
+  document.getElementById('fReviewDate').value = d.reviewDate || '';
+  // Options
+  document.getElementById('optionsList').innerHTML = '';
+  (d.options||[]).forEach(o => addOption(o.text, o.chosen));
+  if ((d.options||[]).length < 2) { addOption(); if ((d.options||[]).length < 1) addOption(); }
+  document.getElementById('decisionModal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('decisionModal').classList.remove('active');
+  editingId = null;
+}
+
+function addOption(text='', chosen=false) {
+  const list = document.getElementById('optionsList');
+  const idx = list.children.length;
+  const div = document.createElement('div');
+  div.className = 'option-item';
+  div.innerHTML = `<div class="chosen-indicator ${chosen?'active':''}" onclick="this.classList.toggle('active')" title="Mark as chosen">✓</div>
+    <input type="text" class="option-input" value="${esc(text)}" placeholder="Option ${idx+1}...">
+    <button class="btn-icon btn-sm" onclick="this.parentElement.remove()" title="Remove">✕</button>`;
+  list.appendChild(div);
+}
+
+function saveDecision() {
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) { document.getElementById('fTitle').focus(); return; }
+
+  const options = [];
+  document.querySelectorAll('#optionsList .option-item').forEach(item => {
+    const text = item.querySelector('.option-input').value.trim();
+    if (text) options.push({ text, chosen: item.querySelector('.chosen-indicator').classList.contains('active') });
+  });
+
+  const data = {
+    title,
+    category: document.getElementById('fCategory').value,
+    importance: document.getElementById('fImportance').value,
+    context: document.getElementById('fContext').value.trim(),
+    options,
+    reasoning: document.getElementById('fReasoning').value.trim(),
+    expected: document.getElementById('fExpected').value.trim(),
+    risks: document.getElementById('fRisks').value.trim(),
+    confidence: parseInt(document.getElementById('fConfidence').value),
+    status: document.getElementById('fStatus').value,
+    tags: document.getElementById('fTags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    reviewDate: document.getElementById('fReviewDate').value,
+  };
+
+  if (editingId) {
+    const idx = decisions.findIndex(d=>d.id===editingId);
+    if (idx>=0) { Object.assign(decisions[idx], data); }
+  } else {
+    decisions.push({ id: crypto.randomUUID(), ...data, date: new Date().toISOString(), review: null });
+  }
+  save();
+  closeModal();
+  renderDecisions();
+  if (editingId) showDetail(editingId);
+}
+
+function deleteDecision(id) {
+  if (!confirm('Delete this decision?')) return;
+  decisions = decisions.filter(d=>d.id!==id);
+  save();
+  switchView('decisions');
+}
+
+// ==================== UTILS ====================
+function esc(s) { const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
+function timeAgo(date) {
+  const s = Math.floor((Date.now()-new Date(date).getTime())/1000);
+  if (s<60) return 'just now';
+  if (s<3600) return Math.floor(s/60)+'m ago';
+  if (s<86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('dj_dark', document.body.classList.contains('dark'));
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(decisions,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'decision-journal-'+new Date().toISOString().split('T')[0]+'.json';
+  a.click();
+}
+
+function importData(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (Array.isArray(d)) { decisions = d; save(); switchView('decisions'); alert('Imported '+d.length+' decisions'); }
+    } catch(e) { alert('Invalid JSON'); }
+  };
+  r.readAsText(f);
+  e.target.value = '';
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openNewDecision(); }
+  if (e.key === '/' ) { e.preventDefault(); switchView('decisions'); setTimeout(()=>document.getElementById('searchInput').focus(),50); }
+  if (e.key === 'd' || e.key === 'D') { e.preventDefault(); toggleDark(); }
+  if (e.key === 'e' || e.key === 'E') { e.preventDefault(); exportData(); }
+  if (e.key === '1') { e.preventDefault(); switchView('decisions'); }
+  if (e.key === '2') { e.preventDefault(); switchView('pending'); }
+  if (e.key === '3') { e.preventDefault(); switchView('timeline'); }
+  if (e.key === '4') { e.preventDefault(); switchView('insights'); }
+  if (e.key === '5') { e.preventDefault(); switchView('frameworks'); }
+  if (e.key === 'Escape') { closeModal(); closeReviewModal(); if (currentView==='detail') switchView('decisions'); }
+});
+
+// Mobile sidebar toggle
+document.addEventListener('click', e => {
+  if (window.innerWidth <= 768) {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar.contains(e.target)) sidebar.classList.remove('open');
+  }
+});
+
+// Init
+if (localStorage.getItem('dj_dark') === 'true') document.body.classList.add('dark');
+load();
+seedData();
+switchView('decisions');
+</script>
+</body>
+</html>

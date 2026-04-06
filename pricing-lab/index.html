@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing Lab — Revenue Modeling & Pricing Strategy Tool</title>
+<style>
+:root {
+  --bg: #f5f5f7; --surface: #fff; --surface2: #f0f0f2; --border: #e0e0e4;
+  --text: #1d1d1f; --text2: #6e6e73; --text3: #aeaeb2;
+  --primary: #6c5ce7; --primary-light: #a29bfe; --primary-bg: #f0eeff;
+  --green: #00b894; --green-bg: #e6faf5; --red: #d63031; --red-bg: #fde8e8;
+  --orange: #f39c12; --orange-bg: #fef5e7; --blue: #0984e3; --blue-bg: #e8f4fd;
+  --yellow: #fdcb6e; --teal: #00cec9;
+  --radius: 12px; --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.dark {
+  --bg: #1a1a2e; --surface: #16213e; --surface2: #0f3460; --border: #2a2a4a;
+  --text: #eaeaea; --text2: #a0a0b0; --text3: #606070;
+  --primary-bg: #2a2050; --green-bg: #1a3a30; --red-bg: #3a1a1a;
+  --orange-bg: #3a2a1a; --blue-bg: #1a2a3a;
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height:100vh; }
+button { cursor:pointer; font-family: var(--font); }
+input,select,textarea { font-family: var(--font); }
+
+/* Layout */
+.app { display:flex; height:100vh; }
+.sidebar { width:240px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; }
+.sidebar-header { padding:20px; border-bottom:1px solid var(--border); }
+.sidebar-header h1 { font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.sidebar-header h1 span { font-size:22px; }
+.sidebar-header p { font-size:11px; color:var(--text2); margin-top:4px; }
+.nav { flex:1; padding:12px; overflow-y:auto; }
+.nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; font-size:13px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; margin-bottom:2px; }
+.nav-item:hover { background:var(--surface2); color:var(--text); }
+.nav-item.active { background:var(--primary-bg); color:var(--primary); }
+.nav-item .icon { font-size:16px; width:20px; text-align:center; }
+.sidebar-footer { padding:12px; border-top:1px solid var(--border); }
+.sidebar-footer button { width:100%; padding:8px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; font-size:12px; color:var(--text2); display:flex; align-items:center; justify-content:center; gap:6px; }
+.sidebar-footer button:hover { background:var(--primary-bg); color:var(--primary); }
+
+.main { flex:1; overflow-y:auto; padding:24px 32px; }
+.main-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+.main-header h2 { font-size:22px; font-weight:700; }
+.header-actions { display:flex; gap:8px; }
+
+/* Cards */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:16px; box-shadow:var(--shadow); }
+.card h3 { font-size:14px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.card-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:16px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; text-align:center; box-shadow:var(--shadow); }
+.stat-card .value { font-size:28px; font-weight:700; color:var(--primary); }
+.stat-card .label { font-size:11px; color:var(--text2); margin-top:4px; text-transform:uppercase; letter-spacing:.5px; }
+.stat-card.green .value { color:var(--green); }
+.stat-card.orange .value { color:var(--orange); }
+.stat-card.blue .value { color:var(--blue); }
+.stat-card.red .value { color:var(--red); }
+
+/* Forms */
+.form-row { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:12px; margin-bottom:12px; }
+.form-group { display:flex; flex-direction:column; gap:4px; }
+.form-group label { font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:.5px; }
+.form-group input, .form-group select, .form-group textarea { padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:var(--surface); color:var(--text); }
+.form-group input:focus, .form-group select:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-bg); }
+
+/* Buttons */
+.btn { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:500; border:1px solid var(--border); background:var(--surface); color:var(--text); transition:all .15s; }
+.btn:hover { background:var(--surface2); }
+.btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+.btn-primary:hover { opacity:.9; }
+.btn-sm { padding:5px 10px; font-size:11px; }
+.btn-danger { color:var(--red); border-color:var(--red); }
+.btn-danger:hover { background:var(--red-bg); }
+
+/* Tables */
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th { text-align:left; padding:10px 12px; font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:.5px; border-bottom:2px solid var(--border); }
+td { padding:10px 12px; border-bottom:1px solid var(--border); }
+tr:hover { background:var(--surface2); }
+
+/* Tags */
+.tag { display:inline-block; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:600; }
+.tag-freemium { background:var(--green-bg); color:var(--green); }
+.tag-tiered { background:var(--primary-bg); color:var(--primary); }
+.tag-perseat { background:var(--blue-bg); color:var(--blue); }
+.tag-usage { background:var(--orange-bg); color:var(--orange); }
+.tag-flat { background:var(--red-bg); color:var(--red); }
+.tag-hybrid { background:#f0e6ff; color:#8b5cf6; }
+
+/* Chart area */
+.chart-container { position:relative; height:300px; margin:16px 0; }
+.chart-bar-container { display:flex; align-items:flex-end; justify-content:space-around; height:250px; padding:0 8px; border-bottom:2px solid var(--border); }
+.chart-bar-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; max-width:60px; }
+.chart-bar { width:100%; border-radius:4px 4px 0 0; transition:height .5s ease; min-height:2px; cursor:pointer; position:relative; }
+.chart-bar:hover { opacity:.85; }
+.chart-bar-label { font-size:9px; color:var(--text3); writing-mode:horizontal-tb; text-align:center; }
+.chart-bar-value { font-size:10px; font-weight:600; color:var(--text); }
+.chart-legend { display:flex; gap:16px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+.chart-legend-item { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--text2); }
+.chart-legend-dot { width:10px; height:10px; border-radius:3px; }
+
+/* Tier editor */
+.tier-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; position:relative; }
+.tier-card .tier-name { font-size:15px; font-weight:700; margin-bottom:8px; }
+.tier-card .tier-price { font-size:24px; font-weight:700; color:var(--primary); }
+.tier-card .tier-price span { font-size:12px; color:var(--text2); font-weight:400; }
+.tier-features { list-style:none; margin-top:8px; }
+.tier-features li { font-size:12px; padding:3px 0; color:var(--text2); }
+.tier-features li::before { content:'✓ '; color:var(--green); font-weight:700; }
+.tier-actions { position:absolute; top:12px; right:12px; display:flex; gap:4px; }
+.tiers-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:16px; }
+
+/* Sensitivity chart */
+.sensitivity-row { display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid var(--border); }
+.sensitivity-bar { height:24px; border-radius:4px; transition:width .3s; display:flex; align-items:center; padding:0 8px; font-size:11px; font-weight:600; color:#fff; min-width:40px; }
+.sensitivity-label { width:80px; font-size:12px; color:var(--text2); text-align:right; flex-shrink:0; }
+.sensitivity-value { width:80px; font-size:12px; font-weight:600; flex-shrink:0; }
+
+/* Modal */
+.modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.5); z-index:100; display:flex; align-items:center; justify-content:center; }
+.modal { background:var(--surface); border-radius:var(--radius); padding:24px; width:90%; max-width:560px; max-height:80vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+.modal h3 { font-size:16px; font-weight:700; margin-bottom:16px; }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+
+/* Comparison table */
+.comp-table { overflow-x:auto; }
+.comp-table table { min-width:600px; }
+.comp-highlight { background:var(--primary-bg) !important; }
+
+/* ABTest */
+.ab-result { padding:16px; border-radius:var(--radius); margin-top:12px; font-size:13px; }
+.ab-winner { background:var(--green-bg); border:1px solid var(--green); }
+.ab-inconclusive { background:var(--orange-bg); border:1px solid var(--orange); }
+
+/* Responsive */
+@media (max-width:768px) {
+  .sidebar { display:none; }
+  .main { padding:16px; }
+  .form-row { grid-template-columns:1fr; }
+  .card-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Scroll */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+/* Animations */
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
+.card { animation:fadeIn .3s ease; }
+
+/* Hidden */
+.hidden { display:none !important; }
+
+/* Tooltip */
+.tooltip { position:relative; }
+.tooltip::after { content:attr(data-tip); position:absolute; bottom:100%; left:50%; transform:translateX(-50%); background:var(--text); color:var(--bg); padding:4px 8px; border-radius:4px; font-size:10px; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .2s; }
+.tooltip:hover::after { opacity:1; }
+
+/* Range */
+input[type=range] { -webkit-appearance:none; width:100%; height:6px; border-radius:3px; background:var(--border); outline:none; border:none; padding:0; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--primary); cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1><span>🧪</span> Pricing Lab</h1>
+      <p>Revenue modeling & pricing strategy</p>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
+        <span class="icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" data-view="products" onclick="switchView('products')">
+        <span class="icon">📦</span> Products
+      </div>
+      <div class="nav-item" data-view="simulator" onclick="switchView('simulator')">
+        <span class="icon">🔬</span> Revenue Simulator
+      </div>
+      <div class="nav-item" data-view="sensitivity" onclick="switchView('sensitivity')">
+        <span class="icon">📈</span> Price Sensitivity
+      </div>
+      <div class="nav-item" data-view="competitors" onclick="switchView('competitors')">
+        <span class="icon">🥊</span> Competitor Map
+      </div>
+      <div class="nav-item" data-view="abtest" onclick="switchView('abtest')">
+        <span class="icon">🧬</span> A/B Calculator
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <button onclick="toggleDark()">🌙 Toggle Dark Mode</button>
+    </div>
+  </aside>
+  <main class="main" id="mainContent"></main>
+</div>
+
+<!-- Templates -->
+<div id="modal-root"></div>
+
+<script>
+// ==================== STATE ====================
+const DEFAULT_STATE = {
+  products: [
+    {
+      id: 'p1', name: 'UTMStamp', model: 'freemium', currency: 'USD',
+      tiers: [
+        { id:'t1', name:'Free', price:0, period:'mo', features:['5 signatures','Basic templates','UTM tracking'], userPct:70, churnPct:5 },
+        { id:'t2', name:'Pro', price:19, period:'mo', features:['Unlimited signatures','Custom templates','Advanced analytics','Team management'], userPct:20, churnPct:3 },
+        { id:'t3', name:'Business', price:49, period:'mo', features:['Everything in Pro','API access','White-label','Priority support','SSO'], userPct:10, churnPct:2 }
+      ],
+      metrics: { totalUsers:500, monthlyGrowth:15, cac:12, ltv:0 }
+    }
+  ],
+  competitors: [
+    { id:'c1', name:'Sigstr', pricing:'$5/user/mo', model:'perseat', strength:'Enterprise', weakness:'Expensive', notes:'Acquired by Terminus' },
+    { id:'c2', name:'WiseStamp', pricing:'$5.80/mo', model:'tiered', strength:'Individual users', weakness:'Limited analytics', notes:'Freemium model' },
+    { id:'c3', name:'Exclaimer', pricing:'Custom', model:'perseat', strength:'O365/Google deep', weakness:'No free tier', notes:'Enterprise focused' }
+  ],
+  abTests: [],
+  settings: { currency:'USD' }
+};
+
+let state = loadState();
+let currentView = 'dashboard';
+
+function loadState() {
+  try { const s = localStorage.getItem('pricing-lab'); return s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_STATE)); }
+  catch(e) { return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
+}
+function saveState() { localStorage.setItem('pricing-lab', JSON.stringify(state)); }
+function genId() { return 'id_' + Math.random().toString(36).substr(2,9); }
+
+// ==================== CURRENCY ====================
+const CURRENCIES = { USD:'$', INR:'₹', EUR:'€', GBP:'£' };
+function fmt(n, cur) {
+  cur = cur || state.settings.currency;
+  const sym = CURRENCIES[cur] || '$';
+  if(n >= 1000000) return sym + (n/1000000).toFixed(1) + 'M';
+  if(n >= 1000) return sym + (n/1000).toFixed(1) + 'K';
+  return sym + Math.round(n).toLocaleString();
+}
+function fmtPct(n) { return n.toFixed(1) + '%'; }
+
+// ==================== VIEWS ====================
+function switchView(v) {
+  currentView = v;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.view === v));
+  render();
+}
+
+function render() {
+  const el = document.getElementById('mainContent');
+  switch(currentView) {
+    case 'dashboard': el.innerHTML = renderDashboard(); break;
+    case 'products': el.innerHTML = renderProducts(); break;
+    case 'simulator': el.innerHTML = renderSimulator(); break;
+    case 'sensitivity': el.innerHTML = renderSensitivity(); break;
+    case 'competitors': el.innerHTML = renderCompetitors(); break;
+    case 'abtest': el.innerHTML = renderABTest(); break;
+  }
+  attachEventListeners();
+}
+
+// ==================== DASHBOARD ====================
+function renderDashboard() {
+  const products = state.products;
+  let totalMRR = 0, totalUsers = 0, avgARPU = 0, totalProducts = products.length;
+  products.forEach(p => {
+    const mrr = calcMRR(p);
+    totalMRR += mrr;
+    totalUsers += p.metrics.totalUsers;
+  });
+  avgARPU = totalUsers > 0 ? totalMRR / totalUsers : 0;
+  const avgGrowth = products.length > 0 ? products.reduce((s,p) => s + p.metrics.monthlyGrowth, 0) / products.length : 0;
+
+  return `
+    <div class="main-header">
+      <h2>📊 Dashboard</h2>
+      <div class="header-actions">
+        <button class="btn btn-sm" onclick="exportData()">📤 Export</button>
+        <button class="btn btn-sm" onclick="importData()">📥 Import</button>
+      </div>
+    </div>
+    <div class="card-grid">
+      <div class="stat-card"><div class="value">${fmt(totalMRR)}</div><div class="label">Monthly Revenue</div></div>
+      <div class="stat-card green"><div class="value">${fmt(totalMRR * 12)}</div><div class="label">Annual Revenue</div></div>
+      <div class="stat-card blue"><div class="value">${totalUsers.toLocaleString()}</div><div class="label">Total Users</div></div>
+      <div class="stat-card orange"><div class="value">${fmt(avgARPU)}</div><div class="label">Avg Revenue/User</div></div>
+    </div>
+    ${products.map(p => renderProductSummaryCard(p)).join('')}
+    ${products.length === 0 ? '<div class="card" style="text-align:center;padding:40px;color:var(--text2)"><p style="font-size:40px;margin-bottom:12px">🧪</p><p>No products yet. Add one to start modeling!</p><br><button class="btn btn-primary" onclick="switchView(\'products\')">+ Add Product</button></div>' : ''}
+    <div class="card">
+      <h3>⌨️ Keyboard Shortcuts</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;font-size:12px;color:var(--text2)">
+        <div><kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px">N</kbd> New product</div>
+        <div><kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px">1-6</kbd> Switch views</div>
+        <div><kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px">D</kbd> Dark mode</div>
+        <div><kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px">Esc</kbd> Close modal</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderProductSummaryCard(p) {
+  const mrr = calcMRR(p);
+  const arr = mrr * 12;
+  const payingUsers = calcPayingUsers(p);
+  const arpu = payingUsers > 0 ? mrr / payingUsers : 0;
+  const modelTag = `<span class="tag tag-${p.model}">${p.model}</span>`;
+
+  return `
+    <div class="card">
+      <h3>${p.name} ${modelTag}</h3>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+        <div><div style="font-size:20px;font-weight:700;color:var(--primary)">${fmt(mrr, p.currency)}</div><div style="font-size:10px;color:var(--text2)">MRR</div></div>
+        <div><div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(arr, p.currency)}</div><div style="font-size:10px;color:var(--text2)">ARR</div></div>
+        <div><div style="font-size:20px;font-weight:700;color:var(--blue)">${p.metrics.totalUsers.toLocaleString()}</div><div style="font-size:10px;color:var(--text2)">Users</div></div>
+        <div><div style="font-size:20px;font-weight:700;color:var(--orange)">${fmt(arpu, p.currency)}</div><div style="font-size:10px;color:var(--text2)">ARPU</div></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${p.tiers.map(t => `<div style="flex:1;min-width:120px;background:var(--surface2);padding:10px;border-radius:8px;text-align:center">
+          <div style="font-size:11px;color:var(--text2)">${t.name}</div>
+          <div style="font-size:16px;font-weight:700">${t.price === 0 ? 'Free' : fmt(t.price, p.currency) + '/' + t.period}</div>
+          <div style="font-size:10px;color:var(--text3)">${Math.round(p.metrics.totalUsers * t.userPct / 100)} users (${t.userPct}%)</div>
+        </div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ==================== PRODUCTS ====================
+function renderProducts() {
+  return `
+    <div class="main-header">
+      <h2>📦 Products</h2>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="openProductModal()">+ Add Product</button>
+      </div>
+    </div>
+    ${state.products.map(p => renderProductCard(p)).join('')}
+    ${state.products.length === 0 ? '<div class="card" style="text-align:center;padding:40px;color:var(--text2)">No products yet. Click "Add Product" to start.</div>' : ''}
+  `;
+}
+
+function renderProductCard(p) {
+  const mrr = calcMRR(p);
+  return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
+        <div>
+          <h3 style="margin:0">${p.name} <span class="tag tag-${p.model}">${p.model}</span></h3>
+          <div style="font-size:12px;color:var(--text2);margin-top:4px">MRR: ${fmt(mrr, p.currency)} · Users: ${p.metrics.totalUsers} · Growth: ${p.metrics.monthlyGrowth}%/mo</div>
+        </div>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm" onclick="openProductModal('${p.id}')">✏️</button>
+          <button class="btn btn-sm" onclick="openTierModal('${p.id}')">+ Tier</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑</button>
+        </div>
+      </div>
+      <div class="tiers-grid">
+        ${p.tiers.map(t => `
+          <div class="tier-card">
+            <div class="tier-actions">
+              <button class="btn btn-sm" onclick="openTierModal('${p.id}','${t.id}')">✏️</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteTier('${p.id}','${t.id}')">✕</button>
+            </div>
+            <div class="tier-name">${t.name}</div>
+            <div class="tier-price">${t.price === 0 ? 'Free' : CURRENCIES[p.currency] + t.price}<span>/${t.period}</span></div>
+            <div style="font-size:11px;color:var(--text2);margin:4px 0">${t.userPct}% of users · ${t.churnPct}% churn/mo</div>
+            <ul class="tier-features">${t.features.map(f => `<li>${f}</li>`).join('')}</ul>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ==================== SIMULATOR ====================
+function renderSimulator() {
+  if(state.products.length === 0) return '<div class="main-header"><h2>🔬 Revenue Simulator</h2></div><div class="card" style="text-align:center;padding:40px;color:var(--text2)">Add a product first to run simulations.</div>';
+
+  const p = state.products[0]; // Default to first product
+  const months = 12;
+  const projections = simulateRevenue(p, months);
+
+  const maxRev = Math.max(...projections.map(m => m.revenue));
+  const barColors = ['#6c5ce7','#00b894','#0984e3','#f39c12','#d63031','#00cec9','#e17055','#fdcb6e','#a29bfe','#55efc4','#74b9ff','#fab1a0'];
+
+  return `
+    <div class="main-header">
+      <h2>🔬 Revenue Simulator</h2>
+    </div>
+    <div class="card">
+      <h3>📐 Simulation Parameters — ${p.name}</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Product</label>
+          <select id="simProduct" onchange="render()">
+            ${state.products.map((pr,i) => `<option value="${i}" ${i===0?'selected':''}>${pr.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Starting Users</label>
+          <input type="number" id="simUsers" value="${p.metrics.totalUsers}" onchange="render()">
+        </div>
+        <div class="form-group">
+          <label>Monthly Growth %</label>
+          <input type="number" id="simGrowth" value="${p.metrics.monthlyGrowth}" step="0.5" onchange="render()">
+        </div>
+        <div class="form-group">
+          <label>Projection Months</label>
+          <input type="number" id="simMonths" value="12" min="3" max="36" onchange="render()">
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📈 Revenue Projection (${months} months)</h3>
+      <div class="chart-container">
+        <div class="chart-bar-container">
+          ${projections.map((m,i) => `
+            <div class="chart-bar-wrap">
+              <div class="chart-bar-value">${fmt(m.revenue, p.currency)}</div>
+              <div class="chart-bar" style="height:${maxRev > 0 ? (m.revenue/maxRev*220) : 2}px;background:${barColors[i % barColors.length]}" data-tip="Users: ${m.users}, Revenue: ${fmt(m.revenue, p.currency)}"></div>
+              <div class="chart-bar-label">M${i+1}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="card-grid">
+      <div class="stat-card"><div class="value">${fmt(projections[projections.length-1]?.revenue || 0, p.currency)}</div><div class="label">Month ${months} MRR</div></div>
+      <div class="stat-card green"><div class="value">${fmt((projections[projections.length-1]?.revenue || 0) * 12, p.currency)}</div><div class="label">Month ${months} ARR</div></div>
+      <div class="stat-card blue"><div class="value">${(projections[projections.length-1]?.users || 0).toLocaleString()}</div><div class="label">Month ${months} Users</div></div>
+      <div class="stat-card orange"><div class="value">${fmt(projections.reduce((s,m)=>s+m.revenue,0), p.currency)}</div><div class="label">Total Revenue (${months}mo)</div></div>
+    </div>
+    <div class="card">
+      <h3>📋 Monthly Breakdown</h3>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Month</th><th>Users</th><th>New</th><th>Churned</th><th>Paying</th><th>MRR</th><th>Cumulative</th></tr></thead>
+          <tbody>
+            ${projections.map((m,i) => `<tr>
+              <td><strong>M${i+1}</strong></td>
+              <td>${m.users.toLocaleString()}</td>
+              <td style="color:var(--green)">+${m.newUsers.toLocaleString()}</td>
+              <td style="color:var(--red)">-${m.churned.toLocaleString()}</td>
+              <td>${m.paying.toLocaleString()}</td>
+              <td><strong>${fmt(m.revenue, p.currency)}</strong></td>
+              <td>${fmt(m.cumulative, p.currency)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function simulateRevenue(p, months) {
+  const results = [];
+  let users = parseInt(document.getElementById('simUsers')?.value) || p.metrics.totalUsers;
+  const growth = parseFloat(document.getElementById('simGrowth')?.value) || p.metrics.monthlyGrowth;
+  months = parseInt(document.getElementById('simMonths')?.value) || months;
+  let cumulative = 0;
+
+  for(let i = 0; i < months; i++) {
+    const newUsers = Math.round(users * growth / 100);
+    let totalChurned = 0;
+    let revenue = 0;
+    let paying = 0;
+
+    p.tiers.forEach(t => {
+      const tierUsers = Math.round(users * t.userPct / 100);
+      const churned = Math.round(tierUsers * t.churnPct / 100);
+      totalChurned += churned;
+      if(t.price > 0) {
+        paying += tierUsers;
+        const monthlyPrice = t.period === 'yr' ? t.price / 12 : t.price;
+        revenue += tierUsers * monthlyPrice;
+      }
+    });
+
+    cumulative += revenue;
+    results.push({ month: i+1, users, newUsers, churned: totalChurned, paying, revenue, cumulative });
+    users = users + newUsers - totalChurned;
+  }
+  return results;
+}
+
+// ==================== SENSITIVITY ====================
+function renderSensitivity() {
+  if(state.products.length === 0) return '<div class="main-header"><h2>📈 Price Sensitivity</h2></div><div class="card" style="text-align:center;padding:40px;color:var(--text2)">Add a product first.</div>';
+  const p = state.products[0];
+  const baseMRR = calcMRR(p);
+  const variations = [-30,-20,-10,0,10,20,30,50,100];
+
+  return `
+    <div class="main-header"><h2>📈 Price Sensitivity Analysis</h2></div>
+    <div class="card">
+      <h3>💰 Revenue Impact of Price Changes — ${p.name}</h3>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:16px">How does changing prices across all paid tiers affect revenue? Assumes 5% user drop per 10% price increase (and vice versa).</p>
+      <div>
+        ${variations.map(v => {
+          const elasticity = -0.5; // 5% user drop per 10% price increase
+          const userChange = v * elasticity / 100;
+          const newRevFactor = (1 + v/100) * (1 + userChange);
+          const newMRR = baseMRR * newRevFactor;
+          const change = ((newMRR - baseMRR) / baseMRR * 100);
+          const barWidth = Math.abs(newRevFactor) / 2.5 * 100;
+          const color = change > 0 ? 'var(--green)' : change < 0 ? 'var(--red)' : 'var(--primary)';
+          const bg = change > 0 ? 'var(--green-bg)' : change < 0 ? 'var(--red-bg)' : 'var(--primary-bg)';
+          return `<div class="sensitivity-row">
+            <div class="sensitivity-label">${v > 0 ? '+' : ''}${v}%</div>
+            <div style="flex:1"><div class="sensitivity-bar" style="width:${barWidth}%;background:${color}">${fmt(newMRR, p.currency)}</div></div>
+            <div class="sensitivity-value" style="color:${color}">${change > 0 ? '+' : ''}${change.toFixed(1)}%</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2)">
+        <strong>💡 Insight:</strong> Based on standard price elasticity (ε = -0.5), a <strong>20% price increase</strong> would yield 
+        <strong>${fmtPct(((1.2 * 0.9) - 1) * 100)} net revenue change</strong> with ~10% user loss. 
+        ${baseMRR > 0 ? `Your sweet spot appears to be around <strong>+10-20%</strong> price increase for maximum revenue.` : 'Add pricing tiers to see specific recommendations.'}
+      </div>
+    </div>
+    <div class="card">
+      <h3>🎯 Per-Tier Analysis</h3>
+      <table>
+        <thead><tr><th>Tier</th><th>Current Price</th><th>Users</th><th>Revenue</th><th>Optimal Range</th><th>Action</th></tr></thead>
+        <tbody>
+          ${p.tiers.filter(t => t.price > 0).map(t => {
+            const tierUsers = Math.round(p.metrics.totalUsers * t.userPct / 100);
+            const tierRev = tierUsers * (t.period === 'yr' ? t.price/12 : t.price);
+            const optLow = Math.round(t.price * 1.05);
+            const optHigh = Math.round(t.price * 1.25);
+            return `<tr>
+              <td><strong>${t.name}</strong></td>
+              <td>${CURRENCIES[p.currency]}${t.price}/${t.period}</td>
+              <td>${tierUsers.toLocaleString()}</td>
+              <td>${fmt(tierRev, p.currency)}/mo</td>
+              <td style="color:var(--green)">${CURRENCIES[p.currency]}${optLow} — ${CURRENCIES[p.currency]}${optHigh}</td>
+              <td><span class="tag tag-tiered">Test +10-25%</span></td>
+            </tr>`;
+          }).join('')}
+          ${p.tiers.filter(t => t.price === 0).map(t => {
+            const tierUsers = Math.round(p.metrics.totalUsers * t.userPct / 100);
+            return `<tr><td><strong>${t.name}</strong></td><td>Free</td><td>${tierUsers.toLocaleString()}</td><td>—</td><td style="color:var(--text2)">Conversion funnel</td><td><span class="tag tag-freemium">Optimize conversion</span></td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ==================== COMPETITORS ====================
+function renderCompetitors() {
+  return `
+    <div class="main-header">
+      <h2>🥊 Competitor Map</h2>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="openCompetitorModal()">+ Add Competitor</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="comp-table">
+        <table>
+          <thead><tr><th>Competitor</th><th>Pricing</th><th>Model</th><th>Strength</th><th>Weakness</th><th>Notes</th><th></th></tr></thead>
+          <tbody>
+            ${state.competitors.map(c => `<tr>
+              <td><strong>${c.name}</strong></td>
+              <td>${c.pricing}</td>
+              <td><span class="tag tag-${c.model}">${c.model}</span></td>
+              <td style="color:var(--green)">${c.strength}</td>
+              <td style="color:var(--red)">${c.weakness}</td>
+              <td style="color:var(--text2);font-size:12px">${c.notes}</td>
+              <td>
+                <button class="btn btn-sm" onclick="openCompetitorModal('${c.id}')">✏️</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteCompetitor('${c.id}')">🗑</button>
+              </td>
+            </tr>`).join('')}
+            ${state.competitors.length === 0 ? '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:24px">No competitors tracked yet.</td></tr>' : ''}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    ${state.products.length > 0 ? renderPositioningMap() : ''}
+  `;
+}
+
+function renderPositioningMap() {
+  const p = state.products[0];
+  const avgPrice = p.tiers.filter(t => t.price > 0).reduce((s,t) => s + t.price, 0) / Math.max(1, p.tiers.filter(t => t.price > 0).length);
+  return `
+    <div class="card">
+      <h3>🗺 Positioning</h3>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Your average paid tier: <strong>${fmt(avgPrice, p.currency)}/mo</strong></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-radius:var(--radius);overflow:hidden">
+        <div style="background:var(--green-bg);padding:20px;text-align:center">
+          <div style="font-size:12px;font-weight:600;color:var(--green)">💎 Premium & Feature-Rich</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">${state.competitors.filter(c => c.model === 'perseat').map(c => c.name).join(', ') || 'None tracked'}</div>
+        </div>
+        <div style="background:var(--blue-bg);padding:20px;text-align:center">
+          <div style="font-size:12px;font-weight:600;color:var(--blue)">🚀 Premium & Niche</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">Enterprise-only players</div>
+        </div>
+        <div style="background:var(--primary-bg);padding:20px;text-align:center">
+          <div style="font-size:12px;font-weight:600;color:var(--primary)">⭐ You Are Here</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">${p.name} — Affordable & Focused</div>
+        </div>
+        <div style="background:var(--orange-bg);padding:20px;text-align:center">
+          <div style="font-size:12px;font-weight:600;color:var(--orange)">🎯 Affordable & Niche</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">${state.competitors.filter(c => c.model === 'tiered' || c.model === 'freemium').map(c => c.name).join(', ') || 'None tracked'}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ==================== A/B TEST CALCULATOR ====================
+function renderABTest() {
+  return `
+    <div class="main-header">
+      <h2>🧬 A/B Test Calculator</h2>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="openABModal()">+ New Test</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Quick Calculator</h3>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Test whether a pricing change is statistically significant.</p>
+      <div class="form-row">
+        <div class="form-group"><label>Control Price</label><input type="number" id="abControlPrice" value="19" step="1"></div>
+        <div class="form-group"><label>Variant Price</label><input type="number" id="abVariantPrice" value="24" step="1"></div>
+        <div class="form-group"><label>Control Visitors</label><input type="number" id="abControlVisitors" value="1000"></div>
+        <div class="form-group"><label>Variant Visitors</label><input type="number" id="abVariantVisitors" value="1000"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Control Conversions</label><input type="number" id="abControlConv" value="50"></div>
+        <div class="form-group"><label>Variant Conversions</label><input type="number" id="abVariantConv" value="42"></div>
+        <div class="form-group"><label>Confidence Level</label><select id="abConfidence"><option value="90">90%</option><option value="95" selected>95%</option><option value="99">99%</option></select></div>
+        <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="calculateAB()" style="height:36px">Calculate</button></div>
+      </div>
+      <div id="abResult"></div>
+    </div>
+    <div class="card">
+      <h3>📊 Saved Tests</h3>
+      ${state.abTests.length === 0 ? '<p style="color:var(--text2);font-size:13px;text-align:center;padding:16px">No saved tests yet. Run a calculation and save it.</p>' : ''}
+      ${state.abTests.map((t,i) => `
+        <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <strong>${t.name || 'Test ' + (i+1)}</strong>
+            <div style="font-size:11px;color:var(--text2)">${t.date} · ${CURRENCIES[state.settings.currency]}${t.controlPrice} vs ${CURRENCIES[state.settings.currency]}${t.variantPrice} · ${t.significant ? '✅ Significant' : '❌ Not significant'}</div>
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="deleteABTest(${i})">🗑</button>
+        </div>
+      `).join('')}
+    </div>
+    <div class="card">
+      <h3>📖 A/B Testing Pricing — Quick Guide</h3>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6">
+        <p><strong>🎯 Sample Size Rule:</strong> Need ~1,000 visitors per variant for 5% conversion rate at 95% confidence.</p>
+        <p><strong>⏱ Duration:</strong> Run for at least 2 full business cycles (usually 2-4 weeks).</p>
+        <p><strong>💡 Revenue vs Conversion:</strong> Higher price may lower conversions but increase revenue. Always check <em>revenue per visitor</em>, not just conversion rate.</p>
+        <p><strong>⚠️ Don't peek:</strong> Decide sample size upfront. Checking early inflates false positives.</p>
+      </div>
+    </div>
+  `;
+}
+
+function calculateAB() {
+  const cp = parseFloat(document.getElementById('abControlPrice').value);
+  const vp = parseFloat(document.getElementById('abVariantPrice').value);
+  const cv = parseInt(document.getElementById('abControlVisitors').value);
+  const vv = parseInt(document.getElementById('abVariantVisitors').value);
+  const cc = parseInt(document.getElementById('abControlConv').value);
+  const vc = parseInt(document.getElementById('abVariantConv').value);
+  const conf = parseInt(document.getElementById('abConfidence').value);
+
+  const cr1 = cc / cv;
+  const cr2 = vc / vv;
+  const rpv1 = cr1 * cp; // Revenue per visitor
+  const rpv2 = cr2 * vp;
+
+  // Z-test for two proportions
+  const pPool = (cc + vc) / (cv + vv);
+  const se = Math.sqrt(pPool * (1 - pPool) * (1/cv + 1/vv));
+  const z = se > 0 ? (cr2 - cr1) / se : 0;
+  const zThresholds = {90: 1.645, 95: 1.96, 99: 2.576};
+  const significant = Math.abs(z) > zThresholds[conf];
+  const convLift = cr1 > 0 ? ((cr2 - cr1) / cr1 * 100) : 0;
+  const revLift = rpv1 > 0 ? ((rpv2 - rpv1) / rpv1 * 100) : 0;
+
+  const winner = rpv2 > rpv1 ? 'Variant' : 'Control';
+  const winClass = significant ? 'ab-winner' : 'ab-inconclusive';
+
+  document.getElementById('abResult').innerHTML = `
+    <div class="ab-result ${winClass}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text2)">CONTROL (${CURRENCIES[state.settings.currency]}${cp})</div>
+          <div style="font-size:18px;font-weight:700">${(cr1*100).toFixed(2)}% conversion</div>
+          <div style="font-size:12px;color:var(--text2)">RPV: ${CURRENCIES[state.settings.currency]}${rpv1.toFixed(2)}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text2)">VARIANT (${CURRENCIES[state.settings.currency]}${vp})</div>
+          <div style="font-size:18px;font-weight:700">${(cr2*100).toFixed(2)}% conversion</div>
+          <div style="font-size:12px;color:var(--text2)">RPV: ${CURRENCIES[state.settings.currency]}${rpv2.toFixed(2)}</div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:12px">
+        <strong>${significant ? '✅ Statistically Significant' : '❌ Not Statistically Significant'}</strong> at ${conf}% confidence (z = ${z.toFixed(3)})
+        <br><span style="font-size:12px">Conversion lift: <strong>${convLift > 0 ? '+' : ''}${convLift.toFixed(1)}%</strong> · Revenue/visitor lift: <strong>${revLift > 0 ? '+' : ''}${revLift.toFixed(1)}%</strong></span>
+        <br><span style="font-size:12px"><strong>🏆 ${winner} wins on revenue per visitor</strong> (${significant ? 'with statistical confidence' : 'but needs more data'})</span>
+      </div>
+      <div style="margin-top:8px"><button class="btn btn-sm btn-primary" onclick="saveABTest(${cp},${vp},${cv},${vv},${cc},${vc},${significant})">💾 Save Test</button></div>
+    </div>
+  `;
+}
+
+function saveABTest(cp,vp,cv,vv,cc,vc,sig) {
+  state.abTests.push({
+    name: `$${cp} vs $${vp}`,
+    date: new Date().toLocaleDateString(),
+    controlPrice:cp, variantPrice:vp,
+    controlVisitors:cv, variantVisitors:vv,
+    controlConv:cc, variantConv:vc,
+    significant: sig
+  });
+  saveState(); render();
+}
+function deleteABTest(i) { state.abTests.splice(i,1); saveState(); render(); }
+
+// ==================== CALCULATIONS ====================
+function calcMRR(p) {
+  let mrr = 0;
+  p.tiers.forEach(t => {
+    if(t.price > 0) {
+      const tierUsers = Math.round(p.metrics.totalUsers * t.userPct / 100);
+      const monthlyPrice = t.period === 'yr' ? t.price / 12 : t.price;
+      mrr += tierUsers * monthlyPrice;
+    }
+  });
+  return mrr;
+}
+function calcPayingUsers(p) {
+  let paying = 0;
+  p.tiers.forEach(t => { if(t.price > 0) paying += Math.round(p.metrics.totalUsers * t.userPct / 100); });
+  return paying;
+}
+
+// ==================== MODALS ====================
+function showModal(html) {
+  document.getElementById('modal-root').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
+}
+function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
+
+function openProductModal(id) {
+  const p = id ? state.products.find(x => x.id === id) : null;
+  showModal(`
+    <h3>${p ? 'Edit' : 'Add'} Product</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Name</label><input type="text" id="pName" value="${p ? p.name : ''}"></div>
+      <div class="form-group"><label>Model</label>
+        <select id="pModel">
+          ${['freemium','tiered','perseat','usage','flat','hybrid'].map(m => `<option value="${m}" ${p?.model===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Currency</label>
+        <select id="pCurrency">${Object.keys(CURRENCIES).map(c => `<option value="${c}" ${(p?.currency||'USD')===c?'selected':''}>${c} (${CURRENCIES[c]})</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Total Users</label><input type="number" id="pUsers" value="${p ? p.metrics.totalUsers : 0}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Monthly Growth %</label><input type="number" id="pGrowth" value="${p ? p.metrics.monthlyGrowth : 10}" step="0.5"></div>
+      <div class="form-group"><label>CAC ($)</label><input type="number" id="pCac" value="${p ? p.metrics.cac : 0}" step="0.01"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProduct('${id || ''}')">Save</button>
+    </div>
+  `);
+}
+
+function saveProduct(id) {
+  const data = {
+    name: document.getElementById('pName').value || 'Untitled',
+    model: document.getElementById('pModel').value,
+    currency: document.getElementById('pCurrency').value,
+    metrics: {
+      totalUsers: parseInt(document.getElementById('pUsers').value) || 0,
+      monthlyGrowth: parseFloat(document.getElementById('pGrowth').value) || 10,
+      cac: parseFloat(document.getElementById('pCac').value) || 0,
+      ltv: 0
+    }
+  };
+  if(id) {
+    const p = state.products.find(x => x.id === id);
+    Object.assign(p, data);
+  } else {
+    state.products.push({ id: genId(), ...data, tiers: [] });
+  }
+  saveState(); closeModal(); render();
+}
+
+function deleteProduct(id) {
+  if(!confirm('Delete this product?')) return;
+  state.products = state.products.filter(p => p.id !== id);
+  saveState(); render();
+}
+
+function openTierModal(productId, tierId) {
+  const p = state.products.find(x => x.id === productId);
+  const t = tierId ? p.tiers.find(x => x.id === tierId) : null;
+  showModal(`
+    <h3>${t ? 'Edit' : 'Add'} Tier — ${p.name}</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Tier Name</label><input type="text" id="tName" value="${t ? t.name : ''}"></div>
+      <div class="form-group"><label>Price</label><input type="number" id="tPrice" value="${t ? t.price : 0}" step="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Period</label><select id="tPeriod"><option value="mo" ${t?.period==='mo'?'selected':''}>Monthly</option><option value="yr" ${t?.period==='yr'?'selected':''}>Yearly</option></select></div>
+      <div class="form-group"><label>% of Users on This Tier</label><input type="number" id="tUserPct" value="${t ? t.userPct : 10}" min="0" max="100" step="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Monthly Churn %</label><input type="number" id="tChurn" value="${t ? t.churnPct : 3}" min="0" step="0.5"></div>
+    </div>
+    <div class="form-group"><label>Features (one per line)</label><textarea id="tFeatures" rows="4" style="resize:vertical">${t ? t.features.join('\n') : ''}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTier('${productId}','${tierId || ''}')">Save</button>
+    </div>
+  `);
+}
+
+function saveTier(productId, tierId) {
+  const p = state.products.find(x => x.id === productId);
+  const data = {
+    name: document.getElementById('tName').value || 'Tier',
+    price: parseFloat(document.getElementById('tPrice').value) || 0,
+    period: document.getElementById('tPeriod').value,
+    userPct: parseFloat(document.getElementById('tUserPct').value) || 0,
+    churnPct: parseFloat(document.getElementById('tChurn').value) || 0,
+    features: document.getElementById('tFeatures').value.split('\n').map(f => f.trim()).filter(Boolean)
+  };
+  if(tierId) {
+    const t = p.tiers.find(x => x.id === tierId);
+    Object.assign(t, data);
+  } else {
+    p.tiers.push({ id: genId(), ...data });
+  }
+  saveState(); closeModal(); render();
+}
+
+function deleteTier(productId, tierId) {
+  if(!confirm('Delete this tier?')) return;
+  const p = state.products.find(x => x.id === productId);
+  p.tiers = p.tiers.filter(t => t.id !== tierId);
+  saveState(); render();
+}
+
+function openCompetitorModal(id) {
+  const c = id ? state.competitors.find(x => x.id === id) : null;
+  showModal(`
+    <h3>${c ? 'Edit' : 'Add'} Competitor</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Name</label><input type="text" id="cName" value="${c ? c.name : ''}"></div>
+      <div class="form-group"><label>Pricing</label><input type="text" id="cPricing" value="${c ? c.pricing : ''}" placeholder="e.g. $19/mo, Custom"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Model</label>
+        <select id="cModel">${['freemium','tiered','perseat','usage','flat','hybrid'].map(m => `<option value="${m}" ${c?.model===m?'selected':''}>${m}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Key Strength</label><input type="text" id="cStrength" value="${c ? c.strength : ''}"></div>
+      <div class="form-group"><label>Key Weakness</label><input type="text" id="cWeakness" value="${c ? c.weakness : ''}"></div>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea id="cNotes" rows="2">${c ? c.notes : ''}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCompetitor('${id || ''}')">Save</button>
+    </div>
+  `);
+}
+
+function saveCompetitor(id) {
+  const data = {
+    name: document.getElementById('cName').value || 'Competitor',
+    pricing: document.getElementById('cPricing').value,
+    model: document.getElementById('cModel').value,
+    strength: document.getElementById('cStrength').value,
+    weakness: document.getElementById('cWeakness').value,
+    notes: document.getElementById('cNotes').value
+  };
+  if(id) { const c = state.competitors.find(x => x.id === id); Object.assign(c, data); }
+  else { state.competitors.push({ id: genId(), ...data }); }
+  saveState(); closeModal(); render();
+}
+
+function deleteCompetitor(id) {
+  if(!confirm('Delete?')) return;
+  state.competitors = state.competitors.filter(c => c.id !== id);
+  saveState(); render();
+}
+
+// ==================== IMPORT/EXPORT ====================
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pricing-lab-backup.json';
+  a.click();
+}
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const f = e.target.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try { state = JSON.parse(ev.target.result); saveState(); render(); alert('Imported!'); }
+      catch(e) { alert('Invalid file'); }
+    };
+    reader.readAsText(f);
+  };
+  input.click();
+}
+
+// ==================== DARK MODE ====================
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('pricing-lab-dark', document.body.classList.contains('dark'));
+}
+if(localStorage.getItem('pricing-lab-dark') === 'true') document.body.classList.add('dark');
+
+// ==================== KEYBOARD ====================
+document.addEventListener('keydown', e => {
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if(e.key === 'Escape') { closeModal(); return; }
+  if(e.key === 'd' || e.key === 'D') { toggleDark(); return; }
+  if(e.key === 'n' || e.key === 'N') { openProductModal(); return; }
+  const views = ['dashboard','products','simulator','sensitivity','competitors','abtest'];
+  const num = parseInt(e.key);
+  if(num >= 1 && num <= 6) { switchView(views[num-1]); return; }
+});
+
+// ==================== EVENT LISTENERS ====================
+function attachEventListeners() {
+  // Re-attach dynamic listeners after render if needed
+}
+
+// ==================== INIT ====================
+render();
+</script>
+</body>
+</html>
