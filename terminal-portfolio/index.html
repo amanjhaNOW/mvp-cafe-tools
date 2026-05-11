@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terminal Portfolio</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0d1117;--fg:#c9d1d9;--accent:#58a6ff;--dim:#484f58;--green:#3fb950;
+--red:#f85149;--yellow:#d29922;--purple:#bc8cff;--cyan:#39d353;
+--border:#30363d;--surface:#161b22;--prompt-user:#3fb950;--prompt-host:#58a6ff;
+--prompt-path:#bc8cff;--cursor:#58a6ff;--selection:rgba(88,166,255,0.2);
+--font:'Menlo','Monaco','Cascadia Code','Consolas','Liberation Mono',monospace;
+}
+[data-theme="matrix"]{--bg:#000a00;--fg:#00ff41;--accent:#00ff41;--dim:#005500;--green:#00ff41;--red:#ff0000;--yellow:#ccff00;--purple:#00ff88;--cyan:#00ffcc;--border:#003300;--surface:#001100;--prompt-user:#00ff41;--prompt-host:#00cc33;--prompt-path:#00ff88;--cursor:#00ff41}
+[data-theme="dracula"]{--bg:#282a36;--fg:#f8f8f2;--accent:#bd93f9;--dim:#6272a4;--green:#50fa7b;--red:#ff5555;--yellow:#f1fa8c;--purple:#bd93f9;--cyan:#8be9fd;--border:#44475a;--surface:#21222c;--prompt-user:#50fa7b;--prompt-host:#8be9fd;--prompt-path:#bd93f9;--cursor:#f8f8f2}
+[data-theme="monokai"]{--bg:#272822;--fg:#f8f8f2;--accent:#66d9ef;--dim:#75715e;--green:#a6e22e;--red:#f92672;--yellow:#e6db74;--purple:#ae81ff;--cyan:#66d9ef;--border:#3e3d32;--surface:#1e1f1c;--prompt-user:#a6e22e;--prompt-host:#66d9ef;--prompt-path:#ae81ff;--cursor:#f8f8f2}
+[data-theme="solarized"]{--bg:#002b36;--fg:#839496;--accent:#268bd2;--dim:#586e75;--green:#859900;--red:#dc322f;--yellow:#b58900;--purple:#6c71c4;--cyan:#2aa198;--border:#073642;--surface:#073642;--prompt-user:#859900;--prompt-host:#268bd2;--prompt-path:#6c71c4;--cursor:#839496}
+[data-theme="nord"]{--bg:#2e3440;--fg:#d8dee9;--accent:#88c0d0;--dim:#4c566a;--green:#a3be8c;--red:#bf616a;--yellow:#ebcb8b;--purple:#b48ead;--cyan:#88c0d0;--border:#3b4252;--surface:#3b4252;--prompt-user:#a3be8c;--prompt-host:#88c0d0;--prompt-path:#b48ead;--cursor:#d8dee9}
+[data-theme="catppuccin"]{--bg:#1e1e2e;--fg:#cdd6f4;--accent:#89b4fa;--dim:#585b70;--green:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--cyan:#94e2d5;--border:#313244;--surface:#181825;--prompt-user:#a6e3a1;--prompt-host:#89b4fa;--prompt-path:#cba6f7;--cursor:#cdd6f4}
+[data-theme="retro"]{--bg:#1a0a2e;--fg:#ff6600;--accent:#ff00ff;--dim:#663399;--green:#00ff00;--red:#ff0000;--yellow:#ffff00;--purple:#ff00ff;--cyan:#00ffff;--border:#330066;--surface:#0d0520;--prompt-user:#00ff00;--prompt-host:#ff00ff;--prompt-path:#00ffff;--cursor:#ff6600}
+[data-theme="light"]{--bg:#fafbfc;--fg:#24292e;--accent:#0366d6;--dim:#6a737d;--green:#22863a;--red:#cb2431;--yellow:#b08800;--purple:#6f42c1;--cyan:#1b7c83;--border:#e1e4e8;--surface:#ffffff;--prompt-user:#22863a;--prompt-host:#0366d6;--prompt-path:#6f42c1;--cursor:#24292e}
+
+html,body{height:100%;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.6;overflow:hidden}
+
+/* App layout */
+.app{display:flex;height:100vh;flex-direction:column}
+.tab-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 8px;gap:2px;align-items:center;min-height:36px;flex-shrink:0}
+.tab{padding:6px 16px;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;font-size:12px;font-family:var(--font);transition:all .15s;user-select:none}
+.tab:hover{color:var(--fg)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.theme-btn{background:none;border:1px solid var(--border);color:var(--dim);padding:3px 10px;border-radius:4px;cursor:pointer;font-family:var(--font);font-size:11px}
+.theme-btn:hover{color:var(--fg);border-color:var(--dim)}
+
+.panels{flex:1;overflow:hidden;position:relative}
+.panel{position:absolute;inset:0;overflow-y:auto;display:none;padding:20px}
+.panel.active{display:block}
+
+/* Terminal */
+.terminal{padding:20px;cursor:text;min-height:100%}
+.terminal:focus{outline:none}
+.output-line{white-space:pre-wrap;word-break:break-word;min-height:1.6em}
+.output-line.dim{color:var(--dim)}
+.output-line .accent{color:var(--accent)}
+.output-line .green{color:var(--green)}
+.output-line .red{color:var(--red)}
+.output-line .yellow{color:var(--yellow)}
+.output-line .purple{color:var(--purple)}
+.output-line .cyan{color:var(--cyan)}
+.output-line .bold{font-weight:bold}
+.output-line .dim-color{color:var(--dim)}
+.output-line .underline{text-decoration:underline}
+
+.prompt-line{display:flex;align-items:center;white-space:pre}
+.prompt-user{color:var(--prompt-user);font-weight:bold}
+.prompt-at{color:var(--dim)}
+.prompt-host{color:var(--prompt-host);font-weight:bold}
+.prompt-sep{color:var(--dim)}
+.prompt-path{color:var(--prompt-path)}
+.prompt-char{color:var(--fg);margin-right:6px}
+.input-area{flex:1;position:relative;display:flex;align-items:center}
+.cmd-input{background:none;border:none;color:var(--fg);font-family:var(--font);font-size:14px;outline:none;width:100%;caret-color:transparent;line-height:1.6}
+.cursor-block{width:8px;height:17px;background:var(--cursor);display:inline-block;animation:blink 1s step-end infinite;position:absolute;pointer-events:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* Welcome ASCII */
+.ascii{color:var(--accent);font-size:11px;line-height:1.3}
+
+/* Editor */
+.editor{max-width:800px;margin:0 auto}
+.editor h2{color:var(--accent);margin-bottom:16px;font-size:18px}
+.editor h3{color:var(--fg);margin:20px 0 10px;font-size:15px}
+.field-group{margin-bottom:12px}
+.field-group label{display:block;color:var(--dim);font-size:12px;margin-bottom:4px}
+.field-group input,.field-group textarea,.field-group select{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--fg);padding:8px 12px;border-radius:6px;font-family:var(--font);font-size:13px;outline:none}
+.field-group input:focus,.field-group textarea:focus{border-color:var(--accent)}
+.field-group textarea{min-height:60px;resize:vertical}
+
+.list-editor{margin:10px 0}
+.list-item{display:flex;gap:8px;margin-bottom:6px;align-items:flex-start}
+.list-item input,.list-item textarea{flex:1}
+.list-item .small{width:120px;flex:none}
+.list-item .med{width:180px;flex:none}
+.btn{background:var(--accent);color:var(--bg);border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-family:var(--font);font-size:12px;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn.danger{background:var(--red)}
+.btn.ghost{background:none;border:1px solid var(--border);color:var(--dim)}
+.btn.ghost:hover{color:var(--fg);border-color:var(--dim)}
+.btn.sm{padding:4px 8px;font-size:11px}
+.btn-row{display:flex;gap:8px;margin:8px 0}
+
+/* Export */
+.export-section{max-width:800px;margin:0 auto}
+.export-section h2{color:var(--accent);margin-bottom:16px;font-size:18px}
+.export-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px}
+.export-card h3{color:var(--fg);margin-bottom:8px;font-size:14px}
+.export-card p{color:var(--dim);font-size:12px;margin-bottom:12px}
+
+/* Preview */
+.preview-frame{border:2px solid var(--border);border-radius:8px;overflow:hidden;height:calc(100vh - 100px)}
+.preview-frame iframe{width:100%;height:100%;border:none}
+.preview-bar{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.preview-bar span{color:var(--dim);font-size:12px}
+
+/* Matrix rain */
+.matrix-canvas{position:fixed;top:0;left:0;z-index:999;pointer-events:none;opacity:.3}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--dim)}
+
+/* Mobile */
+@media(max-width:600px){
+  .terminal{padding:10px;font-size:12px}
+  .prompt-line{font-size:12px}
+  .cmd-input{font-size:12px}
+  .tab{padding:6px 10px;font-size:11px}
+}
+
+/* Neofetch box */
+.neofetch-box{display:inline-block}
+.neofetch-row{display:flex;gap:4px}
+.neofetch-label{color:var(--accent);font-weight:bold;min-width:12ch}
+.neofetch-val{color:var(--fg)}
+
+/* Suggestion */
+.suggestion{color:var(--dim);opacity:.5}
+</style>
+</head>
+<body data-theme="default">
+<div class="app">
+  <div class="tab-bar">
+    <div class="tab active" data-panel="terminal">⌨ Terminal</div>
+    <div class="tab" data-panel="editor">✏ Editor</div>
+    <div class="tab" data-panel="preview">👁 Preview</div>
+    <div class="tab" data-panel="export">📦 Export</div>
+    <div class="tab-right">
+      <button class="theme-btn" id="themeBtn" title="Cycle theme">🎨 Theme</button>
+    </div>
+  </div>
+  <div class="panels">
+    <!-- Terminal Panel -->
+    <div class="panel active" id="panel-terminal">
+      <div class="terminal" id="terminal" tabindex="0"></div>
+    </div>
+    <!-- Editor Panel -->
+    <div class="panel" id="panel-editor">
+      <div class="editor" id="editorContent"></div>
+    </div>
+    <!-- Preview Panel -->
+    <div class="panel" id="panel-preview">
+      <div class="preview-bar">
+        <span>Live preview of exported portfolio</span>
+        <button class="btn sm" onclick="refreshPreview()">↻ Refresh</button>
+        <button class="btn sm ghost" onclick="openPreviewFullscreen()">⛶ Fullscreen</button>
+      </div>
+      <div class="preview-frame"><iframe id="previewFrame"></iframe></div>
+    </div>
+    <!-- Export Panel -->
+    <div class="panel" id="panel-export">
+      <div class="export-section" id="exportContent"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === DATA ===
+const DEFAULT_PROFILE = {
+  name: "Aman Jha",
+  handle: "aj",
+  hostname: "portfolio",
+  title: "Head of Product, Tech & Design",
+  location: "India",
+  email: "aman@mvp.cafe",
+  website: "helloaman.com",
+  bio: "10 years building product. 4 products 0→1. $15M revenue impact.\nShip fast, learn faster, iterate always.",
+  social: {
+    linkedin: "linkedin.com/in/amanjhanow",
+    twitter: "@amanjha",
+    github: "github.com/amanjha"
+  },
+  skills: [
+    { category: "Product", items: "Product Strategy, Roadmapping, PRDs, OKRs, 0→1 Builds, Product-Led Growth" },
+    { category: "Technical", items: "IoT, Manufacturing OS, API Design, System Architecture, SQL, Python" },
+    { category: "Leadership", items: "30+ Team Management, Cross-functional, Stakeholder Management, Hiring" },
+    { category: "Tools", items: "Jira, Figma, Notion, Mixpanel, Amplitude, Metabase, Linear" },
+    { category: "Domains", items: "SaaS, Manufacturing, Fleet/Logistics, Fintech, Automotive" }
+  ],
+  experience: [
+    { role: "Head of Product, Tech & Design", company: "ZYOD", period: "Apr 2023 – Present", highlights: "Manufacturing OS from scratch • $15M revenue impact • $1.4M capital unlocked via QR-WMS • 70% fabric cycle time reduction • IoT across 700+ machines • IIT Delhi R&D partnership • 30+ team" },
+    { role: "Senior Product Manager", company: "GoMechanic", period: "2022 – 2023", highlights: "Miles Membership 200% growth • 50K+ members • 70% CAC reduction • OBD connected-car 10K+ users • BrandHub ad platform launch • Malaysia expansion 19% MOM • WhatsApp bot rebuild" },
+    { role: "Product Strategy", company: "ZeoAuto (YC W20)", period: "2021 – 2022", highlights: "10% activation lift on 500K+ users • Route planner optimization" },
+    { role: "Product Lead", company: "EzoBooks", period: "2020 – 2021", highlights: "5% retention boost • 5K new users in 3 months via Online Shop feature" },
+    { role: "Co-founder", company: "Fortunekit / Fourzip", period: "2015 – 2022", highlights: "Bootstrapped 4→30 people • Built custom IoT hardware • 20K+ vehicles tracked • 5M+ API hits/day • 15+ products delivered • Govt implementations (Jharkhand, Vijayawada) • CTO-as-Cofounder model" }
+  ],
+  projects: [
+    { name: "UTMStamp", desc: "Email signatures with built-in UTM tracking for teams. Shipped in 13 days.", url: "utmstamp.com", status: "Live" },
+    { name: "ZYOD Manufacturing OS", desc: "Digital twin for garment manufacturing. QR-WMS, IoT, real-time factory analytics.", url: "", status: "Live" },
+    { name: "GoConnect OBD", desc: "Connected car platform — real-time location, health, driving behavior.", url: "", status: "Shipped" },
+    { name: "MVP Cafe", desc: "Helping founders ship MVPs fast. Blog, case studies, tools.", url: "mvp.cafe", status: "Live" }
+  ],
+  education: [
+    { degree: "B.Tech", school: "Maharashtra, India", year: "2015" }
+  ],
+  values: [
+    "Ship fast, learn faster",
+    "Solve business problems, not ship features",
+    "Prototype to validate",
+    "Speed is a competitive advantage",
+    "Outcomes over outputs"
+  ],
+  ascii: `
+    _                           _ _         
+   / \\   _ __ ___   __ _ _ __ | | |__   __ _ 
+  / _ \\ | '_ \` _ \\ / _\` | '_ \\| | '_ \\ / _\` |
+ / ___ \\| | | | | | (_| | | | | | | | | (_| |
+/_/   \\_\\_| |_| |_|\\__,_|_| |_|_|_| |_|\\__,_|`,
+  theme: "default"
+};
+
+let profile = JSON.parse(localStorage.getItem('tp_profile') || 'null') || JSON.parse(JSON.stringify(DEFAULT_PROFILE));
+let cmdHistory = JSON.parse(localStorage.getItem('tp_history') || '[]');
+let historyIndex = -1;
+let currentInput = '';
+let matrixInterval = null;
+const THEMES = ['default','matrix','dracula','monokai','solarized','nord','catppuccin','retro','light'];
+const THEME_NAMES = {default:'GitHub Dark',matrix:'Matrix',dracula:'Dracula',monokai:'Monokai',solarized:'Solarized Dark',nord:'Nord',catppuccin:'Catppuccin',retro:'Retro',light:'Light'};
+
+function save(){ localStorage.setItem('tp_profile', JSON.stringify(profile)); localStorage.setItem('tp_history', JSON.stringify(cmdHistory.slice(-200))); }
+
+// === TERMINAL ===
+const termEl = document.getElementById('terminal');
+let outputDiv, promptDiv, inputEl, cursorEl, suggestionEl;
+
+function initTerminal(){
+  termEl.innerHTML = '';
+  outputDiv = document.createElement('div');
+  outputDiv.id = 'output';
+  termEl.appendChild(outputDiv);
+  
+  promptDiv = document.createElement('div');
+  promptDiv.className = 'prompt-line';
+  promptDiv.innerHTML = `<span class="prompt-user">${esc(profile.handle)}</span><span class="prompt-at">@</span><span class="prompt-host">${esc(profile.hostname)}</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-char">$</span><span class="input-area"><input class="cmd-input" id="cmdInput" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus><span class="suggestion" id="suggestion"></span><span class="cursor-block" id="cursor"></span></span>`;
+  termEl.appendChild(promptDiv);
+  
+  inputEl = promptDiv.querySelector('#cmdInput');
+  cursorEl = promptDiv.querySelector('#cursor');
+  suggestionEl = promptDiv.querySelector('#suggestion');
+  
+  inputEl.addEventListener('keydown', handleKey);
+  inputEl.addEventListener('input', updateCursor);
+  termEl.addEventListener('click', ()=> inputEl.focus());
+  
+  printWelcome();
+  updateCursor();
+  setTimeout(()=> inputEl.focus(), 100);
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function updateCursor(){
+  const val = inputEl.value;
+  const measureSpan = document.createElement('span');
+  measureSpan.style.cssText = 'visibility:hidden;position:absolute;white-space:pre;font:14px var(--font)';
+  measureSpan.textContent = val.substring(0, inputEl.selectionStart);
+  document.body.appendChild(measureSpan);
+  const w = measureSpan.offsetWidth;
+  document.body.removeChild(measureSpan);
+  cursorEl.style.left = w + 'px';
+  
+  // Tab suggestion
+  const suggestion = getTabSuggestion(val);
+  if(suggestion && val.length > 0){
+    suggestionEl.textContent = suggestion.substring(val.length);
+    suggestionEl.style.left = w + 'px';
+  } else {
+    suggestionEl.textContent = '';
+  }
+}
+
+const COMMANDS = ['help','about','skills','experience','projects','contact','social','resume','values','neofetch','whoami','theme','clear','history','date','echo','cowsay','matrix','ls','cat','pwd','sudo','fortune','banner','export','edit','reset'];
+
+function getTabSuggestion(input){
+  if(!input) return '';
+  const lower = input.toLowerCase();
+  return COMMANDS.find(c => c.startsWith(lower) && c !== lower) || '';
+}
+
+function handleKey(e){
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    const cmd = inputEl.value.trim();
+    if(cmd){ cmdHistory.push(cmd); save(); }
+    historyIndex = -1;
+    currentInput = '';
+    executeCommand(cmd);
+    return;
+  }
+  if(e.key === 'Tab'){
+    e.preventDefault();
+    const suggestion = getTabSuggestion(inputEl.value);
+    if(suggestion){ inputEl.value = suggestion; updateCursor(); }
+    return;
+  }
+  if(e.key === 'ArrowUp'){
+    e.preventDefault();
+    if(cmdHistory.length === 0) return;
+    if(historyIndex === -1){ currentInput = inputEl.value; historyIndex = cmdHistory.length - 1; }
+    else if(historyIndex > 0){ historyIndex--; }
+    inputEl.value = cmdHistory[historyIndex];
+    updateCursor();
+    return;
+  }
+  if(e.key === 'ArrowDown'){
+    e.preventDefault();
+    if(historyIndex === -1) return;
+    if(historyIndex < cmdHistory.length - 1){ historyIndex++; inputEl.value = cmdHistory[historyIndex]; }
+    else { historyIndex = -1; inputEl.value = currentInput; }
+    updateCursor();
+    return;
+  }
+  if(e.key === 'c' && e.ctrlKey){
+    e.preventDefault();
+    addPromptEcho(inputEl.value + '^C');
+    inputEl.value = '';
+    updateCursor();
+    return;
+  }
+  if(e.key === 'l' && e.ctrlKey){
+    e.preventDefault();
+    outputDiv.innerHTML = '';
+    return;
+  }
+  setTimeout(updateCursor, 0);
+}
+
+function addPromptEcho(text){
+  const line = document.createElement('div');
+  line.className = 'prompt-line';
+  line.innerHTML = `<span class="prompt-user">${esc(profile.handle)}</span><span class="prompt-at">@</span><span class="prompt-host">${esc(profile.hostname)}</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-char">$</span><span style="color:var(--fg)">${esc(text)}</span>`;
+  outputDiv.appendChild(line);
+}
+
+function addOutput(html, cls=''){
+  const line = document.createElement('div');
+  line.className = 'output-line' + (cls ? ' '+cls : '');
+  line.innerHTML = html;
+  outputDiv.appendChild(line);
+}
+
+function addRaw(text){ addOutput(esc(text)); }
+
+function scrollToBottom(){ 
+  const panel = document.getElementById('panel-terminal');
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function executeCommand(raw){
+  addPromptEcho(raw);
+  inputEl.value = '';
+  updateCursor();
+  
+  if(!raw){ scrollToBottom(); return; }
+  
+  const parts = raw.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+  const cmd = (parts[0]||'').toLowerCase();
+  const args = parts.slice(1).map(a => a.replace(/^"|"$/g,''));
+  
+  switch(cmd){
+    case 'help': cmdHelp(); break;
+    case 'about': cmdAbout(); break;
+    case 'skills': cmdSkills(); break;
+    case 'experience': case 'exp': cmdExperience(args); break;
+    case 'projects': case 'proj': cmdProjects(); break;
+    case 'contact': cmdContact(); break;
+    case 'social': cmdSocial(); break;
+    case 'resume': cmdResume(); break;
+    case 'values': cmdValues(); break;
+    case 'neofetch': cmdNeofetch(); break;
+    case 'whoami': addOutput(`<span class="green">${esc(profile.name)}</span> <span class="dim-color">— ${esc(profile.title)}</span>`); break;
+    case 'theme': cmdTheme(args); break;
+    case 'clear': outputDiv.innerHTML = ''; break;
+    case 'history': cmdHistory.forEach((c,i) => addOutput(`<span class="dim-color">${String(i+1).padStart(4)}</span>  ${esc(c)}`)); break;
+    case 'date': addOutput(new Date().toString()); break;
+    case 'echo': addOutput(esc(args.join(' '))); break;
+    case 'cowsay': cmdCowsay(args.join(' ') || 'moo'); break;
+    case 'matrix': cmdMatrix(); break;
+    case 'fortune': cmdFortune(); break;
+    case 'banner': cmdBanner(args.join(' ') || profile.name); break;
+    case 'ls': cmdLs(); break;
+    case 'cat': cmdCat(args[0]); break;
+    case 'pwd': addOutput('/home/' + esc(profile.handle)); break;
+    case 'sudo': addOutput(`<span class="red">${esc(profile.handle)} is not in the sudoers file. This incident will be reported. 🚨</span>`); break;
+    case 'export': addOutput('Switch to the <span class="accent">📦 Export</span> tab to download your portfolio.'); break;
+    case 'edit': addOutput('Switch to the <span class="accent">✏ Editor</span> tab to customize your profile.'); break;
+    case 'reset': 
+      if(args[0] === '--confirm'){ profile = JSON.parse(JSON.stringify(DEFAULT_PROFILE)); save(); addOutput('<span class="yellow">Profile reset to defaults. Refresh to see changes.</span>'); }
+      else { addOutput('Usage: reset --confirm <span class="dim-color">(resets profile to defaults)</span>'); }
+      break;
+    case 'man': addOutput(`No manual entry for ${esc(args[0]||'???')}. Try <span class="accent">help</span>.`); break;
+    case 'exit': case 'quit': addOutput(`<span class="dim-color">There is no escape. You're stuck with me. 😏</span>`); break;
+    case 'vim': case 'nano': case 'emacs': addOutput(`<span class="dim-color">Nice try. Use the Editor tab instead.</span>`); break;
+    case 'rm': addOutput(`<span class="red">rm: permission denied (and also, why?)</span>`); break;
+    case 'cd': addOutput(`<span class="dim-color">You're already home. 🏠</span>`); break;
+    default: addOutput(`<span class="red">command not found:</span> ${esc(cmd)}. Type <span class="accent">help</span> for available commands.`);
+  }
+  scrollToBottom();
+}
+
+function printWelcome(){
+  addOutput(`<pre class="ascii">${esc(profile.ascii)}</pre>`);
+  addOutput('');
+  addOutput(`<span class="bold green">${esc(profile.name)}</span> — <span class="dim-color">${esc(profile.title)}</span>`);
+  addOutput(`<span class="dim-color">${esc(profile.bio.split('\n')[0])}</span>`);
+  addOutput('');
+  addOutput(`Type <span class="accent">help</span> to see available commands. Tab to autocomplete.`);
+  addOutput('');
+}
+
+function cmdHelp(){
+  addOutput('');
+  addOutput('<span class="bold accent">Available Commands</span>');
+  addOutput('<span class="dim-color">─────────────────────────────────────────</span>');
+  const cmds = [
+    ['about','Who I am — bio, background, philosophy'],
+    ['skills','Technical and professional skills'],
+    ['experience','Work history (use: experience 1 for detail)'],
+    ['projects','Things I\'ve built'],
+    ['contact','How to reach me'],
+    ['social','Social links'],
+    ['resume','Full resume summary'],
+    ['values','What I believe in'],
+    ['neofetch','System info, but make it portfolio'],
+    ['whoami','Quick identity'],
+    ['',''],
+    ['theme [name]','Switch theme (try: matrix, dracula, nord)'],
+    ['theme list','See all available themes'],
+    ['banner [text]','ASCII art text'],
+    ['cowsay [text]','🐄 says things'],
+    ['matrix','Toggle matrix rain effect'],
+    ['fortune','Random wisdom'],
+    ['',''],
+    ['clear','Clear terminal'],
+    ['history','Command history'],
+    ['date','Current date/time'],
+    ['echo [text]','Print text'],
+    ['edit','Open profile editor'],
+    ['export','Export portfolio'],
+    ['reset --confirm','Reset to defaults'],
+  ];
+  cmds.forEach(([c,d]) => {
+    if(!c) { addOutput(''); return; }
+    addOutput(`  <span class="green">${esc(c.padEnd(18))}</span><span class="dim-color">${esc(d)}</span>`);
+  });
+  addOutput('');
+  addOutput('<span class="dim-color">Navigation: ↑↓ history · Tab autocomplete · Ctrl+L clear · Ctrl+C cancel</span>');
+  addOutput('');
+}
+
+function cmdAbout(){
+  addOutput('');
+  addOutput(`<span class="bold accent">About ${esc(profile.name)}</span>`);
+  addOutput('<span class="dim-color">─────────────────────────────────────────</span>');
+  profile.bio.split('\n').forEach(line => addOutput(esc(line)));
+  addOutput('');
+  addOutput(`<span class="cyan">📍</span> ${esc(profile.location)}`);
+  addOutput(`<span class="cyan">💼</span> ${esc(profile.title)}`);
+  addOutput(`<span class="cyan">🌐</span> ${esc(profile.website)}`);
+  addOutput('');
+}
+
+function cmdSkills(){
+  addOutput('');
+  addOutput('<span class="bold accent">Skills & Expertise</span>');
+  addOutput('<span class="dim-color">─────────────────────────────────────────</span>');
+  profile.skills.forEach(s => {
+    addOutput(`  <span class="yellow bold">${esc(s.category)}</span>`);
+    addOutput(`  <span class="dim-color">└─</span> ${esc(s.items)}`);
+    addOutput('');
+  });
+}
+
+function cmdExperience(args){
+  addOutput('');
+  if(args[0] && !isNaN(args[0])){
+    const idx = parseInt(args[0]) - 1;
+    const exp = profile.experience[idx];
+    if(!exp){ addOutput(`<span class="red">No experience entry #${args[0]}</span>`); return; }
+    addOutput(`<span class="bold accent">${esc(exp.role)}</span>`);
+    addOutput(`<span class="cyan">${esc(exp.company)}</span> <span class="dim-color">${esc(exp.period)}</span>`);
+    addOutput('<span class="dim-color">─────────────────────────────────────────</span>');
+    exp.highlights.split(' • ').forEach(h => addOutput(`  <span class="green">▸</span> ${esc(h)}`));
+    addOutput('');
+    return;
+  }
+  addOutput('<span class="bold accent">Experience</span>');
+  addOutput('<span class="dim-color">─────────────────────────────────────────</span>');
+  profile.experience.forEach((exp, i) => {
+    addOutput(`  <span class="yellow">[${i+1}]</span> <span class="bold">${esc(exp.role)}</span>`);
+    addOutput(`      <span class="cyan">${esc(exp.company)}</span> <span class="dim-color">· ${esc(exp.period)}</span>`);
+    addOutput('');
+  });
+  addOutput('<span class="dim-color">Type experience [number] for details. E.g.: experience 1</span>');
+  addOutput('');
+}
+
+function cmdProjects(){
+  addOutput('');
+  addOutput('<span class="bold accent">Projects</span>');
+  addOutput('<span class="dim-color">─────────────────────────────────────────</span>');
+  profile.projects.forEach(p => {
+    const status = p.status === 'Live' ? '<span class="green">● Live</span>' : p.status === 'Shipped' ? '<span class="yellow">● Shipped</span>' : `<span class="dim-color">● ${esc(p.status)}</span>`;
+    addOutput(`  <span class="bold">${esc(p.name)}</span> ${status}`);
+    addOutput(`  <span class="dim-color">${esc(p.desc)}</span>`);
+    if(p.url) addOutput(`  <span class="accent">${esc(p.url)}</span>`);
+    addOutput('');
+  });
+}
+
+function cmdContact(){
+  addOutput('');
+  addOutput('<span class="bold accent">Contact</span>');
+  addOutput('<span class="dim-color">─────────────────────────────────────────</span>');
+  addOutput(`  <span class="green">📧</span> ${esc(profile.email)}`);
+  addOutput(`  <span class="green">🌐</span> ${esc(profile.website)}`);
+  addOutput(`  <span class="green">📍</span> ${esc(profile.location)}`);
+  addOutput('');
+}
+
+function cmdSocial(){
+  addOutput('');
+  addOutput('<span class="bold accent">Social</span>');
+  addOutput('<span class="dim-color">─────────────────────────────────────────</span>');
+  Object.entries(profile.social).forEach(([k,v]) => {
+    if(v) addOutput(`  <span class="cyan">${esc(k.padEnd(12))}</span> ${esc(v)}`);
+  });
+  addOutput('');
+}
+
+function cmdResume(){
+  addOutput('');
+  addOutput(`<pre class="ascii">${esc(profile.ascii)}</pre>`);
+  addOutput('');
+  addOutput(`<span class="bold green">${esc(profile.name)}</span>`);
+  addOutput(`<span class="dim-color">${esc(profile.title)} · ${esc(profile.location)}</span>`);
+  addOutput(`<span class="dim-color">${esc(profile.email)} · ${esc(profile.website)}</span>`);
+  addOutput('');
+  addOutput('<span class="dim-color">═══════════════════════════════════════════</span>');
+  addOutput('');
+  profile.bio.split('\n').forEach(l => addOutput(esc(l)));
+  addOutput('');
+  addOutput('<span class="bold accent">── Experience ──────────────────────────</span>');
+  addOutput('');
+  profile.experience.forEach(exp => {
+    addOutput(`<span class="bold">${esc(exp.role)}</span> <span class="dim-color">@</span> <span class="cyan">${esc(exp.company)}</span>`);
+    addOutput(`<span class="dim-color">${esc(exp.period)}</span>`);
+    exp.highlights.split(' • ').forEach(h => addOutput(`  <span class="green">▸</span> ${esc(h)}`));
+    addOutput('');
+  });
+  addOutput('<span class="bold accent">── Skills ──────────────────────────────</span>');
+  addOutput('');
+  profile.skills.forEach(s => addOutput(`  <span class="yellow">${esc(s.category)}:</span> ${esc(s.items)}`));
+  addOutput('');
+  addOutput('<span class="bold accent">── Projects ────────────────────────────</span>');
+  addOutput('');
+  profile.projects.forEach(p => addOutput(`  <span class="bold">${esc(p.name)}</span> <span class="dim-color">— ${esc(p.desc)}</span>`));
+  addOutput('');
+}
+
+function cmdValues(){
+  addOutput('');
+  addOutput('<span class="bold accent">Values & Principles</span>');
+  addOutput('<span class="dim-color">─────────────────────────────────────────</span>');
+  profile.values.forEach(v => addOutput(`  <span class="purple">◆</span> ${esc(v)}`));
+  addOutput('');
+}
+
+function cmdNeofetch(){
+  addOutput('');
+  const lines = [
+    ['', `<span class="bold green">${esc(profile.name)}</span>@<span class="accent">${esc(profile.hostname)}</span>`],
+    ['', '<span class="dim-color">─────────────────────────</span>'],
+    ['Title', profile.title],
+    ['Location', profile.location],
+    ['Experience', profile.experience.length + ' roles'],
+    ['Projects', profile.projects.length + ' built'],
+    ['Skills', profile.skills.reduce((a,s)=> a + s.items.split(',').length, 0) + ' areas'],
+    ['Values', profile.values.length + ' principles'],
+    ['Theme', THEME_NAMES[profile.theme] || 'GitHub Dark'],
+    ['Terminal', 'Terminal Portfolio v1.0'],
+    ['Shell', 'portfolio-sh'],
+    ['Uptime', Math.floor((Date.now()/1000 - 1420070400)/86400) + ' days since 2015'],
+  ];
+  
+  const ascii = `   <span class="green">    ▄▄▄▄▄▄▄▄▄▄▄  </span>
+   <span class="green">   ██████████████ </span>
+   <span class="green">   ██</span><span class="accent">╔══════</span><span class="green">██  </span>
+   <span class="green">   ██</span><span class="accent">║ ▶ AJ ║</span><span class="green">██  </span>
+   <span class="green">   ██</span><span class="accent">╚══════</span><span class="green">██  </span>
+   <span class="green">   ██████████████ </span>
+   <span class="green">   ▀▀████████▀▀  </span>
+   <span class="green">       ████      </span>
+   <span class="green">       ████      </span>
+   <span class="green">     ████████    </span>
+   <span class="green">    ██████████   </span>`;
+  
+  const asciiLines = ascii.split('\n');
+  const maxLines = Math.max(asciiLines.length, lines.length);
+  
+  for(let i = 0; i < maxLines; i++){
+    const art = asciiLines[i] || '                          ';
+    const info = lines[i];
+    let infoHtml = '';
+    if(info){
+      if(info[0]) infoHtml = `<span class="accent bold">${esc(info[0]).padEnd(12)}</span>${info[1].startsWith('<') ? info[1] : esc(info[1])}`;
+      else infoHtml = info[1];
+    }
+    addOutput(`${art}  ${infoHtml}`);
+  }
+  
+  // Color blocks
+  addOutput('                             <span style="background:#000;color:#000">███</span><span style="background:#c00;color:#c00">███</span><span style="background:#0a0;color:#0a0">███</span><span style="background:#cc0;color:#cc0">███</span><span style="background:#00c;color:#00c">███</span><span style="background:#c0c;color:#c0c">███</span><span style="background:#0cc;color:#0cc">███</span><span style="background:#ccc;color:#ccc">███</span>');
+  addOutput('');
+}
+
+function cmdTheme(args){
+  if(!args[0] || args[0] === 'list'){
+    addOutput('');
+    addOutput('<span class="bold accent">Available Themes</span>');
+    addOutput('<span class="dim-color">─────────────────────────────────────────</span>');
+    THEMES.forEach(t => {
+      const active = (profile.theme === t) ? ' <span class="green">← current</span>' : '';
+      addOutput(`  <span class="cyan">${esc(t.padEnd(14))}</span><span class="dim-color">${esc(THEME_NAMES[t])}</span>${active}`);
+    });
+    addOutput('');
+    addOutput(`<span class="dim-color">Usage: theme [name]</span>`);
+    return;
+  }
+  const t = args[0].toLowerCase();
+  if(!THEMES.includes(t)){ addOutput(`<span class="red">Unknown theme:</span> ${esc(t)}. Try <span class="accent">theme list</span>`); return; }
+  document.body.setAttribute('data-theme', t);
+  profile.theme = t;
+  save();
+  addOutput(`<span class="green">✓</span> Theme set to <span class="accent">${esc(THEME_NAMES[t])}</span>`);
+}
+
+function cmdCowsay(text){
+  const maxW = 40;
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+  words.forEach(w => {
+    if((line + ' ' + w).trim().length > maxW){ lines.push(line); line = w; }
+    else { line = (line + ' ' + w).trim(); }
+  });
+  if(line) lines.push(line);
+  const w = Math.max(...lines.map(l=>l.length));
+  addOutput(' ' + '_'.repeat(w+2));
+  lines.forEach((l,i) => {
+    const pad = l.padEnd(w);
+    if(lines.length === 1) addOutput(`&lt; ${esc(pad)} &gt;`);
+    else if(i === 0) addOutput(`/ ${esc(pad)} \\`);
+    else if(i === lines.length-1) addOutput(`\\ ${esc(pad)} /`);
+    else addOutput(`| ${esc(pad)} |`);
+  });
+  addOutput(' ' + '-'.repeat(w+2));
+  addOutput('        \\   ^__^');
+  addOutput('         \\  (oo)\\_______');
+  addOutput('            (__)\\       )\\/\\');
+  addOutput('                ||----w |');
+  addOutput('                ||     ||');
+}
+
+function cmdMatrix(){
+  if(matrixInterval){ clearInterval(matrixInterval); matrixInterval=null; document.querySelectorAll('.matrix-canvas').forEach(c=>c.remove()); addOutput('<span class="green">Matrix rain stopped.</span>'); return; }
+  const canvas = document.createElement('canvas');
+  canvas.className = 'matrix-canvas';
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  const cols = Math.floor(canvas.width/14);
+  const drops = Array(cols).fill(1);
+  const chars = 'ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ01234567890ABCDEF';
+  matrixInterval = setInterval(()=>{
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#0f0';
+    ctx.font = '14px monospace';
+    drops.forEach((y,i)=>{
+      ctx.fillText(chars[Math.floor(Math.random()*chars.length)], i*14, y*14);
+      if(y*14 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    });
+  }, 50);
+  addOutput('<span class="green">Matrix rain activated. Type <span class="accent">matrix</span> again to stop.</span>');
+}
+
+const FORTUNES = [
+  "The best way to predict the future is to build it.",
+  "Ship it. You can always iterate later.",
+  "A prototype is worth a thousand meetings.",
+  "The only failed experiment is the one you didn't learn from.",
+  "Users don't care about your tech stack. They care about their problem.",
+  "If you're not embarrassed by the first version, you shipped too late.",
+  "Product-market fit is a feeling before it's a metric.",
+  "The best product decision is the one you can reverse.",
+  "Speed is a feature. Shipping is a superpower.",
+  "Your roadmap is a hypothesis, not a promise.",
+  "Every line of code is a liability. Ship less, learn more.",
+  "The meeting that could've been an async doc is the meeting you should cancel.",
+  "10x engineers ship 10x faster by building 10x less.",
+  "Culture isn't perks. It's what happens when the CEO isn't watching.",
+  "Revenue fixes everything. Ship the thing that makes money.",
+];
+
+function cmdFortune(){
+  addOutput('');
+  addOutput(`<span class="yellow">  "${FORTUNES[Math.floor(Math.random()*FORTUNES.length)]}"</span>`);
+  addOutput('');
+}
+
+function cmdBanner(text){
+  const letters = {
+    'A':'  ▄  \n █ █ \n█▀▀█\n█  █','B':'█▀▀▄\n█▀▀▄\n█▄▄▀','C':' ▄▀▀\n█   \n ▀▄▄','D':'█▀▀▄\n█  █\n█▄▄▀',
+    'E':'█▀▀\n█▀▀\n█▄▄','F':'█▀▀\n█▀▀\n█  ','G':' ▄▀▀\n█ ▀█\n ▀▄▀','H':'█  █\n█▀▀█\n█  █',
+    'I':'▀█▀\n █ \n▄█▄','J':'  █\n  █\n▀▄▀','K':'█ █\n█▀▄\n█ █','L':'█  \n█  \n█▄▄',
+    'M':'█▄▄█\n█ ▀ █\n█   █','N':'█▄ █\n█ ▀█\n█  █','O':' ▄▀▄\n█   █\n ▀▄▀','P':'█▀▀▄\n█▀▀ \n█   ',
+    'Q':' ▄▀▄\n█   █\n ▀▄▀\\','R':'█▀▀▄\n█▀▀▄\n█  █','S':'▄▀▀\n ▀▄\n▄▄▀','T':'▀▀█▀▀\n  █  \n  █  ',
+    'U':'█  █\n█  █\n ▀▀ ','V':'█   █\n ▀▄▀ \n  ▀  ','W':'█   █\n█ ▀ █\n█▄▄▄█','X':'▀▄ ▄▀\n  █  \n▄▀ ▀▄',
+    'Y':'█ █\n ▀█\n  █','Z':'▀▀█\n ▄▀\n█▄▄',' ':'   \n   \n   ',
+    '0':' ▄▀▄\n█   █\n ▀▄▀','1':' ▄█\n  █\n ▄█▄','2':'▀▀█\n ▄▀\n█▄▄','3':'▀▀█\n ▀█\n▄▄▀',
+    '4':'█ █\n▀▀█\n  █','5':'█▀▀\n ▀▄\n▄▄▀','6':' ▄▀\n█▀▄\n ▀ ','7':'▀▀█\n ▄▀\n█  ',
+    '8':' ▄ \n▄▀▄\n ▀ ','9':' ▀▄\n▄▀█\n ▀ ','.':'  \n  \n▄ ','!':'█\n█\n▄',
+    '?':'▀▀█\n ▄▀\n ▄ ','-':'   \n▀▀▀\n   ','_':'   \n   \n▀▀▀',
+  };
+  const upper = text.toUpperCase();
+  const charLines = [];
+  for(const ch of upper){
+    const art = letters[ch] || letters['?'];
+    charLines.push(art.split('\n'));
+  }
+  const height = Math.max(...charLines.map(c=>c.length));
+  for(let row = 0; row < height; row++){
+    let line = '';
+    charLines.forEach(c => { line += (c[row]||'').padEnd((c[0]||'').length+1); });
+    addOutput(`<span class="accent">${esc(line)}</span>`);
+  }
+}
+
+function cmdLs(){
+  addOutput('<span class="accent bold">about.md</span>     <span class="accent bold">skills.json</span>    <span class="accent bold">experience/</span>');
+  addOutput('<span class="accent bold">projects/</span>    <span class="accent bold">contact.md</span>     <span class="accent bold">values.txt</span>');
+  addOutput('<span class="accent bold">resume.pdf</span>   <span class="accent bold">social.yml</span>     <span class="accent bold">.portfolio</span>');
+}
+
+function cmdCat(file){
+  if(!file){ addOutput('<span class="red">Usage: cat [filename]</span>'); return; }
+  const f = file.replace(/\..*$/,'').toLowerCase();
+  const map = {about:'about',skills:'skills',experience:'experience',projects:'projects',contact:'contact',social:'social',resume:'resume',values:'values'};
+  if(map[f]){ executeCommand(map[f]); }
+  else if(f === '.portfolio'){ addOutput('<span class="dim-color">Built with Terminal Portfolio. https://github.com</span>'); }
+  else { addOutput(`<span class="red">cat: ${esc(file)}: No such file</span>`); }
+}
+
+// === EDITOR ===
+function renderEditor(){
+  const el = document.getElementById('editorContent');
+  el.innerHTML = `
+    <h2>✏ Profile Editor</h2>
+    <p style="color:var(--dim);margin-bottom:20px;font-size:13px">Edit your profile data. Changes auto-save and reflect in the terminal.</p>
+    
+    <h3>Identity</h3>
+    <div class="field-group"><label>Full Name</label><input id="ed-name" value="${esc(profile.name)}"></div>
+    <div class="field-group"><label>Handle (prompt username)</label><input id="ed-handle" value="${esc(profile.handle)}"></div>
+    <div class="field-group"><label>Hostname (prompt host)</label><input id="ed-hostname" value="${esc(profile.hostname)}"></div>
+    <div class="field-group"><label>Title</label><input id="ed-title" value="${esc(profile.title)}"></div>
+    <div class="field-group"><label>Location</label><input id="ed-location" value="${esc(profile.location)}"></div>
+    <div class="field-group"><label>Email</label><input id="ed-email" value="${esc(profile.email)}"></div>
+    <div class="field-group"><label>Website</label><input id="ed-website" value="${esc(profile.website)}"></div>
+    <div class="field-group"><label>Bio (newlines preserved)</label><textarea id="ed-bio" rows="3">${esc(profile.bio)}</textarea></div>
+    <div class="field-group"><label>ASCII Art Banner</label><textarea id="ed-ascii" rows="6" style="font-size:11px;line-height:1.2">${esc(profile.ascii)}</textarea></div>
+    
+    <h3>Social Links</h3>
+    <div class="field-group"><label>LinkedIn</label><input id="ed-linkedin" value="${esc(profile.social.linkedin||'')}"></div>
+    <div class="field-group"><label>Twitter</label><input id="ed-twitter" value="${esc(profile.social.twitter||'')}"></div>
+    <div class="field-group"><label>GitHub</label><input id="ed-github" value="${esc(profile.social.github||'')}"></div>
+    
+    <h3>Skills</h3>
+    <div id="ed-skills" class="list-editor"></div>
+    <button class="btn sm" onclick="addSkill()">+ Add Skill Category</button>
+    
+    <h3>Experience</h3>
+    <div id="ed-exp" class="list-editor"></div>
+    <button class="btn sm" onclick="addExp()">+ Add Experience</button>
+    
+    <h3>Projects</h3>
+    <div id="ed-proj" class="list-editor"></div>
+    <button class="btn sm" onclick="addProj()">+ Add Project</button>
+    
+    <h3>Values</h3>
+    <div id="ed-values" class="list-editor"></div>
+    <button class="btn sm" onclick="addValue()">+ Add Value</button>
+    
+    <div style="margin-top:30px;padding-top:20px;border-top:1px solid var(--border)">
+      <button class="btn" onclick="saveEditor()">💾 Save All Changes</button>
+      <button class="btn ghost" style="margin-left:8px" onclick="if(confirm('Reset to defaults?')){profile=JSON.parse(JSON.stringify(DEFAULT_PROFILE));save();renderEditor()}">↻ Reset</button>
+    </div>
+  `;
+  
+  renderSkillsList();
+  renderExpList();
+  renderProjList();
+  renderValuesList();
+  
+  // Auto-save on input
+  el.querySelectorAll('input,textarea').forEach(inp => {
+    inp.addEventListener('change', saveEditor);
+  });
+}
+
+function renderSkillsList(){
+  const el = document.getElementById('ed-skills');
+  el.innerHTML = profile.skills.map((s,i) => `
+    <div class="list-item">
+      <input class="small" value="${esc(s.category)}" placeholder="Category" onchange="profile.skills[${i}].category=this.value;save()">
+      <input value="${esc(s.items)}" placeholder="Skills (comma separated)" onchange="profile.skills[${i}].items=this.value;save()">
+      <button class="btn sm danger" onclick="profile.skills.splice(${i},1);save();renderSkillsList()">×</button>
+    </div>
+  `).join('');
+}
+function addSkill(){ profile.skills.push({category:'New',items:''}); save(); renderSkillsList(); }
+
+function renderExpList(){
+  const el = document.getElementById('ed-exp');
+  el.innerHTML = profile.experience.map((e,i) => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px">
+      <div class="list-item"><input class="med" value="${esc(e.role)}" placeholder="Role" onchange="profile.experience[${i}].role=this.value;save()"><input class="small" value="${esc(e.company)}" placeholder="Company" onchange="profile.experience[${i}].company=this.value;save()"><input class="small" value="${esc(e.period)}" placeholder="Period" onchange="profile.experience[${i}].period=this.value;save()"><button class="btn sm danger" onclick="profile.experience.splice(${i},1);save();renderExpList()">×</button></div>
+      <div class="field-group" style="margin-top:6px"><textarea rows="2" placeholder="Highlights (use • to separate)" onchange="profile.experience[${i}].highlights=this.value;save()">${esc(e.highlights)}</textarea></div>
+    </div>
+  `).join('');
+}
+function addExp(){ profile.experience.push({role:'',company:'',period:'',highlights:''}); save(); renderExpList(); }
+
+function renderProjList(){
+  const el = document.getElementById('ed-proj');
+  el.innerHTML = profile.projects.map((p,i) => `
+    <div class="list-item">
+      <input class="small" value="${esc(p.name)}" placeholder="Name" onchange="profile.projects[${i}].name=this.value;save()">
+      <input value="${esc(p.desc)}" placeholder="Description" onchange="profile.projects[${i}].desc=this.value;save()">
+      <input class="small" value="${esc(p.url||'')}" placeholder="URL" onchange="profile.projects[${i}].url=this.value;save()">
+      <select class="small" onchange="profile.projects[${i}].status=this.value;save()" style="width:80px;flex:none">
+        <option ${p.status==='Live'?'selected':''}>Live</option>
+        <option ${p.status==='Shipped'?'selected':''}>Shipped</option>
+        <option ${p.status==='WIP'?'selected':''}>WIP</option>
+        <option ${p.status==='Idea'?'selected':''}>Idea</option>
+      </select>
+      <button class="btn sm danger" onclick="profile.projects.splice(${i},1);save();renderProjList()">×</button>
+    </div>
+  `).join('');
+}
+function addProj(){ profile.projects.push({name:'',desc:'',url:'',status:'WIP'}); save(); renderProjList(); }
+
+function renderValuesList(){
+  const el = document.getElementById('ed-values');
+  el.innerHTML = profile.values.map((v,i) => `
+    <div class="list-item">
+      <input value="${esc(v)}" onchange="profile.values[${i}]=this.value;save()">
+      <button class="btn sm danger" onclick="profile.values.splice(${i},1);save();renderValuesList()">×</button>
+    </div>
+  `).join('');
+}
+function addValue(){ profile.values.push(''); save(); renderValuesList(); }
+
+function saveEditor(){
+  const g = id => (document.getElementById(id)||{}).value || '';
+  profile.name = g('ed-name');
+  profile.handle = g('ed-handle');
+  profile.hostname = g('ed-hostname');
+  profile.title = g('ed-title');
+  profile.location = g('ed-location');
+  profile.email = g('ed-email');
+  profile.website = g('ed-website');
+  profile.bio = g('ed-bio');
+  profile.ascii = g('ed-ascii');
+  profile.social.linkedin = g('ed-linkedin');
+  profile.social.twitter = g('ed-twitter');
+  profile.social.github = g('ed-github');
+  save();
+}
+
+// === EXPORT ===
+function renderExport(){
+  const el = document.getElementById('exportContent');
+  el.innerHTML = `
+    <h2>📦 Export Portfolio</h2>
+    <p style="color:var(--dim);margin-bottom:20px;font-size:13px">Download your portfolio as a single HTML file. Host anywhere — GitHub Pages, Netlify, Vercel, or just open locally.</p>
+    
+    <div class="export-card">
+      <h3>🌐 Standalone HTML</h3>
+      <p>A single self-contained HTML file with your terminal portfolio. No dependencies, no build step. Just upload and go.</p>
+      <button class="btn" onclick="exportHTML()">⬇ Download index.html</button>
+    </div>
+    
+    <div class="export-card">
+      <h3>📋 JSON Backup</h3>
+      <p>Export your profile data as JSON. Use this to backup your profile or transfer it to another machine.</p>
+      <div class="btn-row">
+        <button class="btn" onclick="exportJSON()">⬇ Download JSON</button>
+        <button class="btn ghost" onclick="copyJSON()">📋 Copy to Clipboard</button>
+      </div>
+    </div>
+    
+    <div class="export-card">
+      <h3>📄 Markdown Resume</h3>
+      <p>Your profile as a clean Markdown file — perfect for GitHub README, Notion, or docs.</p>
+      <div class="btn-row">
+        <button class="btn" onclick="exportMarkdown()">⬇ Download .md</button>
+        <button class="btn ghost" onclick="copyMarkdown()">📋 Copy to Clipboard</button>
+      </div>
+    </div>
+    
+    <div class="export-card">
+      <h3>📥 Import Profile</h3>
+      <p>Restore a previously exported JSON profile.</p>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+      <button class="btn ghost" onclick="document.getElementById('importFile').click()">📂 Import JSON</button>
+    </div>
+  `;
+}
+
+function generateStandaloneHTML(){
+  const theme = profile.theme || 'default';
+  const p = JSON.stringify(profile);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${profile.name} — Terminal Portfolio</title>
+<meta name="description" content="${profile.title} — ${profile.bio.split('\n')[0]}">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--fg:#c9d1d9;--accent:#58a6ff;--dim:#484f58;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff;--cyan:#39d353;--border:#30363d;--surface:#161b22;--prompt-user:#3fb950;--prompt-host:#58a6ff;--prompt-path:#bc8cff;--cursor:#58a6ff;--font:'Menlo','Monaco','Cascadia Code','Consolas','Liberation Mono',monospace}
+[data-theme="matrix"]{--bg:#000a00;--fg:#00ff41;--accent:#00ff41;--dim:#005500;--green:#00ff41;--red:#ff0000;--yellow:#ccff00;--purple:#00ff88;--cyan:#00ffcc;--border:#003300;--surface:#001100;--prompt-user:#00ff41;--prompt-host:#00cc33;--prompt-path:#00ff88;--cursor:#00ff41}
+[data-theme="dracula"]{--bg:#282a36;--fg:#f8f8f2;--accent:#bd93f9;--dim:#6272a4;--green:#50fa7b;--red:#ff5555;--yellow:#f1fa8c;--purple:#bd93f9;--cyan:#8be9fd;--border:#44475a;--surface:#21222c;--prompt-user:#50fa7b;--prompt-host:#8be9fd;--prompt-path:#bd93f9;--cursor:#f8f8f2}
+[data-theme="monokai"]{--bg:#272822;--fg:#f8f8f2;--accent:#66d9ef;--dim:#75715e;--green:#a6e22e;--red:#f92672;--yellow:#e6db74;--purple:#ae81ff;--cyan:#66d9ef;--border:#3e3d32;--surface:#1e1f1c;--prompt-user:#a6e22e;--prompt-host:#66d9ef;--prompt-path:#ae81ff;--cursor:#f8f8f2}
+[data-theme="solarized"]{--bg:#002b36;--fg:#839496;--accent:#268bd2;--dim:#586e75;--green:#859900;--red:#dc322f;--yellow:#b58900;--purple:#6c71c4;--cyan:#2aa198;--border:#073642;--surface:#073642;--prompt-user:#859900;--prompt-host:#268bd2;--prompt-path:#6c71c4;--cursor:#839496}
+[data-theme="nord"]{--bg:#2e3440;--fg:#d8dee9;--accent:#88c0d0;--dim:#4c566a;--green:#a3be8c;--red:#bf616a;--yellow:#ebcb8b;--purple:#b48ead;--cyan:#88c0d0;--border:#3b4252;--surface:#3b4252;--prompt-user:#a3be8c;--prompt-host:#88c0d0;--prompt-path:#b48ead;--cursor:#d8dee9}
+[data-theme="catppuccin"]{--bg:#1e1e2e;--fg:#cdd6f4;--accent:#89b4fa;--dim:#585b70;--green:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--cyan:#94e2d5;--border:#313244;--surface:#181825;--prompt-user:#a6e3a1;--prompt-host:#89b4fa;--prompt-path:#cba6f7;--cursor:#cdd6f4}
+[data-theme="retro"]{--bg:#1a0a2e;--fg:#ff6600;--accent:#ff00ff;--dim:#663399;--green:#00ff00;--red:#ff0000;--yellow:#ffff00;--purple:#ff00ff;--cyan:#00ffff;--border:#330066;--surface:#0d0520;--prompt-user:#00ff00;--prompt-host:#ff00ff;--prompt-path:#00ffff;--cursor:#ff6600}
+[data-theme="light"]{--bg:#fafbfc;--fg:#24292e;--accent:#0366d6;--dim:#6a737d;--green:#22863a;--red:#cb2431;--yellow:#b08800;--purple:#6f42c1;--cyan:#1b7c83;--border:#e1e4e8;--surface:#ffffff;--prompt-user:#22863a;--prompt-host:#0366d6;--prompt-path:#6f42c1;--cursor:#24292e}
+html,body{height:100%;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.6;overflow-x:hidden}
+.terminal{padding:20px;cursor:text;min-height:100vh}.terminal:focus{outline:none}
+.output-line{white-space:pre-wrap;word-break:break-word;min-height:1.6em}
+.output-line .accent{color:var(--accent)}.output-line .green{color:var(--green)}.output-line .red{color:var(--red)}
+.output-line .yellow{color:var(--yellow)}.output-line .purple{color:var(--purple)}.output-line .cyan{color:var(--cyan)}
+.output-line .bold{font-weight:bold}.output-line .dim-color{color:var(--dim)}.output-line .underline{text-decoration:underline}
+.prompt-line{display:flex;align-items:center;white-space:pre}
+.prompt-user{color:var(--prompt-user);font-weight:bold}.prompt-at{color:var(--dim)}
+.prompt-host{color:var(--prompt-host);font-weight:bold}.prompt-sep{color:var(--dim)}
+.prompt-path{color:var(--prompt-path)}.prompt-char{color:var(--fg);margin-right:6px}
+.input-area{flex:1;position:relative;display:flex;align-items:center}
+.cmd-input{background:none;border:none;color:var(--fg);font-family:var(--font);font-size:14px;outline:none;width:100%;caret-color:transparent;line-height:1.6}
+.cursor-block{width:8px;height:17px;background:var(--cursor);display:inline-block;animation:blink 1s step-end infinite;position:absolute;pointer-events:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.ascii{color:var(--accent);font-size:11px;line-height:1.3}
+.suggestion{color:var(--dim);opacity:.5}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+@media(max-width:600px){.terminal{padding:10px;font-size:12px}.prompt-line{font-size:12px}.cmd-input{font-size:12px}}
+</style>
+</head>
+<body data-theme="${theme}">
+<div class="terminal" id="terminal" tabindex="0"></div>
+<script>
+const profile=${p};
+const COMMANDS=['help','about','skills','experience','projects','contact','social','resume','values','neofetch','whoami','theme','clear','history','date','echo','cowsay','fortune','banner','ls','cat','pwd','sudo'];
+const THEMES=['default','matrix','dracula','monokai','solarized','nord','catppuccin','retro','light'];
+const THEME_NAMES={default:'GitHub Dark',matrix:'Matrix',dracula:'Dracula',monokai:'Monokai',solarized:'Solarized Dark',nord:'Nord',catppuccin:'Catppuccin',retro:'Retro',light:'Light'};
+const FORTUNES=["Ship it. You can always iterate later.","A prototype is worth a thousand meetings.","The only failed experiment is the one you didn't learn from.","Users don't care about your tech stack.","If you're not embarrassed by the first version, you shipped too late.","Speed is a feature. Shipping is a superpower.","Your roadmap is a hypothesis, not a promise.","Revenue fixes everything."];
+let cmdHistory=[],historyIndex=-1,currentInput='',outputDiv,promptDiv,inputEl,cursorEl,suggestionEl;
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function init(){
+const t=document.getElementById('terminal');
+outputDiv=document.createElement('div');t.appendChild(outputDiv);
+promptDiv=document.createElement('div');promptDiv.className='prompt-line';
+promptDiv.innerHTML='<span class="prompt-user">'+esc(profile.handle)+'</span><span class="prompt-at">@</span><span class="prompt-host">'+esc(profile.hostname)+'</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-char">$</span><span class="input-area"><input class="cmd-input" id="ci" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus><span class="suggestion" id="sg"></span><span class="cursor-block" id="cu"></span></span>';
+t.appendChild(promptDiv);inputEl=document.getElementById('ci');cursorEl=document.getElementById('cu');suggestionEl=document.getElementById('sg');
+inputEl.addEventListener('keydown',handleKey);inputEl.addEventListener('input',updateCursor);t.addEventListener('click',()=>inputEl.focus());
+printWelcome();updateCursor();setTimeout(()=>inputEl.focus(),100);
+}
+function updateCursor(){const v=inputEl.value;const m=document.createElement('span');m.style.cssText='visibility:hidden;position:absolute;white-space:pre;font:14px var(--font)';m.textContent=v.substring(0,inputEl.selectionStart);document.body.appendChild(m);const w=m.offsetWidth;document.body.removeChild(m);cursorEl.style.left=w+'px';const s=COMMANDS.find(c=>c.startsWith(v.toLowerCase())&&c!==v.toLowerCase());if(s&&v.length>0){suggestionEl.textContent=s.substring(v.length);suggestionEl.style.left=w+'px'}else{suggestionEl.textContent=''}}
+function handleKey(e){if(e.key==='Enter'){e.preventDefault();const c=inputEl.value.trim();if(c)cmdHistory.push(c);historyIndex=-1;currentInput='';run(c);return}if(e.key==='Tab'){e.preventDefault();const s=COMMANDS.find(c=>c.startsWith(inputEl.value.toLowerCase())&&c!==inputEl.value.toLowerCase());if(s){inputEl.value=s;updateCursor()}return}if(e.key==='ArrowUp'){e.preventDefault();if(!cmdHistory.length)return;if(historyIndex===-1){currentInput=inputEl.value;historyIndex=cmdHistory.length-1}else if(historyIndex>0)historyIndex--;inputEl.value=cmdHistory[historyIndex];updateCursor();return}if(e.key==='ArrowDown'){e.preventDefault();if(historyIndex===-1)return;if(historyIndex<cmdHistory.length-1){historyIndex++;inputEl.value=cmdHistory[historyIndex]}else{historyIndex=-1;inputEl.value=currentInput}updateCursor();return}if(e.key==='l'&&e.ctrlKey){e.preventDefault();outputDiv.innerHTML='';return}setTimeout(updateCursor,0)}
+function echo(t){addPrompt(t);inputEl.value='';updateCursor()}
+function addPrompt(t){const l=document.createElement('div');l.className='prompt-line';l.innerHTML='<span class="prompt-user">'+esc(profile.handle)+'</span><span class="prompt-at">@</span><span class="prompt-host">'+esc(profile.hostname)+'</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-char">$</span><span style="color:var(--fg)">'+esc(t)+'</span>';outputDiv.appendChild(l)}
+function out(h){const l=document.createElement('div');l.className='output-line';l.innerHTML=h;outputDiv.appendChild(l)}
+function sb(){document.getElementById('terminal').scrollTop=document.getElementById('terminal').scrollHeight;window.scrollTo(0,document.body.scrollHeight)}
+function run(raw){echo(raw);if(!raw){sb();return}const p2=raw.match(/(?:[^\\s"]+|"[^"]*")+/g)||[];const c=(p2[0]||'').toLowerCase();const a=p2.slice(1).map(x=>x.replace(/^"|"$/g,''));
+switch(c){
+case'help':out('');out('<span class="bold accent">Available Commands</span>');out('<span class="dim-color">─────────────────────────────────────────</span>');[['about','Who I am'],['skills','Skills & expertise'],['experience','Work history (experience N for detail)'],['projects','Things I built'],['contact','How to reach me'],['social','Social links'],['resume','Full resume'],['values','What I believe in'],['neofetch','System info, portfolio style'],['whoami','Quick identity'],['',''],['theme [name]','Switch theme'],['cowsay [text]','🐄'],['fortune','Random wisdom'],['clear','Clear terminal'],['history','Command history'],['date','Current date']].forEach(([c2,d])=>{if(!c2){out('');return}out('  <span class="green">'+esc(c2.padEnd(18))+'</span><span class="dim-color">'+esc(d)+'</span>')});out('');out('<span class="dim-color">↑↓ history · Tab autocomplete · Ctrl+L clear</span>');break;
+case'about':out('');out('<span class="bold accent">About '+esc(profile.name)+'</span>');out('<span class="dim-color">─────────────────────────────────────────</span>');profile.bio.split('\\n').forEach(l=>out(esc(l)));out('');out('<span class="cyan">📍</span> '+esc(profile.location));out('<span class="cyan">💼</span> '+esc(profile.title));out('<span class="cyan">🌐</span> '+esc(profile.website));out('');break;
+case'skills':out('');out('<span class="bold accent">Skills & Expertise</span>');out('<span class="dim-color">─────────────────────────────────────────</span>');profile.skills.forEach(s=>{out('  <span class="yellow bold">'+esc(s.category)+'</span>');out('  <span class="dim-color">└─</span> '+esc(s.items));out('')});break;
+case'experience':case'exp':out('');if(a[0]&&!isNaN(a[0])){const i=parseInt(a[0])-1;const e=profile.experience[i];if(!e){out('<span class="red">No entry #'+a[0]+'</span>');break}out('<span class="bold accent">'+esc(e.role)+'</span>');out('<span class="cyan">'+esc(e.company)+'</span> <span class="dim-color">'+esc(e.period)+'</span>');out('<span class="dim-color">─────────────────────────────────────────</span>');e.highlights.split(' • ').forEach(h=>out('  <span class="green">▸</span> '+esc(h)))}else{out('<span class="bold accent">Experience</span>');out('<span class="dim-color">─────────────────────────────────────────</span>');profile.experience.forEach((e,i)=>{out('  <span class="yellow">['+(i+1)+']</span> <span class="bold">'+esc(e.role)+'</span>');out('      <span class="cyan">'+esc(e.company)+'</span> <span class="dim-color">· '+esc(e.period)+'</span>');out('')});out('<span class="dim-color">Type experience [number] for details</span>')}out('');break;
+case'projects':out('');out('<span class="bold accent">Projects</span>');out('<span class="dim-color">─────────────────────────────────────────</span>');profile.projects.forEach(p=>{const st=p.status==='Live'?'<span class="green">● Live</span>':p.status==='Shipped'?'<span class="yellow">● Shipped</span>':'<span class="dim-color">● '+esc(p.status)+'</span>';out('  <span class="bold">'+esc(p.name)+'</span> '+st);out('  <span class="dim-color">'+esc(p.desc)+'</span>');if(p.url)out('  <span class="accent">'+esc(p.url)+'</span>');out('')});break;
+case'contact':out('');out('<span class="bold accent">Contact</span>');out('<span class="dim-color">─────────────────────────────────────────</span>');out('  <span class="green">📧</span> '+esc(profile.email));out('  <span class="green">🌐</span> '+esc(profile.website));out('  <span class="green">📍</span> '+esc(profile.location));out('');break;
+case'social':out('');out('<span class="bold accent">Social</span>');out('<span class="dim-color">─────────────────────────────────────────</span>');Object.entries(profile.social).forEach(([k,v])=>{if(v)out('  <span class="cyan">'+esc(k.padEnd(12))+'</span> '+esc(v))});out('');break;
+case'resume':out('');out('<pre class="ascii">'+esc(profile.ascii)+'</pre>');out('');out('<span class="bold green">'+esc(profile.name)+'</span>');out('<span class="dim-color">'+esc(profile.title)+' · '+esc(profile.location)+'</span>');out('<span class="dim-color">'+esc(profile.email)+' · '+esc(profile.website)+'</span>');out('');profile.bio.split('\\n').forEach(l=>out(esc(l)));out('');out('<span class="bold accent">── Experience ──────────────────────────</span>');out('');profile.experience.forEach(e=>{out('<span class="bold">'+esc(e.role)+'</span> <span class="dim-color">@</span> <span class="cyan">'+esc(e.company)+'</span>');out('<span class="dim-color">'+esc(e.period)+'</span>');e.highlights.split(' • ').forEach(h=>out('  <span class="green">▸</span> '+esc(h)));out('')});out('<span class="bold accent">── Skills ──────────────────────────────</span>');out('');profile.skills.forEach(s=>out('  <span class="yellow">'+esc(s.category)+':</span> '+esc(s.items)));out('');out('<span class="bold accent">── Projects ────────────────────────────</span>');out('');profile.projects.forEach(p=>out('  <span class="bold">'+esc(p.name)+'</span> <span class="dim-color">— '+esc(p.desc)+'</span>'));out('');break;
+case'values':out('');out('<span class="bold accent">Values & Principles</span>');out('<span class="dim-color">─────────────────────────────────────────</span>');profile.values.forEach(v=>out('  <span class="purple">◆</span> '+esc(v)));out('');break;
+case'neofetch':out('');const nf=[['',\`<span class="bold green">\${esc(profile.name)}</span>@<span class="accent">\${esc(profile.hostname)}</span>\`],['','<span class="dim-color">─────────────────────────</span>'],['Title',profile.title],['Location',profile.location],['Experience',profile.experience.length+' roles'],['Projects',profile.projects.length+' built'],['Theme',THEME_NAMES[document.body.getAttribute('data-theme')]||'GitHub Dark'],['Terminal','Terminal Portfolio v1.0']];nf.forEach(([k,v])=>{if(k)out('<span class="accent bold">'+esc(k).padEnd(12)+'</span>'+(v.startsWith('<')?v:esc(v)));else out(v)});out('');out('<span style="background:#000;color:#000">███</span><span style="background:#c00;color:#c00">███</span><span style="background:#0a0;color:#0a0">███</span><span style="background:#cc0;color:#cc0">███</span><span style="background:#00c;color:#00c">███</span><span style="background:#c0c;color:#c0c">███</span><span style="background:#0cc;color:#0cc">███</span><span style="background:#ccc;color:#ccc">███</span>');out('');break;
+case'whoami':out('<span class="green">'+esc(profile.name)+'</span> <span class="dim-color">— '+esc(profile.title)+'</span>');break;
+case'theme':if(!a[0]||a[0]==='list'){out('');out('<span class="bold accent">Themes</span>');THEMES.forEach(t=>{const act=document.body.getAttribute('data-theme')===t?' <span class="green">← current</span>':'';out('  <span class="cyan">'+esc(t.padEnd(14))+'</span>'+esc(THEME_NAMES[t])+act)});out('');out('<span class="dim-color">Usage: theme [name]</span>')}else{const t=a[0].toLowerCase();if(!THEMES.includes(t)){out('<span class="red">Unknown: '+esc(t)+'</span>')}else{document.body.setAttribute('data-theme',t);out('<span class="green">✓</span> '+esc(THEME_NAMES[t]))}}break;
+case'cowsay':{const tx=a.join(' ')||'moo';const w2=Math.min(tx.length,40);out(' '+'_'.repeat(w2+2));out('< '+esc(tx.padEnd(w2))+' >');out(' '+'-'.repeat(w2+2));out('        \\\\   ^__^');out('         \\\\  (oo)\\\\_______');out('            (__)\\\\ &nbsp; &nbsp; &nbsp; )\\\\/\\\\');out('                ||----w |');out('                ||     ||')}break;
+case'fortune':out('');out('<span class="yellow">  "'+FORTUNES[Math.floor(Math.random()*FORTUNES.length)]+'"</span>');out('');break;
+case'clear':outputDiv.innerHTML='';break;
+case'history':cmdHistory.forEach((c2,i)=>out('<span class="dim-color">'+String(i+1).padStart(4)+'</span>  '+esc(c2)));break;
+case'date':out(new Date().toString());break;
+case'echo':out(esc(a.join(' ')));break;
+case'ls':out('<span class="accent bold">about.md</span>     <span class="accent bold">skills.json</span>    <span class="accent bold">experience/</span>');out('<span class="accent bold">projects/</span>    <span class="accent bold">contact.md</span>     <span class="accent bold">values.txt</span>');break;
+case'cat':if(!a[0])out('<span class="red">Usage: cat [file]</span>');else{const f=a[0].replace(/\\..*$/,'').toLowerCase();const m2={about:'about',skills:'skills',experience:'experience',projects:'projects',contact:'contact',social:'social',resume:'resume',values:'values'};if(m2[f])run(m2[f]);else out('<span class="red">cat: '+esc(a[0])+': No such file</span>')}break;
+case'pwd':out('/home/'+esc(profile.handle));break;
+case'sudo':out('<span class="red">'+esc(profile.handle)+' is not in the sudoers file. 🚨</span>');break;
+case'exit':case'quit':out('<span class="dim-color">There is no escape. 😏</span>');break;
+default:out('<span class="red">command not found:</span> '+esc(c)+'. Type <span class="accent">help</span> for commands.')}sb()}
+function printWelcome(){out('<pre class="ascii">'+esc(profile.ascii)+'</pre>');out('');out('<span class="bold green">'+esc(profile.name)+'</span> — <span class="dim-color">'+esc(profile.title)+'</span>');out('<span class="dim-color">'+esc(profile.bio.split('\\n')[0])+'</span>');out('');out('Type <span class="accent">help</span> to see available commands. Tab to autocomplete.');out('')}
+init();
+<\/script>
+</body>
+</html>`;
+}
+
+function exportHTML(){
+  const html = generateStandaloneHTML();
+  download('portfolio.html', html, 'text/html');
+}
+
+function exportJSON(){
+  download('portfolio-profile.json', JSON.stringify(profile, null, 2), 'application/json');
+}
+
+function copyJSON(){
+  navigator.clipboard.writeText(JSON.stringify(profile, null, 2));
+  alert('Profile JSON copied to clipboard!');
+}
+
+function generateMarkdown(){
+  let md = `# ${profile.name}\n\n`;
+  md += `**${profile.title}** · ${profile.location}\n\n`;
+  md += `${profile.email} · ${profile.website}\n\n`;
+  md += `---\n\n## About\n\n${profile.bio}\n\n`;
+  md += `## Experience\n\n`;
+  profile.experience.forEach(e => {
+    md += `### ${e.role} @ ${e.company}\n*${e.period}*\n\n`;
+    e.highlights.split(' • ').forEach(h => md += `- ${h}\n`);
+    md += '\n';
+  });
+  md += `## Skills\n\n`;
+  profile.skills.forEach(s => md += `- **${s.category}:** ${s.items}\n`);
+  md += `\n## Projects\n\n`;
+  profile.projects.forEach(p => md += `- **${p.name}** — ${p.desc}${p.url ? ` ([${p.url}](https://${p.url}))` : ''}\n`);
+  md += `\n## Values\n\n`;
+  profile.values.forEach(v => md += `- ${v}\n`);
+  md += `\n## Social\n\n`;
+  Object.entries(profile.social).forEach(([k,v]) => { if(v) md += `- **${k}:** ${v}\n`; });
+  return md;
+}
+
+function exportMarkdown(){ download('resume.md', generateMarkdown(), 'text/markdown'); }
+function copyMarkdown(){ navigator.clipboard.writeText(generateMarkdown()); alert('Markdown copied!'); }
+
+function importJSON(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try {
+      const data = JSON.parse(ev.target.result);
+      Object.assign(profile, data);
+      save();
+      renderEditor();
+      alert('Profile imported! Switch to Terminal to see changes.');
+    } catch(err){ alert('Invalid JSON file'); }
+  };
+  reader.readAsText(file);
+}
+
+function download(name, content, type){
+  const blob = new Blob([content], {type});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// === PREVIEW ===
+function refreshPreview(){
+  const iframe = document.getElementById('previewFrame');
+  const html = generateStandaloneHTML();
+  iframe.srcdoc = html;
+}
+
+function openPreviewFullscreen(){
+  const html = generateStandaloneHTML();
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+// === TABS ===
+document.querySelectorAll('.tab[data-panel]').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    const panel = document.getElementById('panel-' + tab.dataset.panel);
+    panel.classList.add('active');
+    
+    if(tab.dataset.panel === 'editor') renderEditor();
+    if(tab.dataset.panel === 'export') renderExport();
+    if(tab.dataset.panel === 'preview') refreshPreview();
+    if(tab.dataset.panel === 'terminal') setTimeout(()=> inputEl.focus(), 100);
+  });
+});
+
+// Theme button
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const current = profile.theme || 'default';
+  const idx = THEMES.indexOf(current);
+  const next = THEMES[(idx + 1) % THEMES.length];
+  document.body.setAttribute('data-theme', next);
+  profile.theme = next;
+  save();
+  document.getElementById('themeBtn').textContent = '🎨 ' + THEME_NAMES[next];
+});
+
+// Apply saved theme
+if(profile.theme && profile.theme !== 'default'){
+  document.body.setAttribute('data-theme', profile.theme);
+}
+
+// Init
+initTerminal();
+</script>
+</body>
+</html>

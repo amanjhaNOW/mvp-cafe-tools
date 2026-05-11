@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint Board — Scrum Sprint Planner & Velocity Tracker</title>
+<style>
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #232736; --surface3: #2d3145;
+  --border: #353a50; --text: #e4e7f1; --text2: #9ca3bf; --text3: #6b7294;
+  --accent: #6c5ce7; --accent2: #a29bfe; --accent-bg: rgba(108,92,231,0.12);
+  --green: #00b894; --green-bg: rgba(0,184,148,0.12); --yellow: #fdcb6e; --yellow-bg: rgba(253,203,110,0.12);
+  --red: #e17055; --red-bg: rgba(225,112,85,0.12); --blue: #74b9ff; --blue-bg: rgba(116,185,255,0.12);
+  --orange: #e17055; --pink: #fd79a8; --radius: 10px; --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+button { cursor:pointer; font-family:inherit; border:none; background:none; color:var(--text); }
+input,textarea,select { font-family:inherit; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:8px 12px; outline:none; width:100%; }
+input:focus,textarea:focus,select:focus { border-color:var(--accent); }
+textarea { resize:vertical; min-height:60px; }
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+/* Header */
+.header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--border); background:var(--surface); position:sticky; top:0; z-index:100; }
+.header h1 { font-size:20px; font-weight:700; display:flex; align-items:center; gap:10px; }
+.header h1 span { font-size:24px; }
+.header-actions { display:flex; gap:8px; align-items:center; }
+.btn { padding:8px 16px; border-radius:6px; font-size:13px; font-weight:600; transition:all .2s; display:flex; align-items:center; gap:6px; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { background:var(--accent2); }
+.btn-secondary { background:var(--surface2); border:1px solid var(--border); }
+.btn-secondary:hover { background:var(--surface3); }
+.btn-sm { padding:5px 10px; font-size:12px; }
+.btn-icon { padding:6px 8px; font-size:16px; }
+.btn-danger { background:var(--red); color:#fff; }
+.btn-danger:hover { opacity:0.85; }
+
+/* Tabs */
+.tabs { display:flex; gap:2px; background:var(--surface); padding:0 24px; border-bottom:1px solid var(--border); }
+.tab { padding:12px 20px; font-size:14px; font-weight:500; color:var(--text2); border-bottom:2px solid transparent; transition:all .2s; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--accent2); border-bottom-color:var(--accent); }
+
+/* Search */
+.search-bar { display:flex; align-items:center; gap:8px; padding:12px 24px; background:var(--surface); border-bottom:1px solid var(--border); }
+.search-bar input { max-width:300px; }
+.filters { display:flex; gap:8px; flex-wrap:wrap; }
+.filter-chip { padding:4px 12px; border-radius:16px; font-size:12px; font-weight:500; border:1px solid var(--border); transition:all .2s; }
+.filter-chip:hover, .filter-chip.active { border-color:var(--accent); background:var(--accent-bg); color:var(--accent2); }
+
+/* Layout */
+.content { padding:20px 24px; }
+
+/* Stats Cards */
+.stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:20px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
+.stat-card .label { font-size:12px; color:var(--text2); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; }
+.stat-card .value { font-size:28px; font-weight:700; }
+.stat-card .sub { font-size:12px; color:var(--text3); margin-top:2px; }
+.stat-card.accent .value { color:var(--accent2); }
+.stat-card.green .value { color:var(--green); }
+.stat-card.yellow .value { color:var(--yellow); }
+.stat-card.red .value { color:var(--red); }
+.stat-card.blue .value { color:var(--blue); }
+
+/* Backlog */
+.backlog-list { display:flex; flex-direction:column; gap:8px; }
+.story-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; display:flex; align-items:flex-start; gap:12px; transition:all .2s; cursor:pointer; }
+.story-card:hover { border-color:var(--accent); background:var(--surface2); }
+.story-card.dragging { opacity:0.5; }
+.story-points { background:var(--accent-bg); color:var(--accent2); font-size:13px; font-weight:700; min-width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.story-content { flex:1; min-width:0; }
+.story-title { font-size:14px; font-weight:600; margin-bottom:4px; }
+.story-meta { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.story-tag { font-size:11px; padding:2px 8px; border-radius:10px; font-weight:500; }
+.tag-feature { background:var(--accent-bg); color:var(--accent2); }
+.tag-bug { background:var(--red-bg); color:var(--red); }
+.tag-chore { background:var(--yellow-bg); color:var(--yellow); }
+.tag-spike { background:var(--blue-bg); color:var(--blue); }
+.tag-improvement { background:var(--green-bg); color:var(--green); }
+.priority-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+.priority-critical { background:var(--red); }
+.priority-high { background:var(--orange); }
+.priority-medium { background:var(--yellow); }
+.priority-low { background:var(--green); }
+.story-actions { display:flex; gap:4px; flex-shrink:0; opacity:0; transition:opacity .2s; }
+.story-card:hover .story-actions { opacity:1; }
+.assignee-badge { font-size:11px; color:var(--text2); background:var(--surface3); padding:2px 8px; border-radius:10px; }
+
+/* Sprint Board */
+.board { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; min-height:500px; }
+.board-column { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); display:flex; flex-direction:column; min-height:400px; }
+.column-header { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.column-header h3 { font-size:14px; font-weight:600; }
+.column-count { font-size:12px; color:var(--text2); background:var(--surface3); padding:2px 8px; border-radius:10px; }
+.column-body { padding:8px; flex:1; display:flex; flex-direction:column; gap:8px; min-height:100px; }
+.column-body.drag-over { background:var(--accent-bg); border-radius:0 0 var(--radius) var(--radius); }
+.board-card { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px; cursor:grab; transition:all .2s; }
+.board-card:hover { border-color:var(--accent); }
+.board-card.dragging { opacity:0.4; }
+.board-card .card-title { font-size:13px; font-weight:600; margin-bottom:6px; }
+.board-card .card-footer { display:flex; justify-content:space-between; align-items:center; }
+.board-card .card-footer .sp { font-size:11px; background:var(--accent-bg); color:var(--accent2); padding:2px 8px; border-radius:10px; font-weight:600; }
+
+/* Burndown Chart */
+.chart-container { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:20px; }
+.chart-container h3 { font-size:16px; font-weight:600; margin-bottom:16px; }
+.chart-svg { width:100%; height:300px; }
+
+/* Velocity Chart */
+.velocity-bars { display:flex; align-items:flex-end; gap:12px; height:200px; padding:16px 0; }
+.vel-bar-group { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end; }
+.vel-bar { width:100%; max-width:48px; background:var(--accent); border-radius:4px 4px 0 0; transition:height .3s; position:relative; }
+.vel-bar.committed { background:var(--accent-bg); border:1px solid var(--accent); }
+.vel-bar-label { font-size:11px; color:var(--text2); text-align:center; white-space:nowrap; }
+.vel-bar-value { font-size:12px; font-weight:600; color:var(--accent2); }
+
+/* Sprint Selector */
+.sprint-selector { display:flex; gap:8px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+.sprint-chip { padding:6px 14px; border-radius:20px; font-size:13px; font-weight:500; border:1px solid var(--border); transition:all .2s; }
+.sprint-chip:hover { border-color:var(--accent); }
+.sprint-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.sprint-chip.completed { opacity:0.6; }
+
+/* Team */
+.team-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+.team-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; text-align:center; }
+.team-avatar { width:48px; height:48px; border-radius:50%; background:var(--accent-bg); display:flex; align-items:center; justify-content:center; font-size:20px; margin:0 auto 10px; }
+.team-name { font-weight:600; font-size:14px; }
+.team-role { font-size:12px; color:var(--text2); margin-bottom:8px; }
+.team-capacity { display:flex; justify-content:center; gap:16px; font-size:12px; }
+.team-capacity .num { font-weight:700; color:var(--accent2); }
+
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s; }
+.modal-overlay.open { opacity:1; pointer-events:auto; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:12px; width:90%; max-width:560px; max-height:85vh; overflow-y:auto; box-shadow:var(--shadow); }
+.modal-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.modal-header h2 { font-size:18px; }
+.modal-body { padding:20px; display:flex; flex-direction:column; gap:14px; }
+.modal-footer { padding:14px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+.form-group { display:flex; flex-direction:column; gap:4px; }
+.form-group label { font-size:13px; color:var(--text2); font-weight:500; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.points-picker { display:flex; gap:6px; flex-wrap:wrap; }
+.points-picker button { width:36px; height:36px; border-radius:50%; border:1px solid var(--border); font-weight:700; font-size:14px; transition:all .2s; }
+.points-picker button:hover, .points-picker button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+/* Progress bar */
+.progress { height:6px; background:var(--surface3); border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; border-radius:3px; transition:width .3s; }
+.progress-fill.green { background:var(--green); }
+.progress-fill.yellow { background:var(--yellow); }
+.progress-fill.red { background:var(--red); }
+.progress-fill.accent { background:var(--accent); }
+
+/* Sprint detail header */
+.sprint-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap:wrap; gap:12px; }
+.sprint-info h2 { font-size:20px; font-weight:700; margin-bottom:4px; }
+.sprint-info .dates { font-size:13px; color:var(--text2); }
+.sprint-goal { background:var(--accent-bg); border:1px solid var(--accent); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--accent2); margin-top:8px; max-width:500px; }
+.sprint-progress { display:flex; flex-direction:column; align-items:flex-end; gap:6px; min-width:200px; }
+.sprint-progress .big { font-size:24px; font-weight:700; color:var(--green); }
+
+/* Empty state */
+.empty { text-align:center; padding:60px 20px; color:var(--text3); }
+.empty .icon { font-size:48px; margin-bottom:12px; }
+.empty p { font-size:14px; margin-bottom:16px; }
+
+/* Keyboard hint */
+.kbd-hint { position:fixed; bottom:16px; right:16px; font-size:11px; color:var(--text3); background:var(--surface); padding:4px 10px; border-radius:6px; border:1px solid var(--border); z-index:50; }
+
+@media(max-width:900px) {
+  .board { grid-template-columns:1fr 1fr; }
+}
+@media(max-width:600px) {
+  .board { grid-template-columns:1fr; }
+  .form-row { grid-template-columns:1fr; }
+  .stats { grid-template-columns:1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>🏃</span> Sprint Board</h1>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" onclick="importData()" title="Import JSON">📥 Import</button>
+    <button class="btn btn-secondary btn-sm" onclick="exportData()" title="Export JSON">📤 Export</button>
+    <button class="btn btn-primary btn-sm" id="mainActionBtn" onclick="handleMainAction()">+ New Story</button>
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" data-view="backlog">📋 Backlog</button>
+  <button class="tab" data-view="board">🏗️ Sprint Board</button>
+  <button class="tab" data-view="burndown">📉 Burndown</button>
+  <button class="tab" data-view="velocity">📊 Velocity</button>
+  <button class="tab" data-view="sprints">🗓️ Sprints</button>
+  <button class="tab" data-view="team">👥 Team</button>
+</div>
+
+<div id="searchBar" class="search-bar">
+  <input type="text" id="searchInput" placeholder="Search stories... ( / )" />
+  <div class="filters">
+    <button class="filter-chip active" data-filter="all">All</button>
+    <button class="filter-chip" data-filter="feature">Feature</button>
+    <button class="filter-chip" data-filter="bug">Bug</button>
+    <button class="filter-chip" data-filter="chore">Chore</button>
+    <button class="filter-chip" data-filter="spike">Spike</button>
+    <button class="filter-chip" data-filter="improvement">Improvement</button>
+  </div>
+</div>
+
+<div class="content" id="viewContent"></div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<div class="kbd-hint">Press <b>?</b> for shortcuts</div>
+
+<script>
+// ── Data Layer ──
+const FIBONACCI = [0,1,2,3,5,8,13,21];
+const TYPES = ['feature','bug','chore','spike','improvement'];
+const PRIORITIES = ['critical','high','medium','low'];
+const COLUMNS = ['todo','in-progress','review','done'];
+const COL_NAMES = {todo:'To Do','in-progress':'In Progress',review:'In Review',done:'Done'};
+
+let state = {
+  stories: [],
+  sprints: [],
+  team: [],
+  activeSprint: null,
+  currentView: 'backlog',
+  searchText: '',
+  typeFilter: 'all'
+};
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function save() { localStorage.setItem('sprint-board-data', JSON.stringify(state)); }
+function load() {
+  const d = localStorage.getItem('sprint-board-data');
+  if (d) { try { state = JSON.parse(d); } catch(e) { seed(); } }
+  else seed();
+}
+
+function seed() {
+  const now = new Date();
+  const sprintStart = new Date(now); sprintStart.setDate(now.getDate() - 5);
+  const sprintEnd = new Date(sprintStart); sprintEnd.setDate(sprintStart.getDate() + 13);
+  const prevStart = new Date(sprintStart); prevStart.setDate(prevStart.getDate() - 14);
+  const prevEnd = new Date(sprintStart); prevEnd.setDate(prevEnd.getDate() - 1);
+
+  state.team = [
+    { id:uid(), name:'AJ', role:'Product Lead', emoji:'👨‍💻', capacity:8 },
+    { id:uid(), name:'Priya', role:'Frontend Dev', emoji:'👩‍💻', capacity:10 },
+    { id:uid(), name:'Rahul', role:'Backend Dev', emoji:'🧑‍💻', capacity:10 },
+    { id:uid(), name:'Sneha', role:'Designer', emoji:'🎨', capacity:6 }
+  ];
+
+  const sprint1Id = uid(), sprint2Id = uid();
+  
+  state.sprints = [
+    { id:sprint1Id, name:'Sprint 1 — Foundation', goal:'Ship core signature editor & template system', startDate:prevStart.toISOString().slice(0,10), endDate:prevEnd.toISOString().slice(0,10), status:'completed', committed:21, completed:18 },
+    { id:sprint2Id, name:'Sprint 2 — Analytics', goal:'Launch click tracking & analytics dashboard', startDate:sprintStart.toISOString().slice(0,10), endDate:sprintEnd.toISOString().slice(0,10), status:'active', committed:26, completed:0 }
+  ];
+  state.activeSprint = sprint2Id;
+
+  state.stories = [
+    // Sprint 1 — all done
+    { id:uid(), title:'Setup Next.js project with Tailwind', type:'chore', priority:'high', points:2, sprint:sprint1Id, column:'done', assignee:'Rahul', description:'Bootstrap project, CI/CD, deploy to Vercel', created:prevStart.toISOString() },
+    { id:uid(), title:'Design signature editor UI', type:'feature', priority:'critical', points:5, sprint:sprint1Id, column:'done', assignee:'Sneha', description:'Figma → React components for drag-and-drop editor', created:prevStart.toISOString() },
+    { id:uid(), title:'Template engine with 5 starter templates', type:'feature', priority:'high', points:8, sprint:sprint1Id, column:'done', assignee:'Priya', description:'Build template system, create 5 professional templates', created:prevStart.toISOString() },
+    { id:uid(), title:'User auth with Google OAuth', type:'feature', priority:'critical', points:3, sprint:sprint1Id, column:'done', assignee:'Rahul', description:'NextAuth.js with Google provider, session management', created:prevStart.toISOString() },
+    // Sprint 2 — in progress
+    { id:uid(), title:'UTM parameter auto-injection', type:'feature', priority:'critical', points:5, sprint:sprint2Id, column:'in-progress', assignee:'Rahul', description:'Auto-append UTM params to all signature links based on campaign settings', created:sprintStart.toISOString() },
+    { id:uid(), title:'Click tracking pixel + redirect', type:'feature', priority:'critical', points:8, sprint:sprint2Id, column:'todo', assignee:'Rahul', description:'Server-side click tracking, redirect service, event logging', created:sprintStart.toISOString() },
+    { id:uid(), title:'Analytics dashboard — clicks over time', type:'feature', priority:'high', points:5, sprint:sprint2Id, column:'todo', assignee:'Priya', description:'Line chart, bar chart, top links, geography', created:sprintStart.toISOString() },
+    { id:uid(), title:'Fix template preview on Safari', type:'bug', priority:'medium', points:2, sprint:sprint2Id, column:'review', assignee:'Priya', description:'Flexbox rendering issue on Safari 17', created:sprintStart.toISOString() },
+    { id:uid(), title:'Campaign banner system', type:'feature', priority:'medium', points:3, sprint:sprint2Id, column:'in-progress', assignee:'Sneha', description:'Dynamic banners that rotate based on active campaigns', created:sprintStart.toISOString() },
+    { id:uid(), title:'Evaluate Plausible vs custom analytics', type:'spike', priority:'low', points:3, sprint:sprint2Id, column:'done', assignee:'AJ', description:'Compare self-hosted Plausible vs building custom for UTMStamp analytics', created:sprintStart.toISOString() },
+    // Backlog — no sprint
+    { id:uid(), title:'Google Workspace auto-push signatures', type:'feature', priority:'high', points:13, sprint:null, column:'todo', assignee:null, description:'Admin pushes signatures to all team members via Google Workspace API', created:now.toISOString() },
+    { id:uid(), title:'Team management & roles', type:'feature', priority:'high', points:8, sprint:null, column:'todo', assignee:null, description:'Invite team, assign roles (admin/editor/viewer), per-user signatures', created:now.toISOString() },
+    { id:uid(), title:'Email client preview mode', type:'feature', priority:'medium', points:5, sprint:null, column:'todo', assignee:null, description:'Show how signature renders in Gmail, Outlook, Apple Mail', created:now.toISOString() },
+    { id:uid(), title:'Video signature support', type:'feature', priority:'medium', points:8, sprint:null, column:'todo', assignee:null, description:'Embed short video/GIF in signature with fallback image', created:now.toISOString() },
+    { id:uid(), title:'A/B test signatures', type:'feature', priority:'low', points:5, sprint:null, column:'todo', assignee:null, description:'Rotate between signature variants, track which gets more clicks', created:now.toISOString() },
+    { id:uid(), title:'Improve mobile responsiveness', type:'improvement', priority:'medium', points:3, sprint:null, column:'todo', assignee:null, description:'Signature editor should work on tablet/mobile', created:now.toISOString() },
+    { id:uid(), title:'Onboarding flow for new users', type:'chore', priority:'high', points:3, sprint:null, column:'todo', assignee:null, description:'Step-by-step wizard: create first signature → add UTM → deploy', created:now.toISOString() },
+    { id:uid(), title:'Slack integration for click alerts', type:'feature', priority:'low', points:5, sprint:null, column:'todo', assignee:null, description:'Notify Slack channel when signature link gets X clicks', created:now.toISOString() }
+  ];
+  save();
+}
+
+// ── Rendering ──
+function render() {
+  const view = state.currentView;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+  document.getElementById('searchBar').style.display = (view === 'backlog' || view === 'board') ? 'flex' : 'none';
+  
+  const btn = document.getElementById('mainActionBtn');
+  if (view === 'sprints') { btn.textContent = '+ New Sprint'; }
+  else if (view === 'team') { btn.textContent = '+ Add Member'; }
+  else { btn.textContent = '+ New Story'; }
+  
+  const c = document.getElementById('viewContent');
+  switch(view) {
+    case 'backlog': c.innerHTML = renderBacklog(); break;
+    case 'board': c.innerHTML = renderBoard(); break;
+    case 'burndown': c.innerHTML = renderBurndown(); break;
+    case 'velocity': c.innerHTML = renderVelocity(); break;
+    case 'sprints': c.innerHTML = renderSprints(); break;
+    case 'team': c.innerHTML = renderTeam(); break;
+  }
+  attachDragHandlers();
+}
+
+function getFilteredStories(sprintId) {
+  let stories = sprintId === undefined 
+    ? state.stories.filter(s => !s.sprint) 
+    : state.stories.filter(s => s.sprint === sprintId);
+  if (state.typeFilter !== 'all') stories = stories.filter(s => s.type === state.typeFilter);
+  if (state.searchText) {
+    const q = state.searchText.toLowerCase();
+    stories = stories.filter(s => s.title.toLowerCase().includes(q) || (s.description||'').toLowerCase().includes(q) || (s.assignee||'').toLowerCase().includes(q));
+  }
+  return stories;
+}
+
+function storyCardHTML(s, showSprint) {
+  const prioClass = `priority-${s.priority}`;
+  const tagClass = `tag-${s.type}`;
+  const sprintLabel = showSprint && s.sprint ? (() => { const sp = state.sprints.find(x=>x.id===s.sprint); return sp ? `<span class="assignee-badge">${sp.name.split('—')[0].trim()}</span>` : ''; })() : '';
+  return `<div class="story-card" draggable="true" data-id="${s.id}" onclick="editStory('${s.id}')">
+    <div class="story-points">${s.points||'?'}</div>
+    <div class="story-content">
+      <div class="story-title">${esc(s.title)}</div>
+      <div class="story-meta">
+        <span class="story-tag ${tagClass}">${s.type}</span>
+        <span class="priority-dot ${prioClass}" title="${s.priority}"></span>
+        ${s.assignee ? `<span class="assignee-badge">👤 ${esc(s.assignee)}</span>` : ''}
+        ${sprintLabel}
+      </div>
+    </div>
+    <div class="story-actions">
+      ${!s.sprint && state.activeSprint ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();addToSprint('${s.id}')" title="Add to active sprint">→🏃</button>` : ''}
+      ${s.sprint ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();removeFromSprint('${s.id}')" title="Remove from sprint">←📋</button>` : ''}
+      <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteStory('${s.id}')" title="Delete">🗑</button>
+    </div>
+  </div>`;
+}
+
+function renderBacklog() {
+  const backlog = getFilteredStories(undefined);
+  const totalPts = backlog.reduce((a,s) => a + (s.points||0), 0);
+  const sprint = state.sprints.find(s => s.id === state.activeSprint);
+  const sprintStories = sprint ? state.stories.filter(s => s.sprint === sprint.id) : [];
+  const sprintPts = sprintStories.reduce((a,s) => a + (s.points||0), 0);
+  const sprintDone = sprintStories.filter(s => s.column === 'done').reduce((a,s) => a + (s.points||0), 0);
+
+  let html = `<div class="stats">
+    <div class="stat-card accent"><div class="label">Backlog Items</div><div class="value">${backlog.length}</div><div class="sub">${totalPts} points total</div></div>
+    <div class="stat-card blue"><div class="label">Active Sprint</div><div class="value">${sprint ? sprintStories.length : '—'}</div><div class="sub">${sprint ? sprintPts + ' points committed' : 'No active sprint'}</div></div>
+    <div class="stat-card green"><div class="label">Sprint Done</div><div class="value">${sprint ? sprintDone : '—'}</div><div class="sub">${sprint && sprintPts ? Math.round(sprintDone/sprintPts*100) + '% complete' : ''}</div></div>
+    <div class="stat-card yellow"><div class="label">Bugs</div><div class="value">${state.stories.filter(s=>s.type==='bug'&&s.column!=='done').length}</div><div class="sub">open bugs</div></div>
+  </div>`;
+  
+  if (backlog.length === 0) {
+    html += `<div class="empty"><div class="icon">📋</div><p>Backlog is empty${state.searchText || state.typeFilter !== 'all' ? ' (with current filters)' : ''}.</p><button class="btn btn-primary" onclick="openStoryModal()">+ Add Story</button></div>`;
+  } else {
+    html += `<div class="backlog-list">${backlog.map(s => storyCardHTML(s, false)).join('')}</div>`;
+  }
+  return html;
+}
+
+function renderBoard() {
+  const sprint = state.sprints.find(s => s.id === state.activeSprint);
+  if (!sprint) return `<div class="empty"><div class="icon">🏃</div><p>No active sprint. Create one in the Sprints tab.</p></div>`;
+
+  const stories = getFilteredStories(sprint.id);
+  const totalPts = stories.reduce((a,s) => a+(s.points||0), 0);
+  const donePts = stories.filter(s=>s.column==='done').reduce((a,s) => a+(s.points||0), 0);
+  const pct = totalPts ? Math.round(donePts/totalPts*100) : 0;
+  const progressClass = pct >= 80 ? 'green' : pct >= 40 ? 'yellow' : 'red';
+
+  let html = `<div class="sprint-header">
+    <div class="sprint-info">
+      <h2>${esc(sprint.name)}</h2>
+      <div class="dates">📅 ${sprint.startDate} → ${sprint.endDate} · ${daysLeft(sprint.endDate)} days left</div>
+      ${sprint.goal ? `<div class="sprint-goal">🎯 ${esc(sprint.goal)}</div>` : ''}
+    </div>
+    <div class="sprint-progress">
+      <div class="big">${pct}%</div>
+      <div style="width:200px"><div class="progress"><div class="progress-fill ${progressClass}" style="width:${pct}%"></div></div></div>
+      <div style="font-size:12px;color:var(--text2)">${donePts} / ${totalPts} points</div>
+    </div>
+  </div>`;
+
+  html += `<div class="board">`;
+  COLUMNS.forEach(col => {
+    const colStories = stories.filter(s => s.column === col);
+    const colPts = colStories.reduce((a,s) => a+(s.points||0), 0);
+    html += `<div class="board-column" data-column="${col}">
+      <div class="column-header"><h3>${COL_NAMES[col]}</h3><span class="column-count">${colStories.length} · ${colPts}sp</span></div>
+      <div class="column-body" data-column="${col}">
+        ${colStories.map(s => `<div class="board-card" draggable="true" data-id="${s.id}" onclick="editStory('${s.id}')">
+          <div class="card-title">${esc(s.title)}</div>
+          <div class="card-footer">
+            <span class="story-tag tag-${s.type}" style="font-size:10px">${s.type}</span>
+            <span>${s.assignee ? esc(s.assignee) : ''}</span>
+            <span class="sp">${s.points||'?'} SP</span>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function renderBurndown() {
+  const sprint = state.sprints.find(s => s.id === state.activeSprint);
+  if (!sprint) return `<div class="empty"><div class="icon">📉</div><p>No active sprint for burndown.</p></div>`;
+
+  const stories = state.stories.filter(s => s.sprint === sprint.id);
+  const totalPts = stories.reduce((a,s) => a+(s.points||0), 0);
+  const donePts = stories.filter(s=>s.column==='done').reduce((a,s) => a+(s.points||0), 0);
+  const start = new Date(sprint.startDate);
+  const end = new Date(sprint.endDate);
+  const totalDays = Math.ceil((end - start) / 86400000);
+  const elapsed = Math.min(totalDays, Math.ceil((new Date() - start) / 86400000));
+
+  // Simulated burndown (ideal line + actual with some variance)
+  const idealData = [];
+  const actualData = [];
+  for (let i = 0; i <= totalDays; i++) {
+    idealData.push(totalPts - (totalPts / totalDays) * i);
+    if (i <= elapsed) {
+      // Simulate: slightly behind ideal, with done points reflected at end
+      const simRemaining = i === elapsed 
+        ? totalPts - donePts 
+        : totalPts - (donePts / elapsed * i) + (Math.random() * 2 - 1);
+      actualData.push(Math.max(0, Math.round(simRemaining * 10) / 10));
+    }
+  }
+
+  const W = 700, H = 280, PAD = 40;
+  const xScale = (W - PAD * 2) / totalDays;
+  const yScale = (H - PAD * 2) / totalPts;
+  
+  const idealPath = idealData.map((v,i) => `${i===0?'M':'L'}${PAD + i*xScale},${PAD + (totalPts-v)*yScale}`).join(' ');
+  const actualPath = actualData.map((v,i) => `${i===0?'M':'L'}${PAD + i*xScale},${PAD + (totalPts-v)*yScale}`).join(' ');
+
+  // Grid lines
+  let gridLines = '';
+  for (let i = 0; i <= 4; i++) {
+    const y = PAD + (H - PAD*2) / 4 * i;
+    const val = Math.round(totalPts - totalPts/4*i);
+    gridLines += `<line x1="${PAD}" y1="${y}" x2="${W-PAD}" y2="${y}" stroke="var(--border)" stroke-dasharray="4"/>
+      <text x="${PAD-8}" y="${y+4}" text-anchor="end" fill="var(--text3)" font-size="11">${val}</text>`;
+  }
+  // Day labels
+  let dayLabels = '';
+  const step = Math.max(1, Math.floor(totalDays / 7));
+  for (let i = 0; i <= totalDays; i += step) {
+    dayLabels += `<text x="${PAD + i*xScale}" y="${H-8}" text-anchor="middle" fill="var(--text3)" font-size="11">Day ${i}</text>`;
+  }
+
+  let html = `<div class="chart-container">
+    <h3>🔥 Sprint Burndown — ${esc(sprint.name)}</h3>
+    <svg viewBox="0 0 ${W} ${H}" class="chart-svg">
+      ${gridLines}${dayLabels}
+      <path d="${idealPath}" fill="none" stroke="var(--text3)" stroke-width="2" stroke-dasharray="6"/>
+      <path d="${actualPath}" fill="none" stroke="var(--accent)" stroke-width="3"/>
+      ${actualData.length > 0 ? `<circle cx="${PAD + (actualData.length-1)*xScale}" cy="${PAD + (totalPts-actualData[actualData.length-1])*yScale}" r="5" fill="var(--accent)"/>` : ''}
+      <text x="${W-PAD}" y="${PAD-8}" text-anchor="end" fill="var(--text3)" font-size="11">Ideal</text>
+      <text x="${PAD + (actualData.length-1)*xScale + 8}" y="${PAD + (totalPts-actualData[actualData.length-1])*yScale - 8}" fill="var(--accent2)" font-size="12" font-weight="600">${actualData[actualData.length-1]} pts left</text>
+    </svg>
+  </div>`;
+
+  html += `<div class="stats">
+    <div class="stat-card accent"><div class="label">Committed</div><div class="value">${totalPts}</div><div class="sub">story points</div></div>
+    <div class="stat-card green"><div class="label">Completed</div><div class="value">${donePts}</div><div class="sub">${totalPts?Math.round(donePts/totalPts*100):0}% done</div></div>
+    <div class="stat-card yellow"><div class="label">Remaining</div><div class="value">${totalPts-donePts}</div><div class="sub">${daysLeft(sprint.endDate)} days left</div></div>
+    <div class="stat-card ${totalDays-elapsed > 0 && (totalPts-donePts)/(totalDays-elapsed) <= totalPts/totalDays ? 'green' : 'red'}"><div class="label">Daily Burn Rate Needed</div><div class="value">${(totalDays-elapsed) > 0 ? ((totalPts-donePts)/(totalDays-elapsed)).toFixed(1) : '∞'}</div><div class="sub">pts/day (ideal: ${(totalPts/totalDays).toFixed(1)})</div></div>
+  </div>`;
+  return html;
+}
+
+function renderVelocity() {
+  const completed = state.sprints.filter(s => s.status === 'completed' || s.id === state.activeSprint);
+  if (completed.length === 0) return `<div class="empty"><div class="icon">📊</div><p>No sprint data yet for velocity tracking.</p></div>`;
+
+  const velocities = completed.map(sp => {
+    const stories = state.stories.filter(s => s.sprint === sp.id);
+    const committed = stories.reduce((a,s) => a+(s.points||0), 0);
+    const done = stories.filter(s => s.column === 'done').reduce((a,s) => a+(s.points||0), 0);
+    return { name: sp.name.split('—')[0].trim(), committed, done, status: sp.status };
+  });
+
+  const maxVal = Math.max(...velocities.flatMap(v => [v.committed, v.done]), 1);
+  const avgVelocity = velocities.filter(v=>v.status==='completed').length > 0 
+    ? Math.round(velocities.filter(v=>v.status==='completed').reduce((a,v)=>a+v.done,0) / velocities.filter(v=>v.status==='completed').length)
+    : 0;
+
+  let html = `<div class="stats">
+    <div class="stat-card accent"><div class="label">Avg Velocity</div><div class="value">${avgVelocity}</div><div class="sub">pts per sprint (completed)</div></div>
+    <div class="stat-card blue"><div class="label">Sprints Tracked</div><div class="value">${completed.length}</div></div>
+    <div class="stat-card green"><div class="label">Best Sprint</div><div class="value">${velocities.filter(v=>v.status==='completed').length > 0 ? Math.max(...velocities.filter(v=>v.status==='completed').map(v=>v.done)) : '—'}</div><div class="sub">points completed</div></div>
+    <div class="stat-card yellow"><div class="label">Commitment Accuracy</div><div class="value">${velocities.filter(v=>v.status==='completed').length > 0 ? Math.round(velocities.filter(v=>v.status==='completed').reduce((a,v)=>a+v.done,0) / velocities.filter(v=>v.status==='completed').reduce((a,v)=>a+v.committed,0) * 100) : '—'}%</div></div>
+  </div>`;
+
+  html += `<div class="chart-container"><h3>Sprint Velocity</h3>
+    <div class="velocity-bars">
+      ${velocities.map(v => {
+        const commitH = Math.round(v.committed / maxVal * 160);
+        const doneH = Math.round(v.done / maxVal * 160);
+        return `<div class="vel-bar-group">
+          <div class="vel-bar-value">${v.done}/${v.committed}</div>
+          <div style="display:flex;gap:4px;align-items:flex-end;height:160px">
+            <div class="vel-bar committed" style="height:${commitH}px;width:20px" title="Committed: ${v.committed}"></div>
+            <div class="vel-bar" style="height:${doneH}px;width:20px" title="Done: ${v.done}"></div>
+          </div>
+          <div class="vel-bar-label">${v.name}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:12px;color:var(--text2)">
+      <span>◻ Committed</span><span style="color:var(--accent)">■ Completed</span>
+      ${avgVelocity ? `<span>--- Avg: ${avgVelocity} pts</span>` : ''}
+    </div>
+  </div>`;
+  return html;
+}
+
+function renderSprints() {
+  let html = `<div class="sprint-selector" style="margin-bottom:20px">`;
+  state.sprints.forEach(sp => {
+    const active = sp.status === 'active';
+    const stories = state.stories.filter(s => s.sprint === sp.id);
+    const pts = stories.reduce((a,s)=>a+(s.points||0),0);
+    const donePts = stories.filter(s=>s.column==='done').reduce((a,s)=>a+(s.points||0),0);
+    const pct = pts ? Math.round(donePts/pts*100) : 0;
+    html += `<div class="story-card" style="cursor:pointer" onclick="viewSprintDetail('${sp.id}')">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:14px;font-weight:600">${esc(sp.name)}</span>
+          <span class="story-tag ${active?'tag-feature':'tag-chore'}">${sp.status}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:4px">📅 ${sp.startDate} → ${sp.endDate}</div>
+        ${sp.goal ? `<div style="font-size:12px;color:var(--text3)">🎯 ${esc(sp.goal)}</div>` : ''}
+        <div style="margin-top:8px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;max-width:200px"><div class="progress"><div class="progress-fill accent" style="width:${pct}%"></div></div></div>
+          <span style="font-size:12px;color:var(--text2)">${donePts}/${pts} pts (${pct}%)</span>
+          <span style="font-size:12px;color:var(--text2)">${stories.length} stories</span>
+        </div>
+      </div>
+      <div class="story-actions" style="opacity:1;flex-direction:column;gap:4px">
+        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editSprint('${sp.id}')">✏️</button>
+        ${sp.status==='active' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();completeSprint('${sp.id}')">✅</button>` : ''}
+        ${sp.status!=='active' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();activateSprint('${sp.id}')">▶️</button>` : ''}
+        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteSprint('${sp.id}')">🗑</button>
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+  if (state.sprints.length === 0) {
+    html = `<div class="empty"><div class="icon">🗓️</div><p>No sprints yet.</p><button class="btn btn-primary" onclick="openSprintModal()">+ Create Sprint</button></div>`;
+  }
+  return html;
+}
+
+function renderTeam() {
+  if (state.team.length === 0) return `<div class="empty"><div class="icon">👥</div><p>No team members yet.</p><button class="btn btn-primary" onclick="openTeamModal()">+ Add Member</button></div>`;
+  
+  let html = `<div class="team-grid">`;
+  state.team.forEach(m => {
+    const assigned = state.stories.filter(s => s.assignee === m.name && s.sprint === state.activeSprint);
+    const pts = assigned.reduce((a,s)=>a+(s.points||0),0);
+    const donePts = assigned.filter(s=>s.column==='done').reduce((a,s)=>a+(s.points||0),0);
+    html += `<div class="team-card" onclick="editTeamMember('${m.id}')" style="cursor:pointer">
+      <div class="team-avatar">${m.emoji||'👤'}</div>
+      <div class="team-name">${esc(m.name)}</div>
+      <div class="team-role">${esc(m.role||'Team Member')}</div>
+      <div class="team-capacity">
+        <div>Capacity: <span class="num">${m.capacity||0}</span> pts</div>
+        <div>Assigned: <span class="num">${pts}</span> pts</div>
+      </div>
+      <div style="margin-top:8px"><div class="progress"><div class="progress-fill ${pts > (m.capacity||0) ? 'red' : 'green'}" style="width:${m.capacity ? Math.min(100,pts/m.capacity*100) : 0}%"></div></div></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">${assigned.length} stories · ${donePts} done</div>
+    </div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+// ── Modals ──
+function openStoryModal(story) {
+  const s = story || { title:'', type:'feature', priority:'medium', points:3, sprint:null, column:'todo', assignee:null, description:'' };
+  const isEdit = !!story;
+  const teamOptions = state.team.map(m => `<option value="${esc(m.name)}" ${s.assignee===m.name?'selected':''}>${esc(m.name)}</option>`).join('');
+  const sprintOptions = state.sprints.map(sp => `<option value="${sp.id}" ${s.sprint===sp.id?'selected':''}>${esc(sp.name)}</option>`).join('');
+  
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header"><h2>${isEdit?'Edit':'New'} Story</h2><button onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Title</label><input id="mTitle" value="${esc(s.title)}" placeholder="As a user, I want to..." autofocus/></div>
+      <div class="form-group"><label>Description</label><textarea id="mDesc" placeholder="Acceptance criteria, notes...">${esc(s.description||'')}</textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Type</label><select id="mType">${TYPES.map(t=>`<option value="${t}" ${s.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Priority</label><select id="mPriority">${PRIORITIES.map(p=>`<option value="${p}" ${s.priority===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-group"><label>Story Points</label>
+        <div class="points-picker">${FIBONACCI.map(n=>`<button type="button" onclick="pickPoints(this,${n})" class="${s.points===n?'active':''}">${n}</button>`).join('')}</div>
+        <input type="hidden" id="mPoints" value="${s.points||''}"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Assignee</label><select id="mAssignee"><option value="">Unassigned</option>${teamOptions}</select></div>
+        <div class="form-group"><label>Sprint</label><select id="mSprint"><option value="">Backlog</option>${sprintOptions}</select></div>
+      </div>
+      ${isEdit ? `<div class="form-group"><label>Column</label><select id="mColumn">${COLUMNS.map(c=>`<option value="${c}" ${s.column===c?'selected':''}>${COL_NAMES[c]}</option>`).join('')}</select></div>` : ''}
+    </div>
+    <div class="modal-footer">
+      ${isEdit ? `<button class="btn btn-danger btn-sm" onclick="deleteStory('${s.id}');closeModal()">Delete</button>` : ''}
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveStory('${isEdit?s.id:''}')">Save</button>
+    </div>`;
+  openModal();
+  document.getElementById('mTitle').focus();
+}
+
+function pickPoints(btn, val) {
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('mPoints').value = val;
+}
+
+function saveStory(id) {
+  const title = document.getElementById('mTitle').value.trim();
+  if (!title) return;
+  const data = {
+    title,
+    description: document.getElementById('mDesc').value.trim(),
+    type: document.getElementById('mType').value,
+    priority: document.getElementById('mPriority').value,
+    points: parseInt(document.getElementById('mPoints').value) || 0,
+    assignee: document.getElementById('mAssignee').value || null,
+    sprint: document.getElementById('mSprint').value || null
+  };
+  const colEl = document.getElementById('mColumn');
+  if (colEl) data.column = colEl.value;
+  
+  if (id) {
+    const s = state.stories.find(x => x.id === id);
+    if (s) Object.assign(s, data);
+  } else {
+    state.stories.push({ id: uid(), ...data, column: data.column || 'todo', created: new Date().toISOString() });
+  }
+  save(); closeModal(); render();
+}
+
+function editStory(id) { const s = state.stories.find(x=>x.id===id); if(s) openStoryModal(s); }
+function deleteStory(id) { state.stories = state.stories.filter(x=>x.id!==id); save(); render(); }
+function addToSprint(id) { const s = state.stories.find(x=>x.id===id); if(s&&state.activeSprint) { s.sprint=state.activeSprint; s.column='todo'; save(); render(); } }
+function removeFromSprint(id) { const s = state.stories.find(x=>x.id===id); if(s) { s.sprint=null; s.column='todo'; save(); render(); } }
+
+function openSprintModal(sprint) {
+  const s = sprint || { name:'', goal:'', startDate:new Date().toISOString().slice(0,10), endDate:new Date(Date.now()+13*86400000).toISOString().slice(0,10) };
+  const isEdit = !!sprint;
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header"><h2>${isEdit?'Edit':'New'} Sprint</h2><button onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Sprint Name</label><input id="mSpName" value="${esc(s.name)}" placeholder="Sprint 3 — Feature X" autofocus/></div>
+      <div class="form-group"><label>Sprint Goal</label><textarea id="mSpGoal" placeholder="What we're trying to achieve...">${esc(s.goal||'')}</textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Start Date</label><input type="date" id="mSpStart" value="${s.startDate}"/></div>
+        <div class="form-group"><label>End Date</label><input type="date" id="mSpEnd" value="${s.endDate}"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSprint('${isEdit?s.id:''}')">Save</button>
+    </div>`;
+  openModal();
+}
+
+function saveSprint(id) {
+  const name = document.getElementById('mSpName').value.trim();
+  if (!name) return;
+  const data = { name, goal: document.getElementById('mSpGoal').value.trim(), startDate: document.getElementById('mSpStart').value, endDate: document.getElementById('mSpEnd').value };
+  if (id) {
+    const sp = state.sprints.find(x=>x.id===id);
+    if(sp) Object.assign(sp, data);
+  } else {
+    const sp = { id:uid(), ...data, status:'planning', committed:0, completed:0 };
+    state.sprints.push(sp);
+    if (!state.activeSprint) { sp.status = 'active'; state.activeSprint = sp.id; }
+  }
+  save(); closeModal(); render();
+}
+
+function editSprint(id) { const sp = state.sprints.find(x=>x.id===id); if(sp) openSprintModal(sp); }
+function deleteSprint(id) {
+  state.stories.filter(s=>s.sprint===id).forEach(s => { s.sprint=null; s.column='todo'; });
+  state.sprints = state.sprints.filter(x=>x.id!==id);
+  if (state.activeSprint===id) state.activeSprint = state.sprints.find(s=>s.status==='active')?.id || null;
+  save(); render();
+}
+function completeSprint(id) {
+  const sp = state.sprints.find(x=>x.id===id);
+  if(sp) {
+    sp.status = 'completed';
+    const stories = state.stories.filter(s=>s.sprint===id);
+    sp.committed = stories.reduce((a,s)=>a+(s.points||0),0);
+    sp.completed = stories.filter(s=>s.column==='done').reduce((a,s)=>a+(s.points||0),0);
+    // Move incomplete stories back to backlog
+    stories.filter(s=>s.column!=='done').forEach(s => { s.sprint=null; s.column='todo'; });
+    if(state.activeSprint===id) state.activeSprint = null;
+  }
+  save(); render();
+}
+function activateSprint(id) {
+  state.sprints.forEach(sp => { if(sp.status==='active') sp.status='planning'; });
+  const sp = state.sprints.find(x=>x.id===id);
+  if(sp) { sp.status='active'; state.activeSprint=sp.id; }
+  save(); render();
+}
+
+function openTeamModal(member) {
+  const m = member || { name:'', role:'', emoji:'👤', capacity:8 };
+  const isEdit = !!member;
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header"><h2>${isEdit?'Edit':'Add'} Team Member</h2><button onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>Name</label><input id="mTmName" value="${esc(m.name)}" autofocus/></div>
+        <div class="form-group"><label>Emoji</label><input id="mTmEmoji" value="${m.emoji||'👤'}" style="max-width:60px"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Role</label><input id="mTmRole" value="${esc(m.role||'')}"/></div>
+        <div class="form-group"><label>Capacity (pts/sprint)</label><input type="number" id="mTmCap" value="${m.capacity||8}"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      ${isEdit ? `<button class="btn btn-danger btn-sm" onclick="deleteTeamMember('${m.id}');closeModal()">Delete</button>` : ''}
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTeamMember('${isEdit?m.id:''}')">Save</button>
+    </div>`;
+  openModal();
+}
+
+function saveTeamMember(id) {
+  const name = document.getElementById('mTmName').value.trim();
+  if (!name) return;
+  const data = { name, role: document.getElementById('mTmRole').value.trim(), emoji: document.getElementById('mTmEmoji').value.trim() || '👤', capacity: parseInt(document.getElementById('mTmCap').value) || 8 };
+  if (id) {
+    const m = state.team.find(x=>x.id===id);
+    if(m) { const oldName=m.name; Object.assign(m,data); if(oldName!==data.name) state.stories.filter(s=>s.assignee===oldName).forEach(s=>s.assignee=data.name); }
+  } else {
+    state.team.push({ id:uid(), ...data });
+  }
+  save(); closeModal(); render();
+}
+function editTeamMember(id) { const m = state.team.find(x=>x.id===id); if(m) openTeamModal(m); }
+function deleteTeamMember(id) { const m = state.team.find(x=>x.id===id); if(m) { state.stories.filter(s=>s.assignee===m.name).forEach(s=>s.assignee=null); state.team = state.team.filter(x=>x.id!==id); save(); render(); } }
+
+function viewSprintDetail(id) {
+  state.activeSprint = id;
+  state.currentView = 'board';
+  save(); render();
+}
+
+// ── Drag & Drop ──
+let dragId = null;
+function attachDragHandlers() {
+  document.querySelectorAll('[draggable=true]').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      dragId = el.dataset.id;
+      el.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    el.addEventListener('dragend', () => { el.classList.remove('dragging'); dragId=null; });
+  });
+  document.querySelectorAll('.column-body').forEach(col => {
+    col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
+    col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+    col.addEventListener('drop', e => {
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      if (dragId) {
+        const s = state.stories.find(x=>x.id===dragId);
+        if (s) { s.column = col.dataset.column; save(); render(); }
+      }
+    });
+  });
+}
+
+// ── Utils ──
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function daysLeft(dateStr) { return Math.max(0, Math.ceil((new Date(dateStr) - new Date()) / 86400000)); }
+function openModal() { document.getElementById('modalOverlay').classList.add('open'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function handleMainAction() {
+  if (state.currentView==='sprints') openSprintModal();
+  else if (state.currentView==='team') openTeamModal();
+  else openStoryModal();
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `sprint-board-${new Date().toISOString().slice(0,10)}.json`; a.click();
+}
+function importData() {
+  const input = document.createElement('input'); input.type='file'; input.accept='.json';
+  input.onchange = e => {
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = () => { try { state = JSON.parse(r.result); save(); render(); } catch(e) { alert('Invalid JSON'); } };
+    r.readAsText(f);
+  };
+  input.click();
+}
+
+// ── Events ──
+document.getElementById('tabs').addEventListener('click', e => {
+  if (e.target.classList.contains('tab')) { state.currentView = e.target.dataset.view; render(); }
+});
+document.getElementById('searchInput').addEventListener('input', e => { state.searchText = e.target.value; render(); });
+document.querySelectorAll('.filter-chip').forEach(c => c.addEventListener('click', () => {
+  document.querySelectorAll('.filter-chip').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active');
+  state.typeFilter = c.dataset.filter;
+  render();
+}));
+document.getElementById('modalOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+
+document.addEventListener('keydown', e => {
+  if (document.getElementById('modalOverlay').classList.contains('open')) {
+    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Enter' && e.metaKey) { const save = document.querySelector('.modal-footer .btn-primary'); if(save) save.click(); }
+    return;
+  }
+  if (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); handleMainAction(); }
+  if (e.key === '/') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+  if (e.key === 'Escape') document.getElementById('searchInput').blur();
+  if (e.key >= '1' && e.key <= '6') {
+    const views = ['backlog','board','burndown','velocity','sprints','team'];
+    state.currentView = views[parseInt(e.key)-1];
+    render();
+  }
+  if (e.key === '?') {
+    alert('Keyboard Shortcuts:\n\nN — New story/sprint/member\n/ — Search\n1-6 — Switch views\n⌘+Enter — Save modal\nEsc — Close modal/blur search\nE — Export\nI — Import');
+  }
+  if (e.key === 'e' || e.key === 'E') exportData();
+  if (e.key === 'i' || e.key === 'I') importData();
+});
+
+// ── Init ──
+load();
+render();
+</script>
+</body>
+</html>

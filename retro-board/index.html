@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retro Board — Sprint Retrospectives Done Right</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #232736;
+  --surface3: #2d3143;
+  --border: #363b50;
+  --text: #e8eaed;
+  --text2: #9ca3b4;
+  --text3: #6b7280;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --green: #22c55e;
+  --green-bg: rgba(34,197,94,0.12);
+  --red: #ef4444;
+  --red-bg: rgba(239,68,68,0.12);
+  --yellow: #eab308;
+  --yellow-bg: rgba(234,179,8,0.12);
+  --blue: #3b82f6;
+  --blue-bg: rgba(59,130,246,0.12);
+  --purple: #a855f7;
+  --purple-bg: rgba(168,85,247,0.12);
+  --orange: #f97316;
+  --orange-bg: rgba(249,115,22,0.12);
+  --pink: #ec4899;
+  --pink-bg: rgba(236,72,153,0.12);
+  --radius: 10px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+.light {
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --surface2: #f9fafb;
+  --surface3: #e5e7eb;
+  --border: #d1d5db;
+  --text: #111827;
+  --text2: #6b7280;
+  --text3: #9ca3af;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+button { cursor: pointer; font-family: inherit; border: none; }
+input, textarea, select { font-family: inherit; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; outline: none; }
+input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+textarea { resize: vertical; }
+
+/* Header */
+.header { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+.header-left { display: flex; align-items: center; gap: 16px; }
+.logo { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.logo span { color: var(--accent); }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-ghost { background: transparent; color: var(--text2); }
+.btn-ghost:hover { background: var(--surface2); color: var(--text); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-icon { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: var(--surface2); color: var(--text2); font-size: 16px; }
+.btn-icon:hover { background: var(--surface3); color: var(--text); }
+
+/* Layout */
+.app { display: flex; height: calc(100vh - 57px); }
+.sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+.sidebar-header { padding: 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+.sidebar-header h3 { font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+.sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
+.sidebar-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; transition: background 0.15s; }
+.sidebar-item:hover { background: var(--surface2); }
+.sidebar-item.active { background: var(--accent); color: white; }
+.sidebar-item.active .si-date { color: rgba(255,255,255,0.7); }
+.si-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.si-date { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.si-meta { display: flex; gap: 8px; margin-top: 4px; font-size: 11px; color: var(--text3); }
+.si-template { font-size: 10px; padding: 2px 6px; background: var(--surface3); border-radius: 4px; color: var(--text2); }
+
+/* Main content */
+.main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.retro-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.retro-title-row { display: flex; align-items: center; gap: 12px; flex: 1; }
+.retro-title { font-size: 22px; font-weight: 700; background: transparent; border: none; color: var(--text); width: 100%; }
+.retro-title:focus { border-bottom: 2px solid var(--accent); border-radius: 0; }
+.retro-actions { display: flex; gap: 8px; align-items: center; }
+.template-badge { font-size: 11px; padding: 4px 10px; border-radius: 12px; background: var(--purple-bg); color: var(--purple); font-weight: 500; }
+
+/* Timer */
+.timer-wrap { display: flex; align-items: center; gap: 8px; background: var(--surface2); padding: 6px 12px; border-radius: 8px; }
+.timer-display { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 60px; text-align: center; }
+.timer-display.running { color: var(--green); }
+.timer-display.paused { color: var(--yellow); }
+.timer-display.done { color: var(--red); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+.timer-presets { display: flex; gap: 4px; }
+.timer-presets button { padding: 3px 8px; font-size: 11px; border-radius: 4px; background: var(--surface3); color: var(--text2); }
+.timer-presets button:hover { color: var(--text); }
+
+/* Board columns */
+.board { display: flex; gap: 16px; padding: 20px 24px; flex: 1; min-height: 0; overflow-x: auto; }
+.column { flex: 1; min-width: 280px; display: flex; flex-direction: column; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+.col-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+.col-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+.col-icon { font-size: 18px; }
+.col-count { font-size: 11px; color: var(--text3); background: var(--surface2); padding: 2px 8px; border-radius: 10px; }
+.col-cards { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.col-cards.drag-over { background: var(--surface2); }
+.col-footer { padding: 10px 12px; border-top: 1px solid var(--border); }
+.add-card-btn { width: 100%; padding: 8px; border-radius: 6px; background: transparent; color: var(--text3); font-size: 13px; text-align: left; display: flex; align-items: center; gap: 6px; }
+.add-card-btn:hover { background: var(--surface2); color: var(--text); }
+
+/* Cards */
+.card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; cursor: grab; transition: all 0.15s; position: relative; }
+.card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow); }
+.card.dragging { opacity: 0.5; }
+.card-text { font-size: 13px; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; }
+.card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.card-votes { display: flex; align-items: center; gap: 4px; }
+.vote-btn { display: flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px; font-size: 12px; background: transparent; color: var(--text3); }
+.vote-btn:hover { background: var(--surface3); color: var(--text); }
+.vote-btn.voted { color: var(--accent); background: rgba(99,102,241,0.12); }
+.card-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+.card:hover .card-actions { opacity: 1; }
+.card-action-btn { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; background: transparent; color: var(--text3); font-size: 12px; }
+.card-action-btn:hover { background: var(--surface3); color: var(--text); }
+.card-action-btn.del:hover { color: var(--red); }
+
+/* Action item card extras */
+.card.action-item { border-left: 3px solid var(--blue); }
+.card.action-item.done { border-left-color: var(--green); opacity: 0.7; }
+.card.action-item.done .card-text { text-decoration: line-through; }
+.action-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 11px; color: var(--text3); }
+.assignee-tag { padding: 2px 6px; background: var(--blue-bg); color: var(--blue); border-radius: 4px; font-size: 11px; }
+.due-tag { padding: 2px 6px; background: var(--orange-bg); color: var(--orange); border-radius: 4px; }
+.due-tag.overdue { background: var(--red-bg); color: var(--red); }
+.checkbox { width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.checkbox.checked { background: var(--green); border-color: var(--green); color: white; font-size: 10px; }
+
+/* Add card form */
+.add-form { padding: 12px; }
+.add-form textarea { width: 100%; min-height: 60px; margin-bottom: 8px; font-size: 13px; }
+.add-form-actions { display: flex; gap: 6px; }
+.add-form .action-fields { display: flex; gap: 6px; margin-bottom: 8px; }
+.add-form .action-fields input { flex: 1; font-size: 12px; padding: 6px 8px; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; display: flex; align-items: center; justify-content: center; }
+.modal { background: var(--surface); border-radius: 12px; width: 90%; max-width: 520px; max-height: 80vh; overflow-y: auto; box-shadow: var(--shadow); }
+.modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-header h2 { font-size: 18px; }
+.modal-body { padding: 24px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; }
+
+/* Template selector */
+.template-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.template-option { padding: 14px; border-radius: 8px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s; text-align: center; }
+.template-option:hover { border-color: var(--accent); background: var(--surface2); }
+.template-option.selected { border-color: var(--accent); background: rgba(99,102,241,0.1); }
+.template-option h4 { font-size: 13px; margin-bottom: 4px; }
+.template-option p { font-size: 11px; color: var(--text3); }
+.template-option .tpl-icon { font-size: 24px; margin-bottom: 6px; }
+
+/* Stats view */
+.stats-view { padding: 24px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.stat-value { font-size: 28px; font-weight: 700; }
+.stat-label { font-size: 12px; color: var(--text2); margin-top: 4px; }
+.trends-section { margin-top: 24px; }
+.trend-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.trend-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.trend-bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.3s; }
+.trend-label { font-size: 10px; color: var(--text3); }
+
+/* Action Items tracker */
+.action-tracker { padding: 24px; }
+.action-list-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+.action-list-item.done { opacity: 0.6; }
+.action-list-item.done .ali-text { text-decoration: line-through; }
+.ali-text { flex: 1; font-size: 14px; }
+.ali-meta { display: flex; gap: 8px; align-items: center; }
+.ali-retro { font-size: 11px; color: var(--text3); }
+
+/* Export */
+.export-preview { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-size: 13px; font-family: 'SF Mono', monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; line-height: 1.6; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .board { flex-direction: column; padding: 12px; }
+  .column { min-width: unset; }
+  .retro-header { padding: 12px 16px; }
+}
+
+/* Empty state */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text3); text-align: center; padding: 40px; }
+.empty-state .es-icon { font-size: 48px; margin-bottom: 16px; }
+.empty-state h3 { font-size: 18px; color: var(--text2); margin-bottom: 8px; }
+.empty-state p { font-size: 13px; max-width: 300px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* View tabs */
+.view-tabs { display: flex; gap: 2px; background: var(--surface2); padding: 3px; border-radius: 8px; }
+.view-tab { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; color: var(--text2); background: transparent; }
+.view-tab:hover { color: var(--text); }
+.view-tab.active { background: var(--accent); color: white; }
+
+/* Keyboard hint */
+.kbd { display: inline-block; padding: 1px 5px; font-size: 10px; background: var(--surface3); border: 1px solid var(--border); border-radius: 3px; color: var(--text3); font-family: monospace; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="logo">🔄 <span>Retro Board</span></div>
+    <div class="view-tabs" id="viewTabs">
+      <button class="view-tab active" data-view="board" onclick="switchView('board')">Board</button>
+      <button class="view-tab" data-view="actions" onclick="switchView('actions')">Action Items</button>
+      <button class="view-tab" data-view="stats" onclick="switchView('stats')">Insights</button>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="timer-wrap" id="timerWrap">
+      <div class="timer-presets">
+        <button onclick="setTimer(5)">5m</button>
+        <button onclick="setTimer(10)">10m</button>
+        <button onclick="setTimer(15)">15m</button>
+      </div>
+      <div class="timer-display" id="timerDisplay">--:--</div>
+      <button class="btn-icon" id="timerPlayBtn" onclick="toggleTimer()" title="Start/Pause Timer">▶</button>
+      <button class="btn-icon" onclick="resetTimer()" title="Reset">↺</button>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="showExport()" title="Export Markdown">📋 Export</button>
+    <button class="btn btn-ghost btn-sm" onclick="showImportExport()" title="Import/Export JSON">💾</button>
+    <button class="btn-icon" onclick="toggleDark()" title="Toggle Theme" id="themeBtn">🌙</button>
+    <button class="btn-icon" onclick="showShortcuts()" title="Keyboard Shortcuts">⌨</button>
+  </div>
+</div>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h3>Retros</h3>
+      <button class="btn btn-primary btn-sm" onclick="showNewRetro()">+ New</button>
+    </div>
+    <div class="sidebar-list" id="sidebarList"></div>
+  </div>
+  <div class="main" id="mainContent"></div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+// ============ DATA ============
+const TEMPLATES = {
+  'went-well': {
+    name: 'Went Well / Improve / Actions',
+    icon: '🟢',
+    desc: 'Classic 3-column retrospective',
+    columns: [
+      { id: 'well', title: 'What Went Well', icon: '🟢', color: 'var(--green)' },
+      { id: 'improve', title: 'What to Improve', icon: '🔴', color: 'var(--red)' },
+      { id: 'actions', title: 'Action Items', icon: '🎯', color: 'var(--blue)', isActions: true }
+    ]
+  },
+  'start-stop-continue': {
+    name: 'Start / Stop / Continue',
+    icon: '🚦',
+    desc: 'What to start, stop, and keep doing',
+    columns: [
+      { id: 'start', title: 'Start Doing', icon: '🟢', color: 'var(--green)' },
+      { id: 'stop', title: 'Stop Doing', icon: '🔴', color: 'var(--red)' },
+      { id: 'continue', title: 'Continue Doing', icon: '🟡', color: 'var(--yellow)' },
+      { id: 'actions', title: 'Action Items', icon: '🎯', color: 'var(--blue)', isActions: true }
+    ]
+  },
+  '4ls': {
+    name: '4Ls',
+    icon: '💜',
+    desc: 'Liked, Learned, Lacked, Longed For',
+    columns: [
+      { id: 'liked', title: 'Liked', icon: '💚', color: 'var(--green)' },
+      { id: 'learned', title: 'Learned', icon: '💙', color: 'var(--blue)' },
+      { id: 'lacked', title: 'Lacked', icon: '💔', color: 'var(--red)' },
+      { id: 'longed', title: 'Longed For', icon: '💜', color: 'var(--purple)' },
+      { id: 'actions', title: 'Action Items', icon: '🎯', color: 'var(--blue)', isActions: true }
+    ]
+  },
+  'mad-sad-glad': {
+    name: 'Mad / Sad / Glad',
+    icon: '😡',
+    desc: 'Emotion-based retrospective',
+    columns: [
+      { id: 'mad', title: 'Mad 😡', icon: '😡', color: 'var(--red)' },
+      { id: 'sad', title: 'Sad 😢', icon: '😢', color: 'var(--yellow)' },
+      { id: 'glad', title: 'Glad 😊', icon: '😊', color: 'var(--green)' },
+      { id: 'actions', title: 'Action Items', icon: '🎯', color: 'var(--blue)', isActions: true }
+    ]
+  },
+  'sailboat': {
+    name: 'Sailboat',
+    icon: '⛵',
+    desc: 'Wind, Anchor, Rocks, Island',
+    columns: [
+      { id: 'wind', title: '💨 Wind (Helps Us)', icon: '💨', color: 'var(--green)' },
+      { id: 'anchor', title: '⚓ Anchor (Slows Us)', icon: '⚓', color: 'var(--yellow)' },
+      { id: 'rocks', title: '🪨 Rocks (Risks)', icon: '🪨', color: 'var(--red)' },
+      { id: 'island', title: '🏝️ Island (Goals)', icon: '🏝️', color: 'var(--purple)' },
+      { id: 'actions', title: 'Action Items', icon: '🎯', color: 'var(--blue)', isActions: true }
+    ]
+  },
+  'starfish': {
+    name: 'Starfish',
+    icon: '⭐',
+    desc: 'Keep, More, Less, Start, Stop',
+    columns: [
+      { id: 'keep', title: 'Keep Doing', icon: '✅', color: 'var(--green)' },
+      { id: 'more', title: 'Do More', icon: '📈', color: 'var(--blue)' },
+      { id: 'less', title: 'Do Less', icon: '📉', color: 'var(--yellow)' },
+      { id: 'start', title: 'Start Doing', icon: '🆕', color: 'var(--purple)' },
+      { id: 'stop', title: 'Stop Doing', icon: '🛑', color: 'var(--red)' },
+      { id: 'actions', title: 'Action Items', icon: '🎯', color: 'var(--blue)', isActions: true }
+    ]
+  }
+};
+
+let state = {
+  retros: [],
+  activeRetroId: null,
+  view: 'board',
+  dark: true,
+  timer: { seconds: 0, running: false, interval: null, totalSet: 0 }
+};
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
+
+function save() {
+  const s = { ...state, timer: { ...state.timer, interval: null } };
+  localStorage.setItem('retro-board-data', JSON.stringify(s));
+}
+
+function load() {
+  const d = localStorage.getItem('retro-board-data');
+  if (d) {
+    const parsed = JSON.parse(d);
+    state.retros = parsed.retros || [];
+    state.activeRetroId = parsed.activeRetroId;
+    state.dark = parsed.dark !== undefined ? parsed.dark : true;
+    state.view = parsed.view || 'board';
+  }
+  if (!state.retros.length) seedData();
+  applyTheme();
+}
+
+function applyTheme() {
+  document.body.classList.toggle('light', !state.dark);
+  document.getElementById('themeBtn').textContent = state.dark ? '☀️' : '🌙';
+}
+
+function toggleDark() {
+  state.dark = !state.dark;
+  applyTheme();
+  save();
+}
+
+function getActiveRetro() {
+  return state.retros.find(r => r.id === state.activeRetroId);
+}
+
+// ============ TIMER ============
+function setTimer(minutes) {
+  clearInterval(state.timer.interval);
+  state.timer = { seconds: minutes * 60, running: false, interval: null, totalSet: minutes * 60 };
+  renderTimer();
+}
+
+function toggleTimer() {
+  if (state.timer.seconds <= 0) return;
+  if (state.timer.running) {
+    clearInterval(state.timer.interval);
+    state.timer.running = false;
+  } else {
+    state.timer.running = true;
+    state.timer.interval = setInterval(() => {
+      state.timer.seconds--;
+      if (state.timer.seconds <= 0) {
+        state.timer.seconds = 0;
+        state.timer.running = false;
+        clearInterval(state.timer.interval);
+        try { new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=').play(); } catch(e) {}
+      }
+      renderTimer();
+    }, 1000);
+  }
+  renderTimer();
+}
+
+function resetTimer() {
+  clearInterval(state.timer.interval);
+  state.timer = { seconds: 0, running: false, interval: null, totalSet: 0 };
+  renderTimer();
+}
+
+function renderTimer() {
+  const el = document.getElementById('timerDisplay');
+  const btn = document.getElementById('timerPlayBtn');
+  const s = state.timer.seconds;
+  if (s <= 0 && state.timer.totalSet > 0) {
+    el.textContent = '00:00';
+    el.className = 'timer-display done';
+    btn.textContent = '▶';
+  } else if (s <= 0) {
+    el.textContent = '--:--';
+    el.className = 'timer-display';
+    btn.textContent = '▶';
+  } else {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    el.textContent = `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    el.className = `timer-display ${state.timer.running ? 'running' : 'paused'}`;
+    btn.textContent = state.timer.running ? '⏸' : '▶';
+  }
+}
+
+// ============ SIDEBAR ============
+function renderSidebar() {
+  const list = document.getElementById('sidebarList');
+  const sorted = [...state.retros].sort((a,b) => new Date(b.date) - new Date(a.date));
+  list.innerHTML = sorted.map(r => {
+    const tpl = TEMPLATES[r.template];
+    const totalCards = Object.values(r.cards || {}).reduce((sum, arr) => sum + arr.length, 0);
+    return `<div class="sidebar-item ${r.id === state.activeRetroId ? 'active' : ''}" onclick="selectRetro('${r.id}')">
+      <div class="si-name">${esc(r.name)}</div>
+      <div class="si-date">${formatDate(r.date)}</div>
+      <div class="si-meta">
+        <span class="si-template">${tpl ? tpl.icon + ' ' + tpl.name : r.template}</span>
+        <span>${totalCards} cards</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectRetro(id) {
+  state.activeRetroId = id;
+  save();
+  render();
+}
+
+// ============ VIEWS ============
+function switchView(v) {
+  state.view = v;
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+  save();
+  renderMain();
+}
+
+function renderMain() {
+  const retro = getActiveRetro();
+  const main = document.getElementById('mainContent');
+  if (!retro) {
+    main.innerHTML = `<div class="empty-state"><div class="es-icon">🔄</div><h3>No Retro Selected</h3><p>Create a new retrospective to get started</p><button class="btn btn-primary" onclick="showNewRetro()" style="margin-top:16px">+ New Retro</button></div>`;
+    return;
+  }
+  if (state.view === 'board') renderBoard(retro, main);
+  else if (state.view === 'actions') renderActionsView(retro, main);
+  else if (state.view === 'stats') renderStatsView(main);
+}
+
+function renderBoard(retro, main) {
+  const tpl = TEMPLATES[retro.template];
+  if (!tpl) return;
+  const cols = tpl.columns;
+  
+  main.innerHTML = `
+    <div class="retro-header">
+      <div class="retro-title-row">
+        <input class="retro-title" value="${esc(retro.name)}" onchange="renameRetro(this.value)" />
+        <span class="template-badge">${tpl.icon} ${tpl.name}</span>
+      </div>
+      <div class="retro-actions">
+        <button class="btn btn-ghost btn-sm" onclick="deleteRetro()" title="Delete">🗑️</button>
+      </div>
+    </div>
+    <div class="board">${cols.map(col => renderColumn(retro, col)).join('')}</div>
+  `;
+}
+
+function renderColumn(retro, col) {
+  const cards = (retro.cards[col.id] || []);
+  const isAct = col.isActions;
+  return `<div class="column" data-col="${col.id}">
+    <div class="col-header">
+      <div class="col-title">
+        <span class="col-icon">${col.icon}</span> ${col.title}
+      </div>
+      <span class="col-count">${cards.length}</span>
+    </div>
+    <div class="col-cards" id="col-${col.id}" 
+      ondragover="onDragOver(event, '${col.id}')" 
+      ondragleave="onDragLeave(event)" 
+      ondrop="onDrop(event, '${col.id}')">
+      ${cards.map(c => isAct ? renderActionCard(c, col.id) : renderCard(c, col.id)).join('')}
+    </div>
+    <div class="col-footer">
+      <button class="add-card-btn" onclick="showAddCard('${col.id}', ${isAct})">+ Add ${isAct ? 'action item' : 'card'}</button>
+    </div>
+  </div>`;
+}
+
+function renderCard(card, colId) {
+  return `<div class="card" draggable="true" ondragstart="onDragStart(event, '${card.id}', '${colId}')" id="card-${card.id}">
+    <div class="card-text">${esc(card.text)}</div>
+    <div class="card-footer">
+      <div class="card-votes">
+        <button class="vote-btn ${card.voted ? 'voted' : ''}" onclick="toggleVote('${colId}','${card.id}')">
+          👍 ${card.votes || 0}
+        </button>
+      </div>
+      <div class="card-actions">
+        <button class="card-action-btn" onclick="editCard('${colId}','${card.id}')" title="Edit">✏️</button>
+        <button class="card-action-btn del" onclick="deleteCard('${colId}','${card.id}')" title="Delete">🗑️</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderActionCard(card, colId) {
+  const overdue = card.due && new Date(card.due) < new Date() && !card.done;
+  return `<div class="card action-item ${card.done ? 'done' : ''}" draggable="true" ondragstart="onDragStart(event, '${card.id}', '${colId}')" id="card-${card.id}">
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div class="checkbox ${card.done ? 'checked' : ''}" onclick="toggleActionDone('${colId}','${card.id}')">${card.done ? '✓' : ''}</div>
+      <div style="flex:1">
+        <div class="card-text">${esc(card.text)}</div>
+        <div class="action-meta">
+          ${card.assignee ? `<span class="assignee-tag">@${esc(card.assignee)}</span>` : ''}
+          ${card.due ? `<span class="due-tag ${overdue ? 'overdue' : ''}">${overdue ? '⚠️ ' : ''}${card.due}</span>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="card-votes">
+        <button class="vote-btn ${card.voted ? 'voted' : ''}" onclick="toggleVote('${colId}','${card.id}')">
+          👍 ${card.votes || 0}
+        </button>
+      </div>
+      <div class="card-actions">
+        <button class="card-action-btn" onclick="editCard('${colId}','${card.id}')" title="Edit">✏️</button>
+        <button class="card-action-btn del" onclick="deleteCard('${colId}','${card.id}')" title="Delete">🗑️</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ============ ACTIONS VIEW ============
+function renderActionsView(retro, main) {
+  // Collect all action items across ALL retros
+  const allActions = [];
+  state.retros.forEach(r => {
+    const tpl = TEMPLATES[r.template];
+    if (!tpl) return;
+    tpl.columns.forEach(col => {
+      if (col.isActions && r.cards[col.id]) {
+        r.cards[col.id].forEach(c => {
+          allActions.push({ ...c, retroId: r.id, retroName: r.name, retroDate: r.date, colId: col.id });
+        });
+      }
+    });
+  });
+  
+  const pending = allActions.filter(a => !a.done);
+  const done = allActions.filter(a => a.done);
+  
+  main.innerHTML = `
+    <div class="action-tracker">
+      <h2 style="margin-bottom:4px">Action Items</h2>
+      <p style="color:var(--text3);font-size:13px;margin-bottom:20px">${pending.length} pending · ${done.length} completed across all retros</p>
+      
+      ${pending.length ? '<h3 style="margin-bottom:12px;font-size:14px;color:var(--text2)">⏳ Pending</h3>' : ''}
+      ${pending.map(a => renderActionListItem(a)).join('')}
+      
+      ${done.length ? '<h3 style="margin:20px 0 12px;font-size:14px;color:var(--text2)">✅ Completed</h3>' : ''}
+      ${done.map(a => renderActionListItem(a)).join('')}
+      
+      ${!allActions.length ? '<div class="empty-state"><div class="es-icon">🎯</div><h3>No Action Items Yet</h3><p>Add action items to your retro board columns</p></div>' : ''}
+    </div>
+  `;
+}
+
+function renderActionListItem(a) {
+  const overdue = a.due && new Date(a.due) < new Date() && !a.done;
+  return `<div class="action-list-item ${a.done ? 'done' : ''}">
+    <div class="checkbox ${a.done ? 'checked' : ''}" onclick="toggleActionDoneGlobal('${a.retroId}','${a.colId}','${a.id}')">${a.done ? '✓' : ''}</div>
+    <div class="ali-text">${esc(a.text)}</div>
+    <div class="ali-meta">
+      ${a.assignee ? `<span class="assignee-tag">@${esc(a.assignee)}</span>` : ''}
+      ${a.due ? `<span class="due-tag ${overdue ? 'overdue' : ''}">${overdue ? '⚠️ ' : ''}${a.due}</span>` : ''}
+      <span class="ali-retro">${esc(a.retroName)}</span>
+    </div>
+  </div>`;
+}
+
+function toggleActionDoneGlobal(retroId, colId, cardId) {
+  const r = state.retros.find(r => r.id === retroId);
+  if (!r) return;
+  const c = (r.cards[colId] || []).find(c => c.id === cardId);
+  if (c) { c.done = !c.done; save(); renderMain(); }
+}
+
+// ============ STATS VIEW ============
+function renderStatsView(main) {
+  const retros = state.retros;
+  let totalCards = 0, totalVotes = 0, totalActions = 0, doneActions = 0;
+  const templateUsage = {};
+  
+  retros.forEach(r => {
+    templateUsage[r.template] = (templateUsage[r.template] || 0) + 1;
+    const tpl = TEMPLATES[r.template];
+    if (!tpl) return;
+    tpl.columns.forEach(col => {
+      const cards = r.cards[col.id] || [];
+      totalCards += cards.length;
+      cards.forEach(c => {
+        totalVotes += (c.votes || 0);
+        if (col.isActions) {
+          totalActions++;
+          if (c.done) doneActions++;
+        }
+      });
+    });
+  });
+  
+  // Cards per retro trend
+  const sorted = [...retros].sort((a,b) => new Date(a.date) - new Date(b.date)).slice(-10);
+  const maxCards = Math.max(...sorted.map(r => Object.values(r.cards).reduce((s, a) => s + a.length, 0)), 1);
+  
+  main.innerHTML = `
+    <div class="stats-view">
+      <h2 style="margin-bottom:20px">Retrospective Insights</h2>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-value">${retros.length}</div><div class="stat-label">Total Retros</div></div>
+        <div class="stat-card"><div class="stat-value">${totalCards}</div><div class="stat-label">Total Cards</div></div>
+        <div class="stat-card"><div class="stat-value">${totalVotes}</div><div class="stat-label">Total Votes</div></div>
+        <div class="stat-card"><div class="stat-value">${totalActions}</div><div class="stat-label">Action Items</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--green)">${totalActions ? Math.round(doneActions/totalActions*100) : 0}%</div><div class="stat-label">Actions Completed</div></div>
+        <div class="stat-card"><div class="stat-value">${retros.length ? (totalCards/retros.length).toFixed(1) : 0}</div><div class="stat-label">Avg Cards/Retro</div></div>
+      </div>
+      
+      <h3 style="margin-bottom:12px;color:var(--text2)">Cards Per Retro (Last 10)</h3>
+      <div class="trend-chart">
+        ${sorted.map(r => {
+          const cnt = Object.values(r.cards).reduce((s, a) => s + a.length, 0);
+          const h = Math.max((cnt / maxCards) * 100, 5);
+          return `<div class="trend-bar-wrap">
+            <div class="trend-bar" style="height:${h}%;background:var(--accent)"></div>
+            <div class="trend-label">${cnt}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      
+      <h3 style="margin:24px 0 12px;color:var(--text2)">Template Usage</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${Object.entries(templateUsage).map(([k,v]) => {
+          const t = TEMPLATES[k];
+          return `<div style="padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:13px">${t ? t.icon : ''} ${t ? t.name : k}: <b>${v}</b></div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ============ CARD ACTIONS ============
+let dragData = null;
+
+function onDragStart(e, cardId, colId) {
+  dragData = { cardId, colId };
+  e.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => document.getElementById('card-' + cardId)?.classList.add('dragging'), 0);
+}
+
+function onDragOver(e, colId) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function onDrop(e, toColId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragData) return;
+  const retro = getActiveRetro();
+  if (!retro) return;
+  
+  const fromCards = retro.cards[dragData.colId] || [];
+  const idx = fromCards.findIndex(c => c.id === dragData.cardId);
+  if (idx === -1) return;
+  
+  const [card] = fromCards.splice(idx, 1);
+  if (!retro.cards[toColId]) retro.cards[toColId] = [];
+  retro.cards[toColId].push(card);
+  
+  dragData = null;
+  save();
+  renderMain();
+}
+
+function showAddCard(colId, isAction) {
+  const retro = getActiveRetro();
+  if (!retro) return;
+  
+  const footer = document.querySelector(`[data-col="${colId}"] .col-footer`);
+  footer.innerHTML = `<div class="add-form">
+    <textarea id="newCardText" placeholder="${isAction ? 'Action item...' : 'Type your thought...'}" autofocus></textarea>
+    ${isAction ? `<div class="action-fields">
+      <input id="newAssignee" placeholder="Assignee" />
+      <input id="newDue" type="date" />
+    </div>` : ''}
+    <div class="add-form-actions">
+      <button class="btn btn-primary btn-sm" onclick="addCard('${colId}', ${isAction})">Add</button>
+      <button class="btn btn-ghost btn-sm" onclick="renderMain()">Cancel</button>
+    </div>
+  </div>`;
+  document.getElementById('newCardText').focus();
+  document.getElementById('newCardText').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addCard(colId, isAction);
+    if (e.key === 'Escape') renderMain();
+  });
+}
+
+function addCard(colId, isAction) {
+  const retro = getActiveRetro();
+  if (!retro) return;
+  const text = document.getElementById('newCardText').value.trim();
+  if (!text) return;
+  
+  if (!retro.cards[colId]) retro.cards[colId] = [];
+  const card = { id: genId(), text, votes: 0, voted: false, createdAt: new Date().toISOString() };
+  if (isAction) {
+    card.assignee = document.getElementById('newAssignee')?.value.trim() || '';
+    card.due = document.getElementById('newDue')?.value || '';
+    card.done = false;
+  }
+  retro.cards[colId].push(card);
+  save();
+  renderMain();
+}
+
+function toggleVote(colId, cardId) {
+  const retro = getActiveRetro();
+  if (!retro) return;
+  const card = (retro.cards[colId] || []).find(c => c.id === cardId);
+  if (!card) return;
+  if (card.voted) { card.votes = Math.max(0, (card.votes || 0) - 1); card.voted = false; }
+  else { card.votes = (card.votes || 0) + 1; card.voted = true; }
+  save();
+  renderMain();
+}
+
+function toggleActionDone(colId, cardId) {
+  const retro = getActiveRetro();
+  if (!retro) return;
+  const card = (retro.cards[colId] || []).find(c => c.id === cardId);
+  if (card) { card.done = !card.done; save(); renderMain(); }
+}
+
+function editCard(colId, cardId) {
+  const retro = getActiveRetro();
+  if (!retro) return;
+  const card = (retro.cards[colId] || []).find(c => c.id === cardId);
+  if (!card) return;
+  
+  const tpl = TEMPLATES[retro.template];
+  const col = tpl?.columns.find(c => c.id === colId);
+  const isAction = col?.isActions;
+  
+  showModal(`
+    <div class="modal-header"><h2>Edit Card</h2><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Text</label><textarea id="editText" rows="3">${esc(card.text)}</textarea></div>
+      ${isAction ? `
+        <div class="form-group"><label>Assignee</label><input id="editAssignee" value="${esc(card.assignee || '')}" /></div>
+        <div class="form-group"><label>Due Date</label><input id="editDue" type="date" value="${card.due || ''}" /></div>
+      ` : ''}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditCard('${colId}','${cardId}',${isAction})">Save</button>
+    </div>
+  `);
+}
+
+function saveEditCard(colId, cardId, isAction) {
+  const retro = getActiveRetro();
+  if (!retro) return;
+  const card = (retro.cards[colId] || []).find(c => c.id === cardId);
+  if (!card) return;
+  card.text = document.getElementById('editText').value.trim();
+  if (isAction) {
+    card.assignee = document.getElementById('editAssignee')?.value.trim() || '';
+    card.due = document.getElementById('editDue')?.value || '';
+  }
+  save();
+  closeModal();
+  renderMain();
+}
+
+function deleteCard(colId, cardId) {
+  const retro = getActiveRetro();
+  if (!retro) return;
+  retro.cards[colId] = (retro.cards[colId] || []).filter(c => c.id !== cardId);
+  save();
+  renderMain();
+}
+
+// ============ RETRO CRUD ============
+function showNewRetro() {
+  showModal(`
+    <div class="modal-header"><h2>New Retrospective</h2><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Name</label><input id="newRetroName" placeholder="Sprint 12 Retro" value="Sprint ${state.retros.length + 1} Retro" /></div>
+      <div class="form-group"><label>Date</label><input id="newRetroDate" type="date" value="${new Date().toISOString().split('T')[0]}" /></div>
+      <div class="form-group"><label>Template</label>
+        <div class="template-grid" id="templateGrid">
+          ${Object.entries(TEMPLATES).map(([k, t], i) => `
+            <div class="template-option ${i === 0 ? 'selected' : ''}" data-tpl="${k}" onclick="selectTemplate('${k}')">
+              <div class="tpl-icon">${t.icon}</div>
+              <h4>${t.name}</h4>
+              <p>${t.desc}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createRetro()">Create</button>
+    </div>
+  `);
+  document.getElementById('newRetroName').focus();
+}
+
+let selectedTemplate = 'went-well';
+function selectTemplate(k) {
+  selectedTemplate = k;
+  document.querySelectorAll('.template-option').forEach(el => el.classList.toggle('selected', el.dataset.tpl === k));
+}
+
+function createRetro() {
+  const name = document.getElementById('newRetroName').value.trim() || 'Untitled Retro';
+  const date = document.getElementById('newRetroDate').value || new Date().toISOString().split('T')[0];
+  const tpl = TEMPLATES[selectedTemplate];
+  const cards = {};
+  tpl.columns.forEach(c => cards[c.id] = []);
+  
+  const retro = { id: genId(), name, date, template: selectedTemplate, cards, createdAt: new Date().toISOString() };
+  state.retros.push(retro);
+  state.activeRetroId = retro.id;
+  state.view = 'board';
+  save();
+  closeModal();
+  render();
+}
+
+function renameRetro(name) {
+  const retro = getActiveRetro();
+  if (retro) { retro.name = name; save(); renderSidebar(); }
+}
+
+function deleteRetro() {
+  if (!confirm('Delete this retro? This cannot be undone.')) return;
+  state.retros = state.retros.filter(r => r.id !== state.activeRetroId);
+  state.activeRetroId = state.retros.length ? state.retros[0].id : null;
+  save();
+  render();
+}
+
+// ============ EXPORT ============
+function showExport() {
+  const retro = getActiveRetro();
+  if (!retro) return;
+  const tpl = TEMPLATES[retro.template];
+  if (!tpl) return;
+  
+  let md = `# ${retro.name}\n`;
+  md += `**Date:** ${retro.date} · **Template:** ${tpl.name}\n\n`;
+  
+  tpl.columns.forEach(col => {
+    md += `## ${col.icon} ${col.title}\n`;
+    const cards = (retro.cards[col.id] || []).sort((a,b) => (b.votes||0) - (a.votes||0));
+    if (!cards.length) { md += '_No items_\n\n'; return; }
+    cards.forEach(c => {
+      if (col.isActions) {
+        md += `- [${c.done ? 'x' : ' '}] ${c.text}`;
+        if (c.assignee) md += ` (@${c.assignee})`;
+        if (c.due) md += ` — due ${c.due}`;
+        md += c.votes ? ` 👍${c.votes}` : '';
+      } else {
+        md += `- ${c.text}${c.votes ? ` 👍${c.votes}` : ''}`;
+      }
+      md += '\n';
+    });
+    md += '\n';
+  });
+  
+  showModal(`
+    <div class="modal-header"><h2>Export — ${esc(retro.name)}</h2><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="export-preview">${esc(md)}</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary" onclick="navigator.clipboard.writeText(\`${md.replace(/`/g,'\\`').replace(/\$/g,'\\$')}\`);this.textContent='Copied!'">📋 Copy</button>
+    </div>
+  `);
+}
+
+function showImportExport() {
+  showModal(`
+    <div class="modal-header"><h2>Import / Export JSON</h2><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Export</label><button class="btn btn-primary" onclick="exportJSON()">📥 Download JSON</button></div>
+      <div class="form-group"><label>Import</label><input type="file" accept=".json" onchange="importJSON(event)" style="background:none;border:none;padding:0" /></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>
+  `);
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify({ retros: state.retros }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `retro-board-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+}
+
+function importJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (data.retros) {
+        state.retros = data.retros;
+        state.activeRetroId = state.retros.length ? state.retros[0].id : null;
+        save();
+        closeModal();
+        render();
+      }
+    } catch(err) { alert('Invalid JSON'); }
+  };
+  reader.readAsText(file);
+}
+
+function showShortcuts() {
+  showModal(`
+    <div class="modal-header"><h2>Keyboard Shortcuts</h2><button class="btn-icon" onclick="closeModal()">✕</button></div>
+    <div class="modal-body" style="font-size:13px;line-height:2">
+      <span class="kbd">N</span> New retro &nbsp;
+      <span class="kbd">/</span> Quick search &nbsp;
+      <span class="kbd">D</span> Toggle dark mode &nbsp;
+      <span class="kbd">1</span> Board view &nbsp;
+      <span class="kbd">2</span> Actions view &nbsp;
+      <span class="kbd">3</span> Insights view &nbsp;
+      <span class="kbd">E</span> Export markdown &nbsp;
+      <span class="kbd">T</span> Start 10m timer &nbsp;
+      <span class="kbd">Space</span> Pause/Resume timer &nbsp;
+      <span class="kbd">Esc</span> Close modal &nbsp;
+      <span class="kbd">Ctrl+Enter</span> Save card &nbsp;
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>
+  `);
+}
+
+// ============ MODAL ============
+function showModal(html) {
+  document.getElementById('modalRoot').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
+}
+
+function closeModal() {
+  document.getElementById('modalRoot').innerHTML = '';
+}
+
+// ============ KEYBOARD ============
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'Escape') { closeModal(); return; }
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); showNewRetro(); }
+  if (e.key === 'd' || e.key === 'D') { toggleDark(); }
+  if (e.key === '1') switchView('board');
+  if (e.key === '2') switchView('actions');
+  if (e.key === '3') switchView('stats');
+  if (e.key === 'e' || e.key === 'E') showExport();
+  if (e.key === 't' || e.key === 'T') { setTimer(10); toggleTimer(); }
+  if (e.key === ' ' && state.timer.totalSet > 0) { e.preventDefault(); toggleTimer(); }
+});
+
+// ============ HELPERS ============
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function formatDate(d) { try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch(e) { return d; } }
+
+// ============ SEED DATA ============
+function seedData() {
+  const now = new Date();
+  const retros = [
+    {
+      id: genId(), name: 'Sprint 14 Retro — UTMStamp Launch', date: '2026-04-10',
+      template: 'went-well',
+      cards: {
+        well: [
+          { id: genId(), text: 'Shipped UTMStamp landing page in 2 days — design to deploy', votes: 5, voted: false },
+          { id: genId(), text: 'Chatur handled overnight builds consistently — 18 tools shipped', votes: 3, voted: false },
+          { id: genId(), text: 'Product Hunt launch prep was smooth — all assets ready 48h early', votes: 4, voted: false },
+          { id: genId(), text: 'LinkedIn content getting consistent engagement (500+ impressions avg)', votes: 2, voted: false },
+        ],
+        improve: [
+          { id: genId(), text: 'Need better error tracking — found bugs from user reports, not monitoring', votes: 4, voted: false },
+          { id: genId(), text: 'Too many context switches between UTMStamp, job hunt, and content', votes: 3, voted: false },
+          { id: genId(), text: 'Analytics dashboard took 3x longer than estimated — scope creep', votes: 2, voted: false },
+          { id: genId(), text: 'Team deployment feature needs real user testing, not just dogfooding', votes: 1, voted: false },
+        ],
+        actions: [
+          { id: genId(), text: 'Set up Sentry for UTMStamp error tracking', votes: 3, voted: false, assignee: 'AJ', due: '2026-04-15', done: false },
+          { id: genId(), text: 'Block 2h daily for focused UTMStamp work (no context switching)', votes: 2, voted: false, assignee: 'AJ', due: '2026-04-12', done: false },
+          { id: genId(), text: 'Recruit 5 beta testers for team deployment feature', votes: 2, voted: false, assignee: 'AJ', due: '2026-04-18', done: false },
+        ]
+      }
+    },
+    {
+      id: genId(), name: 'Sprint 13 — ZYOD Handover', date: '2026-04-03',
+      template: 'sailboat',
+      cards: {
+        wind: [
+          { id: genId(), text: 'Documentation was thorough — handover doc covered all systems', votes: 3, voted: false },
+          { id: genId(), text: 'Good relationship with engineering team made transition smoother', votes: 2, voted: false },
+        ],
+        anchor: [
+          { id: genId(), text: 'Knowledge silos — some IoT logic only in my head, not documented', votes: 4, voted: false },
+          { id: genId(), text: 'Emotional attachment to the product slowed decision-making', votes: 1, voted: false },
+        ],
+        rocks: [
+          { id: genId(), text: 'Risk of key team members leaving after my departure', votes: 3, voted: false },
+          { id: genId(), text: 'Factory IoT deployment might stall without dedicated PM', votes: 2, voted: false },
+        ],
+        island: [
+          { id: genId(), text: 'Clean exit — no burned bridges, strong references secured', votes: 5, voted: false },
+          { id: genId(), text: 'Full focus on UTMStamp and job search post-handover', votes: 4, voted: false },
+        ],
+        actions: [
+          { id: genId(), text: 'Record 3 Loom videos covering IoT deployment process', votes: 3, voted: false, assignee: 'AJ', due: '2026-04-05', done: true },
+          { id: genId(), text: 'Get LinkedIn recommendations from 3 ZYOD colleagues', votes: 2, voted: false, assignee: 'AJ', due: '2026-04-10', done: true },
+        ]
+      }
+    },
+    {
+      id: genId(), name: 'Weekly Retro — Content Strategy', date: '2026-03-27',
+      template: 'start-stop-continue',
+      cards: {
+        start: [
+          { id: genId(), text: 'Start posting Twitter threads — not just LinkedIn', votes: 3, voted: false },
+          { id: genId(), text: 'Start tracking which content drives UTMStamp signups', votes: 4, voted: false },
+        ],
+        stop: [
+          { id: genId(), text: 'Stop overthinking post copy — ship draft, iterate', votes: 5, voted: false },
+          { id: genId(), text: 'Stop posting generic "10 tips" content — share real stories', votes: 3, voted: false },
+        ],
+        continue: [
+          { id: genId(), text: 'Keep sharing build-in-public updates — resonates with founders', votes: 4, voted: false },
+          { id: genId(), text: 'Keep documenting learnings from overnight builds', votes: 2, voted: false },
+          { id: genId(), text: 'Continue engaging with commenters within 1h of posting', votes: 3, voted: false },
+        ],
+        actions: [
+          { id: genId(), text: 'Set up UTM tracking for LinkedIn bio link', votes: 3, voted: false, assignee: 'AJ', due: '2026-03-30', done: true },
+          { id: genId(), text: 'Write first Twitter thread on "shipping UTMStamp in 13 days"', votes: 2, voted: false, assignee: 'AJ', due: '2026-04-01', done: false },
+        ]
+      }
+    }
+  ];
+  
+  state.retros = retros;
+  state.activeRetroId = retros[0].id;
+  save();
+}
+
+// ============ RENDER ============
+function render() {
+  renderSidebar();
+  renderMain();
+  renderTimer();
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.dataset.view === state.view));
+}
+
+// Boot
+load();
+render();
+</script>
+</body>
+</html>

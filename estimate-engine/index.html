@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estimate Engine — Project Estimation & Planning Tool</title>
+<style>
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#242836;--surface3:#2e3348;--border:#363b50;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--accent:#6366f1;--accent2:#818cf8;--green:#22c55e;--green2:#16a34a;--red:#ef4444;--red2:#dc2626;--amber:#f59e0b;--amber2:#d97706;--blue:#3b82f6;--purple:#a855f7;--pink:#ec4899;--cyan:#06b6d4;--radius:8px;--radius2:12px;--shadow:0 4px 24px rgba(0,0,0,.4)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+button{cursor:pointer;border:none;font:inherit;color:var(--text)}
+input,select,textarea{font:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical}
+
+/* SIDEBAR */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:16px;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:20px}
+.sidebar-search{margin:12px 16px 8px;position:relative}
+.sidebar-search input{width:100%;padding-left:32px;font-size:13px}
+.sidebar-search::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px}
+.sidebar-list{flex:1;overflow-y:auto;padding:4px 8px}
+.sidebar-item{padding:10px 12px;border-radius:var(--radius);cursor:pointer;font-size:13px;display:flex;justify-content:space-between;align-items:center;transition:.15s}
+.sidebar-item:hover{background:var(--surface2)}
+.sidebar-item.active{background:var(--accent);color:white}
+.sidebar-item .est-count{font-size:11px;color:var(--text3);background:var(--surface3);padding:2px 6px;border-radius:10px}
+.sidebar-item.active .est-count{background:rgba(255,255,255,.2);color:white}
+.sidebar-actions{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px}
+.sidebar-actions button{flex:1;padding:8px;border-radius:var(--radius);font-size:12px;font-weight:600}
+
+/* NAV TABS */
+.nav{display:flex;border-bottom:1px solid var(--border);background:var(--surface);padding:0 16px;gap:4px}
+.nav button{padding:10px 16px;background:none;font-size:13px;font-weight:500;color:var(--text2);border-bottom:2px solid transparent;transition:.15s}
+.nav button:hover{color:var(--text)}
+.nav button.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.nav-right button{border-bottom:none;font-size:12px;padding:6px 12px;border-radius:var(--radius);background:var(--surface2)}
+.nav-right button:hover{background:var(--surface3)}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;margin-bottom:16px}
+.card h3{font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:16px}
+.stat-card .label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:4px}
+.stat-card .value{font-size:22px;font-weight:700}
+.stat-card .sub{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* BADGE */
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge-xs{background:var(--blue);color:white}.badge-s{background:var(--green);color:white}
+.badge-m{background:var(--amber);color:#000}.badge-l{background:var(--red);color:white}
+.badge-xl{background:var(--purple);color:white}.badge-xxl{background:var(--pink);color:white}
+.badge-low{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-med{background:rgba(245,158,11,.15);color:var(--amber)}
+.badge-high{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-crit{background:rgba(239,68,68,.3);color:#fca5a5}
+
+/* TABLE */
+.est-table{width:100%;border-collapse:collapse}
+.est-table th{text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);cursor:pointer}
+.est-table th:hover{color:var(--text2)}
+.est-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px}
+.est-table tr:hover td{background:var(--surface2)}
+.est-table .clickable{cursor:pointer;color:var(--accent2)}
+.est-table .clickable:hover{text-decoration:underline}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:12px;color:var(--text2);font-weight:500}
+.form-group.full{grid-column:1/-1}
+.form-row{display:flex;gap:12px;align-items:end}
+.form-row .form-group{flex:1}
+.three-point{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.three-point .form-group input{text-align:center}
+.three-point .opt{border-color:var(--green)}
+.three-point .likely{border-color:var(--amber)}
+.three-point .pess{border-color:var(--red)}
+
+/* PROGRESS */
+.progress-bar{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width .3s}
+
+/* CHART */
+.chart-bar-h{display:flex;align-items:center;gap:8px;margin:4px 0}
+.chart-bar-h .bar-label{width:100px;font-size:12px;color:var(--text2);text-align:right;flex-shrink:0}
+.chart-bar-h .bar-track{flex:1;height:24px;background:var(--surface3);border-radius:4px;overflow:hidden;position:relative}
+.chart-bar-h .bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:600;color:white;min-width:fit-content}
+.chart-bar-h .bar-value{font-size:12px;color:var(--text2);width:50px;flex-shrink:0}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);width:680px;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-header h2{font-size:16px}
+.modal-body{padding:20px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.btn{padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;transition:.15s}
+.btn-primary{background:var(--accent);color:white}.btn-primary:hover{background:var(--accent2)}
+.btn-ghost{background:transparent;color:var(--text2)}.btn-ghost:hover{background:var(--surface2)}
+.btn-danger{background:var(--red);color:white}.btn-danger:hover{background:var(--red2)}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* VELOCITY CHART */
+.velocity-bars{display:flex;align-items:end;gap:6px;height:160px;padding:8px 0}
+.vel-bar-group{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end}
+.vel-bar{width:24px;border-radius:4px 4px 0 0;transition:.3s}
+.vel-label{font-size:10px;color:var(--text3);margin-top:4px;text-align:center}
+.vel-value{font-size:10px;color:var(--text2);margin-bottom:2px}
+
+/* CONFIDENCE */
+.conf-range{display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface2);border-radius:var(--radius);margin:8px 0}
+.conf-range .conf-bar{flex:1;height:32px;background:var(--surface3);border-radius:4px;position:relative;overflow:hidden}
+.conf-range .conf-fill{position:absolute;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:white}
+.conf-range .conf-opt{background:rgba(34,197,94,.3);left:0}
+.conf-range .conf-likely{background:rgba(245,158,11,.5)}
+.conf-range .conf-pess{background:rgba(239,68,68,.3)}
+.conf-label{font-size:11px;color:var(--text3);width:40px;text-align:center}
+
+/* PERT VISUAL */
+.pert-result{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:16px 0}
+.pert-card{text-align:center;padding:16px;border-radius:var(--radius);border:1px solid var(--border)}
+.pert-card .pert-val{font-size:28px;font-weight:700;margin:4px 0}
+.pert-card .pert-label{font-size:11px;color:var(--text3);text-transform:uppercase}
+.pert-card.opt{border-color:var(--green);background:rgba(34,197,94,.05)}.pert-card.opt .pert-val{color:var(--green)}
+.pert-card.expected{border-color:var(--accent);background:rgba(99,102,241,.05)}.pert-card.expected .pert-val{color:var(--accent2)}
+.pert-card.pess{border-color:var(--red);background:rgba(239,68,68,.05)}.pert-card.pess .pert-val{color:var(--red)}
+
+/* ACCURACY */
+.accuracy-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.acc-great{background:var(--green)}.acc-ok{background:var(--amber)}.acc-poor{background:var(--red)}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty .emoji{font-size:48px;margin-bottom:12px}
+.empty h3{color:var(--text2);margin-bottom:8px}
+
+/* HELP MODAL */
+.kbd{display:inline-block;padding:2px 6px;background:var(--surface3);border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:monospace;color:var(--text2)}
+.help-grid{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;align-items:center}
+
+/* TIMELINE */
+.timeline-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.timeline-bar{height:28px;border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:11px;color:white;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* TAG */
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;background:var(--surface3);color:var(--text2);margin:2px}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span>📐</span> Estimate Engine</h1>
+  </div>
+  <div class="sidebar-search"><input type="text" id="sidebarSearch" placeholder="Search projects..."></div>
+  <div class="sidebar-list" id="sidebarList"></div>
+  <div class="sidebar-actions">
+    <button class="btn btn-primary" onclick="newProject()">+ Project</button>
+    <button class="btn btn-ghost" onclick="showHelp()">?</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="nav" id="navTabs">
+    <button onclick="switchView('estimates')" data-view="estimates">📋 Estimates</button>
+    <button onclick="switchView('timeline')" data-view="timeline">📅 Timeline</button>
+    <button onclick="switchView('velocity')" data-view="velocity">📈 Velocity</button>
+    <button onclick="switchView('accuracy')" data-view="accuracy">🎯 Accuracy</button>
+    <button onclick="switchView('dashboard')" data-view="dashboard">📊 Dashboard</button>
+    <div class="nav-right">
+      <button onclick="exportData()">Export</button>
+      <button onclick="importData()">Import</button>
+    </div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<div id="modalContainer"></div>
+
+<script>
+// ========== DATA ==========
+const SIZES = ['XS','S','M','L','XL','XXL'];
+const SIZE_HOURS = {XS:2,S:4,M:8,L:16,XL:32,XXL:64};
+const SIZE_COLORS = {XS:'var(--blue)',S:'var(--green)',M:'var(--amber)',L:'var(--red)',XL:'var(--purple)',XXL:'var(--pink)'};
+const PRIORITIES = ['Low','Medium','High','Critical'];
+const PRIORITY_CLS = {Low:'badge-low',Medium:'badge-med',High:'badge-high',Critical:'badge-crit'};
+const CATEGORIES = ['Feature','Bug','Tech Debt','Spike','Improvement','Integration','Migration','Infrastructure'];
+const STATUSES = ['Not Started','In Progress','Done'];
+
+let state = JSON.parse(localStorage.getItem('estimate-engine') || 'null') || {
+  projects: [],
+  activeProject: null,
+  sprints: [],
+  view: 'estimates'
+};
+
+function save() { localStorage.setItem('estimate-engine', JSON.stringify(state)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+// ========== INIT ==========
+function init() {
+  if (!state.projects.length) seedData();
+  renderSidebar();
+  switchView(state.view || 'estimates');
+}
+
+// ========== SIDEBAR ==========
+function renderSidebar() {
+  const q = document.getElementById('sidebarSearch').value.toLowerCase();
+  const list = document.getElementById('sidebarList');
+  const filtered = state.projects.filter(p => p.name.toLowerCase().includes(q));
+  list.innerHTML = filtered.map(p => `
+    <div class="sidebar-item ${state.activeProject === p.id ? 'active' : ''}" onclick="selectProject('${p.id}')">
+      <span>${p.emoji || '📁'} ${p.name}</span>
+      <span class="est-count">${p.estimates.length}</span>
+    </div>
+  `).join('');
+}
+
+function selectProject(id) {
+  state.activeProject = id;
+  save();
+  renderSidebar();
+  renderView();
+}
+
+function getProject() { return state.projects.find(p => p.id === state.activeProject); }
+
+// ========== VIEWS ==========
+function switchView(v) {
+  state.view = v;
+  save();
+  document.querySelectorAll('.nav button[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  renderView();
+}
+
+function renderView() {
+  const c = document.getElementById('content');
+  const proj = getProject();
+  if (!proj) { c.innerHTML = '<div class="empty"><div class="emoji">📐</div><h3>Select or create a project</h3><p>Use + Project to get started</p></div>'; return; }
+  switch(state.view) {
+    case 'estimates': renderEstimates(c, proj); break;
+    case 'timeline': renderTimeline(c, proj); break;
+    case 'velocity': renderVelocity(c, proj); break;
+    case 'accuracy': renderAccuracy(c, proj); break;
+    case 'dashboard': renderDashboard(c, proj); break;
+  }
+}
+
+// ========== ESTIMATES VIEW ==========
+function renderEstimates(c, proj) {
+  const estimates = proj.estimates || [];
+  const total3pt = estimates.reduce((s,e) => s + (e.pertExpected || 0), 0);
+  const totalSP = estimates.reduce((s,e) => s + (e.storyPoints || 0), 0);
+  const done = estimates.filter(e => e.status === 'Done').length;
+
+  c.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2>${proj.emoji || '📁'} ${proj.name}</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="editProject('${proj.id}')">✏️ Edit</button>
+        <button class="btn btn-primary btn-sm" onclick="newEstimate()">+ Estimate</button>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Total Items</div><div class="value">${estimates.length}</div></div>
+      <div class="stat-card"><div class="label">Story Points</div><div class="value">${totalSP}</div></div>
+      <div class="stat-card"><div class="label">PERT Total</div><div class="value">${total3pt.toFixed(1)}h</div></div>
+      <div class="stat-card"><div class="label">Completed</div><div class="value">${done}/${estimates.length}</div>
+        <div class="progress-bar" style="margin-top:6px"><div class="progress-fill" style="width:${estimates.length?done/estimates.length*100:0}%;background:var(--green)"></div></div>
+      </div>
+    </div>
+    ${estimates.length ? `
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table class="est-table">
+        <thead><tr>
+          <th>Name</th><th>Size</th><th>Points</th><th>PERT (h)</th><th>Category</th><th>Priority</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody>${estimates.map(e => `
+          <tr>
+            <td class="clickable" onclick="editEstimate('${e.id}')">${esc(e.name)}</td>
+            <td><span class="badge badge-${e.size.toLowerCase()}">${e.size}</span></td>
+            <td>${e.storyPoints || '—'}</td>
+            <td>${e.pertExpected ? e.pertExpected.toFixed(1) : '—'}${e.pertSD ? ` <span style="color:var(--text3);font-size:11px">±${e.pertSD.toFixed(1)}</span>` : ''}</td>
+            <td><span class="tag">${e.category}</span></td>
+            <td><span class="badge ${PRIORITY_CLS[e.priority]}">${e.priority}</span></td>
+            <td style="cursor:pointer" onclick="cycleStatus('${e.id}')">${statusIcon(e.status)} ${e.status}</td>
+            <td>
+              <button class="btn btn-ghost btn-sm" onclick="editEstimate('${e.id}')">✏️</button>
+              <button class="btn btn-ghost btn-sm" onclick="duplicateEstimate('${e.id}')">📋</button>
+              <button class="btn btn-ghost btn-sm" onclick="deleteEstimate('${e.id}')" style="color:var(--red)">🗑</button>
+            </td>
+          </tr>
+        `).join('')}</tbody>
+      </table>
+    </div>` : '<div class="empty"><div class="emoji">📋</div><h3>No estimates yet</h3><p>Click + Estimate to add your first item</p></div>'}
+  `;
+}
+
+function statusIcon(s) { return s === 'Done' ? '✅' : s === 'In Progress' ? '🔄' : '⬜'; }
+
+function cycleStatus(eId) {
+  const proj = getProject();
+  const e = proj.estimates.find(x => x.id === eId);
+  if (!e) return;
+  const idx = STATUSES.indexOf(e.status);
+  e.status = STATUSES[(idx + 1) % STATUSES.length];
+  if (e.status === 'Done' && !e.actualHours) e.completedAt = new Date().toISOString();
+  save(); renderView();
+}
+
+// ========== TIMELINE VIEW ==========
+function renderTimeline(c, proj) {
+  const estimates = proj.estimates.filter(e => e.pertExpected > 0);
+  if (!estimates.length) { c.innerHTML = '<div class="empty"><div class="emoji">📅</div><h3>No estimates with PERT values</h3><p>Add three-point estimates to see the timeline</p></div>'; return; }
+
+  // Sort by priority then size
+  const priOrder = {Critical:0,High:1,Medium:2,Low:3};
+  const sorted = [...estimates].sort((a,b) => (priOrder[a.priority]||3) - (priOrder[b.priority]||3) || (SIZE_HOURS[b.size]||0) - (SIZE_HOURS[a.size]||0));
+  
+  const maxH = Math.max(...sorted.map(e => e.pessimistic || e.pertExpected * 1.5));
+  const totalOpt = sorted.reduce((s,e) => s + (e.optimistic || e.pertExpected * 0.6), 0);
+  const totalExp = sorted.reduce((s,e) => s + e.pertExpected, 0);
+  const totalPess = sorted.reduce((s,e) => s + (e.pessimistic || e.pertExpected * 1.5), 0);
+
+  const hoursPerDay = proj.hoursPerDay || 6;
+  
+  c.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2>📅 Timeline — ${proj.name}</h2>
+      <div style="font-size:13px;color:var(--text2)">${hoursPerDay}h/day productive time</div>
+    </div>
+    <div class="pert-result">
+      <div class="pert-card opt"><div class="pert-label">Best Case</div><div class="pert-val">${(totalOpt/hoursPerDay).toFixed(1)}d</div><div style="font-size:12px;color:var(--text2)">${totalOpt.toFixed(0)}h total</div></div>
+      <div class="pert-card expected"><div class="pert-label">Expected</div><div class="pert-val">${(totalExp/hoursPerDay).toFixed(1)}d</div><div style="font-size:12px;color:var(--text2)">${totalExp.toFixed(0)}h total</div></div>
+      <div class="pert-card pess"><div class="pert-label">Worst Case</div><div class="pert-val">${(totalPess/hoursPerDay).toFixed(1)}d</div><div style="font-size:12px;color:var(--text2)">${totalPess.toFixed(0)}h total</div></div>
+    </div>
+    <div class="card">
+      <h3>📊 Gantt-style Estimate Breakdown</h3>
+      <div style="margin-top:8px">
+        ${sorted.map(e => {
+          const pct = maxH > 0 ? (e.pertExpected / maxH * 100) : 0;
+          const optPct = maxH > 0 ? ((e.optimistic || e.pertExpected*0.6) / maxH * 100) : 0;
+          const pessPct = maxH > 0 ? ((e.pessimistic || e.pertExpected*1.5) / maxH * 100) : 0;
+          return `<div class="timeline-row">
+            <div style="width:200px;font-size:13px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.name)}</div>
+            <div style="flex:1;position:relative;height:28px;background:var(--surface3);border-radius:4px;overflow:hidden">
+              <div style="position:absolute;height:100%;background:rgba(34,197,94,.15);width:${pessPct}%;border-radius:4px"></div>
+              <div class="timeline-bar" style="position:absolute;width:${pct}%;background:${SIZE_COLORS[e.size]};opacity:.85">${e.pertExpected.toFixed(1)}h</div>
+            </div>
+            <div style="width:60px;text-align:right;font-size:12px;color:var(--text2);flex-shrink:0"><span class="badge badge-${e.size.toLowerCase()}">${e.size}</span></div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:16px;margin-top:12px;font-size:11px;color:var(--text3)">
+        <span>█ PERT Expected</span>
+        <span style="color:rgba(34,197,94,.5)">█ Pessimistic range</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📆 Delivery Forecast</h3>
+      <p style="color:var(--text2);font-size:13px;margin-top:8px">
+        At <strong>${hoursPerDay}h/day</strong> productive time:<br>
+        • <span style="color:var(--green)">Best case:</span> ${Math.ceil(totalOpt/hoursPerDay)} working days (${formatDate(addWorkDays(new Date(), Math.ceil(totalOpt/hoursPerDay)))})<br>
+        • <span style="color:var(--accent2)">Expected:</span> ${Math.ceil(totalExp/hoursPerDay)} working days (${formatDate(addWorkDays(new Date(), Math.ceil(totalExp/hoursPerDay)))})<br>
+        • <span style="color:var(--red)">Worst case:</span> ${Math.ceil(totalPess/hoursPerDay)} working days (${formatDate(addWorkDays(new Date(), Math.ceil(totalPess/hoursPerDay)))})
+      </p>
+    </div>
+  `;
+}
+
+function addWorkDays(start, days) {
+  const d = new Date(start);
+  let added = 0;
+  while (added < days) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) added++; }
+  return d;
+}
+function formatDate(d) { return d.toLocaleDateString('en-IN', {weekday:'short', month:'short', day:'numeric'}); }
+
+// ========== VELOCITY VIEW ==========
+function renderVelocity(c, proj) {
+  const sprints = (proj.sprints || []).sort((a,b) => a.number - b.number);
+  
+  if (!sprints.length) {
+    c.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2>📈 Velocity — ${proj.name}</h2>
+        <button class="btn btn-primary btn-sm" onclick="newSprint()">+ Sprint</button>
+      </div>
+      <div class="empty"><div class="emoji">📈</div><h3>No sprints tracked yet</h3><p>Add sprints to track velocity over time</p></div>
+    `;
+    return;
+  }
+
+  const avgVel = sprints.reduce((s,sp) => s + sp.completed, 0) / sprints.length;
+  const avgComm = sprints.reduce((s,sp) => s + (sp.committed||0), 0) / sprints.length;
+  const maxPts = Math.max(...sprints.map(sp => Math.max(sp.committed||0, sp.completed||0)));
+  const commitAcc = sprints.filter(sp=>sp.committed>0).length ? 
+    sprints.filter(sp=>sp.committed>0).reduce((s,sp) => s + Math.min(sp.completed/sp.committed,1),0) / sprints.filter(sp=>sp.committed>0).length * 100 : 0;
+
+  c.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2>📈 Velocity — ${proj.name}</h2>
+      <button class="btn btn-primary btn-sm" onclick="newSprint()">+ Sprint</button>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Avg Velocity</div><div class="value">${avgVel.toFixed(1)}</div><div class="sub">points/sprint</div></div>
+      <div class="stat-card"><div class="label">Avg Committed</div><div class="value">${avgComm.toFixed(1)}</div><div class="sub">points/sprint</div></div>
+      <div class="stat-card"><div class="label">Commitment Accuracy</div><div class="value">${commitAcc.toFixed(0)}%</div></div>
+      <div class="stat-card"><div class="label">Sprints Tracked</div><div class="value">${sprints.length}</div></div>
+    </div>
+    <div class="card">
+      <h3>📊 Sprint Velocity Chart</h3>
+      <div class="velocity-bars">
+        ${sprints.map(sp => {
+          const cH = maxPts > 0 ? (sp.committed||0)/maxPts*100 : 0;
+          const dH = maxPts > 0 ? sp.completed/maxPts*100 : 0;
+          return `<div class="vel-bar-group">
+            <div style="display:flex;gap:2px;align-items:end;height:100%">
+              <div>
+                <div class="vel-value">${sp.committed||0}</div>
+                <div class="vel-bar" style="height:${Math.max(cH,4)}%;background:var(--surface3);width:20px"></div>
+              </div>
+              <div>
+                <div class="vel-value">${sp.completed}</div>
+                <div class="vel-bar" style="height:${Math.max(dH,4)}%;background:${sp.completed>=(sp.committed||0)?'var(--green)':'var(--amber)'};width:20px"></div>
+              </div>
+            </div>
+            <div class="vel-label">S${sp.number}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text3)">
+        <span>█ Committed</span><span style="color:var(--green)">█ Completed</span>
+      </div>
+      <div style="margin-top:8px;border-top:1px dashed var(--border);padding-top:8px">
+        <div style="font-size:12px;color:var(--text2)">Average velocity line: <strong>${avgVel.toFixed(1)} pts</strong> — use this for sprint planning</div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table class="est-table">
+        <thead><tr><th>Sprint</th><th>Committed</th><th>Completed</th><th>Accuracy</th><th>Carryover</th><th>Notes</th><th></th></tr></thead>
+        <tbody>${sprints.map(sp => {
+          const acc = sp.committed > 0 ? (sp.completed/sp.committed*100) : 0;
+          const carry = Math.max(0, (sp.committed||0) - sp.completed);
+          return `<tr>
+            <td><strong>Sprint ${sp.number}</strong></td>
+            <td>${sp.committed || '—'}</td>
+            <td>${sp.completed}</td>
+            <td><span class="accuracy-dot ${acc>=90?'acc-great':acc>=70?'acc-ok':'acc-poor'}"></span>${acc.toFixed(0)}%</td>
+            <td>${carry > 0 ? `<span style="color:var(--amber)">${carry} pts</span>` : '✅ 0'}</td>
+            <td style="color:var(--text2);font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">${esc(sp.notes||'')}</td>
+            <td>
+              <button class="btn btn-ghost btn-sm" onclick="editSprint('${sp.id}')">✏️</button>
+              <button class="btn btn-ghost btn-sm" onclick="deleteSprint('${sp.id}')" style="color:var(--red)">🗑</button>
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>🔮 Forecast with Current Velocity</h3>
+      <p style="color:var(--text2);font-size:13px;margin-top:8px">
+        ${(() => {
+          const remaining = proj.estimates.filter(e=>e.status!=='Done').reduce((s,e)=>s+(e.storyPoints||0),0);
+          const sprintsNeeded = avgVel > 0 ? Math.ceil(remaining / avgVel) : '∞';
+          return `Remaining backlog: <strong>${remaining} points</strong><br>
+          At avg velocity of ${avgVel.toFixed(1)} pts/sprint → <strong>${sprintsNeeded} sprints</strong> to complete<br>
+          ${proj.sprintLength ? `(~${typeof sprintsNeeded==='number'?sprintsNeeded*proj.sprintLength:'?'} days at ${proj.sprintLength}-day sprints)` : ''}`;
+        })()}
+      </p>
+    </div>
+  `;
+}
+
+// ========== ACCURACY VIEW ==========
+function renderAccuracy(c, proj) {
+  const completed = proj.estimates.filter(e => e.status === 'Done' && e.actualHours > 0);
+  
+  if (!completed.length) {
+    c.innerHTML = `<div style="margin-bottom:16px"><h2>🎯 Estimation Accuracy — ${proj.name}</h2></div>
+      <div class="empty"><div class="emoji">🎯</div><h3>No completed estimates with actuals</h3><p>Mark items as Done and add actual hours to track accuracy</p></div>`;
+    return;
+  }
+
+  const avgRatio = completed.reduce((s,e) => s + (e.actualHours / e.pertExpected), 0) / completed.length;
+  const overEst = completed.filter(e => e.actualHours < e.pertExpected * 0.8).length;
+  const underEst = completed.filter(e => e.actualHours > e.pertExpected * 1.2).length;
+  const accurate = completed.filter(e => e.actualHours >= e.pertExpected * 0.8 && e.actualHours <= e.pertExpected * 1.2).length;
+
+  // By size
+  const bySizeData = {};
+  completed.forEach(e => {
+    if (!bySizeData[e.size]) bySizeData[e.size] = {est:0,act:0,count:0};
+    bySizeData[e.size].est += e.pertExpected;
+    bySizeData[e.size].act += e.actualHours;
+    bySizeData[e.size].count++;
+  });
+
+  c.innerHTML = `
+    <div style="margin-bottom:16px"><h2>🎯 Estimation Accuracy — ${proj.name}</h2></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Avg Accuracy</div><div class="value" style="color:${avgRatio>0.8&&avgRatio<1.2?'var(--green)':'var(--amber)'}">${(avgRatio*100).toFixed(0)}%</div><div class="sub">actual vs estimated</div></div>
+      <div class="stat-card"><div class="label">Accurate</div><div class="value" style="color:var(--green)">${accurate}</div><div class="sub">within ±20%</div></div>
+      <div class="stat-card"><div class="label">Over-estimated</div><div class="value" style="color:var(--blue)">${overEst}</div><div class="sub">took less time</div></div>
+      <div class="stat-card"><div class="label">Under-estimated</div><div class="value" style="color:var(--red)">${underEst}</div><div class="sub">took more time</div></div>
+    </div>
+    <div class="card">
+      <h3>📊 Estimated vs Actual by Item</h3>
+      <div style="margin-top:8px">
+        ${completed.map(e => {
+          const ratio = e.actualHours / e.pertExpected;
+          const maxVal = Math.max(e.pertExpected, e.actualHours);
+          return `<div style="margin:8px 0">
+            <div style="font-size:13px;margin-bottom:4px">${esc(e.name)} <span class="badge badge-${e.size.toLowerCase()}">${e.size}</span></div>
+            <div style="display:flex;gap:4px;align-items:center">
+              <div style="width:60px;font-size:11px;color:var(--text3);text-align:right">Est</div>
+              <div style="flex:1;height:16px;background:var(--surface3);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:${e.pertExpected/maxVal*100}%;background:var(--accent);border-radius:3px"></div>
+              </div>
+              <div style="width:40px;font-size:11px;color:var(--text2)">${e.pertExpected.toFixed(1)}h</div>
+            </div>
+            <div style="display:flex;gap:4px;align-items:center;margin-top:2px">
+              <div style="width:60px;font-size:11px;color:var(--text3);text-align:right">Actual</div>
+              <div style="flex:1;height:16px;background:var(--surface3);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:${e.actualHours/maxVal*100}%;background:${ratio>1.2?'var(--red)':ratio<0.8?'var(--blue)':'var(--green)'};border-radius:3px"></div>
+              </div>
+              <div style="width:40px;font-size:11px;color:var(--text2)">${e.actualHours.toFixed(1)}h</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <h3>👕 Accuracy by T-Shirt Size</h3>
+      <div style="margin-top:12px">
+        ${SIZES.filter(s=>bySizeData[s]).map(s => {
+          const d = bySizeData[s];
+          const ratio = d.act / d.est * 100;
+          return `<div class="chart-bar-h">
+            <div class="bar-label"><span class="badge badge-${s.toLowerCase()}">${s}</span> (${d.count})</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${Math.min(ratio,150)/1.5}%;background:${ratio>120?'var(--red)':ratio<80?'var(--blue)':'var(--green)'}">${ratio.toFixed(0)}%</div>
+            </div>
+            <div class="bar-value">${d.act.toFixed(0)}h/${d.est.toFixed(0)}h</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">100% = perfect estimation · &lt;80% = over-estimated · &gt;120% = under-estimated</div>
+    </div>
+    <div class="card">
+      <h3>💡 Insights</h3>
+      <ul style="color:var(--text2);font-size:13px;padding-left:20px;line-height:1.8">
+        ${avgRatio > 1.3 ? '<li style="color:var(--red)">⚠️ You consistently under-estimate. Consider multiplying estimates by ' + (1/avgRatio*1.3).toFixed(1) + 'x</li>' : ''}
+        ${avgRatio < 0.7 ? '<li style="color:var(--blue)">📝 You tend to over-estimate. Your estimates could be ~' + ((1-avgRatio)*100).toFixed(0) + '% tighter</li>' : ''}
+        ${avgRatio >= 0.8 && avgRatio <= 1.2 ? '<li style="color:var(--green)">✅ Your estimates are well-calibrated! Keep it up.</li>' : ''}
+        ${Object.entries(bySizeData).filter(([s,d])=>d.act/d.est>1.3).map(([s])=>`<li style="color:var(--amber)">⚠️ ${s}-sized items tend to be under-estimated. Add buffer for ${s} tasks.</li>`).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+// ========== DASHBOARD VIEW ==========
+function renderDashboard(c, proj) {
+  const est = proj.estimates;
+  const total = est.length;
+  const done = est.filter(e=>e.status==='Done').length;
+  const inProg = est.filter(e=>e.status==='In Progress').length;
+  const totalPts = est.reduce((s,e)=>s+(e.storyPoints||0),0);
+  const totalHrs = est.reduce((s,e)=>s+(e.pertExpected||0),0);
+  const doneHrs = est.filter(e=>e.status==='Done').reduce((s,e)=>s+(e.pertExpected||0),0);
+
+  // By size
+  const bySize = {};
+  SIZES.forEach(s => bySize[s] = est.filter(e=>e.size===s).length);
+  const maxSize = Math.max(...Object.values(bySize), 1);
+
+  // By category
+  const byCat = {};
+  est.forEach(e => { byCat[e.category] = (byCat[e.category]||0) + 1; });
+  const maxCat = Math.max(...Object.values(byCat), 1);
+
+  // By priority
+  const byPri = {};
+  PRIORITIES.forEach(p => byPri[p] = est.filter(e=>e.priority===p).length);
+
+  c.innerHTML = `
+    <div style="margin-bottom:16px"><h2>📊 Dashboard — ${proj.name}</h2></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Total Estimates</div><div class="value">${total}</div></div>
+      <div class="stat-card"><div class="label">Story Points</div><div class="value">${totalPts}</div><div class="sub">${est.filter(e=>e.status==='Done').reduce((s,e)=>s+(e.storyPoints||0),0)} completed</div></div>
+      <div class="stat-card"><div class="label">Total Hours (PERT)</div><div class="value">${totalHrs.toFixed(0)}h</div><div class="sub">${doneHrs.toFixed(0)}h done</div></div>
+      <div class="stat-card"><div class="label">Progress</div><div class="value">${total?(done/total*100).toFixed(0):0}%</div>
+        <div class="progress-bar" style="margin-top:6px"><div class="progress-fill" style="width:${total?done/total*100:0}%;background:var(--green)"></div></div>
+      </div>
+      <div class="stat-card"><div class="label">In Progress</div><div class="value" style="color:var(--amber)">${inProg}</div></div>
+      <div class="stat-card"><div class="label">Not Started</div><div class="value" style="color:var(--text3)">${total-done-inProg}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <h3>👕 Distribution by Size</h3>
+        <div style="margin-top:12px">
+          ${SIZES.map(s => `<div class="chart-bar-h">
+            <div class="bar-label"><span class="badge badge-${s.toLowerCase()}">${s}</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${bySize[s]/maxSize*100}%;background:${SIZE_COLORS[s]}">${bySize[s]}</div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <h3>📂 Distribution by Category</h3>
+        <div style="margin-top:12px">
+          ${Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,n]) => `<div class="chart-bar-h">
+            <div class="bar-label">${cat}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${n/maxCat*100}%;background:var(--accent)">${n}</div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <h3>🎯 Priority Breakdown</h3>
+        <div style="margin-top:12px">
+          ${PRIORITIES.map(p => `<div class="chart-bar-h">
+            <div class="bar-label"><span class="badge ${PRIORITY_CLS[p]}">${p}</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${(byPri[p]||0)/Math.max(...Object.values(byPri),1)*100}%;background:var(--surface3)">${byPri[p]||0}</div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <h3>⏱ Hours by Size Bucket</h3>
+        <div style="margin-top:12px">
+          ${SIZES.filter(s=>bySize[s]>0).map(s => {
+            const hrs = est.filter(e=>e.size===s).reduce((sum,e)=>sum+(e.pertExpected||0),0);
+            return `<div class="chart-bar-h">
+              <div class="bar-label"><span class="badge badge-${s.toLowerCase()}">${s}</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:${hrs/Math.max(totalHrs,1)*100}%;background:${SIZE_COLORS[s]}">${hrs.toFixed(0)}h</div></div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ========== MODALS ==========
+function showModal(title, body, footer) {
+  document.getElementById('modalContainer').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-header"><h2>${title}</h2><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+        <div class="modal-body">${body}</div>
+        <div class="modal-footer">${footer}</div>
+      </div>
+    </div>`;
+}
+function closeModal() { document.getElementById('modalContainer').innerHTML = ''; }
+
+// ========== PROJECT CRUD ==========
+function newProject() {
+  showModal('New Project', `
+    <div class="form-grid">
+      <div class="form-group"><label>Name</label><input id="pName" placeholder="e.g. UTMStamp v2"></div>
+      <div class="form-group"><label>Emoji</label><input id="pEmoji" value="📁" style="width:60px"></div>
+      <div class="form-group"><label>Hours/Day (productive)</label><input id="pHours" type="number" value="6" min="1" max="12"></div>
+      <div class="form-group"><label>Sprint Length (days)</label><input id="pSprint" type="number" value="14" min="1"></div>
+      <div class="form-group full"><label>Description</label><textarea id="pDesc" rows="2" placeholder="Project context..."></textarea></div>
+    </div>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveNewProject()">Create</button>`);
+  document.getElementById('pName').focus();
+}
+
+function saveNewProject() {
+  const name = document.getElementById('pName').value.trim();
+  if (!name) return;
+  const proj = {
+    id: uid(), name, emoji: document.getElementById('pEmoji').value||'📁',
+    description: document.getElementById('pDesc').value,
+    hoursPerDay: parseInt(document.getElementById('pHours').value)||6,
+    sprintLength: parseInt(document.getElementById('pSprint').value)||14,
+    estimates: [], sprints: [], createdAt: new Date().toISOString()
+  };
+  state.projects.push(proj);
+  state.activeProject = proj.id;
+  save(); closeModal(); renderSidebar(); renderView();
+}
+
+function editProject(id) {
+  const p = state.projects.find(x=>x.id===id);
+  if(!p) return;
+  showModal('Edit Project', `
+    <div class="form-grid">
+      <div class="form-group"><label>Name</label><input id="pName" value="${esc(p.name)}"></div>
+      <div class="form-group"><label>Emoji</label><input id="pEmoji" value="${p.emoji||'📁'}" style="width:60px"></div>
+      <div class="form-group"><label>Hours/Day</label><input id="pHours" type="number" value="${p.hoursPerDay||6}" min="1" max="12"></div>
+      <div class="form-group"><label>Sprint Length</label><input id="pSprint" type="number" value="${p.sprintLength||14}" min="1"></div>
+      <div class="form-group full"><label>Description</label><textarea id="pDesc" rows="2">${esc(p.description||'')}</textarea></div>
+    </div>
+  `, `<button class="btn btn-danger btn-sm" onclick="deleteProject('${id}')">Delete Project</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditProject('${id}')">Save</button>`);
+}
+
+function saveEditProject(id) {
+  const p = state.projects.find(x=>x.id===id);
+  if(!p) return;
+  p.name = document.getElementById('pName').value.trim() || p.name;
+  p.emoji = document.getElementById('pEmoji').value || '📁';
+  p.hoursPerDay = parseInt(document.getElementById('pHours').value) || 6;
+  p.sprintLength = parseInt(document.getElementById('pSprint').value) || 14;
+  p.description = document.getElementById('pDesc').value;
+  save(); closeModal(); renderSidebar(); renderView();
+}
+
+function deleteProject(id) {
+  if(!confirm('Delete this project and all estimates?')) return;
+  state.projects = state.projects.filter(p=>p.id!==id);
+  if(state.activeProject===id) state.activeProject = state.projects[0]?.id || null;
+  save(); closeModal(); renderSidebar(); renderView();
+}
+
+// ========== ESTIMATE CRUD ==========
+function newEstimate() {
+  const proj = getProject();
+  if(!proj) return;
+  showEstimateModal(null, proj);
+}
+
+function editEstimate(eId) {
+  const proj = getProject();
+  const e = proj?.estimates.find(x=>x.id===eId);
+  if(!e) return;
+  showEstimateModal(e, proj);
+}
+
+function showEstimateModal(e, proj) {
+  const isEdit = !!e;
+  showModal(isEdit ? 'Edit Estimate' : 'New Estimate', `
+    <div class="form-grid">
+      <div class="form-group full"><label>Name *</label><input id="eName" value="${esc(e?.name||'')}" placeholder="e.g. Add Google Workspace integration"></div>
+      <div class="form-group"><label>Category</label>
+        <select id="eCat">${CATEGORIES.map(c=>`<option ${e?.category===c?'selected':''}>${c}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Priority</label>
+        <select id="ePri">${PRIORITIES.map(p=>`<option ${e?.priority===p?'selected':''}>${p}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>T-Shirt Size</label>
+        <select id="eSize">${SIZES.map(s=>`<option ${e?.size===s?'selected':''}>${s}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Story Points</label>
+        <select id="eSP"><option value="">—</option>${[0,1,2,3,5,8,13,21,34].map(n=>`<option ${e?.storyPoints===n?'selected':''} value="${n}">${n}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select id="eStatus">${STATUSES.map(s=>`<option ${e?.status===s?'selected':''}>${s}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Assignee</label><input id="eAssignee" value="${esc(e?.assignee||'')}" placeholder="e.g. AJ"></div>
+    </div>
+    <div style="margin-top:16px">
+      <h3 style="font-size:14px;margin-bottom:8px">🎯 Three-Point Estimate (hours)</h3>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:8px">PERT: E = (O + 4M + P) / 6 · σ = (P - O) / 6</p>
+      <div class="three-point">
+        <div class="form-group"><label style="color:var(--green)">⚡ Optimistic</label><input id="eOpt" class="opt" type="number" step="0.5" min="0" value="${e?.optimistic||''}" placeholder="Best case" oninput="calcPERT()"></div>
+        <div class="form-group"><label style="color:var(--amber)">📊 Most Likely</label><input id="eLikely" class="likely" type="number" step="0.5" min="0" value="${e?.likely||''}" placeholder="Realistic" oninput="calcPERT()"></div>
+        <div class="form-group"><label style="color:var(--red)">🐌 Pessimistic</label><input id="ePess" class="pess" type="number" step="0.5" min="0" value="${e?.pessimistic||''}" placeholder="Worst case" oninput="calcPERT()"></div>
+      </div>
+      <div id="pertResult" style="margin-top:8px"></div>
+    </div>
+    ${isEdit ? `
+    <div style="margin-top:16px">
+      <h3 style="font-size:14px;margin-bottom:8px">⏱ Actual (for accuracy tracking)</h3>
+      <div class="form-grid">
+        <div class="form-group"><label>Actual Hours</label><input id="eActual" type="number" step="0.5" value="${e?.actualHours||''}" placeholder="How long it really took"></div>
+      </div>
+    </div>` : ''}
+    <div class="form-grid" style="margin-top:16px">
+      <div class="form-group full"><label>Notes</label><textarea id="eNotes" rows="3" placeholder="Context, assumptions, risks...">${esc(e?.notes||'')}</textarea></div>
+      <div class="form-group full"><label>Tags (comma-separated)</label><input id="eTags" value="${(e?.tags||[]).join(', ')}" placeholder="e.g. v2, integration, api"></div>
+    </div>
+  `, `${isEdit?`<button class="btn btn-danger btn-sm" onclick="deleteEstimate('${e.id}');closeModal()">Delete</button>`:''}
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEstimate(${isEdit?`'${e.id}'`:'null'})">Save</button>`);
+  
+  calcPERT();
+  document.getElementById('eName').focus();
+}
+
+function calcPERT() {
+  const o = parseFloat(document.getElementById('eOpt')?.value) || 0;
+  const m = parseFloat(document.getElementById('eLikely')?.value) || 0;
+  const p = parseFloat(document.getElementById('ePess')?.value) || 0;
+  const el = document.getElementById('pertResult');
+  if (!el) return;
+  if (!o && !m && !p) { el.innerHTML = ''; return; }
+  const E = (o + 4*m + p) / 6;
+  const SD = (p - o) / 6;
+  el.innerHTML = `
+    <div class="conf-range">
+      <div class="conf-label" style="color:var(--green)">${o}h</div>
+      <div class="conf-bar">
+        <div class="conf-fill conf-opt" style="width:${p>0?o/p*100:33}%"></div>
+        <div class="conf-fill" style="width:${p>0?E/p*100:50}%;background:var(--accent);opacity:.6"></div>
+      </div>
+      <div class="conf-label" style="color:var(--red)">${p}h</div>
+    </div>
+    <div style="text-align:center;font-size:13px;color:var(--text2)">
+      PERT Expected: <strong style="color:var(--accent2)">${E.toFixed(1)}h</strong> · 
+      Std Dev: <strong>${SD.toFixed(1)}h</strong> · 
+      95% CI: <strong>${Math.max(0,E-2*SD).toFixed(1)}h – ${(E+2*SD).toFixed(1)}h</strong>
+    </div>`;
+}
+
+function saveEstimate(eId) {
+  const proj = getProject();
+  if(!proj) return;
+  const name = document.getElementById('eName').value.trim();
+  if(!name) return;
+  
+  const o = parseFloat(document.getElementById('eOpt').value) || 0;
+  const m = parseFloat(document.getElementById('eLikely').value) || 0;
+  const p = parseFloat(document.getElementById('ePess').value) || 0;
+  const E = (o && m && p) ? (o + 4*m + p) / 6 : 0;
+  const SD = (o && p) ? (p - o) / 6 : 0;
+
+  const data = {
+    name,
+    category: document.getElementById('eCat').value,
+    priority: document.getElementById('ePri').value,
+    size: document.getElementById('eSize').value,
+    storyPoints: parseInt(document.getElementById('eSP').value) || 0,
+    status: document.getElementById('eStatus').value,
+    assignee: document.getElementById('eAssignee').value.trim(),
+    optimistic: o, likely: m, pessimistic: p,
+    pertExpected: E, pertSD: SD,
+    notes: document.getElementById('eNotes').value,
+    tags: document.getElementById('eTags').value.split(',').map(t=>t.trim()).filter(Boolean)
+  };
+
+  const actualEl = document.getElementById('eActual');
+  if (actualEl) data.actualHours = parseFloat(actualEl.value) || 0;
+
+  if (eId) {
+    const e = proj.estimates.find(x=>x.id===eId);
+    if(e) Object.assign(e, data);
+  } else {
+    data.id = uid();
+    data.createdAt = new Date().toISOString();
+    proj.estimates.push(data);
+  }
+  save(); closeModal(); renderView();
+}
+
+function deleteEstimate(eId) {
+  const proj = getProject();
+  if(!proj) return;
+  proj.estimates = proj.estimates.filter(e=>e.id!==eId);
+  save(); renderView();
+}
+
+function duplicateEstimate(eId) {
+  const proj = getProject();
+  const e = proj?.estimates.find(x=>x.id===eId);
+  if(!e) return;
+  const dup = {...e, id:uid(), name:e.name+' (copy)', status:'Not Started', actualHours:0, createdAt:new Date().toISOString()};
+  proj.estimates.push(dup);
+  save(); renderView();
+}
+
+// ========== SPRINT CRUD ==========
+function newSprint() {
+  const proj = getProject();
+  if(!proj) return;
+  if(!proj.sprints) proj.sprints = [];
+  const nextNum = proj.sprints.length ? Math.max(...proj.sprints.map(s=>s.number)) + 1 : 1;
+  showModal('New Sprint', `
+    <div class="form-grid">
+      <div class="form-group"><label>Sprint Number</label><input id="spNum" type="number" value="${nextNum}"></div>
+      <div class="form-group"><label>Committed (points)</label><input id="spComm" type="number" value="0"></div>
+      <div class="form-group"><label>Completed (points)</label><input id="spDone" type="number" value="0"></div>
+      <div class="form-group full"><label>Notes</label><textarea id="spNotes" rows="2" placeholder="Sprint retrospective notes..."></textarea></div>
+    </div>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSprint()">Save</button>`);
+}
+
+function saveSprint(spId) {
+  const proj = getProject();
+  if(!proj) return;
+  if(!proj.sprints) proj.sprints = [];
+  const data = {
+    number: parseInt(document.getElementById('spNum').value)||1,
+    committed: parseInt(document.getElementById('spComm').value)||0,
+    completed: parseInt(document.getElementById('spDone').value)||0,
+    notes: document.getElementById('spNotes').value
+  };
+  if(spId) {
+    const sp = proj.sprints.find(s=>s.id===spId);
+    if(sp) Object.assign(sp, data);
+  } else {
+    data.id = uid();
+    proj.sprints.push(data);
+  }
+  save(); closeModal(); renderView();
+}
+
+function editSprint(spId) {
+  const proj = getProject();
+  const sp = proj?.sprints?.find(s=>s.id===spId);
+  if(!sp) return;
+  showModal('Edit Sprint', `
+    <div class="form-grid">
+      <div class="form-group"><label>Sprint Number</label><input id="spNum" type="number" value="${sp.number}"></div>
+      <div class="form-group"><label>Committed (points)</label><input id="spComm" type="number" value="${sp.committed||0}"></div>
+      <div class="form-group"><label>Completed (points)</label><input id="spDone" type="number" value="${sp.completed}"></div>
+      <div class="form-group full"><label>Notes</label><textarea id="spNotes" rows="2">${esc(sp.notes||'')}</textarea></div>
+    </div>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSprint('${spId}')">Save</button>`);
+}
+
+function deleteSprint(spId) {
+  const proj = getProject();
+  if(!proj) return;
+  proj.sprints = (proj.sprints||[]).filter(s=>s.id!==spId);
+  save(); renderView();
+}
+
+// ========== HELP ==========
+function showHelp() {
+  showModal('⌨️ Keyboard Shortcuts', `
+    <div class="help-grid">
+      <span class="kbd">N</span><span>New estimate</span>
+      <span class="kbd">P</span><span>New project</span>
+      <span class="kbd">/</span><span>Search</span>
+      <span class="kbd">1-5</span><span>Switch views</span>
+      <span class="kbd">E</span><span>Export JSON</span>
+      <span class="kbd">I</span><span>Import JSON</span>
+      <span class="kbd">?</span><span>This help</span>
+      <span class="kbd">Esc</span><span>Close modal</span>
+      <span class="kbd">⌘+Enter</span><span>Save in modal</span>
+    </div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <h3 style="font-size:14px;margin-bottom:8px">📐 Estimation Methods</h3>
+      <ul style="font-size:13px;color:var(--text2);padding-left:20px;line-height:1.8">
+        <li><strong>T-Shirt Sizing:</strong> Quick relative sizing (XS=2h, S=4h, M=8h, L=16h, XL=32h, XXL=64h)</li>
+        <li><strong>Story Points:</strong> Fibonacci scale (1,2,3,5,8,13,21,34) for sprint planning</li>
+        <li><strong>Three-Point (PERT):</strong> E = (O + 4M + P) / 6 for statistical confidence</li>
+        <li><strong>Velocity Tracking:</strong> Points completed per sprint for forecasting</li>
+        <li><strong>Accuracy Review:</strong> Compare estimates vs actuals to improve over time</li>
+      </ul>
+    </div>
+  `, '<button class="btn btn-primary" onclick="closeModal()">Got it</button>');
+}
+
+// ========== IMPORT/EXPORT ==========
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'estimate-engine-backup.json';
+  a.click();
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if(data.projects) {
+          state = data;
+          save(); renderSidebar(); renderView();
+        }
+      } catch(err) { alert('Invalid JSON file'); }
+    };
+    reader.readAsText(e.target.files[0]);
+  };
+  input.click();
+}
+
+// ========== KEYBOARD ==========
+document.addEventListener('keydown', e => {
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') {
+    if(e.key==='Escape') { closeModal(); e.target.blur(); }
+    if((e.metaKey||e.ctrlKey) && e.key==='Enter') {
+      const saveBtn = document.querySelector('.modal-footer .btn-primary');
+      if(saveBtn) saveBtn.click();
+    }
+    return;
+  }
+  switch(e.key) {
+    case 'n': case 'N': e.preventDefault(); newEstimate(); break;
+    case 'p': if(!e.metaKey) { e.preventDefault(); newProject(); } break;
+    case '/': e.preventDefault(); document.getElementById('sidebarSearch').focus(); break;
+    case '1': switchView('estimates'); break;
+    case '2': switchView('timeline'); break;
+    case '3': switchView('velocity'); break;
+    case '4': switchView('accuracy'); break;
+    case '5': switchView('dashboard'); break;
+    case 'e': case 'E': if(!e.metaKey) exportData(); break;
+    case 'i': case 'I': if(!e.metaKey) importData(); break;
+    case '?': showHelp(); break;
+    case 'Escape': closeModal(); break;
+  }
+});
+
+document.getElementById('sidebarSearch').addEventListener('input', renderSidebar);
+
+// ========== UTILS ==========
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ========== SEED DATA ==========
+function seedData() {
+  const proj1 = {
+    id: uid(), name: 'UTMStamp v2', emoji: '📧', description: 'Next major release with Google Workspace, video signatures, and team features',
+    hoursPerDay: 6, sprintLength: 14, createdAt: new Date().toISOString(),
+    estimates: [
+      {id:uid(),name:'Google Workspace Auto-Push',category:'Integration',priority:'Critical',size:'XL',storyPoints:21,
+       optimistic:24,likely:36,pessimistic:56,pertExpected:37.3,pertSD:5.3,status:'In Progress',assignee:'AJ',
+       actualHours:0,notes:'Complex OAuth flow + admin SDK. Key differentiator.',tags:['v2','integration','google'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Video Signatures',category:'Feature',priority:'High',size:'L',storyPoints:13,
+       optimistic:12,likely:18,pessimistic:28,pertExpected:18.7,pertSD:2.7,status:'Not Started',assignee:'',
+       actualHours:0,notes:'Embed short video loops in email signatures. Unique selling point.',tags:['v2','feature'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Team Management Dashboard',category:'Feature',priority:'High',size:'L',storyPoints:13,
+       optimistic:10,likely:16,pessimistic:24,pertExpected:16.3,pertSD:2.3,status:'Not Started',assignee:'',
+       actualHours:0,notes:'Admin panel for team signature deployment, compliance, analytics.',tags:['v2','teams'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Click Analytics v2',category:'Improvement',priority:'Medium',size:'M',storyPoints:8,
+       optimistic:6,likely:10,pessimistic:16,pertExpected:10.3,pertSD:1.7,status:'Not Started',assignee:'',
+       actualHours:0,notes:'Funnels, cohort analysis, export to CSV.',tags:['v2','analytics'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Template Builder Overhaul',category:'Improvement',priority:'Medium',size:'M',storyPoints:8,
+       optimistic:5,likely:8,pessimistic:14,pertExpected:8.5,pertSD:1.5,status:'Not Started',assignee:'',
+       actualHours:0,notes:'Drag-and-drop, better preview, mobile responsive templates.',tags:['v2','ux'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Stripe Billing Integration',category:'Integration',priority:'High',size:'M',storyPoints:8,
+       optimistic:4,likely:8,pessimistic:12,pertExpected:8,pertSD:1.3,status:'Done',assignee:'AJ',
+       actualHours:9,notes:'Subscription management, invoices, usage-based billing.',tags:['v2','billing'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'API Rate Limiting',category:'Infrastructure',priority:'Medium',size:'S',storyPoints:3,
+       optimistic:2,likely:4,pessimistic:6,pertExpected:4,pertSD:0.7,status:'Done',assignee:'AJ',
+       actualHours:3.5,notes:'Redis-based rate limiter per API key.',tags:['infra'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Email Validation Webhook',category:'Feature',priority:'Low',size:'S',storyPoints:3,
+       optimistic:2,likely:3,pessimistic:6,pertExpected:3.3,pertSD:0.7,status:'Done',assignee:'AJ',
+       actualHours:4,notes:'Validate email deliverability before signature creation.',tags:['feature'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Safari Rendering Fix',category:'Bug',priority:'High',size:'XS',storyPoints:2,
+       optimistic:1,likely:2,pessimistic:4,pertExpected:2.2,pertSD:0.5,status:'Done',assignee:'AJ',
+       actualHours:1.5,notes:'Signature table layout broke on Safari 17.',tags:['bug','urgent'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Bulk Signature Import',category:'Feature',priority:'Low',size:'M',storyPoints:5,
+       optimistic:4,likely:8,pessimistic:14,pertExpected:8.3,pertSD:1.7,status:'Not Started',assignee:'',
+       actualHours:0,notes:'CSV upload for importing team signatures.',tags:['v2','teams'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Supabase → PlanetScale Migration Spike',category:'Spike',priority:'Medium',size:'S',storyPoints:3,
+       optimistic:2,likely:4,pessimistic:8,pertExpected:4.3,pertSD:1,status:'Not Started',assignee:'',
+       actualHours:0,notes:'Evaluate if PlanetScale makes sense for scale.',tags:['infra','spike'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Onboarding Flow Redesign',category:'Improvement',priority:'High',size:'M',storyPoints:5,
+       optimistic:4,likely:6,pessimistic:10,pertExpected:6.3,pertSD:1,status:'In Progress',assignee:'AJ',
+       actualHours:0,notes:'30% drop-off at step 3. Need wizard-style flow.',tags:['ux','growth'],createdAt:new Date().toISOString()},
+    ],
+    sprints: [
+      {id:uid(),number:1,committed:21,completed:18,notes:'First sprint. Under-committed intentionally. Safari fix was a fire drill.'},
+      {id:uid(),number:2,committed:26,completed:24,notes:'Better velocity. Stripe integration took longer than expected.'},
+      {id:uid(),number:3,committed:24,completed:26,notes:'Over-delivered! Rate limiting was faster than estimated.'},
+      {id:uid(),number:4,committed:28,completed:22,notes:'Google Workspace complexity hit us. Need to break it down more.'},
+      {id:uid(),number:5,committed:24,completed:25,notes:'Steady sprint. Team settling into rhythm.'},
+    ]
+  };
+
+  const proj2 = {
+    id: uid(), name: 'Job Hunt Prep', emoji: '💼', description: 'Preparation tasks for Head of Product interviews',
+    hoursPerDay: 3, sprintLength: 7, createdAt: new Date().toISOString(),
+    estimates: [
+      {id:uid(),name:'Update Resume & Portfolio',category:'Feature',priority:'Critical',size:'M',storyPoints:5,
+       optimistic:3,likely:6,pessimistic:10,pertExpected:6.2,pertSD:1.2,status:'Done',assignee:'AJ',
+       actualHours:7,notes:'Resume, LinkedIn, helloaman.com',tags:['prep'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Practice PM Frameworks (RICE, JTBD, NSM)',category:'Feature',priority:'High',size:'L',storyPoints:8,
+       optimistic:8,likely:12,pessimistic:20,pertExpected:12.7,pertSD:2,status:'In Progress',assignee:'AJ',
+       actualHours:0,notes:'Need to nail these for interviews.',tags:['prep','interview'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Write 5 STAR Stories',category:'Feature',priority:'High',size:'M',storyPoints:5,
+       optimistic:3,likely:5,pessimistic:8,pertExpected:5.2,pertSD:0.8,status:'Done',assignee:'AJ',
+       actualHours:4,notes:'ZYOD, GoMechanic, Fortunekit stories.',tags:['prep','behavioral'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'System Design Practice',category:'Feature',priority:'Medium',size:'L',storyPoints:8,
+       optimistic:6,likely:10,pessimistic:18,pertExpected:10.7,pertSD:2,status:'Not Started',assignee:'AJ',
+       actualHours:0,notes:'URL shortener, analytics dashboard, notification system.',tags:['prep','technical'],createdAt:new Date().toISOString()},
+      {id:uid(),name:'Research Target Companies',category:'Spike',priority:'High',size:'S',storyPoints:3,
+       optimistic:2,likely:4,pessimistic:6,pertExpected:4,pertSD:0.7,status:'Done',assignee:'AJ',
+       actualHours:3,notes:'Top 20 companies, their product challenges, recent news.',tags:['research'],createdAt:new Date().toISOString()},
+    ],
+    sprints: [
+      {id:uid(),number:1,committed:13,completed:10,notes:'Resume took longer. Portfolio needed more polish.'},
+      {id:uid(),number:2,committed:11,completed:13,notes:'STAR stories flowed well. Research was quick with Chatur helping.'},
+    ]
+  };
+
+  state.projects = [proj1, proj2];
+  state.activeProject = proj1.id;
+  save();
+}
+
+// ========== GO ==========
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Survey Forge — Beautiful Survey & Form Builder</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #232733;
+  --border: #2d3140;
+  --text: #e4e6ed;
+  --text2: #9399a8;
+  --accent: #6c5ce7;
+  --accent2: #a29bfe;
+  --green: #00b894;
+  --red: #e17055;
+  --orange: #fdcb6e;
+  --blue: #74b9ff;
+  --pink: #fd79a8;
+  --radius: 10px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+button { cursor:pointer; font-family:inherit; border:none; }
+input,textarea,select { font-family:inherit; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:8px 12px; outline:none; width:100%; }
+input:focus,textarea:focus,select:focus { border-color:var(--accent); }
+textarea { resize:vertical; min-height:60px; }
+
+/* Layout */
+.app { display:flex; height:100vh; }
+.sidebar { width:280px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; }
+.sidebar-header { padding:16px; border-bottom:1px solid var(--border); }
+.sidebar-header h1 { font-size:18px; display:flex; align-items:center; gap:8px; }
+.sidebar-header h1 span { font-size:22px; }
+.sidebar-search { padding:8px 12px; }
+.sidebar-search input { font-size:13px; padding:6px 10px; }
+.sidebar-list { flex:1; overflow-y:auto; padding:4px 8px; }
+.sidebar-item { padding:10px 12px; border-radius:8px; cursor:pointer; margin-bottom:2px; display:flex; justify-content:space-between; align-items:center; }
+.sidebar-item:hover { background:var(--surface2); }
+.sidebar-item.active { background:var(--accent); color:white; }
+.sidebar-item .name { font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
+.sidebar-item .count { font-size:11px; color:var(--text2); background:var(--surface); padding:2px 6px; border-radius:10px; }
+.sidebar-item.active .count { background:rgba(255,255,255,0.2); color:white; }
+.sidebar-actions { padding:12px; border-top:1px solid var(--border); display:flex; gap:8px; }
+.sidebar-actions button { flex:1; padding:8px; border-radius:6px; font-size:13px; font-weight:500; }
+.btn-primary { background:var(--accent); color:white; }
+.btn-primary:hover { background:var(--accent2); }
+.btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-secondary:hover { background:var(--border); }
+
+/* Main */
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.topbar { padding:12px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; background:var(--surface); }
+.topbar .tabs { display:flex; gap:4px; }
+.topbar .tab { padding:6px 14px; border-radius:6px; font-size:13px; font-weight:500; color:var(--text2); background:transparent; }
+.topbar .tab:hover { background:var(--surface2); }
+.topbar .tab.active { background:var(--accent); color:white; }
+.topbar .spacer { flex:1; }
+.topbar .actions { display:flex; gap:6px; }
+.topbar .actions button { padding:6px 12px; border-radius:6px; font-size:12px; font-weight:500; }
+
+.content { flex:1; overflow-y:auto; padding:24px; }
+
+/* Empty state */
+.empty { text-align:center; padding:80px 20px; }
+.empty .icon { font-size:48px; margin-bottom:16px; }
+.empty h2 { font-size:20px; margin-bottom:8px; }
+.empty p { color:var(--text2); margin-bottom:24px; }
+
+/* Editor */
+.editor-header { margin-bottom:24px; }
+.editor-header input.survey-title { font-size:24px; font-weight:700; background:transparent; border:none; border-bottom:2px solid transparent; padding:4px 0; width:100%; }
+.editor-header input.survey-title:focus { border-bottom-color:var(--accent); }
+.editor-header input.survey-desc { font-size:14px; color:var(--text2); background:transparent; border:none; border-bottom:1px solid transparent; padding:4px 0; width:100%; margin-top:8px; }
+.editor-header input.survey-desc:focus { border-bottom-color:var(--border); }
+
+.question-list { display:flex; flex-direction:column; gap:12px; }
+.question-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; position:relative; }
+.question-card.dragging { opacity:0.5; }
+.question-card.drag-over { border-color:var(--accent); border-style:dashed; }
+.question-card-header { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+.question-card-header .drag-handle { cursor:grab; color:var(--text2); font-size:14px; user-select:none; }
+.question-card-header .q-number { background:var(--accent); color:white; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0; }
+.question-card-header input { flex:1; font-size:15px; font-weight:500; background:transparent; border:none; border-bottom:1px solid transparent; padding:2px 0; }
+.question-card-header input:focus { border-bottom-color:var(--accent); }
+.question-card-header .q-actions { display:flex; gap:4px; }
+.question-card-header .q-actions button { background:transparent; color:var(--text2); padding:4px 6px; border-radius:4px; font-size:12px; }
+.question-card-header .q-actions button:hover { background:var(--surface2); color:var(--text); }
+.question-card-body { padding-left:40px; }
+.q-type-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.q-type-row select { width:auto; font-size:12px; padding:4px 8px; }
+.q-type-row label { font-size:12px; color:var(--text2); display:flex; align-items:center; gap:4px; cursor:pointer; }
+.q-type-row label input[type=checkbox] { accent-color:var(--accent); }
+
+/* Options editor */
+.options-list { display:flex; flex-direction:column; gap:6px; }
+.option-row { display:flex; align-items:center; gap:8px; }
+.option-row .dot { width:16px; height:16px; border:2px solid var(--border); border-radius:50%; flex-shrink:0; }
+.option-row.checkbox .dot { border-radius:3px; }
+.option-row input { flex:1; font-size:13px; padding:6px 8px; }
+.option-row .remove-opt { background:transparent; color:var(--text2); padding:2px 6px; border-radius:4px; font-size:14px; }
+.option-row .remove-opt:hover { color:var(--red); }
+.add-option { background:transparent; color:var(--accent); font-size:13px; padding:6px 0; margin-top:4px; }
+.add-option:hover { color:var(--accent2); }
+
+/* Rating config */
+.rating-config { display:flex; align-items:center; gap:12px; font-size:13px; }
+.rating-config label { color:var(--text2); }
+.rating-config select { width:auto; }
+
+/* Preview */
+.preview-container { max-width:640px; margin:0 auto; }
+.preview-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.preview-header { padding:32px 24px; background:linear-gradient(135deg, var(--accent), #8b5cf6); text-align:center; }
+.preview-header h2 { font-size:24px; color:white; margin-bottom:8px; }
+.preview-header p { color:rgba(255,255,255,0.8); font-size:14px; }
+.preview-body { padding:24px; }
+.preview-question { margin-bottom:24px; }
+.preview-question .pq-label { font-size:15px; font-weight:500; margin-bottom:8px; display:flex; gap:4px; }
+.preview-question .pq-label .req { color:var(--red); }
+.preview-question .pq-desc { font-size:13px; color:var(--text2); margin-bottom:8px; }
+.preview-options { display:flex; flex-direction:column; gap:6px; }
+.preview-option { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-size:14px; transition:all 0.15s; }
+.preview-option:hover { border-color:var(--accent); }
+.preview-option.selected { border-color:var(--accent); background:rgba(108,92,231,0.15); }
+.preview-option .radio { width:18px; height:18px; border:2px solid var(--border); border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.preview-option .checkbox { width:18px; height:18px; border:2px solid var(--border); border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.preview-option.selected .radio { border-color:var(--accent); }
+.preview-option.selected .radio::after { content:''; width:10px; height:10px; background:var(--accent); border-radius:50%; }
+.preview-option.selected .checkbox { border-color:var(--accent); background:var(--accent); }
+.preview-option.selected .checkbox::after { content:'✓'; color:white; font-size:12px; font-weight:bold; }
+.preview-rating { display:flex; gap:6px; flex-wrap:wrap; }
+.preview-rating button { width:44px; height:44px; border-radius:8px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-size:16px; font-weight:600; }
+.preview-rating button:hover { border-color:var(--accent); }
+.preview-rating button.selected { background:var(--accent); border-color:var(--accent); color:white; }
+.preview-nps { display:flex; gap:4px; }
+.preview-nps button { flex:1; height:40px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-size:14px; font-weight:500; min-width:36px; }
+.preview-nps button:hover { border-color:var(--accent); }
+.preview-nps button.selected { color:white; border-color:transparent; }
+.preview-nps button.det { background:#e17055; }
+.preview-nps button.pas { background:#fdcb6e; color:#333; }
+.preview-nps button.pro { background:#00b894; }
+.preview-nps-labels { display:flex; justify-content:space-between; margin-top:4px; font-size:11px; color:var(--text2); }
+.preview-submit { text-align:center; padding:16px 0; }
+.preview-submit button { background:var(--accent); color:white; padding:12px 32px; border-radius:8px; font-size:15px; font-weight:600; }
+.preview-submit button:hover { background:var(--accent2); }
+
+/* Responses */
+.responses-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:24px; }
+.resp-stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; text-align:center; }
+.resp-stat .val { font-size:28px; font-weight:700; color:var(--accent); }
+.resp-stat .label { font-size:12px; color:var(--text2); margin-top:4px; }
+.resp-question { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:16px; }
+.resp-question h3 { font-size:15px; margin-bottom:12px; }
+.resp-bar-chart { display:flex; flex-direction:column; gap:8px; }
+.resp-bar-row { display:flex; align-items:center; gap:10px; }
+.resp-bar-label { font-size:13px; width:140px; text-align:right; flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.resp-bar-track { flex:1; height:28px; background:var(--surface2); border-radius:6px; overflow:hidden; position:relative; }
+.resp-bar-fill { height:100%; border-radius:6px; transition:width 0.3s; display:flex; align-items:center; padding-left:8px; font-size:12px; font-weight:600; color:white; min-width:fit-content; }
+.resp-bar-count { font-size:13px; color:var(--text2); width:50px; flex-shrink:0; }
+.resp-text-list { display:flex; flex-direction:column; gap:6px; }
+.resp-text-item { background:var(--surface2); padding:10px 14px; border-radius:6px; font-size:13px; border-left:3px solid var(--accent); }
+.resp-nps-score { font-size:48px; font-weight:700; text-align:center; margin:16px 0; }
+.resp-nps-breakdown { display:flex; gap:16px; justify-content:center; font-size:13px; }
+.resp-nps-breakdown span { display:flex; align-items:center; gap:4px; }
+.resp-avg { font-size:36px; font-weight:700; text-align:center; color:var(--accent); margin:12px 0; }
+
+/* Share view */
+.share-section { max-width:640px; margin:0 auto; }
+.share-section h2 { font-size:20px; margin-bottom:16px; }
+.share-option { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
+.share-option h3 { font-size:15px; margin-bottom:8px; }
+.share-option p { font-size:13px; color:var(--text2); margin-bottom:12px; }
+.share-option .code-block { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:12px; font-family:'SF Mono',Monaco,monospace; font-size:12px; max-height:200px; overflow:auto; white-space:pre-wrap; word-break:break-all; }
+.share-option button { margin-top:8px; }
+
+/* Templates */
+.template-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
+.template-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; cursor:pointer; transition:all 0.15s; }
+.template-card:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:var(--shadow); }
+.template-card .icon { font-size:32px; margin-bottom:12px; }
+.template-card h3 { font-size:16px; margin-bottom:6px; }
+.template-card p { font-size:13px; color:var(--text2); line-height:1.5; }
+.template-card .q-count { font-size:12px; color:var(--accent); margin-top:8px; }
+
+/* Modal */
+.modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:100; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; width:90%; max-width:480px; max-height:80vh; overflow-y:auto; }
+.modal h2 { font-size:18px; margin-bottom:16px; }
+.modal .form-group { margin-bottom:14px; }
+.modal .form-group label { display:block; font-size:13px; color:var(--text2); margin-bottom:4px; }
+.modal .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
+.modal .modal-actions button { padding:8px 20px; border-radius:6px; font-size:13px; font-weight:500; }
+
+/* Kbd */
+.kbd-help { position:fixed; bottom:12px; right:12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:4px 10px; font-size:11px; color:var(--text2); z-index:50; }
+kbd { background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:1px 5px; font-size:10px; font-family:inherit; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--text2); }
+
+/* Responsive */
+@media(max-width:768px) {
+  .sidebar { display:none; }
+  .content { padding:16px; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div class="kbd-help"><kbd>?</kbd> Shortcuts</div>
+
+<script>
+// =============================================
+// SURVEY FORGE — Beautiful Survey & Form Builder
+// =============================================
+
+const QUESTION_TYPES = [
+  { id:'short_text', label:'Short Text', icon:'✏️' },
+  { id:'long_text', label:'Long Text', icon:'📝' },
+  { id:'multiple_choice', label:'Multiple Choice', icon:'🔘' },
+  { id:'checkbox', label:'Checkboxes', icon:'☑️' },
+  { id:'dropdown', label:'Dropdown', icon:'📋' },
+  { id:'rating', label:'Rating', icon:'⭐' },
+  { id:'nps', label:'NPS (0-10)', icon:'📊' },
+  { id:'yes_no', label:'Yes / No', icon:'👍' },
+  { id:'email', label:'Email', icon:'📧' },
+  { id:'number', label:'Number', icon:'🔢' },
+];
+
+const COLORS = ['#6c5ce7','#00b894','#e17055','#74b9ff','#fdcb6e','#fd79a8','#a29bfe','#55efc4'];
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function esc(s) { return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// State
+let state = {
+  surveys: [],
+  activeSurveyId: null,
+  activeView: 'editor', // editor, preview, responses, share
+  previewAnswers: {},
+  searchTerm: '',
+  showHelp: false,
+  showTemplates: false,
+};
+
+function save() {
+  localStorage.setItem('survey-forge', JSON.stringify(state.surveys));
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem('survey-forge'));
+    if (d && Array.isArray(d)) state.surveys = d;
+  } catch(e) {}
+}
+
+function getActiveSurvey() {
+  return state.surveys.find(s => s.id === state.activeSurveyId);
+}
+
+function createSurvey(name, questions) {
+  const s = {
+    id: uid(),
+    name: name || 'Untitled Survey',
+    description: 'Add a description...',
+    questions: questions || [],
+    responses: [],
+    createdAt: new Date().toISOString(),
+    color: COLORS[state.surveys.length % COLORS.length],
+  };
+  state.surveys.unshift(s);
+  state.activeSurveyId = s.id;
+  state.activeView = 'editor';
+  save();
+  render();
+}
+
+function addQuestion(type) {
+  const s = getActiveSurvey();
+  if (!s) return;
+  const q = {
+    id: uid(),
+    type: type || 'short_text',
+    text: '',
+    required: false,
+    options: ['Option 1', 'Option 2'],
+    ratingMax: 5,
+    description: '',
+  };
+  if (type === 'nps') { q.options = []; q.ratingMax = 10; }
+  if (type === 'yes_no') { q.options = ['Yes', 'No']; }
+  if (type === 'rating') { q.ratingMax = 5; }
+  s.questions.push(q);
+  save();
+  render();
+  // Focus new question
+  setTimeout(() => {
+    const cards = document.querySelectorAll('.question-card');
+    if (cards.length) {
+      const last = cards[cards.length - 1];
+      last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const inp = last.querySelector('.q-text-input');
+      if (inp) inp.focus();
+    }
+  }, 50);
+}
+
+function deleteQuestion(qId) {
+  const s = getActiveSurvey();
+  if (!s) return;
+  s.questions = s.questions.filter(q => q.id !== qId);
+  save();
+  render();
+}
+
+function duplicateQuestion(qId) {
+  const s = getActiveSurvey();
+  if (!s) return;
+  const idx = s.questions.findIndex(q => q.id === qId);
+  if (idx < 0) return;
+  const clone = JSON.parse(JSON.stringify(s.questions[idx]));
+  clone.id = uid();
+  s.questions.splice(idx + 1, 0, clone);
+  save();
+  render();
+}
+
+function moveQuestion(qId, dir) {
+  const s = getActiveSurvey();
+  if (!s) return;
+  const idx = s.questions.findIndex(q => q.id === qId);
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= s.questions.length) return;
+  [s.questions[idx], s.questions[newIdx]] = [s.questions[newIdx], s.questions[idx]];
+  save();
+  render();
+}
+
+function deleteSurvey(id) {
+  state.surveys = state.surveys.filter(s => s.id !== id);
+  if (state.activeSurveyId === id) {
+    state.activeSurveyId = state.surveys[0]?.id || null;
+  }
+  save();
+  render();
+}
+
+// Templates
+const TEMPLATES = [
+  {
+    icon: '🔬', name: 'User Research', desc: 'Understand user needs, pain points, and behaviors. Great for product discovery.',
+    questions: [
+      { type:'short_text', text:'What is your role/job title?', required:true, options:[], ratingMax:5, description:'' },
+      { type:'multiple_choice', text:'How did you first hear about us?', required:false, options:['Google Search','Social Media','Friend/Colleague','Blog Post','Conference','Other'], ratingMax:5, description:'' },
+      { type:'long_text', text:'What problem were you trying to solve when you found us?', required:true, options:[], ratingMax:5, description:'Be as specific as possible.' },
+      { type:'rating', text:'How well does our product solve your problem?', required:true, options:[], ratingMax:5, description:'1 = Not at all, 5 = Perfectly' },
+      { type:'long_text', text:'What is the most frustrating part of using our product?', required:false, options:[], ratingMax:5, description:'' },
+      { type:'checkbox', text:'Which features do you use most?', required:false, options:['Dashboard','Reports','Integrations','Team Management','Settings'], ratingMax:5, description:'Select all that apply.' },
+      { type:'nps', text:'How likely are you to recommend us to a friend or colleague?', required:true, options:[], ratingMax:10, description:'' },
+      { type:'long_text', text:'If you could change one thing about the product, what would it be?', required:false, options:[], ratingMax:5, description:'' },
+    ]
+  },
+  {
+    icon: '🎯', name: 'Feature Validation', desc: 'Validate a new feature idea before building. Save engineering time.',
+    questions: [
+      { type:'multiple_choice', text:'How often do you experience [this problem]?', required:true, options:['Daily','Weekly','Monthly','Rarely','Never'], ratingMax:5, description:'' },
+      { type:'rating', text:'How painful is this problem for you?', required:true, options:[], ratingMax:5, description:'1 = Minor annoyance, 5 = Critical blocker' },
+      { type:'long_text', text:'How do you currently work around this problem?', required:false, options:[], ratingMax:5, description:'' },
+      { type:'yes_no', text:'Would you use a feature that [solves this problem]?', required:true, options:['Yes','No'], ratingMax:5, description:'' },
+      { type:'multiple_choice', text:'How much would you pay for this feature?', required:false, options:['$0 — only if free','$5-10/mo','$10-25/mo','$25-50/mo','$50+/mo'], ratingMax:5, description:'' },
+      { type:'rating', text:'How likely are you to use this feature weekly?', required:true, options:[], ratingMax:5, description:'1 = Unlikely, 5 = Definitely' },
+      { type:'long_text', text:'What else would you want this feature to do?', required:false, options:[], ratingMax:5, description:'' },
+    ]
+  },
+  {
+    icon: '😊', name: 'Customer Satisfaction (CSAT)', desc: 'Measure customer happiness. Track satisfaction over time.',
+    questions: [
+      { type:'rating', text:'Overall, how satisfied are you with our product?', required:true, options:[], ratingMax:5, description:'1 = Very Dissatisfied, 5 = Very Satisfied' },
+      { type:'rating', text:'How easy is our product to use?', required:true, options:[], ratingMax:5, description:'1 = Very Difficult, 5 = Very Easy' },
+      { type:'rating', text:'How well does our product meet your needs?', required:true, options:[], ratingMax:5, description:'' },
+      { type:'multiple_choice', text:'How responsive is our support team?', required:false, options:['Excellent','Good','Average','Below Average','Poor'], ratingMax:5, description:'' },
+      { type:'nps', text:'How likely are you to recommend us?', required:true, options:[], ratingMax:10, description:'' },
+      { type:'long_text', text:'What could we do to improve your experience?', required:false, options:[], ratingMax:5, description:'' },
+    ]
+  },
+  {
+    icon: '🚀', name: 'Product-Market Fit', desc: 'The Sean Ellis test: would users be disappointed if your product disappeared?',
+    questions: [
+      { type:'multiple_choice', text:'How would you feel if you could no longer use our product?', required:true, options:['Very disappointed','Somewhat disappointed','Not disappointed','I no longer use it'], ratingMax:5, description:'The core PMF question.' },
+      { type:'long_text', text:'What is the main benefit you get from our product?', required:true, options:[], ratingMax:5, description:'' },
+      { type:'long_text', text:'What type of person do you think would benefit most from our product?', required:false, options:[], ratingMax:5, description:'' },
+      { type:'long_text', text:'How can we improve the product for you?', required:false, options:[], ratingMax:5, description:'' },
+      { type:'multiple_choice', text:'How often do you use our product?', required:true, options:['Multiple times a day','Daily','Weekly','Monthly','Less than monthly'], ratingMax:5, description:'' },
+      { type:'short_text', text:'What would you use as an alternative if our product didn\'t exist?', required:false, options:[], ratingMax:5, description:'' },
+    ]
+  },
+  {
+    icon: '💼', name: 'Post-Interview Feedback', desc: 'Gather structured feedback from interviewers or candidates.',
+    questions: [
+      { type:'short_text', text:'Candidate Name', required:true, options:[], ratingMax:5, description:'' },
+      { type:'short_text', text:'Position', required:true, options:[], ratingMax:5, description:'' },
+      { type:'rating', text:'Technical Skills', required:true, options:[], ratingMax:5, description:'1 = Poor, 5 = Excellent' },
+      { type:'rating', text:'Communication Skills', required:true, options:[], ratingMax:5, description:'' },
+      { type:'rating', text:'Problem Solving', required:true, options:[], ratingMax:5, description:'' },
+      { type:'rating', text:'Culture Fit', required:true, options:[], ratingMax:5, description:'' },
+      { type:'multiple_choice', text:'Hiring Recommendation', required:true, options:['Strong Hire','Hire','Lean Hire','Lean No Hire','No Hire','Strong No Hire'], ratingMax:5, description:'' },
+      { type:'long_text', text:'Strengths observed', required:true, options:[], ratingMax:5, description:'' },
+      { type:'long_text', text:'Areas of concern', required:false, options:[], ratingMax:5, description:'' },
+    ]
+  },
+  {
+    icon: '📋', name: 'Sprint Feedback', desc: 'Quick pulse check after a sprint. Gauge team health.',
+    questions: [
+      { type:'rating', text:'How productive was this sprint?', required:true, options:[], ratingMax:5, description:'' },
+      { type:'rating', text:'How clear were the sprint goals?', required:true, options:[], ratingMax:5, description:'' },
+      { type:'rating', text:'How well did the team collaborate?', required:true, options:[], ratingMax:5, description:'' },
+      { type:'long_text', text:'What went well this sprint?', required:false, options:[], ratingMax:5, description:'' },
+      { type:'long_text', text:'What should we improve next sprint?', required:false, options:[], ratingMax:5, description:'' },
+      { type:'multiple_choice', text:'Are there any blockers carrying over?', required:true, options:['No blockers','Minor blockers','Major blockers'], ratingMax:5, description:'' },
+      { type:'nps', text:'How likely are you to recommend this team to work with?', required:false, options:[], ratingMax:10, description:'' },
+    ]
+  },
+];
+
+// Render
+function render() {
+  const app = document.getElementById('app');
+  const survey = getActiveSurvey();
+  const filtered = state.surveys.filter(s =>
+    !state.searchTerm || s.name.toLowerCase().includes(state.searchTerm.toLowerCase())
+  );
+
+  app.innerHTML = `
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h1><span>📋</span> Survey Forge</h1>
+      </div>
+      <div class="sidebar-search">
+        <input type="text" placeholder="Search surveys... (/)" value="${esc(state.searchTerm)}" oninput="state.searchTerm=this.value;render()" id="sidebarSearch">
+      </div>
+      <div class="sidebar-list">
+        ${filtered.map(s => `
+          <div class="sidebar-item ${s.id===state.activeSurveyId?'active':''}" onclick="state.activeSurveyId='${s.id}';state.activeView='editor';state.previewAnswers={};render()">
+            <span class="name">${esc(s.name)}</span>
+            <span class="count">${s.questions.length}q</span>
+          </div>
+        `).join('')}
+        ${filtered.length === 0 ? '<div style="padding:20px;text-align:center;color:var(--text2);font-size:13px">No surveys found</div>' : ''}
+      </div>
+      <div class="sidebar-actions">
+        <button class="btn-primary" onclick="createSurvey()">+ New</button>
+        <button class="btn-secondary" onclick="state.showTemplates=true;render()">📋 Templates</button>
+      </div>
+    </div>
+    <div class="main">
+      ${survey ? renderTopbar(survey) : ''}
+      <div class="content">
+        ${!survey ? renderEmpty() : ''}
+        ${survey && state.activeView === 'editor' ? renderEditor(survey) : ''}
+        ${survey && state.activeView === 'preview' ? renderPreview(survey) : ''}
+        ${survey && state.activeView === 'responses' ? renderResponses(survey) : ''}
+        ${survey && state.activeView === 'share' ? renderShare(survey) : ''}
+      </div>
+    </div>
+    ${state.showHelp ? renderHelpModal() : ''}
+    ${state.showTemplates ? renderTemplatesModal() : ''}
+  `;
+}
+
+function renderTopbar(s) {
+  return `<div class="topbar">
+    <div class="tabs">
+      <button class="tab ${state.activeView==='editor'?'active':''}" onclick="state.activeView='editor';render()">✏️ Editor</button>
+      <button class="tab ${state.activeView==='preview'?'active':''}" onclick="state.activeView='preview';state.previewAnswers={};render()">👁 Preview</button>
+      <button class="tab ${state.activeView==='responses'?'active':''}" onclick="state.activeView='responses';render()">📊 Responses <span style="font-size:11px;opacity:0.7">(${s.responses.length})</span></button>
+      <button class="tab ${state.activeView==='share'?'active':''}" onclick="state.activeView='share';render()">🔗 Share</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="actions">
+      <button class="btn-secondary" onclick="duplicateSurvey('${s.id}')">📄 Duplicate</button>
+      <button class="btn-secondary" onclick="exportJSON()">⬇ Export</button>
+      <button class="btn-secondary" onclick="importJSON()">⬆ Import</button>
+      <button class="btn-secondary" style="color:var(--red)" onclick="if(confirm('Delete this survey?'))deleteSurvey('${s.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+
+function renderEmpty() {
+  return `<div class="empty">
+    <div class="icon">📋</div>
+    <h2>Welcome to Survey Forge</h2>
+    <p>Build beautiful surveys, collect responses, analyze results.<br>All local, no backend needed.</p>
+    <button class="btn-primary" style="padding:12px 24px;font-size:15px;" onclick="createSurvey()">Create Your First Survey</button>
+    <div style="margin-top:12px">
+      <button class="btn-secondary" style="padding:10px 20px;font-size:14px;" onclick="state.showTemplates=true;render()">📋 Start from Template</button>
+    </div>
+  </div>`;
+}
+
+function renderEditor(s) {
+  return `
+    <div class="editor-header">
+      <input class="survey-title" value="${esc(s.name)}" placeholder="Survey Title" oninput="updateSurveyField('name',this.value)">
+      <input class="survey-desc" value="${esc(s.description)}" placeholder="Add a description..." oninput="updateSurveyField('description',this.value)">
+    </div>
+    <div class="question-list">
+      ${s.questions.map((q, i) => renderQuestionCard(q, i, s)).join('')}
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+      ${QUESTION_TYPES.map(t => `
+        <button class="btn-secondary" style="font-size:12px;padding:6px 10px;" onclick="addQuestion('${t.id}')">${t.icon} ${t.label}</button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderQuestionCard(q, idx, s) {
+  const t = QUESTION_TYPES.find(t => t.id === q.type);
+  const hasOptions = ['multiple_choice','checkbox','dropdown'].includes(q.type);
+  const isRating = q.type === 'rating';
+  const isNps = q.type === 'nps';
+
+  return `<div class="question-card" draggable="true" ondragstart="dragStart(event,'${q.id}')" ondragover="dragOver(event)" ondrop="drop(event,'${q.id}')" ondragend="dragEnd(event)">
+    <div class="question-card-header">
+      <span class="drag-handle">⠿</span>
+      <span class="q-number">${idx+1}</span>
+      <input class="q-text-input" value="${esc(q.text)}" placeholder="Question text..." oninput="updateQ('${s.id}','${q.id}','text',this.value)">
+      <div class="q-actions">
+        <button title="Move up" onclick="moveQuestion('${q.id}',-1)">↑</button>
+        <button title="Move down" onclick="moveQuestion('${q.id}',1)">↓</button>
+        <button title="Duplicate" onclick="duplicateQuestion('${q.id}')">📄</button>
+        <button title="Delete" onclick="deleteQuestion('${q.id}')" style="color:var(--red)">✕</button>
+      </div>
+    </div>
+    <div class="question-card-body">
+      <div class="q-type-row">
+        <select onchange="updateQ('${s.id}','${q.id}','type',this.value);render()">
+          ${QUESTION_TYPES.map(t2 => `<option value="${t2.id}" ${t2.id===q.type?'selected':''}>${t2.icon} ${t2.label}</option>`).join('')}
+        </select>
+        <label><input type="checkbox" ${q.required?'checked':''} onchange="updateQ('${s.id}','${q.id}','required',this.checked)"> Required</label>
+      </div>
+      <input style="font-size:12px;margin-bottom:8px;color:var(--text2);" value="${esc(q.description||'')}" placeholder="Description (optional)" oninput="updateQ('${s.id}','${q.id}','description',this.value)">
+      ${hasOptions ? renderOptionsEditor(q, s) : ''}
+      ${isRating ? `<div class="rating-config"><label>Max rating:</label><select onchange="updateQ('${s.id}','${q.id}','ratingMax',+this.value)">${[3,4,5,7,10].map(n=>`<option value="${n}" ${q.ratingMax===n?'selected':''}>${n}</option>`).join('')}</select></div>` : ''}
+      ${isNps ? '<div style="font-size:12px;color:var(--text2)">0-6 Detractors · 7-8 Passive · 9-10 Promoters</div>' : ''}
+    </div>
+  </div>`;
+}
+
+function renderOptionsEditor(q, s) {
+  const isCheck = q.type === 'checkbox';
+  return `<div class="options-list">
+    ${(q.options||[]).map((opt, i) => `
+      <div class="option-row ${isCheck?'checkbox':''}">
+        <div class="dot"></div>
+        <input value="${esc(opt)}" oninput="updateOption('${s.id}','${q.id}',${i},this.value)" placeholder="Option ${i+1}">
+        <button class="remove-opt" onclick="removeOption('${s.id}','${q.id}',${i})">✕</button>
+      </div>
+    `).join('')}
+    <button class="add-option" onclick="addOption('${s.id}','${q.id}')">+ Add option</button>
+  </div>`;
+}
+
+function renderPreview(s) {
+  return `<div class="preview-container">
+    <div class="preview-card">
+      <div class="preview-header">
+        <h2>${esc(s.name)}</h2>
+        ${s.description && s.description !== 'Add a description...' ? `<p>${esc(s.description)}</p>` : ''}
+      </div>
+      <div class="preview-body">
+        ${s.questions.map((q, i) => renderPreviewQuestion(q, i)).join('')}
+        <div class="preview-submit">
+          <button onclick="submitPreview()">Submit Response</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderPreviewQuestion(q, idx) {
+  const ans = state.previewAnswers[q.id];
+  let body = '';
+
+  switch (q.type) {
+    case 'short_text':
+    case 'email':
+      body = `<input type="${q.type==='email'?'email':'text'}" placeholder="Your answer..." value="${esc(ans||'')}" oninput="state.previewAnswers['${q.id}']=this.value">`;
+      break;
+    case 'long_text':
+      body = `<textarea placeholder="Your answer..." oninput="state.previewAnswers['${q.id}']=this.value">${esc(ans||'')}</textarea>`;
+      break;
+    case 'number':
+      body = `<input type="number" placeholder="0" value="${esc(ans||'')}" oninput="state.previewAnswers['${q.id}']=this.value">`;
+      break;
+    case 'multiple_choice':
+    case 'yes_no':
+      body = `<div class="preview-options">${(q.options||[]).map(opt => `
+        <div class="preview-option ${ans===opt?'selected':''}" onclick="state.previewAnswers['${q.id}']='${esc(opt)}';render()">
+          <div class="radio"></div>
+          <span>${esc(opt)}</span>
+        </div>
+      `).join('')}</div>`;
+      break;
+    case 'checkbox':
+      const checked = ans || [];
+      body = `<div class="preview-options">${(q.options||[]).map(opt => {
+        const sel = checked.includes(opt);
+        return `<div class="preview-option ${sel?'selected':''}" onclick="toggleCheckbox('${q.id}','${esc(opt)}')">
+          <div class="checkbox"></div>
+          <span>${esc(opt)}</span>
+        </div>`;
+      }).join('')}</div>`;
+      break;
+    case 'dropdown':
+      body = `<select onchange="state.previewAnswers['${q.id}']=this.value" style="max-width:300px">
+        <option value="">Select...</option>
+        ${(q.options||[]).map(opt => `<option value="${esc(opt)}" ${ans===opt?'selected':''}>${esc(opt)}</option>`).join('')}
+      </select>`;
+      break;
+    case 'rating':
+      body = `<div class="preview-rating">${Array.from({length:q.ratingMax||5},(_,i)=>i+1).map(n => `
+        <button class="${ans==n?'selected':''}" onclick="state.previewAnswers['${q.id}']=${n};render()">${n}</button>
+      `).join('')}</div>`;
+      break;
+    case 'nps':
+      body = `<div class="preview-nps">${Array.from({length:11},(_,i)=>i).map(n => {
+        const cls = n <= 6 ? 'det' : n <= 8 ? 'pas' : 'pro';
+        return `<button class="${ans===n?cls+' selected':''}" onclick="state.previewAnswers['${q.id}']=${n};render()">${n}</button>`;
+      }).join('')}</div><div class="preview-nps-labels"><span>Not likely</span><span>Very likely</span></div>`;
+      break;
+  }
+
+  return `<div class="preview-question">
+    <div class="pq-label">${idx+1}. ${esc(q.text||'Untitled Question')} ${q.required?'<span class="req">*</span>':''}</div>
+    ${q.description?`<div class="pq-desc">${esc(q.description)}</div>`:''}
+    ${body}
+  </div>`;
+}
+
+function renderResponses(s) {
+  if (!s.responses.length) {
+    return `<div class="empty">
+      <div class="icon">📊</div>
+      <h2>No Responses Yet</h2>
+      <p>Share your survey or submit a test response from the Preview tab.</p>
+      <button class="btn-secondary" style="margin-top:8px" onclick="addDemoResponses()">+ Add Demo Responses</button>
+    </div>`;
+  }
+
+  const total = s.responses.length;
+
+  return `
+    <div class="responses-summary">
+      <div class="resp-stat"><div class="val">${total}</div><div class="label">Total Responses</div></div>
+      ${renderNPSStat(s)}
+      ${renderAvgRatingStat(s)}
+      <div class="resp-stat"><div class="val">${s.responses.length > 0 ? new Date(s.responses[s.responses.length-1].submittedAt).toLocaleDateString() : '—'}</div><div class="label">Last Response</div></div>
+    </div>
+    ${s.questions.map(q => renderResponseChart(q, s.responses)).join('')}
+    <div style="margin-top:16px;text-align:right">
+      <button class="btn-secondary" onclick="exportCSV()">📥 Export CSV</button>
+      <button class="btn-secondary" style="color:var(--red);margin-left:8px" onclick="if(confirm('Clear all responses?')){getActiveSurvey().responses=[];save();render()}">🗑 Clear</button>
+    </div>
+  `;
+}
+
+function renderNPSStat(s) {
+  const npsQ = s.questions.find(q => q.type === 'nps');
+  if (!npsQ) return '';
+  const vals = s.responses.map(r => r.answers[npsQ.id]).filter(v => v !== undefined && v !== null);
+  if (!vals.length) return '';
+  const det = vals.filter(v => v <= 6).length;
+  const pro = vals.filter(v => v >= 9).length;
+  const nps = Math.round((pro / vals.length - det / vals.length) * 100);
+  const color = nps >= 50 ? 'var(--green)' : nps >= 0 ? 'var(--orange)' : 'var(--red)';
+  return `<div class="resp-stat"><div class="val" style="color:${color}">${nps > 0 ? '+' : ''}${nps}</div><div class="label">NPS Score</div></div>`;
+}
+
+function renderAvgRatingStat(s) {
+  const ratingQs = s.questions.filter(q => q.type === 'rating');
+  if (!ratingQs.length) return '';
+  let sum = 0, count = 0;
+  ratingQs.forEach(q => {
+    s.responses.forEach(r => {
+      if (r.answers[q.id] !== undefined) { sum += r.answers[q.id]; count++; }
+    });
+  });
+  if (!count) return '';
+  const avg = (sum / count).toFixed(1);
+  return `<div class="resp-stat"><div class="val">${avg} ⭐</div><div class="label">Avg Rating</div></div>`;
+}
+
+function renderResponseChart(q, responses) {
+  const answers = responses.map(r => r.answers[q.id]).filter(a => a !== undefined && a !== null && a !== '');
+  if (!answers.length) return `<div class="resp-question"><h3>${esc(q.text||'Untitled')}</h3><div style="color:var(--text2);font-size:13px">No responses yet</div></div>`;
+
+  let chart = '';
+
+  if (['multiple_choice','yes_no','dropdown'].includes(q.type)) {
+    const counts = {};
+    (q.options||[]).forEach(o => counts[o] = 0);
+    answers.forEach(a => { counts[a] = (counts[a]||0) + 1; });
+    const max = Math.max(...Object.values(counts), 1);
+    chart = `<div class="resp-bar-chart">${Object.entries(counts).map(([label, count], i) => {
+      const pct = (count / answers.length * 100).toFixed(0);
+      const w = Math.max(count / max * 100, 2);
+      const color = COLORS[i % COLORS.length];
+      return `<div class="resp-bar-row">
+        <div class="resp-bar-label" title="${esc(label)}">${esc(label)}</div>
+        <div class="resp-bar-track"><div class="resp-bar-fill" style="width:${w}%;background:${color}">${pct}%</div></div>
+        <div class="resp-bar-count">${count}</div>
+      </div>`;
+    }).join('')}</div>`;
+  } else if (q.type === 'checkbox') {
+    const counts = {};
+    (q.options||[]).forEach(o => counts[o] = 0);
+    answers.forEach(arr => { if (Array.isArray(arr)) arr.forEach(a => { counts[a] = (counts[a]||0) + 1; }); });
+    const max = Math.max(...Object.values(counts), 1);
+    chart = `<div class="resp-bar-chart">${Object.entries(counts).map(([label, count], i) => {
+      const pct = (count / answers.length * 100).toFixed(0);
+      const w = Math.max(count / max * 100, 2);
+      const color = COLORS[i % COLORS.length];
+      return `<div class="resp-bar-row">
+        <div class="resp-bar-label" title="${esc(label)}">${esc(label)}</div>
+        <div class="resp-bar-track"><div class="resp-bar-fill" style="width:${w}%;background:${color}">${pct}%</div></div>
+        <div class="resp-bar-count">${count}</div>
+      </div>`;
+    }).join('')}</div>`;
+  } else if (q.type === 'rating') {
+    const counts = {};
+    for (let i = 1; i <= (q.ratingMax||5); i++) counts[i] = 0;
+    answers.forEach(a => { counts[a] = (counts[a]||0) + 1; });
+    const avg = (answers.reduce((s,v) => s+v, 0) / answers.length).toFixed(1);
+    const max = Math.max(...Object.values(counts), 1);
+    chart = `<div class="resp-avg">${avg} / ${q.ratingMax||5}</div>
+    <div class="resp-bar-chart">${Object.entries(counts).map(([label, count]) => {
+      const w = Math.max(count / max * 100, 2);
+      return `<div class="resp-bar-row">
+        <div class="resp-bar-label">${'⭐'.repeat(+label)}</div>
+        <div class="resp-bar-track"><div class="resp-bar-fill" style="width:${w}%;background:var(--accent)">${count}</div></div>
+        <div class="resp-bar-count">${count}</div>
+      </div>`;
+    }).join('')}</div>`;
+  } else if (q.type === 'nps') {
+    const det = answers.filter(v => v <= 6).length;
+    const pas = answers.filter(v => v >= 7 && v <= 8).length;
+    const pro = answers.filter(v => v >= 9).length;
+    const nps = Math.round((pro / answers.length - det / answers.length) * 100);
+    const color = nps >= 50 ? 'var(--green)' : nps >= 0 ? 'var(--orange)' : 'var(--red)';
+    chart = `<div class="resp-nps-score" style="color:${color}">${nps > 0 ? '+' : ''}${nps}</div>
+    <div class="resp-nps-breakdown">
+      <span style="color:var(--red)">😞 Detractors: ${det} (${(det/answers.length*100).toFixed(0)}%)</span>
+      <span style="color:var(--orange)">😐 Passives: ${pas} (${(pas/answers.length*100).toFixed(0)}%)</span>
+      <span style="color:var(--green)">😊 Promoters: ${pro} (${(pro/answers.length*100).toFixed(0)}%)</span>
+    </div>`;
+  } else {
+    // Text responses
+    chart = `<div class="resp-text-list">${answers.slice(0, 20).map(a => `<div class="resp-text-item">${esc(String(a))}</div>`).join('')}
+    ${answers.length > 20 ? `<div style="font-size:12px;color:var(--text2);margin-top:4px">+ ${answers.length - 20} more</div>` : ''}</div>`;
+  }
+
+  return `<div class="resp-question"><h3>${esc(q.text||'Untitled')}</h3>${chart}</div>`;
+}
+
+function renderShare(s) {
+  return `<div class="share-section">
+    <h2>Share "${esc(s.name)}"</h2>
+
+    <div class="share-option">
+      <h3>📄 Export as Standalone HTML</h3>
+      <p>Download a single HTML file that works offline. Host it anywhere — GitHub Pages, Netlify, your own server. Responses are stored in the respondent's browser.</p>
+      <button class="btn-primary" onclick="exportStandaloneHTML()">⬇ Download HTML Survey</button>
+    </div>
+
+    <div class="share-option">
+      <h3>📋 Copy as Markdown</h3>
+      <p>Copy the survey as a Markdown document for docs, Notion, or Slack.</p>
+      <button class="btn-primary" onclick="copyMarkdown()">📋 Copy Markdown</button>
+    </div>
+
+    <div class="share-option">
+      <h3>📥 Export Responses as CSV</h3>
+      <p>Download all ${s.responses.length} responses as a CSV spreadsheet.</p>
+      <button class="btn-primary" onclick="exportCSV()" ${s.responses.length===0?'disabled':''}>⬇ Download CSV</button>
+    </div>
+
+    <div class="share-option">
+      <h3>🔗 Embed Code</h3>
+      <p>After hosting the standalone HTML, use this iframe to embed it:</p>
+      <div class="code-block">&lt;iframe src="YOUR_URL_HERE" width="100%" height="700" frameborder="0"&gt;&lt;/iframe&gt;</div>
+    </div>
+  </div>`;
+}
+
+function renderHelpModal() {
+  return `<div class="modal-overlay" onclick="state.showHelp=false;render()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2>⌨️ Keyboard Shortcuts</h2>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:13px;">
+        <kbd>N</kbd><span>New survey</span>
+        <kbd>A</kbd><span>Add question (short text)</span>
+        <kbd>/</kbd><span>Focus search</span>
+        <kbd>1</kbd><span>Editor view</span>
+        <kbd>2</kbd><span>Preview view</span>
+        <kbd>3</kbd><span>Responses view</span>
+        <kbd>4</kbd><span>Share view</span>
+        <kbd>T</kbd><span>Templates</span>
+        <kbd>E</kbd><span>Export JSON</span>
+        <kbd>I</kbd><span>Import JSON</span>
+        <kbd>D</kbd><span>Duplicate survey</span>
+        <kbd>Esc</kbd><span>Close modal</span>
+        <kbd>?</kbd><span>This help</span>
+      </div>
+      <div class="modal-actions"><button class="btn-primary" onclick="state.showHelp=false;render()">Close</button></div>
+    </div>
+  </div>`;
+}
+
+function renderTemplatesModal() {
+  return `<div class="modal-overlay" onclick="state.showTemplates=false;render()">
+    <div class="modal" style="max-width:720px" onclick="event.stopPropagation()">
+      <h2>📋 Survey Templates</h2>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:16px">Start with a proven structure. Customize after creating.</p>
+      <div class="template-grid">
+        ${TEMPLATES.map((t, i) => `
+          <div class="template-card" onclick="createFromTemplate(${i})">
+            <div class="icon">${t.icon}</div>
+            <h3>${esc(t.name)}</h3>
+            <p>${esc(t.desc)}</p>
+            <div class="q-count">${t.questions.length} questions</div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="modal-actions"><button class="btn-secondary" onclick="state.showTemplates=false;render()">Cancel</button></div>
+    </div>
+  </div>`;
+}
+
+// Actions
+function updateSurveyField(field, val) {
+  const s = getActiveSurvey();
+  if (s) { s[field] = val; save(); }
+}
+
+function updateQ(sId, qId, field, val) {
+  const s = state.surveys.find(s => s.id === sId);
+  if (!s) return;
+  const q = s.questions.find(q => q.id === qId);
+  if (!q) return;
+  q[field] = val;
+  // Reset options when type changes
+  if (field === 'type') {
+    if (['multiple_choice','checkbox','dropdown'].includes(val) && (!q.options || !q.options.length)) {
+      q.options = ['Option 1', 'Option 2'];
+    }
+    if (val === 'yes_no') q.options = ['Yes', 'No'];
+    if (val === 'nps') q.ratingMax = 10;
+    if (val === 'rating' && !q.ratingMax) q.ratingMax = 5;
+  }
+  save();
+}
+
+function addOption(sId, qId) {
+  const s = state.surveys.find(s => s.id === sId);
+  const q = s?.questions.find(q => q.id === qId);
+  if (!q) return;
+  q.options = q.options || [];
+  q.options.push(`Option ${q.options.length + 1}`);
+  save();
+  render();
+}
+
+function removeOption(sId, qId, idx) {
+  const s = state.surveys.find(s => s.id === sId);
+  const q = s?.questions.find(q => q.id === qId);
+  if (!q || !q.options) return;
+  q.options.splice(idx, 1);
+  save();
+  render();
+}
+
+function updateOption(sId, qId, idx, val) {
+  const s = state.surveys.find(s => s.id === sId);
+  const q = s?.questions.find(q => q.id === qId);
+  if (!q || !q.options) return;
+  q.options[idx] = val;
+  save();
+}
+
+function toggleCheckbox(qId, opt) {
+  let arr = state.previewAnswers[qId] || [];
+  if (!Array.isArray(arr)) arr = [];
+  if (arr.includes(opt)) arr = arr.filter(a => a !== opt);
+  else arr.push(opt);
+  state.previewAnswers[qId] = arr;
+  render();
+}
+
+function submitPreview() {
+  const s = getActiveSurvey();
+  if (!s) return;
+  // Validate required
+  for (const q of s.questions) {
+    if (q.required) {
+      const ans = state.previewAnswers[q.id];
+      if (ans === undefined || ans === null || ans === '' || (Array.isArray(ans) && !ans.length)) {
+        alert(`Please answer: "${q.text}"`);
+        return;
+      }
+    }
+  }
+  s.responses.push({
+    id: uid(),
+    answers: { ...state.previewAnswers },
+    submittedAt: new Date().toISOString(),
+  });
+  state.previewAnswers = {};
+  save();
+  alert('Response submitted! Check the Responses tab.');
+  render();
+}
+
+function duplicateSurvey(id) {
+  const s = state.surveys.find(s => s.id === id);
+  if (!s) return;
+  const clone = JSON.parse(JSON.stringify(s));
+  clone.id = uid();
+  clone.name = s.name + ' (Copy)';
+  clone.responses = [];
+  clone.createdAt = new Date().toISOString();
+  state.surveys.unshift(clone);
+  state.activeSurveyId = clone.id;
+  save();
+  render();
+}
+
+function createFromTemplate(idx) {
+  const t = TEMPLATES[idx];
+  const questions = t.questions.map(q => ({ ...q, id: uid() }));
+  createSurvey(t.name, questions);
+  state.showTemplates = false;
+  render();
+}
+
+function addDemoResponses() {
+  const s = getActiveSurvey();
+  if (!s || !s.questions.length) return;
+  for (let r = 0; r < 25; r++) {
+    const answers = {};
+    s.questions.forEach(q => {
+      switch (q.type) {
+        case 'short_text': case 'email':
+          answers[q.id] = ['Great product!','Needs work','Love it','Could be better','Amazing UX','Fast and reliable','Decent','Meh','Really useful','Solid tool'][Math.floor(Math.random()*10)]; break;
+        case 'long_text':
+          answers[q.id] = ['The interface is clean and intuitive. Would love more integrations.','I use it daily for my team. The reporting could be better.','Switched from a competitor and love it. Keep shipping!','Some features feel incomplete but the core is solid.','Great for small teams. Enterprise features would be nice.'][Math.floor(Math.random()*5)]; break;
+        case 'multiple_choice': case 'dropdown': case 'yes_no':
+          answers[q.id] = q.options[Math.floor(Math.random()*q.options.length)]; break;
+        case 'checkbox':
+          const n = Math.floor(Math.random()*q.options.length)+1;
+          const shuffled = [...q.options].sort(() => Math.random()-0.5);
+          answers[q.id] = shuffled.slice(0, n); break;
+        case 'rating':
+          answers[q.id] = Math.floor(Math.random()*(q.ratingMax||5))+1; break;
+        case 'nps':
+          // Weighted toward promoters
+          const w = Math.random();
+          answers[q.id] = w < 0.2 ? Math.floor(Math.random()*7) : w < 0.4 ? Math.floor(Math.random()*2)+7 : Math.floor(Math.random()*2)+9;
+          break;
+        case 'number':
+          answers[q.id] = Math.floor(Math.random()*100); break;
+      }
+    });
+    s.responses.push({ id: uid(), answers, submittedAt: new Date(Date.now() - Math.random()*30*86400000).toISOString() });
+  }
+  save();
+  render();
+}
+
+// Export/Import
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state.surveys, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'survey-forge-backup.json';
+  a.click();
+}
+
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (Array.isArray(data)) {
+          state.surveys = data;
+          state.activeSurveyId = data[0]?.id || null;
+          save();
+          render();
+        }
+      } catch(e) { alert('Invalid JSON file'); }
+    };
+    reader.readAsText(e.target.files[0]);
+  };
+  input.click();
+}
+
+function exportCSV() {
+  const s = getActiveSurvey();
+  if (!s || !s.responses.length) return;
+  const headers = ['Submitted At', ...s.questions.map(q => q.text || 'Untitled')];
+  const rows = s.responses.map(r => {
+    return [new Date(r.submittedAt).toLocaleString(), ...s.questions.map(q => {
+      const a = r.answers[q.id];
+      if (Array.isArray(a)) return a.join('; ');
+      return a ?? '';
+    })];
+  });
+  const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${s.name.replace(/[^a-z0-9]/gi,'_')}_responses.csv`;
+  a.click();
+}
+
+function copyMarkdown() {
+  const s = getActiveSurvey();
+  if (!s) return;
+  let md = `# ${s.name}\n\n`;
+  if (s.description && s.description !== 'Add a description...') md += `${s.description}\n\n`;
+  md += '---\n\n';
+  s.questions.forEach((q, i) => {
+    md += `### ${i+1}. ${q.text || 'Untitled'}${q.required ? ' *' : ''}\n`;
+    if (q.description) md += `*${q.description}*\n`;
+    const t = QUESTION_TYPES.find(t => t.id === q.type);
+    md += `Type: ${t?.label || q.type}\n`;
+    if (['multiple_choice','checkbox','dropdown','yes_no'].includes(q.type)) {
+      (q.options||[]).forEach(o => md += `- ${o}\n`);
+    }
+    if (q.type === 'rating') md += `Scale: 1-${q.ratingMax||5}\n`;
+    if (q.type === 'nps') md += `Scale: 0-10\n`;
+    md += '\n';
+  });
+  navigator.clipboard.writeText(md).then(() => alert('Markdown copied!')).catch(() => alert('Failed to copy'));
+}
+
+function exportStandaloneHTML() {
+  const s = getActiveSurvey();
+  if (!s) return;
+  // Generate a self-contained survey HTML
+  const questionsJSON = JSON.stringify(s.questions);
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${esc(s.name)}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1117;color:#e4e6ed;min-height:100vh;display:flex;justify-content:center;padding:20px}
+.container{width:100%;max-width:640px}.header{padding:32px 24px;background:linear-gradient(135deg,#6c5ce7,#8b5cf6);border-radius:12px 12px 0 0;text-align:center}
+.header h1{font-size:24px;color:white;margin-bottom:8px}.header p{color:rgba(255,255,255,0.8);font-size:14px}
+.body{background:#1a1d27;border:1px solid #2d3140;border-top:none;border-radius:0 0 12px 12px;padding:24px}
+.question{margin-bottom:24px}.q-label{font-size:15px;font-weight:500;margin-bottom:8px;display:flex;gap:4px}.req{color:#e17055}
+.q-desc{font-size:13px;color:#9399a8;margin-bottom:8px}input,textarea,select{font-family:inherit;background:#232733;color:#e4e6ed;border:1px solid #2d3140;border-radius:6px;padding:8px 12px;width:100%;outline:none}
+input:focus,textarea:focus{border-color:#6c5ce7}textarea{min-height:80px;resize:vertical}
+.options{display:flex;flex-direction:column;gap:6px}.option{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#232733;border:1px solid #2d3140;border-radius:8px;cursor:pointer;font-size:14px;transition:all .15s}
+.option:hover{border-color:#6c5ce7}.option.selected{border-color:#6c5ce7;background:rgba(108,92,231,.15)}
+.radio,.checkbox{width:18px;height:18px;border:2px solid #2d3140;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.radio{border-radius:50%}.checkbox{border-radius:4px}.option.selected .radio{border-color:#6c5ce7}.option.selected .radio::after{content:'';width:10px;height:10px;background:#6c5ce7;border-radius:50%}
+.option.selected .checkbox{border-color:#6c5ce7;background:#6c5ce7}.option.selected .checkbox::after{content:'✓';color:white;font-size:12px;font-weight:bold}
+.rating{display:flex;gap:6px;flex-wrap:wrap}.rating button{width:44px;height:44px;border-radius:8px;background:#232733;border:1px solid #2d3140;color:#e4e6ed;font-size:16px;font-weight:600;cursor:pointer}
+.rating button:hover{border-color:#6c5ce7}.rating button.selected{background:#6c5ce7;border-color:#6c5ce7;color:white}
+.nps{display:flex;gap:4px}.nps button{flex:1;height:40px;border-radius:6px;background:#232733;border:1px solid #2d3140;color:#e4e6ed;font-size:14px;font-weight:500;cursor:pointer;min-width:32px}
+.nps button:hover{border-color:#6c5ce7}.nps button.det{background:#e17055;color:white;border-color:transparent}.nps button.pas{background:#fdcb6e;color:#333;border-color:transparent}.nps button.pro{background:#00b894;color:white;border-color:transparent}
+.nps-labels{display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:#9399a8}
+.submit{text-align:center;padding:16px 0}.submit button{background:#6c5ce7;color:white;padding:12px 32px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+.submit button:hover{background:#a29bfe}.thanks{text-align:center;padding:40px 20px}.thanks .icon{font-size:48px;margin-bottom:16px}.thanks h2{margin-bottom:8px}.thanks p{color:#9399a8}
+</style>
+</head>
+<body>
+<div class="container" id="survey"></div>
+<script>
+const questions=${questionsJSON};
+const title=${JSON.stringify(s.name)};
+const desc=${JSON.stringify(s.description !== 'Add a description...' ? s.description : '')};
+const answers={};
+function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);}
+function render(){const el=document.getElementById('survey');let h='<div class="header"><h1>'+esc(title)+'</h1>'+(desc?'<p>'+esc(desc)+'</p>':'')+'</div><div class="body">';
+questions.forEach((q,i)=>{h+='<div class="question"><div class="q-label">'+(i+1)+'. '+esc(q.text||'Untitled')+(q.required?' <span class="req">*</span>':'')+'</div>';
+if(q.description)h+='<div class="q-desc">'+esc(q.description)+'</div>';
+if(q.type==='short_text'||q.type==='email')h+='<input type="'+(q.type==='email'?'email':'text')+'" placeholder="Your answer..." value="'+esc(answers[q.id]||'')+'" oninput="answers[\\''+q.id+'\\']= this.value">';
+else if(q.type==='long_text')h+='<textarea placeholder="Your answer..." oninput="answers[\\''+q.id+'\\']= this.value">'+esc(answers[q.id]||'')+'</textarea>';
+else if(q.type==='number')h+='<input type="number" placeholder="0" value="'+esc(answers[q.id]||'')+'" oninput="answers[\\''+q.id+'\\']= this.value">';
+else if(q.type==='multiple_choice'||q.type==='yes_no'){h+='<div class="options">';(q.options||[]).forEach(o=>{const sel=answers[q.id]===o;h+='<div class="option'+(sel?' selected':'')+'" onclick="answers[\\''+q.id+'\\']= \\''+esc(o).replace(/'/g,"\\\\'")+'\\'  ;render()"><div class="radio"></div><span>'+esc(o)+'</span></div>';});h+='</div>';}
+else if(q.type==='checkbox'){const checked=answers[q.id]||[];h+='<div class="options">';(q.options||[]).forEach(o=>{const sel=checked.includes(o);h+='<div class="option'+(sel?' selected':'')+'" onclick="toggleCb(\\''+q.id+'\\',\\''+esc(o).replace(/'/g,"\\\\'")+'\\'  )"><div class="checkbox"></div><span>'+esc(o)+'</span></div>';});h+='</div>';}
+else if(q.type==='dropdown'){h+='<select onchange="answers[\\''+q.id+'\\']= this.value" style="max-width:300px"><option value="">Select...</option>';(q.options||[]).forEach(o=>{h+='<option value="'+esc(o)+'" '+(answers[q.id]===o?'selected':'')+'>'+esc(o)+'</option>';});h+='</select>';}
+else if(q.type==='rating'){h+='<div class="rating">';for(let n=1;n<=(q.ratingMax||5);n++){h+='<button class="'+(answers[q.id]===n?'selected':'')+'" onclick="answers[\\''+q.id+'\\']= '+n+';render()">'+n+'</button>';}h+='</div>';}
+else if(q.type==='nps'){h+='<div class="nps">';for(let n=0;n<=10;n++){const cls=n<=6?'det':n<=8?'pas':'pro';h+='<button class="'+(answers[q.id]===n?cls+' selected':'')+'" onclick="answers[\\''+q.id+'\\']= '+n+';render()">'+n+'</button>';}h+='</div><div class="nps-labels"><span>Not likely</span><span>Very likely</span></div>';}
+h+='</div>';});
+h+='<div class="submit"><button onclick="submit()">Submit</button></div></div>';el.innerHTML=h;}
+function toggleCb(qId,opt){let a=answers[qId]||[];if(!Array.isArray(a))a=[];if(a.includes(opt))a=a.filter(x=>x!==opt);else a.push(opt);answers[qId]=a;render();}
+function submit(){for(const q of questions){if(q.required){const a=answers[q.id];if(a===undefined||a===null||a===''||(Array.isArray(a)&&!a.length)){alert('Please answer: "'+q.text+'"');return;}}}
+const key='survey_responses_'+btoa(title).slice(0,20);const existing=JSON.parse(localStorage.getItem(key)||'[]');existing.push({answers:{...answers},submittedAt:new Date().toISOString()});localStorage.setItem(key,JSON.stringify(existing));
+document.getElementById('survey').innerHTML='<div class="thanks"><div class="icon">🎉</div><h2>Thank you!</h2><p>Your response has been recorded.</p></div>';}
+render();
+<\\/script>
+</body>
+</html>`;
+  const blob = new Blob([html.replace('<\\/script>','</' + 'script>')], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${s.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
+  a.click();
+}
+
+// Drag and drop
+let dragId = null;
+function dragStart(e, qId) { dragId = qId; e.target.classList.add('dragging'); }
+function dragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function dragEnd(e) { document.querySelectorAll('.drag-over,.dragging').forEach(el => el.classList.remove('drag-over','dragging')); }
+function drop(e, targetId) {
+  e.preventDefault();
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  if (!dragId || dragId === targetId) return;
+  const s = getActiveSurvey();
+  if (!s) return;
+  const fromIdx = s.questions.findIndex(q => q.id === dragId);
+  const toIdx = s.questions.findIndex(q => q.id === targetId);
+  const [moved] = s.questions.splice(fromIdx, 1);
+  s.questions.splice(toIdx, 0, moved);
+  dragId = null;
+  save();
+  render();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') { e.target.blur(); return; }
+    return;
+  }
+  if (e.key === '?') { state.showHelp = !state.showHelp; render(); return; }
+  if (e.key === 'Escape') { state.showHelp = false; state.showTemplates = false; render(); return; }
+  if (e.key === 'n' || e.key === 'N') { createSurvey(); return; }
+  if (e.key === 'a' || e.key === 'A') { addQuestion('short_text'); return; }
+  if (e.key === '/') { e.preventDefault(); document.getElementById('sidebarSearch')?.focus(); return; }
+  if (e.key === 't' || e.key === 'T') { state.showTemplates = true; render(); return; }
+  if (e.key === 'e' || e.key === 'E') { exportJSON(); return; }
+  if (e.key === 'i' || e.key === 'I') { importJSON(); return; }
+  if (e.key === 'd' || e.key === 'D') { const s = getActiveSurvey(); if (s) duplicateSurvey(s.id); return; }
+  if (e.key === '1') { state.activeView = 'editor'; render(); return; }
+  if (e.key === '2') { state.activeView = 'preview'; state.previewAnswers = {}; render(); return; }
+  if (e.key === '3') { state.activeView = 'responses'; render(); return; }
+  if (e.key === '4') { state.activeView = 'share'; render(); return; }
+});
+
+// Demo data
+function seedDemo() {
+  if (state.surveys.length > 0) return;
+  // Create a UTMStamp user research survey with demo responses
+  const survey = {
+    id: uid(),
+    name: 'UTMStamp User Research',
+    description: 'Understanding how marketing teams track email signature performance',
+    color: '#6c5ce7',
+    createdAt: new Date().toISOString(),
+    questions: [
+      { id: uid(), type: 'short_text', text: 'What is your role?', required: true, options: [], ratingMax: 5, description: '' },
+      { id: uid(), type: 'multiple_choice', text: 'How do you currently manage email signatures?', required: true, options: ['Manually in email client', 'IT manages centrally', 'Third-party tool (Exclaimer, etc.)', 'We don\'t manage them', 'Other'], ratingMax: 5, description: '' },
+      { id: uid(), type: 'rating', text: 'How important is tracking email signature clicks to you?', required: true, options: [], ratingMax: 5, description: '1 = Not important, 5 = Critical' },
+      { id: uid(), type: 'checkbox', text: 'Which features matter most to you?', required: false, options: ['Click tracking', 'UTM parameters', 'Campaign banners', 'Team deployment', 'Analytics dashboard', 'A/B testing'], ratingMax: 5, description: 'Select all that apply.' },
+      { id: uid(), type: 'nps', text: 'How likely are you to recommend UTMStamp to a colleague?', required: true, options: [], ratingMax: 10, description: '' },
+      { id: uid(), type: 'long_text', text: 'What\'s the biggest pain point with email signatures today?', required: false, options: [], ratingMax: 5, description: '' },
+      { id: uid(), type: 'multiple_choice', text: 'How much would you pay per user/month?', required: true, options: ['$0 — free only', '$1-3', '$3-5', '$5-10', '$10+'], ratingMax: 5, description: '' },
+    ],
+    responses: [],
+  };
+
+  // Generate 30 demo responses
+  const roles = ['Marketing Manager','Head of Marketing','Growth Lead','Sales Director','CMO','Digital Marketer','Demand Gen','Content Lead','VP Marketing','Brand Manager'];
+  const pains = [
+    'No way to know if signatures drive any traffic.',
+    'Updating signatures across 50+ employees is a nightmare.',
+    'Can\'t A/B test different CTAs in signatures.',
+    'IT controls signatures and it takes weeks to change.',
+    'We paste UTMs manually — error-prone and inconsistent.',
+    'Zero visibility into which campaigns work.',
+    'Signatures look different across Outlook and Gmail.',
+    'No analytics at all. Flying blind.',
+  ];
+  for (let i = 0; i < 30; i++) {
+    const answers = {};
+    answers[survey.questions[0].id] = roles[Math.floor(Math.random()*roles.length)];
+    answers[survey.questions[1].id] = survey.questions[1].options[Math.floor(Math.random()*5)];
+    answers[survey.questions[2].id] = Math.random() < 0.6 ? Math.floor(Math.random()*2)+4 : Math.floor(Math.random()*3)+2;
+    const feats = [...survey.questions[3].options].sort(() => Math.random()-0.5).slice(0, Math.floor(Math.random()*4)+1);
+    answers[survey.questions[3].id] = feats;
+    const w = Math.random();
+    answers[survey.questions[4].id] = w < 0.15 ? Math.floor(Math.random()*7) : w < 0.35 ? Math.floor(Math.random()*2)+7 : Math.floor(Math.random()*2)+9;
+    answers[survey.questions[5].id] = pains[Math.floor(Math.random()*pains.length)];
+    answers[survey.questions[6].id] = survey.questions[6].options[Math.floor(Math.random()*5)];
+    survey.responses.push({ id: uid(), answers, submittedAt: new Date(Date.now() - Math.random()*14*86400000).toISOString() });
+  }
+
+  state.surveys.push(survey);
+
+  // PMF survey template
+  const pmfSurvey = {
+    id: uid(),
+    name: 'Product-Market Fit Survey',
+    description: 'The Sean Ellis test — would users be disappointed?',
+    color: '#00b894',
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    questions: TEMPLATES[3].questions.map(q => ({ ...q, id: uid() })),
+    responses: [],
+  };
+  state.surveys.push(pmfSurvey);
+
+  state.activeSurveyId = survey.id;
+  save();
+}
+
+// Init
+load();
+seedDemo();
+render();
+</script>
+</body>
+</html>

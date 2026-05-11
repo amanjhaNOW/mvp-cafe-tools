@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Runway — Startup Financial Modeler</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #232736;
+  --border: #2d3148;
+  --text: #e4e6f0;
+  --text2: #8b8fa8;
+  --accent: #6c5ce7;
+  --accent2: #a29bfe;
+  --green: #00b894;
+  --green-bg: rgba(0,184,148,0.12);
+  --red: #ff6b6b;
+  --red-bg: rgba(255,107,107,0.12);
+  --amber: #fdcb6e;
+  --amber-bg: rgba(253,203,110,0.12);
+  --blue: #74b9ff;
+  --blue-bg: rgba(116,185,255,0.12);
+  --radius: 12px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+.light {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --surface2: #f7f8fa;
+  --border: #e0e3eb;
+  --text: #1a1d27;
+  --text2: #6b7084;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+input, select, textarea, button { font-family: inherit; }
+
+/* Layout */
+.app { display: flex; height: 100vh; }
+.sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: var(--surface); }
+.content { flex: 1; overflow-y: auto; padding: 24px; }
+
+/* Sidebar */
+.sidebar-header { padding: 20px 16px; border-bottom: 1px solid var(--border); }
+.sidebar-header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.sidebar-header h1 span { font-size: 20px; }
+.sidebar-header p { font-size: 11px; color: var(--text2); margin-top: 4px; }
+.sidebar-nav { flex: 1; padding: 8px; overflow-y: auto; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--text2); font-size: 13px; transition: all 0.15s; }
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--accent); color: white; }
+.nav-item .icon { width: 20px; text-align: center; font-size: 15px; }
+.nav-section { padding: 12px 12px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); }
+.sidebar-footer { padding: 12px; border-top: 1px solid var(--border); display: flex; gap: 6px; }
+.sidebar-footer button { flex: 1; padding: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.15s; }
+.sidebar-footer button:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* Header */
+.header h2 { font-size: 16px; flex: 1; }
+.header-actions { display: flex; gap: 8px; }
+
+/* Buttons */
+.btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-danger { background: var(--red); color: white; }
+.btn-danger:hover { opacity: 0.85; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.card-title { font-size: 13px; color: var(--text2); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Stats */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+.stat-label { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+.stat-value { font-size: 28px; font-weight: 700; }
+.stat-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+.stat-green { color: var(--green); }
+.stat-red { color: var(--red); }
+.stat-amber { color: var(--amber); }
+.stat-blue { color: var(--blue); }
+
+/* Forms */
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 6px; font-weight: 500; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+input[type="text"], input[type="number"], input[type="date"], select, textarea {
+  width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; outline: none; transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 60px; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; padding: 10px 12px; color: var(--text2); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+tr:hover td { background: var(--surface2); }
+
+/* Tags */
+.tag { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.tag-green { background: var(--green-bg); color: var(--green); }
+.tag-red { background: var(--red-bg); color: var(--red); }
+.tag-amber { background: var(--amber-bg); color: var(--amber); }
+.tag-blue { background: var(--blue-bg); color: var(--blue); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; width: 90%; max-width: 560px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow); }
+.modal h3 { font-size: 16px; margin-bottom: 16px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+/* Charts */
+.chart-container { position: relative; }
+canvas { width: 100% !important; }
+
+/* Scenario tabs */
+.scenario-tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+.scenario-tab { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); cursor: pointer; font-size: 13px; transition: all 0.15s; }
+.scenario-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* Expense list */
+.expense-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; background: var(--surface2); margin-bottom: 8px; }
+.expense-item .name { flex: 1; font-size: 13px; }
+.expense-item .amount { font-weight: 600; font-size: 14px; }
+.expense-item .actions { display: flex; gap: 4px; }
+.expense-item .actions button { background: none; border: none; color: var(--text2); cursor: pointer; padding: 4px; font-size: 14px; }
+.expense-item .actions button:hover { color: var(--red); }
+.expense-cat { font-size: 10px; color: var(--text2); background: var(--bg); padding: 2px 6px; border-radius: 3px; }
+
+/* Revenue item */
+.rev-item { background: var(--surface2); border-radius: 8px; padding: 14px; margin-bottom: 8px; }
+.rev-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.rev-name { font-weight: 600; font-size: 14px; }
+.rev-mrr { color: var(--green); font-weight: 600; }
+.rev-details { display: flex; gap: 16px; font-size: 12px; color: var(--text2); }
+
+/* Unit Economics */
+.ue-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.ue-card { background: var(--surface2); border-radius: 8px; padding: 14px; text-align: center; }
+.ue-value { font-size: 24px; font-weight: 700; margin: 6px 0; }
+.ue-label { font-size: 11px; color: var(--text2); }
+.ue-sub { font-size: 10px; color: var(--text2); }
+
+/* Runway bar */
+.runway-bar { height: 32px; background: var(--surface2); border-radius: 16px; overflow: hidden; position: relative; margin: 12px 0; }
+.runway-fill { height: 100%; border-radius: 16px; transition: width 0.5s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 12px; font-size: 12px; font-weight: 600; color: white; min-width: 40px; }
+.runway-months { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); }
+
+/* Waterfall chart */
+.waterfall { display: flex; align-items: flex-end; gap: 4px; height: 200px; padding: 12px 0; }
+.wf-bar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+.wf-block { width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; transition: height 0.3s; position: relative; }
+.wf-label { font-size: 9px; color: var(--text2); margin-top: 4px; writing-mode: vertical-lr; text-orientation: mixed; max-height: 60px; overflow: hidden; }
+.wf-value { font-size: 9px; color: var(--text); margin-bottom: 2px; font-weight: 600; }
+
+/* Projection table */
+.proj-table { font-size: 12px; }
+.proj-table th, .proj-table td { padding: 6px 8px; white-space: nowrap; }
+.proj-table .month-header { font-weight: 600; }
+.proj-negative { color: var(--red); }
+.proj-positive { color: var(--green); }
+
+/* Print */
+@media print {
+  .sidebar, .header-actions { display: none; }
+  .main { margin: 0; }
+  body { background: white; color: black; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.2s ease; }
+
+/* Currency selector */
+.currency-sel { display: flex; gap: 4px; }
+.currency-opt { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); cursor: pointer; font-size: 12px; }
+.currency-opt.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* Donut */
+.donut-wrap { display: flex; align-items: center; gap: 20px; }
+.donut-legend { font-size: 12px; }
+.donut-legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.donut-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* Empty state */
+.empty { text-align: center; padding: 60px 20px; color: var(--text2); }
+.empty .icon { font-size: 48px; margin-bottom: 12px; }
+.empty p { margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1><span>🛫</span> Runway</h1>
+      <p>Startup Financial Modeler</p>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Views</div>
+      <div class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
+        <span class="icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" data-view="expenses" onclick="switchView('expenses')">
+        <span class="icon">💸</span> Expenses
+      </div>
+      <div class="nav-item" data-view="revenue" onclick="switchView('revenue')">
+        <span class="icon">💰</span> Revenue
+      </div>
+      <div class="nav-item" data-view="scenarios" onclick="switchView('scenarios')">
+        <span class="icon">🔮</span> Scenarios
+      </div>
+      <div class="nav-item" data-view="unit-economics" onclick="switchView('unit-economics')">
+        <span class="icon">🧮</span> Unit Economics
+      </div>
+      <div class="nav-item" data-view="projections" onclick="switchView('projections')">
+        <span class="icon">📈</span> 12-Month Projection
+      </div>
+      <div class="nav-item" data-view="funding" onclick="switchView('funding')">
+        <span class="icon">🏦</span> Funding Rounds
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <button onclick="toggleTheme()" title="Toggle theme">🌓</button>
+      <button onclick="exportData()" title="Export">📤</button>
+      <button onclick="importData()" title="Import">📥</button>
+      <button onclick="resetData()" title="Reset">🔄</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="header">
+      <h2 id="viewTitle">Dashboard</h2>
+      <div class="header-actions">
+        <div class="currency-sel">
+          <span class="currency-opt active" data-cur="INR" onclick="setCurrency('INR')">₹ INR</span>
+          <span class="currency-opt" data-cur="USD" onclick="setCurrency('USD')">$ USD</span>
+          <span class="currency-opt" data-cur="EUR" onclick="setCurrency('EUR')">€ EUR</span>
+        </div>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<!-- Hidden file input for import -->
+<input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleImport(event)">
+
+<script>
+// ============ STATE ============
+const STORAGE_KEY = 'runway_data';
+const CURRENCIES = { INR: '₹', USD: '$', EUR: '€', GBP: '£' };
+let state = loadState();
+
+function defaultState() {
+  return {
+    currency: 'INR',
+    cashOnHand: 2500000,
+    expenses: [
+      { id: uid(), name: 'Cloud Hosting (AWS/Vercel)', amount: 8000, category: 'Infrastructure', recurring: true },
+      { id: uid(), name: 'Domain & SSL', amount: 1500, category: 'Infrastructure', recurring: true },
+      { id: uid(), name: 'SaaS Tools (Figma, GitHub, etc.)', amount: 5000, category: 'Tools', recurring: true },
+      { id: uid(), name: 'Email Service (Resend/Postmark)', amount: 3000, category: 'Infrastructure', recurring: true },
+      { id: uid(), name: 'Marketing & Ads', amount: 15000, category: 'Marketing', recurring: true },
+      { id: uid(), name: 'Freelance Dev Help', amount: 25000, category: 'Team', recurring: true },
+      { id: uid(), name: 'AJ Living Expenses', amount: 80000, category: 'Personal', recurring: true },
+      { id: uid(), name: 'Co-working Space', amount: 5000, category: 'Office', recurring: true },
+    ],
+    revenueStreams: [
+      { id: uid(), name: 'UTMStamp Pro Plans', currentMRR: 0, growthRate: 25, churnRate: 5, pricePerUser: 499, customers: 0, startMonth: 2, type: 'subscription' },
+      { id: uid(), name: 'UTMStamp Team Plans', currentMRR: 0, growthRate: 15, churnRate: 3, pricePerUser: 1999, customers: 0, startMonth: 4, type: 'subscription' },
+      { id: uid(), name: 'Consulting/Freelance', currentMRR: 50000, growthRate: 0, churnRate: 0, pricePerUser: 50000, customers: 1, startMonth: 0, type: 'one-time' },
+    ],
+    scenarios: {
+      base: { name: 'Base Case', revenueMultiplier: 1.0, expenseMultiplier: 1.0, extraCash: 0 },
+      best: { name: 'Best Case', revenueMultiplier: 1.5, expenseMultiplier: 0.85, extraCash: 0 },
+      worst: { name: 'Worst Case', revenueMultiplier: 0.5, expenseMultiplier: 1.2, extraCash: 0 },
+    },
+    unitEconomics: {
+      cac: 2000,
+      monthlyARPU: 499,
+      avgLifetimeMonths: 18,
+      grossMargin: 85,
+      paybackTarget: 6,
+    },
+    fundingRounds: [
+      { id: uid(), name: 'Pre-seed (if needed)', amount: 5000000, dilution: 10, status: 'planned', date: '', notes: 'Angel round if UTMStamp gets traction', valuation: 50000000 },
+    ],
+  };
+}
+
+function uid() { return Math.random().toString(36).slice(2, 10); }
+function loadState() { try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : defaultState(); } catch { return defaultState(); } }
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function fmt(n) { const s = CURRENCIES[state.currency] || '₹'; if (Math.abs(n) >= 10000000) return s + (n/10000000).toFixed(1) + 'Cr'; if (Math.abs(n) >= 100000) return s + (n/100000).toFixed(1) + 'L'; if (Math.abs(n) >= 1000) return s + (n/1000).toFixed(1) + 'K'; return s + Math.round(n).toLocaleString(); }
+function fmtFull(n) { return (CURRENCIES[state.currency] || '₹') + Math.round(n).toLocaleString('en-IN'); }
+function pct(n) { return (n >= 0 ? '+' : '') + n.toFixed(1) + '%'; }
+
+// ============ CALCULATIONS ============
+function monthlyBurn() { return state.expenses.reduce((s, e) => s + (e.recurring ? e.amount : e.amount / 12), 0); }
+
+function projectedRevenue(month, scenario = 'base') {
+  const mult = state.scenarios[scenario]?.revenueMultiplier || 1;
+  let total = 0;
+  state.revenueStreams.forEach(rs => {
+    if (month < rs.startMonth) return;
+    const months = month - rs.startMonth;
+    if (rs.type === 'subscription') {
+      let customers = rs.customers || 0;
+      for (let m = 0; m <= months; m++) {
+        const newCust = Math.max(1, Math.floor(customers * (rs.growthRate / 100)));
+        const churned = Math.floor(customers * (rs.churnRate / 100));
+        customers = Math.max(0, customers + (m === 0 && customers === 0 ? 5 : newCust) - churned);
+      }
+      total += customers * rs.pricePerUser;
+    } else {
+      total += rs.currentMRR;
+    }
+  });
+  return total * mult;
+}
+
+function projectedExpense(month, scenario = 'base') {
+  const mult = state.scenarios[scenario]?.expenseMultiplier || 1;
+  return monthlyBurn() * mult;
+}
+
+function runwayMonths(scenario = 'base') {
+  let cash = state.cashOnHand + (state.scenarios[scenario]?.extraCash || 0);
+  let months = 0;
+  for (let m = 0; m < 60; m++) {
+    const rev = projectedRevenue(m, scenario);
+    const exp = projectedExpense(m, scenario);
+    cash += rev - exp;
+    if (cash <= 0) return months;
+    months++;
+  }
+  return 60;
+}
+
+function breakEvenMonth(scenario = 'base') {
+  for (let m = 0; m < 60; m++) {
+    if (projectedRevenue(m, scenario) >= projectedExpense(m, scenario)) return m;
+  }
+  return -1;
+}
+
+function getProjection(months = 12, scenario = 'base') {
+  let cash = state.cashOnHand + (state.scenarios[scenario]?.extraCash || 0);
+  const data = [];
+  for (let m = 0; m < months; m++) {
+    const rev = projectedRevenue(m, scenario);
+    const exp = projectedExpense(m, scenario);
+    const net = rev - exp;
+    cash += net;
+    data.push({ month: m, revenue: rev, expenses: exp, net, cash, monthLabel: monthName(m) });
+  }
+  return data;
+}
+
+function monthName(offset) {
+  const d = new Date();
+  d.setMonth(d.getMonth() + offset);
+  return d.toLocaleDateString('en', { month: 'short', year: '2-digit' });
+}
+
+// ============ VIEWS ============
+function switchView(view) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+  const titles = { dashboard: 'Dashboard', expenses: 'Monthly Expenses', revenue: 'Revenue Streams', scenarios: 'Scenario Planning', 'unit-economics': 'Unit Economics', projections: '12-Month Projection', funding: 'Funding Rounds' };
+  document.getElementById('viewTitle').textContent = titles[view] || view;
+  const el = document.getElementById('content');
+  el.innerHTML = '';
+  el.className = 'content fade-in';
+  const renderers = { dashboard: renderDashboard, expenses: renderExpenses, revenue: renderRevenue, scenarios: renderScenarios, 'unit-economics': renderUnitEconomics, projections: renderProjections, funding: renderFunding };
+  (renderers[view] || renderDashboard)(el);
+}
+
+// ---- DASHBOARD ----
+function renderDashboard(el) {
+  const burn = monthlyBurn();
+  const runway = runwayMonths();
+  const rev0 = projectedRevenue(0);
+  const rev6 = projectedRevenue(6);
+  const be = breakEvenMonth();
+  const netBurn = burn - rev0;
+  const runwayColor = runway > 12 ? 'stat-green' : runway > 6 ? 'stat-amber' : 'stat-red';
+  const runwayBarColor = runway > 12 ? 'var(--green)' : runway > 6 ? 'var(--amber)' : 'var(--red)';
+  const runwayPct = Math.min(100, (runway / 24) * 100);
+
+  el.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Cash on Hand</div><div class="stat-value stat-blue">${fmt(state.cashOnHand)}</div><div class="stat-sub">Starting balance</div></div>
+      <div class="stat-card"><div class="stat-label">Monthly Burn</div><div class="stat-value stat-red">${fmt(burn)}</div><div class="stat-sub">Total recurring expenses</div></div>
+      <div class="stat-card"><div class="stat-label">Current MRR</div><div class="stat-value stat-green">${fmt(rev0)}</div><div class="stat-sub">${state.revenueStreams.length} streams</div></div>
+      <div class="stat-card"><div class="stat-label">Net Burn</div><div class="stat-value ${netBurn > 0 ? 'stat-red' : 'stat-green'}">${fmt(netBurn)}</div><div class="stat-sub">${netBurn > 0 ? 'Losing' : 'Profit'} per month</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Runway</div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+        <span style="font-size:36px;font-weight:800" class="${runwayColor}">${runway >= 60 ? '60+' : runway}</span>
+        <span style="color:var(--text2)">months</span>
+        ${be > 0 ? `<span style="margin-left:auto;font-size:13px;color:var(--text2)">Break-even in <strong style="color:var(--green)">${be} months</strong></span>` : be === 0 ? '<span style="margin-left:auto;font-size:13px;color:var(--green)">Already profitable! 🎉</span>' : '<span style="margin-left:auto;font-size:13px;color:var(--text2)">No break-even in 5 years</span>'}
+      </div>
+      <div class="runway-bar"><div class="runway-fill" style="width:${runwayPct}%;background:${runwayBarColor}">${runway >= 60 ? '60+' : runway}m</div></div>
+      <div class="runway-months"><span>0</span><span>6m</span><span>12m</span><span>18m</span><span>24m</span></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-title">Cash Flow Projection (12 months)</div>
+        <div class="waterfall" id="cashWaterfall"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Expense Breakdown</div>
+        <div id="expenseDonut"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">Scenario Comparison</div>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Scenario</th><th>Runway</th><th>MRR @ Month 6</th><th>Break-even</th><th>Cash @ Month 12</th></tr>
+          ${['base','best','worst'].map(s => {
+            const r = runwayMonths(s);
+            const proj = getProjection(12, s);
+            const beM = breakEvenMonth(s);
+            const cash12 = proj[11]?.cash || 0;
+            return `<tr>
+              <td><strong>${state.scenarios[s].name}</strong></td>
+              <td class="${r > 12 ? 'stat-green' : r > 6 ? 'stat-amber' : 'stat-red'}">${r >= 60 ? '60+' : r} months</td>
+              <td>${fmt(projectedRevenue(6, s))}</td>
+              <td>${beM >= 0 ? beM + ' months' : 'N/A'}</td>
+              <td class="${cash12 >= 0 ? 'proj-positive' : 'proj-negative'}">${fmtFull(cash12)}</td>
+            </tr>`;
+          }).join('')}
+        </table>
+      </div>
+    </div>
+  `;
+
+  // Cash waterfall
+  const proj = getProjection(12);
+  const maxCash = Math.max(...proj.map(p => Math.abs(p.cash)));
+  const wf = document.getElementById('cashWaterfall');
+  proj.forEach(p => {
+    const h = Math.max(4, (Math.abs(p.cash) / maxCash) * 160);
+    const color = p.cash >= 0 ? 'var(--green)' : 'var(--red)';
+    wf.innerHTML += `<div class="wf-bar"><div class="wf-value">${fmt(p.cash)}</div><div class="wf-block" style="height:${h}px;background:${color}"></div><div class="wf-label">${p.monthLabel}</div></div>`;
+  });
+
+  // Expense donut
+  const cats = {};
+  state.expenses.forEach(e => { cats[e.category] = (cats[e.category] || 0) + (e.recurring ? e.amount : e.amount / 12); });
+  const donutColors = ['#6c5ce7','#00b894','#fdcb6e','#ff6b6b','#74b9ff','#a29bfe','#55efc4','#fab1a0'];
+  const total = Object.values(cats).reduce((a, b) => a + b, 0);
+  let donutHTML = '<div class="donut-wrap"><div style="width:120px;height:120px;position:relative">';
+  // SVG donut
+  let offset = 0;
+  const entries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+  let svgParts = '';
+  entries.forEach(([cat, amt], i) => {
+    const pctVal = (amt / total) * 100;
+    const dasharray = `${pctVal * 2.83} ${283 - pctVal * 2.83}`;
+    svgParts += `<circle cx="60" cy="60" r="45" fill="none" stroke="${donutColors[i % donutColors.length]}" stroke-width="20" stroke-dasharray="${dasharray}" stroke-dashoffset="${-offset * 2.83}" transform="rotate(-90 60 60)"/>`;
+    offset += pctVal;
+  });
+  donutHTML += `<svg viewBox="0 0 120 120" style="width:100%;height:100%">${svgParts}<text x="60" y="56" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">${fmt(total)}</text><text x="60" y="70" text-anchor="middle" fill="var(--text2)" font-size="8">/month</text></svg>`;
+  donutHTML += '</div><div class="donut-legend">';
+  entries.forEach(([cat, amt], i) => {
+    donutHTML += `<div class="donut-legend-item"><div class="donut-dot" style="background:${donutColors[i % donutColors.length]}"></div><span>${cat}: ${fmtFull(amt)} (${((amt/total)*100).toFixed(0)}%)</span></div>`;
+  });
+  donutHTML += '</div></div>';
+  document.getElementById('expenseDonut').innerHTML = donutHTML;
+}
+
+// ---- EXPENSES ----
+function renderExpenses(el) {
+  const cats = [...new Set(state.expenses.map(e => e.category))].sort();
+  const burn = monthlyBurn();
+
+  let html = `<div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Monthly Burn</div><div class="stat-value stat-red">${fmt(burn)}</div></div>
+    <div class="stat-card"><div class="stat-label">Annual Burn</div><div class="stat-value stat-red">${fmt(burn * 12)}</div></div>
+    <div class="stat-card"><div class="stat-label"># Expenses</div><div class="stat-value">${state.expenses.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Categories</div><div class="stat-value">${cats.length}</div></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <input type="text" id="expSearch" placeholder="Search expenses..." style="width:260px" oninput="filterExpenses()">
+    <button class="btn btn-primary" onclick="showExpenseModal()">+ Add Expense</button>
+  </div>
+  <div id="expenseList"></div>`;
+  el.innerHTML = html;
+  renderExpenseList();
+}
+
+function renderExpenseList() {
+  const search = (document.getElementById('expSearch')?.value || '').toLowerCase();
+  const filtered = state.expenses.filter(e => !search || e.name.toLowerCase().includes(search) || e.category.toLowerCase().includes(search));
+  const cats = {};
+  filtered.forEach(e => { (cats[e.category] = cats[e.category] || []).push(e); });
+  let html = '';
+  Object.entries(cats).sort().forEach(([cat, items]) => {
+    const catTotal = items.reduce((s, e) => s + (e.recurring ? e.amount : e.amount / 12), 0);
+    html += `<div style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><strong style="font-size:13px">${cat}</strong><span style="font-size:12px;color:var(--text2)">${fmtFull(catTotal)}/mo</span></div>`;
+    items.forEach(e => {
+      html += `<div class="expense-item">
+        <span class="name">${e.name} ${e.recurring ? '' : '<span class="expense-cat">one-time</span>'}</span>
+        <span class="amount">${fmtFull(e.recurring ? e.amount : e.amount)} ${e.recurring ? '/mo' : '/yr'}</span>
+        <span class="actions">
+          <button onclick="editExpense('${e.id}')" title="Edit">✏️</button>
+          <button onclick="deleteExpense('${e.id}')" title="Delete">🗑️</button>
+        </span>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  if (!filtered.length) html = '<div class="empty"><div class="icon">💸</div><p>No expenses yet</p></div>';
+  document.getElementById('expenseList').innerHTML = html;
+}
+
+function filterExpenses() { renderExpenseList(); }
+
+function showExpenseModal(existing) {
+  const e = existing || { name: '', amount: '', category: 'Infrastructure', recurring: true };
+  const isEdit = !!existing;
+  const cats = ['Infrastructure', 'Tools', 'Marketing', 'Team', 'Personal', 'Office', 'Legal', 'Other'];
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal"><h3>${isEdit ? 'Edit' : 'Add'} Expense</h3>
+    <div class="form-group"><label>Name</label><input type="text" id="expName" value="${e.name}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Amount</label><input type="number" id="expAmount" value="${e.amount}"></div>
+      <div class="form-group"><label>Category</label><select id="expCat">${cats.map(c => `<option ${c === e.category ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-group"><label><input type="checkbox" id="expRecurring" ${e.recurring ? 'checked' : ''}> Monthly recurring</label></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExpense('${isEdit ? e.id : ''}')">Save</button>
+    </div></div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#expName').focus();
+}
+
+function saveExpense(id) {
+  const name = document.getElementById('expName').value.trim();
+  const amount = parseFloat(document.getElementById('expAmount').value) || 0;
+  const category = document.getElementById('expCat').value;
+  const recurring = document.getElementById('expRecurring').checked;
+  if (!name || !amount) return;
+  if (id) {
+    const e = state.expenses.find(x => x.id === id);
+    if (e) Object.assign(e, { name, amount, category, recurring });
+  } else {
+    state.expenses.push({ id: uid(), name, amount, category, recurring });
+  }
+  saveState();
+  document.querySelector('.modal-overlay')?.remove();
+  switchView('expenses');
+}
+
+function editExpense(id) { showExpenseModal(state.expenses.find(e => e.id === id)); }
+function deleteExpense(id) { if (confirm('Delete this expense?')) { state.expenses = state.expenses.filter(e => e.id !== id); saveState(); renderExpenseList(); } }
+
+// ---- REVENUE ----
+function renderRevenue(el) {
+  const totalMRR = state.revenueStreams.reduce((s, r) => s + r.currentMRR, 0);
+  const projMRR6 = projectedRevenue(6);
+  const projMRR12 = projectedRevenue(12);
+
+  let html = `<div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Current MRR</div><div class="stat-value stat-green">${fmt(totalMRR)}</div></div>
+    <div class="stat-card"><div class="stat-label">Projected MRR (6mo)</div><div class="stat-value stat-green">${fmt(projMRR6)}</div></div>
+    <div class="stat-card"><div class="stat-label">Projected ARR (12mo)</div><div class="stat-value stat-green">${fmt(projMRR12 * 12)}</div></div>
+    <div class="stat-card"><div class="stat-label">Revenue Streams</div><div class="stat-value">${state.revenueStreams.length}</div></div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+    <button class="btn btn-primary" onclick="showRevenueModal()">+ Add Stream</button>
+  </div>
+  <div id="revList"></div>
+  <div class="card" style="margin-top:20px">
+    <div class="card-title">MRR Growth Projection</div>
+    <div class="waterfall" id="mrrWaterfall" style="height:180px"></div>
+  </div>`;
+  el.innerHTML = html;
+
+  // Revenue list
+  const list = document.getElementById('revList');
+  state.revenueStreams.forEach(rs => {
+    const proj6 = projectedRevenue(6);
+    list.innerHTML += `<div class="rev-item">
+      <div class="rev-header">
+        <span class="rev-name">${rs.name}</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="rev-mrr">${fmtFull(rs.currentMRR)}/mo</span>
+          <button class="btn btn-sm btn-outline" onclick="editRevenue('${rs.id}')">✏️</button>
+          <button class="btn btn-sm btn-outline" onclick="deleteRevenue('${rs.id}')" style="color:var(--red)">🗑️</button>
+        </div>
+      </div>
+      <div class="rev-details">
+        <span>Type: ${rs.type}</span>
+        <span>Growth: ${rs.growthRate}%/mo</span>
+        <span>Churn: ${rs.churnRate}%/mo</span>
+        <span>Price: ${fmtFull(rs.pricePerUser)}/user</span>
+        <span>Customers: ${rs.customers}</span>
+        ${rs.startMonth > 0 ? `<span>Starts: Month ${rs.startMonth}</span>` : ''}
+      </div>
+    </div>`;
+  });
+
+  // MRR waterfall
+  const mrrData = [];
+  for (let m = 0; m < 12; m++) mrrData.push({ month: m, mrr: projectedRevenue(m) });
+  const maxMRR = Math.max(...mrrData.map(d => d.mrr), 1);
+  const wf = document.getElementById('mrrWaterfall');
+  mrrData.forEach(d => {
+    const h = Math.max(4, (d.mrr / maxMRR) * 150);
+    wf.innerHTML += `<div class="wf-bar"><div class="wf-value">${fmt(d.mrr)}</div><div class="wf-block" style="height:${h}px;background:var(--green)"></div><div class="wf-label">${monthName(d.month)}</div></div>`;
+  });
+}
+
+function showRevenueModal(existing) {
+  const r = existing || { name: '', currentMRR: 0, growthRate: 15, churnRate: 5, pricePerUser: 499, customers: 0, startMonth: 0, type: 'subscription' };
+  const isEdit = !!existing;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal"><h3>${isEdit ? 'Edit' : 'Add'} Revenue Stream</h3>
+    <div class="form-group"><label>Name</label><input type="text" id="revName" value="${r.name}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Type</label><select id="revType"><option ${r.type === 'subscription' ? 'selected' : ''} value="subscription">Subscription (MRR)</option><option ${r.type === 'one-time' ? 'selected' : ''} value="one-time">Recurring Fixed</option></select></div>
+      <div class="form-group"><label>Current MRR</label><input type="number" id="revMRR" value="${r.currentMRR}"></div>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Price/User</label><input type="number" id="revPrice" value="${r.pricePerUser}"></div>
+      <div class="form-group"><label>Current Customers</label><input type="number" id="revCust" value="${r.customers}"></div>
+      <div class="form-group"><label>Start Month (0=now)</label><input type="number" id="revStart" value="${r.startMonth}" min="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Growth Rate (%/mo)</label><input type="number" id="revGrowth" value="${r.growthRate}" step="0.1"></div>
+      <div class="form-group"><label>Churn Rate (%/mo)</label><input type="number" id="revChurn" value="${r.churnRate}" step="0.1"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRevenue('${isEdit ? r.id : ''}')">Save</button>
+    </div></div>`;
+  document.body.appendChild(overlay);
+}
+
+function saveRevenue(id) {
+  const data = {
+    name: document.getElementById('revName').value.trim(),
+    currentMRR: parseFloat(document.getElementById('revMRR').value) || 0,
+    growthRate: parseFloat(document.getElementById('revGrowth').value) || 0,
+    churnRate: parseFloat(document.getElementById('revChurn').value) || 0,
+    pricePerUser: parseFloat(document.getElementById('revPrice').value) || 0,
+    customers: parseInt(document.getElementById('revCust').value) || 0,
+    startMonth: parseInt(document.getElementById('revStart').value) || 0,
+    type: document.getElementById('revType').value,
+  };
+  if (!data.name) return;
+  if (id) { const r = state.revenueStreams.find(x => x.id === id); if (r) Object.assign(r, data); }
+  else { state.revenueStreams.push({ id: uid(), ...data }); }
+  saveState();
+  document.querySelector('.modal-overlay')?.remove();
+  switchView('revenue');
+}
+
+function editRevenue(id) { showRevenueModal(state.revenueStreams.find(r => r.id === id)); }
+function deleteRevenue(id) { if (confirm('Delete?')) { state.revenueStreams = state.revenueStreams.filter(r => r.id !== id); saveState(); switchView('revenue'); } }
+
+// ---- SCENARIOS ----
+function renderScenarios(el) {
+  let html = '<div class="scenario-tabs" id="scenTabs">';
+  ['base', 'best', 'worst'].forEach(s => {
+    html += `<div class="scenario-tab ${s === 'base' ? 'active' : ''}" data-s="${s}" onclick="selectScenario('${s}')">${state.scenarios[s].name}</div>`;
+  });
+  html += '</div><div id="scenContent"></div>';
+  el.innerHTML = html;
+  selectScenario('base');
+}
+
+function selectScenario(s) {
+  document.querySelectorAll('.scenario-tab').forEach(t => t.classList.toggle('active', t.dataset.s === s));
+  const sc = state.scenarios[s];
+  const runway = runwayMonths(s);
+  const be = breakEvenMonth(s);
+  const proj = getProjection(12, s);
+  const cash12 = proj[11]?.cash || 0;
+
+  let html = `<div class="card" style="margin-bottom:16px">
+    <div class="form-row-3">
+      <div class="form-group"><label>Scenario Name</label><input type="text" value="${sc.name}" onchange="state.scenarios['${s}'].name=this.value;saveState()"></div>
+      <div class="form-group"><label>Revenue Multiplier</label><input type="number" value="${sc.revenueMultiplier}" step="0.05" min="0" onchange="state.scenarios['${s}'].revenueMultiplier=parseFloat(this.value);saveState();selectScenario('${s}')"></div>
+      <div class="form-group"><label>Expense Multiplier</label><input type="number" value="${sc.expenseMultiplier}" step="0.05" min="0" onchange="state.scenarios['${s}'].expenseMultiplier=parseFloat(this.value);saveState();selectScenario('${s}')"></div>
+    </div>
+    <div class="form-group"><label>Additional Cash Injection</label><input type="number" value="${sc.extraCash}" onchange="state.scenarios['${s}'].extraCash=parseFloat(this.value)||0;saveState();selectScenario('${s}')"></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Runway</div><div class="stat-value ${runway > 12 ? 'stat-green' : runway > 6 ? 'stat-amber' : 'stat-red'}">${runway >= 60 ? '60+' : runway} mo</div></div>
+    <div class="stat-card"><div class="stat-label">Break-even</div><div class="stat-value">${be >= 0 ? be + ' mo' : 'N/A'}</div></div>
+    <div class="stat-card"><div class="stat-label">Cash @ Month 12</div><div class="stat-value ${cash12 >= 0 ? 'stat-green' : 'stat-red'}">${fmt(cash12)}</div></div>
+    <div class="stat-card"><div class="stat-label">MRR @ Month 12</div><div class="stat-value stat-green">${fmt(projectedRevenue(12, s))}</div></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">Cash Balance Over Time</div>
+    <div class="waterfall" id="scenWaterfall" style="height:200px"></div>
+  </div>`;
+  document.getElementById('scenContent').innerHTML = html;
+
+  const maxCash = Math.max(...proj.map(p => Math.abs(p.cash)), 1);
+  const wf = document.getElementById('scenWaterfall');
+  proj.forEach(p => {
+    const h = Math.max(4, (Math.abs(p.cash) / maxCash) * 170);
+    const color = p.cash >= 0 ? 'var(--green)' : 'var(--red)';
+    wf.innerHTML += `<div class="wf-bar"><div class="wf-value">${fmt(p.cash)}</div><div class="wf-block" style="height:${h}px;background:${color}"></div><div class="wf-label">${p.monthLabel}</div></div>`;
+  });
+}
+
+// ---- UNIT ECONOMICS ----
+function renderUnitEconomics(el) {
+  const ue = state.unitEconomics;
+  const ltv = ue.monthlyARPU * ue.avgLifetimeMonths * (ue.grossMargin / 100);
+  const ltvCac = ue.cac > 0 ? ltv / ue.cac : Infinity;
+  const payback = ue.monthlyARPU > 0 ? ue.cac / (ue.monthlyARPU * (ue.grossMargin / 100)) : Infinity;
+  const ltvColor = ltvCac >= 3 ? 'stat-green' : ltvCac >= 1 ? 'stat-amber' : 'stat-red';
+  const paybackColor = payback <= ue.paybackTarget ? 'stat-green' : payback <= 12 ? 'stat-amber' : 'stat-red';
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Input Parameters</div>
+      <div class="form-row-3">
+        <div class="form-group"><label>Customer Acquisition Cost (CAC)</label><input type="number" value="${ue.cac}" onchange="state.unitEconomics.cac=parseFloat(this.value)||0;saveState();switchView('unit-economics')"></div>
+        <div class="form-group"><label>Monthly ARPU</label><input type="number" value="${ue.monthlyARPU}" onchange="state.unitEconomics.monthlyARPU=parseFloat(this.value)||0;saveState();switchView('unit-economics')"></div>
+        <div class="form-group"><label>Avg. Customer Lifetime (months)</label><input type="number" value="${ue.avgLifetimeMonths}" onchange="state.unitEconomics.avgLifetimeMonths=parseFloat(this.value)||0;saveState();switchView('unit-economics')"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Gross Margin %</label><input type="number" value="${ue.grossMargin}" min="0" max="100" onchange="state.unitEconomics.grossMargin=parseFloat(this.value)||0;saveState();switchView('unit-economics')"></div>
+        <div class="form-group"><label>Target Payback (months)</label><input type="number" value="${ue.paybackTarget}" onchange="state.unitEconomics.paybackTarget=parseFloat(this.value)||0;saveState();switchView('unit-economics')"></div>
+      </div>
+    </div>
+    <div class="ue-grid">
+      <div class="ue-card"><div class="ue-label">Customer Lifetime Value</div><div class="ue-value stat-green">${fmtFull(ltv)}</div><div class="ue-sub">ARPU × Lifetime × Margin</div></div>
+      <div class="ue-card"><div class="ue-label">LTV:CAC Ratio</div><div class="ue-value ${ltvColor}">${ltvCac === Infinity ? '∞' : ltvCac.toFixed(1)}x</div><div class="ue-sub">${ltvCac >= 3 ? '✅ Healthy (≥3x)' : ltvCac >= 1 ? '⚠️ Needs improvement' : '🚨 Losing money'}</div></div>
+      <div class="ue-card"><div class="ue-label">CAC Payback</div><div class="ue-value ${paybackColor}">${payback === Infinity ? '∞' : payback.toFixed(1)} mo</div><div class="ue-sub">${payback <= ue.paybackTarget ? '✅ Under target' : '⚠️ Over target (' + ue.paybackTarget + 'mo)'}</div></div>
+      <div class="ue-card"><div class="ue-label">Gross Margin per User</div><div class="ue-value">${fmtFull(ue.monthlyARPU * (ue.grossMargin / 100))}</div><div class="ue-sub">per month</div></div>
+      <div class="ue-card"><div class="ue-label">Monthly Revenue/CAC</div><div class="ue-value">${ue.cac > 0 ? ((ue.monthlyARPU / ue.cac) * 100).toFixed(1) + '%' : '∞'}</div><div class="ue-sub">Efficiency ratio</div></div>
+      <div class="ue-card"><div class="ue-label">Annual Contract Value</div><div class="ue-value">${fmtFull(ue.monthlyARPU * 12)}</div><div class="ue-sub">ACV per customer</div></div>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">SaaS Benchmarks</div>
+      <table>
+        <tr><th>Metric</th><th>Your Value</th><th>Good</th><th>Great</th><th>Status</th></tr>
+        <tr><td>LTV:CAC</td><td>${ltvCac === Infinity ? '∞' : ltvCac.toFixed(1)}x</td><td>≥ 3x</td><td>≥ 5x</td><td>${ltvCac >= 5 ? '<span class="tag tag-green">Great</span>' : ltvCac >= 3 ? '<span class="tag tag-green">Good</span>' : '<span class="tag tag-red">Below</span>'}</td></tr>
+        <tr><td>Payback Period</td><td>${payback === Infinity ? '∞' : payback.toFixed(1)} mo</td><td>≤ 12 mo</td><td>≤ 6 mo</td><td>${payback <= 6 ? '<span class="tag tag-green">Great</span>' : payback <= 12 ? '<span class="tag tag-amber">OK</span>' : '<span class="tag tag-red">Slow</span>'}</td></tr>
+        <tr><td>Gross Margin</td><td>${ue.grossMargin}%</td><td>≥ 70%</td><td>≥ 80%</td><td>${ue.grossMargin >= 80 ? '<span class="tag tag-green">Great</span>' : ue.grossMargin >= 70 ? '<span class="tag tag-green">Good</span>' : '<span class="tag tag-amber">Low</span>'}</td></tr>
+      </table>
+    </div>`;
+}
+
+// ---- PROJECTIONS ----
+function renderProjections(el) {
+  const proj = getProjection(12);
+  el.innerHTML = `<div class="card">
+    <div class="card-title">Month-by-Month Breakdown</div>
+    <div class="table-wrap">
+      <table class="proj-table">
+        <tr><th>Month</th><th>Revenue</th><th>Expenses</th><th>Net</th><th>Cash Balance</th><th>Runway Left</th></tr>
+        ${proj.map((p, i) => {
+          const rl = p.cash > 0 ? Math.ceil(p.cash / (p.expenses - p.revenue > 0 ? p.expenses - p.revenue : 1)) : 0;
+          return `<tr>
+            <td class="month-header">${p.monthLabel}</td>
+            <td class="proj-positive">${fmtFull(p.revenue)}</td>
+            <td class="proj-negative">${fmtFull(p.expenses)}</td>
+            <td class="${p.net >= 0 ? 'proj-positive' : 'proj-negative'}">${fmtFull(p.net)}</td>
+            <td class="${p.cash >= 0 ? 'proj-positive' : 'proj-negative'}" style="font-weight:600">${fmtFull(p.cash)}</td>
+            <td>${p.cash > 0 && p.net < 0 ? rl + ' mo' : p.net >= 0 ? '∞' : '💀'}</td>
+          </tr>`;
+        }).join('')}
+      </table>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+    <div class="card">
+      <div class="card-title">Revenue vs Expenses</div>
+      <div class="waterfall" id="revExpChart" style="height:200px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Cumulative Cash</div>
+      <div class="waterfall" id="cumCashChart" style="height:200px"></div>
+    </div>
+  </div>`;
+
+  // Revenue vs Expense overlay
+  const maxVal = Math.max(...proj.map(p => Math.max(p.revenue, p.expenses)), 1);
+  const rec = document.getElementById('revExpChart');
+  proj.forEach(p => {
+    const hR = Math.max(2, (p.revenue / maxVal) * 160);
+    const hE = Math.max(2, (p.expenses / maxVal) * 160);
+    rec.innerHTML += `<div class="wf-bar" style="gap:2px">
+      <div class="wf-value" style="font-size:8px">${fmt(p.revenue)}</div>
+      <div style="display:flex;gap:2px;align-items:flex-end;width:100%;height:170px">
+        <div style="flex:1;height:${hR}px;background:var(--green);border-radius:3px 3px 0 0;opacity:0.8"></div>
+        <div style="flex:1;height:${hE}px;background:var(--red);border-radius:3px 3px 0 0;opacity:0.8"></div>
+      </div>
+      <div class="wf-label">${p.monthLabel}</div>
+    </div>`;
+  });
+
+  // Cumulative cash
+  const maxCash = Math.max(...proj.map(p => Math.abs(p.cash)), 1);
+  const cc = document.getElementById('cumCashChart');
+  proj.forEach(p => {
+    const h = Math.max(4, (Math.abs(p.cash) / maxCash) * 170);
+    cc.innerHTML += `<div class="wf-bar"><div class="wf-value">${fmt(p.cash)}</div><div class="wf-block" style="height:${h}px;background:${p.cash >= 0 ? 'var(--green)' : 'var(--red)'}"></div><div class="wf-label">${p.monthLabel}</div></div>`;
+  });
+}
+
+// ---- FUNDING ----
+function renderFunding(el) {
+  const totalRaised = state.fundingRounds.filter(f => f.status === 'raised').reduce((s, f) => s + f.amount, 0);
+  const totalDilution = state.fundingRounds.filter(f => f.status === 'raised').reduce((s, f) => s + f.dilution, 0);
+
+  let html = `<div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Total Raised</div><div class="stat-value stat-green">${fmt(totalRaised)}</div></div>
+    <div class="stat-card"><div class="stat-label">Total Dilution</div><div class="stat-value stat-amber">${totalDilution}%</div></div>
+    <div class="stat-card"><div class="stat-label">Founder Ownership</div><div class="stat-value stat-blue">${100 - totalDilution}%</div></div>
+    <div class="stat-card"><div class="stat-label">Rounds</div><div class="stat-value">${state.fundingRounds.length}</div></div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+    <button class="btn btn-primary" onclick="showFundingModal()">+ Add Round</button>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Round</th><th>Amount</th><th>Valuation</th><th>Dilution</th><th>Status</th><th>Notes</th><th></th></tr>
+    ${state.fundingRounds.map(f => `<tr>
+      <td><strong>${f.name}</strong></td>
+      <td>${fmtFull(f.amount)}</td>
+      <td>${f.valuation ? fmtFull(f.valuation) : '—'}</td>
+      <td>${f.dilution}%</td>
+      <td><span class="tag ${f.status === 'raised' ? 'tag-green' : f.status === 'negotiating' ? 'tag-amber' : 'tag-blue'}">${f.status}</span></td>
+      <td style="max-width:200px;font-size:12px;color:var(--text2)">${f.notes || '—'}</td>
+      <td><button class="btn btn-sm btn-outline" onclick="editFunding('${f.id}')">✏️</button> <button class="btn btn-sm btn-outline" onclick="deleteFunding('${f.id}')" style="color:var(--red)">🗑️</button></td>
+    </tr>`).join('')}
+  </table></div>
+  ${!state.fundingRounds.length ? '<div class="empty"><div class="icon">🏦</div><p>No funding rounds tracked yet</p><button class="btn btn-primary" onclick="showFundingModal()">Add First Round</button></div>' : ''}
+  <div class="card" style="margin-top:20px">
+    <div class="card-title">Quick Valuation Calculator</div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Current ARR</label><input type="number" id="valARR" value="${projectedRevenue(0) * 12}" oninput="calcValuation()"></div>
+      <div class="form-group"><label>Revenue Multiple</label><input type="number" id="valMult" value="10" step="0.5" oninput="calcValuation()"></div>
+      <div class="form-group"><label>Estimated Valuation</label><input type="text" id="valResult" readonly style="font-weight:700;color:var(--green)"></div>
+    </div>
+  </div>`;
+  el.innerHTML = html;
+  calcValuation();
+}
+
+function calcValuation() {
+  const arr = parseFloat(document.getElementById('valARR')?.value) || 0;
+  const mult = parseFloat(document.getElementById('valMult')?.value) || 0;
+  const result = document.getElementById('valResult');
+  if (result) result.value = fmtFull(arr * mult);
+}
+
+function showFundingModal(existing) {
+  const f = existing || { name: '', amount: '', valuation: '', dilution: '', status: 'planned', date: '', notes: '' };
+  const isEdit = !!existing;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal"><h3>${isEdit ? 'Edit' : 'Add'} Funding Round</h3>
+    <div class="form-group"><label>Round Name</label><input type="text" id="fundName" value="${f.name}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Amount</label><input type="number" id="fundAmount" value="${f.amount}"></div>
+      <div class="form-group"><label>Pre-money Valuation</label><input type="number" id="fundVal" value="${f.valuation || ''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Dilution %</label><input type="number" id="fundDilution" value="${f.dilution}" step="0.5"></div>
+      <div class="form-group"><label>Status</label><select id="fundStatus"><option ${f.status === 'planned' ? 'selected' : ''} value="planned">Planned</option><option ${f.status === 'negotiating' ? 'selected' : ''} value="negotiating">Negotiating</option><option ${f.status === 'raised' ? 'selected' : ''} value="raised">Raised</option></select></div>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea id="fundNotes">${f.notes || ''}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveFunding('${isEdit ? f.id : ''}')">Save</button>
+    </div></div>`;
+  document.body.appendChild(overlay);
+}
+
+function saveFunding(id) {
+  const data = {
+    name: document.getElementById('fundName').value.trim(),
+    amount: parseFloat(document.getElementById('fundAmount').value) || 0,
+    valuation: parseFloat(document.getElementById('fundVal').value) || 0,
+    dilution: parseFloat(document.getElementById('fundDilution').value) || 0,
+    status: document.getElementById('fundStatus').value,
+    notes: document.getElementById('fundNotes').value.trim(),
+  };
+  if (!data.name) return;
+  if (id) { const f = state.fundingRounds.find(x => x.id === id); if (f) Object.assign(f, data); }
+  else { state.fundingRounds.push({ id: uid(), ...data }); }
+  saveState();
+  document.querySelector('.modal-overlay')?.remove();
+  switchView('funding');
+}
+
+function editFunding(id) { showFundingModal(state.fundingRounds.find(f => f.id === id)); }
+function deleteFunding(id) { if (confirm('Delete?')) { state.fundingRounds = state.fundingRounds.filter(f => f.id !== id); saveState(); switchView('funding'); } }
+
+// ============ SETTINGS ============
+function setCashOnHand() {
+  const v = prompt('Cash on hand:', state.cashOnHand);
+  if (v !== null) { state.cashOnHand = parseFloat(v) || 0; saveState(); switchView('dashboard'); }
+}
+
+function setCurrency(cur) {
+  state.currency = cur;
+  document.querySelectorAll('.currency-opt').forEach(c => c.classList.toggle('active', c.dataset.cur === cur));
+  saveState();
+  // Refresh current view
+  const active = document.querySelector('.nav-item.active');
+  if (active) switchView(active.dataset.view);
+}
+
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  localStorage.setItem('runway_theme', document.body.classList.contains('light') ? 'light' : 'dark');
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `runway-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+}
+
+function importData() { document.getElementById('fileInput').click(); }
+function handleImport(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      state = JSON.parse(ev.target.result);
+      saveState();
+      switchView('dashboard');
+    } catch { alert('Invalid file'); }
+  };
+  reader.readAsText(f);
+}
+
+function resetData() {
+  if (confirm('Reset all data to demo defaults?')) {
+    state = defaultState();
+    saveState();
+    switchView('dashboard');
+  }
+}
+
+// ============ KEYBOARD SHORTCUTS ============
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  const modal = document.querySelector('.modal-overlay');
+  if (e.key === 'Escape' && modal) { modal.remove(); return; }
+  if (e.key === 'Escape') return;
+  const map = { '1': 'dashboard', '2': 'expenses', '3': 'revenue', '4': 'scenarios', '5': 'unit-economics', '6': 'projections', '7': 'funding', 'd': 'toggleTheme', 'e': 'export', 'n': 'new' };
+  if (map[e.key] === 'toggleTheme') { toggleTheme(); return; }
+  if (map[e.key] === 'export') { exportData(); return; }
+  if (map[e.key]) switchView(map[e.key]);
+});
+
+// Make cash on hand editable by clicking
+document.addEventListener('click', e => {
+  if (e.target.closest('.stat-card')?.querySelector('.stat-label')?.textContent === 'Cash on Hand') setCashOnHand();
+});
+
+// ============ INIT ============
+if (localStorage.getItem('runway_theme') === 'light') document.body.classList.add('light');
+switchView('dashboard');
+</script>
+</body>
+</html>

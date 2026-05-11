@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Changelog Studio — Beautiful Release Notes Builder</title>
+<style>
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #242836; --surface3: #2e3345;
+  --border: #353a4f; --text: #e4e7f1; --text2: #9ca3bf; --text3: #6b7394;
+  --accent: #6c5ce7; --accent2: #a29bfe; --accent-bg: rgba(108,92,231,0.12);
+  --green: #00b894; --green-bg: rgba(0,184,148,0.12);
+  --blue: #0984e3; --blue-bg: rgba(9,132,227,0.12);
+  --yellow: #fdcb6e; --yellow-bg: rgba(253,203,110,0.12);
+  --red: #e17055; --red-bg: rgba(225,112,85,0.12);
+  --pink: #fd79a8; --pink-bg: rgba(253,121,168,0.12);
+  --cyan: #00cec9; --cyan-bg: rgba(0,206,201,0.12);
+  --orange: #e17055; --orange-bg: rgba(225,112,85,0.12);
+  --radius: 10px; --radius-sm: 6px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; min-height: 100vh; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* Layout */
+.app { display: flex; height: 100vh; }
+.sidebar { width: 280px; min-width: 280px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); }
+.sidebar-header h1 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sidebar-header h1 span { font-size: 20px; }
+.sidebar-nav { display: flex; gap: 4px; padding: 12px; border-bottom: 1px solid var(--border); }
+.sidebar-nav button { flex: 1; padding: 6px 10px; border: none; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; cursor: pointer; background: transparent; color: var(--text2); transition: all 0.15s; }
+.sidebar-nav button.active, .sidebar-nav button:hover { background: var(--accent-bg); color: var(--accent2); }
+.project-list { flex: 1; overflow-y: auto; padding: 8px; }
+.project-item { padding: 10px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s; margin-bottom: 4px; }
+.project-item:hover { background: var(--surface2); }
+.project-item.active { background: var(--accent-bg); border-left: 3px solid var(--accent); }
+.project-item .pname { font-size: 14px; font-weight: 600; }
+.project-item .pmeta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.sidebar-footer { padding: 12px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.sidebar-footer button { flex: 1; }
+
+/* Main */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.toolbar { padding: 12px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: var(--surface); }
+.toolbar .search-box { flex: 1; max-width: 300px; position: relative; }
+.toolbar .search-box input { width: 100%; padding: 7px 12px 7px 32px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); font-size: 13px; outline: none; }
+.toolbar .search-box input:focus { border-color: var(--accent); }
+.toolbar .search-box::before { content: '🔍'; position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 13px; }
+.view-tabs { display: flex; gap: 4px; }
+.view-tabs button { padding: 6px 14px; border: none; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; cursor: pointer; background: transparent; color: var(--text2); transition: all 0.15s; }
+.view-tabs button.active, .view-tabs button:hover { background: var(--accent-bg); color: var(--accent2); }
+.content { flex: 1; overflow-y: auto; padding: 24px; }
+
+/* Buttons */
+.btn { padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--surface2); color: var(--text); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-danger { background: var(--red); color: white; }
+.btn-danger:hover { opacity: 0.8; }
+
+/* Release Cards */
+.release-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 20px; overflow: hidden; }
+.release-header { padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+.release-version { display: flex; align-items: center; gap: 12px; }
+.release-version .ver { font-size: 22px; font-weight: 700; font-family: var(--mono); }
+.release-date { font-size: 12px; color: var(--text3); }
+.release-title { font-size: 15px; color: var(--text2); margin-top: 2px; }
+.release-badges { display: flex; gap: 6px; }
+.badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge-major { background: var(--accent-bg); color: var(--accent2); }
+.badge-minor { background: var(--blue-bg); color: var(--blue); }
+.badge-patch { background: var(--green-bg); color: var(--green); }
+.badge-beta { background: var(--yellow-bg); color: var(--yellow); }
+.badge-breaking { background: var(--red-bg); color: var(--red); }
+.badge-hotfix { background: var(--orange-bg); color: var(--orange); }
+
+.release-body { padding: 20px 24px; }
+.change-group { margin-bottom: 16px; }
+.change-group:last-child { margin-bottom: 0; }
+.change-group-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+.change-icon { width: 22px; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.change-icon.added { background: var(--green-bg); color: var(--green); }
+.change-icon.changed { background: var(--blue-bg); color: var(--blue); }
+.change-icon.fixed { background: var(--yellow-bg); color: var(--yellow); }
+.change-icon.removed { background: var(--red-bg); color: var(--red); }
+.change-icon.security { background: var(--pink-bg); color: var(--pink); }
+.change-icon.perf { background: var(--cyan-bg); color: var(--cyan); }
+.change-icon.deprecated { background: var(--orange-bg); color: var(--orange); }
+
+.change-list { list-style: none; padding-left: 30px; }
+.change-list li { position: relative; padding: 4px 0; font-size: 14px; color: var(--text2); }
+.change-list li::before { content: ''; position: absolute; left: -16px; top: 12px; width: 5px; height: 5px; border-radius: 50%; background: var(--text3); }
+
+.release-actions { padding: 12px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.modal-overlay.show { opacity: 1; pointer-events: all; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow); }
+.modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.modal-header h2 { font-size: 18px; font-weight: 600; }
+.modal-close { width: 30px; height: 30px; border: none; border-radius: var(--radius-sm); background: transparent; color: var(--text2); cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+.modal-close:hover { background: var(--surface2); }
+.modal-body { padding: 24px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; position: sticky; bottom: 0; background: var(--surface); }
+
+/* Form */
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); font-size: 14px; font-family: var(--font); outline: none; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+/* Change entry editor */
+.change-editor { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 8px; }
+.change-editor-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.change-entries { margin-top: 8px; }
+.change-entry-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.change-entry-row input { flex: 1; }
+.change-entry-row .remove-entry { width: 28px; height: 28px; border: none; border-radius: var(--radius-sm); background: var(--red-bg); color: var(--red); cursor: pointer; font-size: 14px; flex-shrink: 0; }
+.add-entry-btn { font-size: 12px; color: var(--accent2); cursor: pointer; background: none; border: none; padding: 4px 0; }
+.add-entry-btn:hover { text-decoration: underline; }
+.add-group-btn { margin-top: 8px; }
+
+/* Stats Dashboard */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
+.stat-card .stat-val { font-size: 32px; font-weight: 700; font-family: var(--mono); }
+.stat-card .stat-label { font-size: 12px; color: var(--text3); text-transform: uppercase; margin-top: 4px; }
+
+/* Timeline */
+.timeline { position: relative; padding-left: 40px; }
+.timeline::before { content: ''; position: absolute; left: 15px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+.timeline-item { position: relative; margin-bottom: 32px; }
+.timeline-dot { position: absolute; left: -33px; top: 4px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent); background: var(--bg); }
+.timeline-item:first-child .timeline-dot { background: var(--accent); }
+.timeline-date { font-size: 12px; color: var(--text3); margin-bottom: 4px; }
+.timeline-ver { font-size: 20px; font-weight: 700; font-family: var(--mono); }
+.timeline-title { font-size: 14px; color: var(--text2); }
+.timeline-summary { margin-top: 8px; font-size: 13px; color: var(--text3); }
+
+/* Preview / Public Page */
+.preview-container { max-width: 720px; margin: 0 auto; }
+.preview-header { text-align: center; padding: 40px 0 32px; }
+.preview-header h1 { font-size: 28px; font-weight: 700; }
+.preview-header p { font-size: 14px; color: var(--text3); margin-top: 8px; }
+.preview-header .product-badge { display: inline-block; padding: 4px 14px; border-radius: 16px; background: var(--accent-bg); color: var(--accent2); font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+.subscribe-bar { max-width: 400px; margin: 16px auto 0; display: flex; gap: 8px; }
+.subscribe-bar input { flex: 1; padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); font-size: 13px; outline: none; }
+.subscribe-bar input:focus { border-color: var(--accent); }
+
+/* RSS badge */
+.rss-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; background: var(--orange-bg); color: var(--orange); font-size: 11px; font-weight: 600; cursor: pointer; margin-left: 8px; }
+
+/* Category chart */
+.chart-bar-group { margin-bottom: 12px; }
+.chart-bar-label { font-size: 12px; color: var(--text2); margin-bottom: 4px; display: flex; justify-content: space-between; }
+.chart-bar { height: 8px; border-radius: 4px; background: var(--surface3); overflow: hidden; }
+.chart-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+.empty-state .emoji { font-size: 48px; margin-bottom: 16px; }
+.empty-state h3 { font-size: 18px; color: var(--text2); margin-bottom: 8px; }
+
+/* Project editor modal */
+.color-options { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-opt { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+.color-opt.selected { border-color: white; transform: scale(1.15); }
+
+/* Keyboard help */
+.kbd { display: inline-block; padding: 2px 6px; border: 1px solid var(--border); border-radius: 3px; font-size: 11px; font-family: var(--mono); background: var(--surface2); color: var(--text2); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Print */
+@media print {
+  .sidebar, .toolbar, .release-actions, .modal-overlay, .subscribe-bar { display: none !important; }
+  .app { display: block; }
+  .main { display: block; }
+  .content { padding: 0; }
+  .release-card { break-inside: avoid; border: 1px solid #ddd; }
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1><span>📋</span> Changelog Studio</h1>
+    </div>
+    <div class="sidebar-nav">
+      <button onclick="showProjects()" id="navProjects" class="active">Products</button>
+      <button onclick="showSettings()" id="navSettings">Settings</button>
+    </div>
+    <div class="project-list" id="projectList"></div>
+    <div class="sidebar-footer">
+      <button class="btn btn-primary btn-sm" onclick="newProject()">+ New Product</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportAll()">📦 Export</button>
+      <button class="btn btn-ghost btn-sm" onclick="importAll()">📥 Import</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="toolbar">
+      <div class="search-box">
+        <input type="text" placeholder="Search releases... (/)" id="searchInput" oninput="filterReleases()" />
+      </div>
+      <div class="view-tabs">
+        <button onclick="setView('releases')" id="viewReleases" class="active">Releases</button>
+        <button onclick="setView('timeline')" id="viewTimeline">Timeline</button>
+        <button onclick="setView('preview')" id="viewPreview">Public Page</button>
+        <button onclick="setView('stats')" id="viewStats">Stats</button>
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn btn-primary btn-sm" onclick="newRelease()">+ New Release</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportHTML()" title="Export as standalone HTML page">🌐 Export HTML</button>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<!-- Release Modal -->
+<div class="modal-overlay" id="releaseModal">
+  <div class="modal" style="max-width:800px">
+    <div class="modal-header">
+      <h2 id="releaseModalTitle">New Release</h2>
+      <button class="modal-close" onclick="closeModal('releaseModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Version</label>
+          <input type="text" id="relVersion" placeholder="1.2.0" />
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="relDate" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" id="relTitle" placeholder="What's new in this release?" />
+        </div>
+        <div class="form-group">
+          <label>Badge</label>
+          <select id="relBadge">
+            <option value="">None</option>
+            <option value="major">Major</option>
+            <option value="minor">Minor</option>
+            <option value="patch">Patch</option>
+            <option value="beta">Beta</option>
+            <option value="breaking">Breaking</option>
+            <option value="hotfix">Hotfix</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Summary (shown in timeline & public page)</label>
+        <textarea id="relSummary" rows="2" placeholder="Brief summary of this release..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Changes</label>
+        <div id="changeGroupsEditor"></div>
+        <button class="btn btn-ghost btn-sm add-group-btn" onclick="addChangeGroup()">+ Add Category</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('releaseModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRelease()" id="saveReleaseBtn">Save Release</button>
+    </div>
+  </div>
+</div>
+
+<!-- Project Modal -->
+<div class="modal-overlay" id="projectModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h2 id="projectModalTitle">New Product</h2>
+      <button class="modal-close" onclick="closeModal('projectModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Product Name</label>
+        <input type="text" id="projName" placeholder="e.g. UTMStamp" />
+      </div>
+      <div class="form-group">
+        <label>Tagline</label>
+        <input type="text" id="projTagline" placeholder="Every Signature. Every Click. Tracked." />
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="projDesc" rows="2" placeholder="Brief product description..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Website URL</label>
+        <input type="text" id="projUrl" placeholder="https://utmstamp.com" />
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <div class="color-options" id="colorOptions"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('projectModal')">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteProject()" id="deleteProjBtn" style="display:none">Delete</button>
+      <button class="btn btn-primary" onclick="saveProject()" id="saveProjBtn">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Panel -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h2>Settings</h2>
+      <button class="modal-close" onclick="closeModal('settingsModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Public Page Title</label>
+        <input type="text" id="setTitle" placeholder="Changelog" />
+      </div>
+      <div class="form-group">
+        <label>Subtitle</label>
+        <input type="text" id="setSubtitle" placeholder="Stay up to date with the latest changes" />
+      </div>
+      <div class="form-group">
+        <label>Subscribe CTA text</label>
+        <input type="text" id="setSubscribeCta" placeholder="Get notified of new releases" />
+      </div>
+      <h3 style="font-size:14px;margin:16px 0 8px;color:var(--text2)">Keyboard Shortcuts</h3>
+      <div style="font-size:13px;color:var(--text3);line-height:2">
+        <span class="kbd">N</span> New release &nbsp;
+        <span class="kbd">/</span> Search &nbsp;
+        <span class="kbd">1-4</span> Switch views &nbsp;
+        <span class="kbd">D</span> Dark mode &nbsp;
+        <span class="kbd">E</span> Export &nbsp;
+        <span class="kbd">Esc</span> Close modal
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('settingsModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)" />
+
+<script>
+// ===== DATA =====
+const CHANGE_TYPES = [
+  { key: 'added', label: 'Added', icon: '✨', cls: 'added', color: 'var(--green)' },
+  { key: 'changed', label: 'Changed', icon: '🔄', cls: 'changed', color: 'var(--blue)' },
+  { key: 'fixed', label: 'Fixed', icon: '🐛', cls: 'fixed', color: 'var(--yellow)' },
+  { key: 'removed', label: 'Removed', icon: '🗑️', cls: 'removed', color: 'var(--red)' },
+  { key: 'security', label: 'Security', icon: '🔒', cls: 'security', color: 'var(--pink)' },
+  { key: 'performance', label: 'Performance', icon: '⚡', cls: 'perf', color: 'var(--cyan)' },
+  { key: 'deprecated', label: 'Deprecated', icon: '⚠️', cls: 'deprecated', color: 'var(--orange)' }
+];
+const COLORS = ['#6c5ce7','#0984e3','#00b894','#fdcb6e','#e17055','#fd79a8','#00cec9','#a29bfe','#636e72','#d63031'];
+let state = { projects: [], activeProject: null, view: 'releases', search: '', editingRelease: null, editingProject: null, settings: { title: 'Changelog', subtitle: 'Stay up to date with the latest changes', subscribeCta: 'Get notified of new releases' } };
+
+function load() {
+  try { const d = JSON.parse(localStorage.getItem('changelog-studio')); if (d) state = { ...state, ...d }; } catch(e) {}
+  if (!state.projects.length) seedData();
+}
+function save() { localStorage.setItem('changelog-studio', JSON.stringify(state)); }
+
+function seedData() {
+  const proj = { id: genId(), name: 'UTMStamp', tagline: 'Every Signature. Every Click. Tracked.', desc: 'Email signature manager with built-in UTM tracking for teams', url: 'https://utmstamp.com', color: '#6c5ce7', releases: [] };
+  proj.releases = [
+    { id: genId(), version: '1.0.0', date: '2026-03-10', title: 'Initial Launch 🚀', summary: 'UTMStamp goes live — signature creation, UTM tracking, and team management in one tool.', badge: 'major', changes: { added: ['Signature template editor with live preview','UTM parameter builder with campaign tracking','Team workspace with role-based access','Click analytics dashboard with real-time stats','Google Workspace integration','5 professional signature templates','CSV export for analytics data'], changed: [], fixed: [], removed: [], security: [], performance: [], deprecated: [] } },
+    { id: genId(), version: '1.1.0', date: '2026-03-18', title: 'Analytics Upgrade', summary: 'Deep dive into your signature performance with new charts and filters.', badge: 'minor', changes: { added: ['Time-series click chart with date range picker','Device breakdown (desktop/mobile/tablet)','Geographic click heatmap','Top performing signatures leaderboard','Weekly email digest for team admins'], changed: ['Dashboard redesigned with card-based layout','Improved signature preview rendering'], fixed: ['Click tracking pixel not firing on Outlook desktop','Signature alignment issues in Apple Mail'], removed: [], security: ['Added CSP headers to tracking endpoints'], performance: ['Reduced dashboard load time by 60%'], deprecated: [] } },
+    { id: genId(), version: '1.2.0', date: '2026-03-25', title: 'Campaign Banners', summary: 'Dynamic promotional banners in email signatures — schedule, A/B test, and track.', badge: 'minor', changes: { added: ['Campaign banner designer with drag-and-drop','Banner scheduling with start/end dates','A/B testing for banner variants','Banner click-through analytics','8 banner templates for common use cases','Banner auto-rotation for multi-campaign support'], changed: ['Signature editor now supports banner placement zones','Team settings page reorganized for clarity'], fixed: ['Rare duplicate click counting on Gmail web','Template preview not updating on color change','CSV export missing timezone offset'], removed: [], security: [], performance: ['Image optimization reduces banner load by 40%'], deprecated: ['Legacy signature format v0 (migration auto-applied)'] } },
+    { id: genId(), version: '1.2.1', date: '2026-03-28', title: 'Hotfix', summary: 'Critical fix for banner rendering in Outlook.', badge: 'hotfix', changes: { added: [], changed: [], fixed: ['Banner images not rendering in Outlook 2019/2021','Banner scheduling timezone calculation off by 1 hour','Rare crash when deleting banner with active A/B test'], removed: [], security: [], performance: [], deprecated: [] } },
+    { id: genId(), version: '1.3.0', date: '2026-04-05', title: 'Team Features & API', summary: 'Enterprise-ready team management plus REST API for power users.', badge: 'minor', changes: { added: ['REST API with full CRUD for signatures, campaigns, and analytics','API key management in team settings','Bulk signature deployment for Google Workspace','Team activity audit log','Custom domain support for tracking links','Slack notifications for campaign milestones','Webhook support for click events'], changed: ['Team member invitation flow simplified','Settings page split into General, Team, API, Integrations tabs'], fixed: ['Team member role changes not reflecting immediately','Analytics timezone filter not persisting across sessions'], removed: [], security: ['API rate limiting: 100 req/min per key','API keys support IP allowlisting'], performance: ['Batch signature deployment 3x faster'], deprecated: [] } },
+    { id: genId(), version: '2.0.0-beta', date: '2026-04-12', title: 'Video Signatures Beta', summary: 'Embed short video clips in email signatures — the future of email branding.', badge: 'beta', changes: { added: ['Video signature support (GIF preview → click to play)','Video upload with auto-compression (max 15s)','3 video signature layouts','Video analytics (play rate, completion rate)','Loom and YouTube embed support'], changed: ['Signature editor rewritten with new component architecture','Template system now supports custom HTML blocks'], fixed: ['Banner A/B test winner selection logic edge case'], removed: [], security: [], performance: ['New CDN integration for faster asset delivery globally'], deprecated: ['v1 API endpoints (sunset in 90 days, migrate to v2)'] } }
+  ];
+  state.projects = [proj];
+  state.activeProject = proj.id;
+  save();
+}
+
+function genId() { return Math.random().toString(36).substr(2,9); }
+
+// ===== RENDERING =====
+function render() {
+  renderSidebar();
+  renderContent();
+}
+
+function renderSidebar() {
+  const el = document.getElementById('projectList');
+  el.innerHTML = state.projects.map(p => `
+    <div class="project-item ${p.id === state.activeProject ? 'active' : ''}" onclick="selectProject('${p.id}')" ondblclick="editProject('${p.id}')">
+      <div class="pname" style="color:${p.color}">${p.name}</div>
+      <div class="pmeta">${p.releases.length} release${p.releases.length !== 1 ? 's' : ''}${p.releases.length ? ' · v' + p.releases[0].version : ''}</div>
+    </div>
+  `).join('');
+}
+
+function renderContent() {
+  const el = document.getElementById('content');
+  const proj = state.projects.find(p => p.id === state.activeProject);
+  if (!proj) { el.innerHTML = emptyState('📋', 'No Product Selected', 'Create a product to get started'); return; }
+  const views = { releases: renderReleases, timeline: renderTimeline, preview: renderPreview, stats: renderStats };
+  (views[state.view] || views.releases)(el, proj);
+}
+
+function getFilteredReleases(proj) {
+  if (!state.search) return proj.releases;
+  const q = state.search.toLowerCase();
+  return proj.releases.filter(r =>
+    r.version.toLowerCase().includes(q) || r.title.toLowerCase().includes(q) || r.summary.toLowerCase().includes(q) ||
+    Object.values(r.changes).flat().some(c => c.toLowerCase().includes(q))
+  );
+}
+
+function renderReleases(el, proj) {
+  const releases = getFilteredReleases(proj);
+  if (!releases.length) { el.innerHTML = emptyState('📦', 'No Releases Yet', 'Create your first release with the + button above'); return; }
+  el.innerHTML = releases.map(r => releaseCard(r)).join('');
+}
+
+function releaseCard(r) {
+  const groups = CHANGE_TYPES.filter(t => r.changes[t.key] && r.changes[t.key].length);
+  return `<div class="release-card">
+    <div class="release-header">
+      <div class="release-version">
+        <span class="ver">${r.version}</span>
+        <div>
+          <div class="release-title">${r.title}</div>
+          <div class="release-date">${formatDate(r.date)}</div>
+        </div>
+      </div>
+      <div class="release-badges">
+        ${r.badge ? `<span class="badge badge-${r.badge}">${r.badge}</span>` : ''}
+      </div>
+    </div>
+    <div class="release-body">
+      ${groups.map(t => `
+        <div class="change-group">
+          <div class="change-group-header">
+            <div class="change-icon ${t.cls}">${t.icon}</div>
+            ${t.label}
+            <span style="font-size:12px;color:var(--text3);font-weight:400">(${r.changes[t.key].length})</span>
+          </div>
+          <ul class="change-list">
+            ${r.changes[t.key].map(c => `<li>${escHtml(c)}</li>`).join('')}
+          </ul>
+        </div>
+      `).join('')}
+    </div>
+    <div class="release-actions">
+      <button class="btn btn-ghost btn-sm" onclick="copyMarkdown('${r.id}')">📝 Copy MD</button>
+      <button class="btn btn-ghost btn-sm" onclick="editRelease('${r.id}')">✏️ Edit</button>
+      <button class="btn btn-ghost btn-sm" onclick="deleteRelease('${r.id}')" style="color:var(--red)">🗑️</button>
+    </div>
+  </div>`;
+}
+
+function renderTimeline(el, proj) {
+  const releases = getFilteredReleases(proj);
+  if (!releases.length) { el.innerHTML = emptyState('📅', 'No Releases', 'Add releases to see the timeline'); return; }
+  const totalChanges = r => Object.values(r.changes).flat().length;
+  el.innerHTML = `<div class="timeline">${releases.map(r => `
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-date">${formatDate(r.date)} ${r.badge ? `<span class="badge badge-${r.badge}" style="font-size:10px">${r.badge}</span>` : ''}</div>
+      <div class="timeline-ver">${r.version}</div>
+      <div class="timeline-title">${escHtml(r.title)}</div>
+      <div class="timeline-summary">${escHtml(r.summary || '')} · ${totalChanges(r)} change${totalChanges(r) !== 1 ? 's' : ''}</div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function renderPreview(el, proj) {
+  const releases = getFilteredReleases(proj);
+  el.innerHTML = `<div class="preview-container">
+    <div class="preview-header">
+      <div class="product-badge">${escHtml(proj.name)}</div>
+      <h1>${escHtml(state.settings.title)}</h1>
+      <p>${escHtml(state.settings.subtitle)}</p>
+      <div class="subscribe-bar">
+        <input type="email" placeholder="you@email.com" />
+        <button class="btn btn-primary btn-sm">${escHtml(state.settings.subscribeCta || 'Subscribe')}</button>
+      </div>
+    </div>
+    ${releases.map(r => releaseCard(r)).join('')}
+  </div>`;
+  // Hide edit/delete in preview
+  el.querySelectorAll('.release-actions').forEach(a => a.style.display = 'none');
+}
+
+function renderStats(el, proj) {
+  const rels = proj.releases;
+  const totalChanges = rels.reduce((s,r) => s + Object.values(r.changes).flat().length, 0);
+  const typeCounts = {};
+  CHANGE_TYPES.forEach(t => { typeCounts[t.key] = rels.reduce((s,r) => s + (r.changes[t.key]||[]).length, 0); });
+  const maxCount = Math.max(...Object.values(typeCounts), 1);
+  const badgeCounts = {};
+  rels.forEach(r => { if(r.badge) badgeCounts[r.badge] = (badgeCounts[r.badge]||0)+1; });
+  
+  // Monthly release frequency
+  const months = {};
+  rels.forEach(r => { const m = r.date.substring(0,7); months[m] = (months[m]||0)+1; });
+
+  el.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val" style="color:var(--accent)">${rels.length}</div><div class="stat-label">Total Releases</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">${totalChanges}</div><div class="stat-label">Total Changes</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${rels.length ? (totalChanges/rels.length).toFixed(1) : 0}</div><div class="stat-label">Avg Changes/Release</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--yellow)">${typeCounts.fixed}</div><div class="stat-label">Bugs Fixed</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--cyan)">${typeCounts.performance}</div><div class="stat-label">Perf Improvements</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--pink)">${typeCounts.security}</div><div class="stat-label">Security Updates</div></div>
+    </div>
+    <h3 style="margin-bottom:16px;font-size:16px">Changes by Category</h3>
+    ${CHANGE_TYPES.map(t => `
+      <div class="chart-bar-group">
+        <div class="chart-bar-label"><span>${t.icon} ${t.label}</span><span>${typeCounts[t.key]}</span></div>
+        <div class="chart-bar"><div class="chart-bar-fill" style="width:${(typeCounts[t.key]/maxCount)*100}%;background:${t.color}"></div></div>
+      </div>
+    `).join('')}
+    ${Object.keys(badgeCounts).length ? `
+      <h3 style="margin:24px 0 16px;font-size:16px">Release Types</h3>
+      ${Object.entries(badgeCounts).map(([b,c]) => `<span class="badge badge-${b}" style="margin-right:8px">${b} × ${c}</span>`).join('')}
+    ` : ''}
+    ${Object.keys(months).length ? `
+      <h3 style="margin:24px 0 16px;font-size:16px">Release Frequency</h3>
+      ${Object.entries(months).sort().map(([m,c]) => `
+        <div class="chart-bar-group">
+          <div class="chart-bar-label"><span>${m}</span><span>${c} release${c>1?'s':''}</span></div>
+          <div class="chart-bar"><div class="chart-bar-fill" style="width:${(c/Math.max(...Object.values(months)))*100}%;background:var(--accent)"></div></div>
+        </div>
+      `).join('')}
+    ` : ''}
+  `;
+}
+
+function emptyState(emoji, title, sub) {
+  return `<div class="empty-state"><div class="emoji">${emoji}</div><h3>${title}</h3><p>${sub}</p></div>`;
+}
+
+// ===== ACTIONS =====
+function selectProject(id) { state.activeProject = id; save(); render(); }
+
+function setView(v) {
+  state.view = v;
+  document.querySelectorAll('.view-tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById('view' + v.charAt(0).toUpperCase() + v.slice(1)).classList.add('active');
+  renderContent();
+}
+
+function filterReleases() { state.search = document.getElementById('searchInput').value; renderContent(); }
+
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// Project CRUD
+function newProject() {
+  state.editingProject = null;
+  document.getElementById('projectModalTitle').textContent = 'New Product';
+  document.getElementById('projName').value = '';
+  document.getElementById('projTagline').value = '';
+  document.getElementById('projDesc').value = '';
+  document.getElementById('projUrl').value = '';
+  document.getElementById('deleteProjBtn').style.display = 'none';
+  document.getElementById('saveProjBtn').textContent = 'Create';
+  renderColorPicker(null);
+  openModal('projectModal');
+  document.getElementById('projName').focus();
+}
+
+function editProject(id) {
+  const p = state.projects.find(x => x.id === id);
+  if (!p) return;
+  state.editingProject = id;
+  document.getElementById('projectModalTitle').textContent = 'Edit Product';
+  document.getElementById('projName').value = p.name;
+  document.getElementById('projTagline').value = p.tagline || '';
+  document.getElementById('projDesc').value = p.desc || '';
+  document.getElementById('projUrl').value = p.url || '';
+  document.getElementById('deleteProjBtn').style.display = '';
+  document.getElementById('saveProjBtn').textContent = 'Save';
+  renderColorPicker(p.color);
+  openModal('projectModal');
+}
+
+function renderColorPicker(sel) {
+  document.getElementById('colorOptions').innerHTML = COLORS.map(c =>
+    `<div class="color-opt ${c===sel?'selected':''}" style="background:${c}" onclick="pickColor(this,'${c}')"></div>`
+  ).join('');
+}
+let selectedColor = COLORS[0];
+function pickColor(el, c) {
+  selectedColor = c;
+  document.querySelectorAll('.color-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function saveProject() {
+  const name = document.getElementById('projName').value.trim();
+  if (!name) return;
+  if (state.editingProject) {
+    const p = state.projects.find(x => x.id === state.editingProject);
+    p.name = name;
+    p.tagline = document.getElementById('projTagline').value.trim();
+    p.desc = document.getElementById('projDesc').value.trim();
+    p.url = document.getElementById('projUrl').value.trim();
+    p.color = selectedColor;
+  } else {
+    const p = { id: genId(), name, tagline: document.getElementById('projTagline').value.trim(), desc: document.getElementById('projDesc').value.trim(), url: document.getElementById('projUrl').value.trim(), color: selectedColor, releases: [] };
+    state.projects.push(p);
+    state.activeProject = p.id;
+  }
+  save(); render(); closeModal('projectModal');
+}
+
+function deleteProject() {
+  if (!state.editingProject) return;
+  if (!confirm('Delete this product and all its releases?')) return;
+  state.projects = state.projects.filter(p => p.id !== state.editingProject);
+  if (state.activeProject === state.editingProject) state.activeProject = state.projects[0]?.id || null;
+  save(); render(); closeModal('projectModal');
+}
+
+// Release CRUD
+function newRelease() {
+  if (!state.activeProject) return;
+  state.editingRelease = null;
+  document.getElementById('releaseModalTitle').textContent = 'New Release';
+  document.getElementById('relVersion').value = suggestVersion();
+  document.getElementById('relDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('relTitle').value = '';
+  document.getElementById('relSummary').value = '';
+  document.getElementById('relBadge').value = '';
+  currentChangeGroups = [{ type: 'added', entries: [''] }];
+  renderChangeGroupsEditor();
+  document.getElementById('saveReleaseBtn').textContent = 'Create Release';
+  openModal('releaseModal');
+  document.getElementById('relVersion').focus();
+}
+
+function suggestVersion() {
+  const proj = state.projects.find(p => p.id === state.activeProject);
+  if (!proj || !proj.releases.length) return '1.0.0';
+  const last = proj.releases[0].version.replace(/-.+/,'');
+  const parts = last.split('.').map(Number);
+  parts[2] = (parts[2]||0) + 1;
+  return parts.join('.');
+}
+
+let currentChangeGroups = [];
+
+function renderChangeGroupsEditor() {
+  const el = document.getElementById('changeGroupsEditor');
+  el.innerHTML = currentChangeGroups.map((g, gi) => `
+    <div class="change-editor">
+      <div class="change-editor-header">
+        <select onchange="currentChangeGroups[${gi}].type=this.value" style="padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px">
+          ${CHANGE_TYPES.map(t => `<option value="${t.key}" ${g.type===t.key?'selected':''}>${t.icon} ${t.label}</option>`).join('')}
+        </select>
+        <div style="flex:1"></div>
+        <button class="remove-entry" onclick="removeChangeGroup(${gi})" title="Remove category">×</button>
+      </div>
+      <div class="change-entries">
+        ${g.entries.map((e, ei) => `
+          <div class="change-entry-row">
+            <input type="text" value="${escAttr(e)}" placeholder="Describe the change..." oninput="currentChangeGroups[${gi}].entries[${ei}]=this.value" onkeydown="entryKeydown(event,${gi},${ei})" />
+            <button class="remove-entry" onclick="removeEntry(${gi},${ei})">×</button>
+          </div>
+        `).join('')}
+        <button class="add-entry-btn" onclick="addEntry(${gi})">+ Add item</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addChangeGroup() {
+  const used = new Set(currentChangeGroups.map(g => g.type));
+  const next = CHANGE_TYPES.find(t => !used.has(t.key)) || CHANGE_TYPES[0];
+  currentChangeGroups.push({ type: next.key, entries: [''] });
+  renderChangeGroupsEditor();
+}
+
+function removeChangeGroup(gi) { currentChangeGroups.splice(gi, 1); renderChangeGroupsEditor(); }
+function addEntry(gi) { currentChangeGroups[gi].entries.push(''); renderChangeGroupsEditor(); const inputs = document.querySelectorAll(`.change-editor:nth-child(${gi+1}) .change-entry-row input`); if (inputs.length) inputs[inputs.length-1].focus(); }
+function removeEntry(gi, ei) { currentChangeGroups[gi].entries.splice(ei, 1); if (!currentChangeGroups[gi].entries.length) currentChangeGroups[gi].entries = ['']; renderChangeGroupsEditor(); }
+function entryKeydown(e, gi, ei) { if (e.key === 'Enter') { e.preventDefault(); addEntry(gi); } }
+
+function editRelease(id) {
+  const proj = state.projects.find(p => p.id === state.activeProject);
+  const r = proj?.releases.find(x => x.id === id);
+  if (!r) return;
+  state.editingRelease = id;
+  document.getElementById('releaseModalTitle').textContent = 'Edit Release';
+  document.getElementById('relVersion').value = r.version;
+  document.getElementById('relDate').value = r.date;
+  document.getElementById('relTitle').value = r.title;
+  document.getElementById('relSummary').value = r.summary || '';
+  document.getElementById('relBadge').value = r.badge || '';
+  currentChangeGroups = CHANGE_TYPES.filter(t => r.changes[t.key]?.length).map(t => ({ type: t.key, entries: [...r.changes[t.key]] }));
+  if (!currentChangeGroups.length) currentChangeGroups = [{ type: 'added', entries: [''] }];
+  renderChangeGroupsEditor();
+  document.getElementById('saveReleaseBtn').textContent = 'Save Changes';
+  openModal('releaseModal');
+}
+
+function saveRelease() {
+  const proj = state.projects.find(p => p.id === state.activeProject);
+  if (!proj) return;
+  const version = document.getElementById('relVersion').value.trim();
+  if (!version) return;
+  const changes = {};
+  CHANGE_TYPES.forEach(t => changes[t.key] = []);
+  currentChangeGroups.forEach(g => { changes[g.type] = g.entries.filter(e => e.trim()); });
+  const data = { version, date: document.getElementById('relDate').value, title: document.getElementById('relTitle').value.trim(), summary: document.getElementById('relSummary').value.trim(), badge: document.getElementById('relBadge').value, changes };
+  if (state.editingRelease) {
+    const idx = proj.releases.findIndex(r => r.id === state.editingRelease);
+    if (idx >= 0) Object.assign(proj.releases[idx], data);
+  } else {
+    proj.releases.unshift({ id: genId(), ...data });
+  }
+  // Sort by date desc, then version desc
+  proj.releases.sort((a,b) => b.date.localeCompare(a.date) || b.version.localeCompare(a.version));
+  save(); render(); closeModal('releaseModal');
+}
+
+function deleteRelease(id) {
+  if (!confirm('Delete this release?')) return;
+  const proj = state.projects.find(p => p.id === state.activeProject);
+  proj.releases = proj.releases.filter(r => r.id !== id);
+  save(); render();
+}
+
+// Copy as Markdown
+function copyMarkdown(id) {
+  const proj = state.projects.find(p => p.id === state.activeProject);
+  const r = proj?.releases.find(x => x.id === id);
+  if (!r) return;
+  let md = `## [${r.version}] - ${r.date}\n\n`;
+  if (r.title) md += `**${r.title}**\n\n`;
+  if (r.summary) md += `${r.summary}\n\n`;
+  CHANGE_TYPES.forEach(t => {
+    if (r.changes[t.key]?.length) {
+      md += `### ${t.label}\n`;
+      r.changes[t.key].forEach(c => md += `- ${c}\n`);
+      md += '\n';
+    }
+  });
+  navigator.clipboard.writeText(md).then(() => showToast('Markdown copied!'));
+}
+
+// Export standalone HTML
+function exportHTML() {
+  const proj = state.projects.find(p => p.id === state.activeProject);
+  if (!proj) return;
+  const releases = proj.releases;
+  let html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${escHtml(proj.name)} Changelog</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0f1117;color:#e4e7f1;line-height:1.7;padding:40px 20px}
+.container{max-width:700px;margin:0 auto}
+.header{text-align:center;padding:40px 0 32px}.header h1{font-size:28px;font-weight:700}.header p{font-size:14px;color:#6b7394;margin-top:8px}
+.product{display:inline-block;padding:4px 14px;border-radius:16px;background:rgba(108,92,231,.12);color:#a29bfe;font-size:12px;font-weight:600;margin-bottom:12px}
+.release{background:#1a1d27;border:1px solid #353a4f;border-radius:10px;margin-bottom:20px;overflow:hidden}
+.rel-head{padding:20px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #353a4f}
+.ver{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace}.rel-title{font-size:15px;color:#9ca3bf;margin-top:2px}.rel-date{font-size:12px;color:#6b7394}
+.badge{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase}
+.badge-major{background:rgba(108,92,231,.12);color:#a29bfe}.badge-minor{background:rgba(9,132,227,.12);color:#0984e3}
+.badge-patch{background:rgba(0,184,148,.12);color:#00b894}.badge-beta{background:rgba(253,203,110,.12);color:#fdcb6e}
+.badge-breaking{background:rgba(225,112,85,.12);color:#e17055}.badge-hotfix{background:rgba(225,112,85,.12);color:#e17055}
+.rel-body{padding:20px 24px}
+.cg{margin-bottom:16px}.cg:last-child{margin-bottom:0}
+.cg-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:600;font-size:14px}
+.ci{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px}
+.ci-a{background:rgba(0,184,148,.12);color:#00b894}.ci-c{background:rgba(9,132,227,.12);color:#0984e3}
+.ci-f{background:rgba(253,203,110,.12);color:#fdcb6e}.ci-r{background:rgba(225,112,85,.12);color:#e17055}
+.ci-s{background:rgba(253,121,168,.12);color:#fd79a8}.ci-p{background:rgba(0,206,201,.12);color:#00cec9}
+.ci-d{background:rgba(225,112,85,.12);color:#e17055}
+ul{list-style:none;padding-left:30px}li{position:relative;padding:4px 0;font-size:14px;color:#9ca3bf}
+li::before{content:'';position:absolute;left:-16px;top:12px;width:5px;height:5px;border-radius:50%;background:#6b7394}
+</style></head><body><div class="container">
+<div class="header"><div class="product">${escHtml(proj.name)}</div><h1>${escHtml(state.settings.title)}</h1><p>${escHtml(state.settings.subtitle)}</p></div>`;
+
+  const iconMap = {added:['✨','ci-a'],changed:['🔄','ci-c'],fixed:['🐛','ci-f'],removed:['🗑️','ci-r'],security:['🔒','ci-s'],performance:['⚡','ci-p'],deprecated:['⚠️','ci-d']};
+  const labelMap = {added:'Added',changed:'Changed',fixed:'Fixed',removed:'Removed',security:'Security',performance:'Performance',deprecated:'Deprecated'};
+
+  releases.forEach(r => {
+    html += `<div class="release"><div class="rel-head"><div><span class="ver">${escHtml(r.version)}</span><div class="rel-title">${escHtml(r.title)}</div><div class="rel-date">${formatDate(r.date)}</div></div>`;
+    if (r.badge) html += `<span class="badge badge-${r.badge}">${r.badge}</span>`;
+    html += `</div><div class="rel-body">`;
+    CHANGE_TYPES.forEach(t => {
+      if (r.changes[t.key]?.length) {
+        const [icon, cls] = iconMap[t.key];
+        html += `<div class="cg"><div class="cg-head"><div class="ci ${cls}">${icon}</div>${labelMap[t.key]}</div><ul>${r.changes[t.key].map(c=>`<li>${escHtml(c)}</li>`).join('')}</ul></div>`;
+      }
+    });
+    html += `</div></div>`;
+  });
+  html += `</div></body></html>`;
+
+  const blob = new Blob([html], {type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${proj.name.toLowerCase().replace(/\s+/g,'-')}-changelog.html`;
+  a.click();
+  showToast('HTML exported!');
+}
+
+// Settings
+function showSettings() { 
+  document.getElementById('setTitle').value = state.settings.title;
+  document.getElementById('setSubtitle').value = state.settings.subtitle;
+  document.getElementById('setSubscribeCta').value = state.settings.subscribeCta || '';
+  openModal('settingsModal');
+}
+function showProjects() {}
+function saveSettings() {
+  state.settings.title = document.getElementById('setTitle').value.trim() || 'Changelog';
+  state.settings.subtitle = document.getElementById('setSubtitle').value.trim();
+  state.settings.subscribeCta = document.getElementById('setSubscribeCta').value.trim();
+  save(); render(); closeModal('settingsModal');
+}
+
+// Import/Export
+function exportAll() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'changelog-studio-backup.json';
+  a.click();
+  showToast('Backup exported!');
+}
+function importAll() { document.getElementById('importFile').click(); }
+function handleImport(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (d.projects) { state = { ...state, ...d }; save(); render(); showToast('Imported!'); }
+    } catch(err) { alert('Invalid file'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// Toast
+let toastTimer;
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) { t = document.createElement('div'); t.id = 'toast'; t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 20px;background:var(--accent);color:white;border-radius:8px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.opacity = 1;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.opacity = 0, 2000);
+}
+
+// Utils
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return String(s||'').replace(/"/g,'&quot;').replace(/&/g,'&amp;'); }
+function formatDate(d) { try { return new Date(d+'T00:00').toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}); } catch(e) { return d; } }
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') { e.target.blur(); document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show')); }
+    return;
+  }
+  if (e.key === 'Escape') { document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show')); }
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); newRelease(); }
+  if (e.key === '/') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+  if (e.key === '1') setView('releases');
+  if (e.key === '2') setView('timeline');
+  if (e.key === '3') setView('preview');
+  if (e.key === '4') setView('stats');
+  if (e.key === 'e' || e.key === 'E') { e.preventDefault(); exportAll(); }
+});
+
+// Init
+load();
+render();
+</script>
+</body>
+</html>

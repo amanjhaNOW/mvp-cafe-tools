@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Launch Pad — Product Launch Planner</title>
+<style>
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#242837;--surface3:#2e3346;--border:#363b50;--text:#e4e7f1;--text2:#9ca3be;--text3:#6b7394;--accent:#6366f1;--accent2:#818cf8;--accentBg:rgba(99,102,241,.12);--green:#22c55e;--greenBg:rgba(34,197,94,.12);--amber:#f59e0b;--amberBg:rgba(245,158,11,.12);--red:#ef4444;--redBg:rgba(239,68,68,.12);--blue:#3b82f6;--blueBg:rgba(59,130,246,.12);--purple:#a855f7;--purpleBg:rgba(168,85,247,.12);--pink:#ec4899;--pinkBg:rgba(236,72,153,.12);--radius:10px;--shadow:0 4px 24px rgba(0,0,0,.3)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:var(--text)}
+input,textarea,select{font-family:inherit;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:14px;outline:none;width:100%}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;flex-shrink:0}
+.sidebar-header{padding:20px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:18px;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:22px}
+.sidebar-header p{font-size:12px;color:var(--text3);margin-top:4px}
+.sidebar-search{padding:12px 16px}
+.sidebar-search input{background:var(--surface2);font-size:13px;padding:8px 12px 8px 32px}
+.search-wrap{position:relative}.search-wrap::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px}
+.launch-list{flex:1;overflow-y:auto;padding:8px}
+.launch-item{padding:10px 14px;border-radius:8px;cursor:pointer;margin-bottom:2px;display:flex;align-items:center;gap:10px;transition:.15s}
+.launch-item:hover{background:var(--surface2)}
+.launch-item.active{background:var(--accentBg);color:var(--accent2)}
+.launch-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.launch-item .info{flex:1;min-width:0}
+.launch-item .name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.launch-item .meta{font-size:11px;color:var(--text3);margin-top:2px}
+.launch-item .pct{font-size:11px;font-weight:600;flex-shrink:0}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px}
+.sidebar-footer button{flex:1;padding:8px;border-radius:6px;font-size:12px;font-weight:600;background:var(--accent);color:#fff;transition:.15s}
+.sidebar-footer button:hover{opacity:.85}
+.sidebar-footer .sec{background:var(--surface2);color:var(--text2)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.tabs{display:flex;gap:4px}
+.tab{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text2);transition:.15s}
+.tab:hover{background:var(--surface2)}
+.tab.active{background:var(--accentBg);color:var(--accent2)}
+.topbar-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.topbar-right button{padding:6px 12px;border-radius:6px;font-size:12px;background:var(--surface2);color:var(--text2);transition:.15s}
+.topbar-right button:hover{background:var(--surface3)}
+
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* Empty state */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3);gap:12px}
+.empty span{font-size:48px}
+.empty p{font-size:14px}
+
+/* Phase sections */
+.phase{margin-bottom:32px}
+.phase-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;cursor:pointer;user-select:none}
+.phase-header h2{font-size:16px;font-weight:700}
+.phase-header .badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px}
+.phase-header .progress-mini{flex:1;max-width:200px;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.phase-header .progress-mini .bar{height:100%;border-radius:2px;transition:.3s}
+.phase-header .chevron{color:var(--text3);transition:.2s;font-size:12px}
+.phase.collapsed .phase-body{display:none}
+.phase.collapsed .chevron{transform:rotate(-90deg)}
+
+.checklist{list-style:none}
+.checklist li{display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-radius:8px;transition:.1s;cursor:pointer;margin-bottom:2px}
+.checklist li:hover{background:var(--surface2)}
+.checklist li.done{opacity:.6}
+.checklist li.done .ck-title{text-decoration:line-through}
+.ck-box{width:20px;height:20px;border-radius:5px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:.15s;font-size:12px}
+.ck-box.checked{background:var(--green);border-color:var(--green);color:#fff}
+.ck-content{flex:1;min-width:0}
+.ck-title{font-size:14px;font-weight:500}
+.ck-desc{font-size:12px;color:var(--text3);margin-top:2px}
+.ck-tags{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.ck-tag{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600}
+.ck-actions{display:flex;gap:4px;flex-shrink:0;opacity:0;transition:.15s}
+.checklist li:hover .ck-actions{opacity:1}
+.ck-actions button{padding:4px 8px;border-radius:4px;font-size:11px;background:var(--surface3)}
+.ck-actions button:hover{background:var(--border)}
+.ck-actions .del:hover{color:var(--red)}
+.add-item-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;color:var(--text3);font-size:13px;border-radius:8px;margin-top:4px;cursor:pointer;transition:.15s}
+.add-item-btn:hover{background:var(--surface2);color:var(--text)}
+
+/* Timeline view */
+.timeline{position:relative;padding-left:28px}
+.timeline::before{content:'';position:absolute;left:12px;top:0;bottom:0;width:2px;background:var(--border)}
+.tl-event{position:relative;margin-bottom:24px;padding-left:20px}
+.tl-event::before{content:'';position:absolute;left:-20px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--surface3);border:2px solid var(--border);z-index:1}
+.tl-event.active::before{background:var(--accent);border-color:var(--accent)}
+.tl-event.done::before{background:var(--green);border-color:var(--green)}
+.tl-time{font-size:12px;color:var(--text3);font-weight:600;margin-bottom:4px}
+.tl-title{font-size:14px;font-weight:600}
+.tl-desc{font-size:13px;color:var(--text2);margin-top:2px}
+.tl-owner{font-size:11px;color:var(--text3);margin-top:4px}
+
+/* Dashboard */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:32px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center}
+.stat-card .val{font-size:28px;font-weight:800}
+.stat-card .label{font-size:12px;color:var(--text3);margin-top:4px}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.chart-card h3{font-size:14px;font-weight:600;margin-bottom:16px}
+.bar-chart{display:flex;flex-direction:column;gap:8px}
+.bar-row{display:flex;align-items:center;gap:10px}
+.bar-label{font-size:12px;color:var(--text2);width:80px;flex-shrink:0;text-align:right}
+.bar-track{flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;transition:.5s;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:10px;font-weight:700;color:#fff;min-width:30px}
+
+/* Post-launch review */
+.review-section{margin-bottom:24px}
+.review-section h3{font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.review-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.review-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.review-card h4{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text2)}
+.review-card textarea{min-height:80px;font-size:13px}
+.metric-inputs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.metric-input label{font-size:11px;color:var(--text3);display:block;margin-bottom:4px}
+.metric-input input{font-size:13px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:.2s}
+.modal-overlay.show{opacity:1;pointer-events:auto}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:560px;max-height:85vh;overflow-y:auto;padding:24px;box-shadow:var(--shadow)}
+.modal h2{font-size:18px;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.modal .field{margin-bottom:14px}
+.modal .field label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px}
+.modal .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.modal .actions button{padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600}
+.btn-primary{background:var(--accent)!important;color:#fff!important}
+.btn-primary:hover{opacity:.85}
+.btn-danger{color:var(--red)!important}
+.btn-cancel{background:var(--surface2)!important;color:var(--text2)!important}
+
+/* Progress ring */
+.progress-ring{position:relative;width:120px;height:120px;margin:0 auto 16px}
+.progress-ring svg{transform:rotate(-90deg)}
+.progress-ring .pct-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800}
+
+/* Announcements */
+.announce-section{margin-bottom:24px}
+.announce-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:8px}
+.announce-card .ch{font-size:12px;font-weight:600;color:var(--accent2);margin-bottom:4px}
+.announce-card .msg{font-size:13px;color:var(--text2);white-space:pre-wrap}
+.announce-card .actions-row{display:flex;gap:8px;margin-top:8px}
+.announce-card .actions-row button{font-size:11px;padding:4px 10px;border-radius:4px;background:var(--surface2)}
+.copy-btn.copied{color:var(--green)}
+
+/* Responsive */
+@media(max-width:900px){.chart-row,.review-grid{grid-template-columns:1fr}.sidebar{width:220px}}
+@media(max-width:700px){body{flex-direction:column}.sidebar{width:100%;height:auto;max-height:40vh}}
+
+/* Priority tags */
+.p-critical{background:var(--redBg);color:var(--red)}.p-high{background:var(--amberBg);color:var(--amber)}.p-medium{background:var(--blueBg);color:var(--blue)}.p-low{background:var(--surface3);color:var(--text3)}
+.owner-tag{background:var(--purpleBg);color:var(--purple)}
+/* Status colors */
+.s-planning .dot{background:var(--text3)}.s-pre-launch .dot{background:var(--amber)}.s-launch-day .dot{background:var(--red)}.s-post-launch .dot{background:var(--green)}.s-completed .dot{background:var(--accent)}
+.s-planning .pct{color:var(--text3)}.s-pre-launch .pct{color:var(--amber)}.s-launch-day .pct{color:var(--red)}.s-post-launch .pct{color:var(--green)}.s-completed .pct{color:var(--accent)}
+
+/* Help */
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:.2s}
+.help-overlay.show{opacity:1;pointer-events:auto}
+.help-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:420px;max-height:80vh;overflow-y:auto}
+.help-box h2{font-size:16px;margin-bottom:16px}
+.help-box table{width:100%;border-collapse:collapse}
+.help-box td{padding:6px 8px;font-size:13px;border-bottom:1px solid var(--border)}
+.help-box td:first-child{font-weight:600;color:var(--accent2);width:80px}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span>🚀</span> Launch Pad</h1>
+    <p>Product Launch Planner</p>
+  </div>
+  <div class="sidebar-search">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="Search launches..." oninput="filterLaunches()">
+    </div>
+  </div>
+  <div class="launch-list" id="launchList"></div>
+  <div class="sidebar-footer">
+    <button onclick="newLaunch()">+ New Launch</button>
+    <button class="sec" onclick="showHelp()">?</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="tabs" id="tabsBar"></div>
+    <div class="topbar-right">
+      <button onclick="exportJSON()">📦 Export</button>
+      <button onclick="importJSON()">📥 Import</button>
+    </div>
+  </div>
+  <div class="content" id="content">
+    <div class="empty"><span>🚀</span><p>Create a launch to get started</p></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="event.target===this&&closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<div class="help-overlay" id="helpOverlay" onclick="event.target===this&&closeHelp()">
+  <div class="help-box">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <table>
+      <tr><td>N</td><td>New launch</td></tr>
+      <tr><td>/</td><td>Search</td></tr>
+      <tr><td>1-5</td><td>Switch tabs</td></tr>
+      <tr><td>D</td><td>Toggle dark mode</td></tr>
+      <tr><td>E</td><td>Export JSON</td></tr>
+      <tr><td>I</td><td>Import JSON</td></tr>
+      <tr><td>?</td><td>This help</td></tr>
+      <tr><td>Esc</td><td>Close modal/help</td></tr>
+    </table>
+    <br>
+    <p style="font-size:12px;color:var(--text3)">Launch Pad v1.0 — Built overnight by Chatur 😏</p>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleImport(event)">
+
+<script>
+// ─── Data ───
+const PHASES = [
+  {id:'planning',name:'🎯 Planning',color:'var(--text3)',bg:'var(--surface3)'},
+  {id:'pre-launch',name:'🔧 Pre-Launch',color:'var(--amber)',bg:'var(--amberBg)'},
+  {id:'launch-day',name:'🚀 Launch Day',color:'var(--red)',bg:'var(--redBg)'},
+  {id:'post-launch',name:'📊 Post-Launch',color:'var(--green)',bg:'var(--greenBg)'},
+];
+const PRIORITIES = ['Critical','High','Medium','Low'];
+const CHANNELS = ['Product Hunt','Twitter/X','LinkedIn','Hacker News','Email List','Blog','Discord','Slack','Reddit','Press','Internal','Other'];
+const VIEWS = [
+  {id:'checklist',name:'✅ Checklist'},
+  {id:'timeline',name:'📅 Timeline'},
+  {id:'announcements',name:'📣 Announcements'},
+  {id:'review',name:'📝 Review'},
+  {id:'dashboard',name:'📊 Dashboard'},
+];
+
+let launches = [];
+let activeLaunchId = null;
+let activeView = 'checklist';
+
+function save(){localStorage.setItem('launchpad_data',JSON.stringify(launches))}
+function load(){try{launches=JSON.parse(localStorage.getItem('launchpad_data'))||[]}catch(e){launches=[]}if(!launches.length)seedData();if(launches.length&&!activeLaunchId)activeLaunchId=launches[0].id}
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+
+function getActiveLaunch(){return launches.find(l=>l.id===activeLaunchId)}
+
+function seedData(){
+  const l = {
+    id:uid(),name:'UTMStamp v2.0 Launch',product:'UTMStamp',status:'pre-launch',
+    launchDate:'2026-05-01',created:'2026-04-21',
+    description:'Major feature launch: Video Signatures, Google Workspace Auto-Push, Advanced Analytics Dashboard',
+    items:[
+      // Planning
+      {id:uid(),phase:'planning',title:'Define launch goals & success metrics',desc:'Target: 500 signups first week, 50 paid conversions, 2K PH upvotes',done:true,priority:'Critical',owner:'AJ'},
+      {id:uid(),phase:'planning',title:'Identify target audience segments',desc:'Marketing teams (50+), Solo founders, Sales teams with email outreach',done:true,priority:'High',owner:'AJ'},
+      {id:uid(),phase:'planning',title:'Competitive positioning review',desc:'Update battle cards vs Exclaimer, WiseStamp, Opensense',done:true,priority:'Medium',owner:'AJ'},
+      {id:uid(),phase:'planning',title:'Create launch messaging & positioning doc',desc:'Key messages, taglines, elevator pitch, feature benefit mapping',done:false,priority:'Critical',owner:'AJ'},
+      {id:uid(),phase:'planning',title:'Plan pricing changes for v2.0',desc:'Review free tier limits, Pro pricing, Team pricing for new features',done:false,priority:'High',owner:'AJ'},
+      // Pre-launch
+      {id:uid(),phase:'pre-launch',title:'Build landing page for v2.0',desc:'Hero section, feature showcase, social proof, pricing table, CTA',done:false,priority:'Critical',owner:'AJ'},
+      {id:uid(),phase:'pre-launch',title:'Record product demo video',desc:'2-3 min walkthrough of video signatures + analytics',done:false,priority:'High',owner:'AJ'},
+      {id:uid(),phase:'pre-launch',title:'Prepare Product Hunt assets',desc:'Thumbnail, gallery images, maker comment, tagline, description',done:false,priority:'Critical',owner:'AJ'},
+      {id:uid(),phase:'pre-launch',title:'Write launch blog post',desc:'The story behind v2.0 — build in public narrative',done:false,priority:'Medium',owner:'AJ'},
+      {id:uid(),phase:'pre-launch',title:'Set up email drip for waitlist',desc:'3-email sequence: teaser, feature reveal, launch day',done:false,priority:'High',owner:'AJ'},
+      {id:uid(),phase:'pre-launch',title:'Seed beta testers for feedback',desc:'Get 10-15 power users on early access, collect testimonials',done:false,priority:'High',owner:'AJ'},
+      {id:uid(),phase:'pre-launch',title:'QA all new features end-to-end',desc:'Video signatures, auto-push, analytics — test on 3 browsers',done:false,priority:'Critical',owner:'AJ'},
+      {id:uid(),phase:'pre-launch',title:'Prepare social media content batch',desc:'10 tweets, 3 LinkedIn posts, 2 threads — scheduled for launch week',done:false,priority:'Medium',owner:'AJ'},
+      // Launch day
+      {id:uid(),phase:'launch-day',title:'Submit to Product Hunt at 12:01 AM PST',desc:'Optimal timing for US audience visibility',done:false,priority:'Critical',owner:'AJ',time:'00:01'},
+      {id:uid(),phase:'launch-day',title:'Post launch tweet thread',desc:'5-tweet thread: problem → solution → features → metrics → CTA',done:false,priority:'Critical',owner:'AJ',time:'06:00'},
+      {id:uid(),phase:'launch-day',title:'LinkedIn launch post',desc:'Build-in-public story angle, tag relevant people',done:false,priority:'High',owner:'AJ',time:'09:00'},
+      {id:uid(),phase:'launch-day',title:'Send launch email to subscribers',desc:'Personalized email with exclusive launch offer',done:false,priority:'Critical',owner:'AJ',time:'10:00'},
+      {id:uid(),phase:'launch-day',title:'Post on Hacker News',desc:'Show HN post — focus on technical angle and build story',done:false,priority:'Medium',owner:'AJ',time:'10:30'},
+      {id:uid(),phase:'launch-day',title:'Engage with PH comments all day',desc:'Reply to every comment within 30 min, thank voters',done:false,priority:'High',owner:'AJ',time:'All Day'},
+      {id:uid(),phase:'launch-day',title:'Monitor for bugs and hotfix',desc:'Keep deploy pipeline ready, watch error tracking',done:false,priority:'Critical',owner:'AJ',time:'All Day'},
+      {id:uid(),phase:'launch-day',title:'Share real-time metrics updates',desc:'Tweet milestones: 100 signups, 500, 1K — build in public',done:false,priority:'Medium',owner:'AJ',time:'Ongoing'},
+      // Post-launch
+      {id:uid(),phase:'post-launch',title:'Collect and analyze Day 1 metrics',desc:'Signups, activations, PH rank, social engagement, revenue',done:false,priority:'Critical',owner:'AJ'},
+      {id:uid(),phase:'post-launch',title:'Send thank-you email to early adopters',desc:'Personal note + ask for feedback + referral nudge',done:false,priority:'High',owner:'AJ'},
+      {id:uid(),phase:'post-launch',title:'Write launch retrospective',desc:'What worked, what didn\'t, key learnings for next launch',done:false,priority:'Medium',owner:'AJ'},
+      {id:uid(),phase:'post-launch',title:'Follow up with press/bloggers',desc:'Share launch results, offer exclusive interviews',done:false,priority:'Low',owner:'AJ'},
+      {id:uid(),phase:'post-launch',title:'Plan Week 2 content cadence',desc:'Keep momentum: user stories, feature deep-dives, tips',done:false,priority:'High',owner:'AJ'},
+      {id:uid(),phase:'post-launch',title:'Analyze funnel drop-offs',desc:'Where are people dropping? Signup→Activation→Paid',done:false,priority:'Critical',owner:'AJ'},
+    ],
+    announcements:[
+      {id:uid(),channel:'Product Hunt',message:'🚀 UTMStamp v2.0 — Every Signature. Every Click. Tracked.\n\nWe just shipped video signatures, Google Workspace auto-push, and an analytics dashboard that actually tells you which signatures drive clicks.\n\nBuilt in 13 days. Now in its biggest update yet.\n\n→ Free forever plan\n→ Track every click from email signatures\n→ Deploy to your whole team in 2 clicks',draft:false},
+      {id:uid(),channel:'Twitter/X',message:'🧵 I built UTMStamp in 13 days.\n\nToday we\'re launching v2.0 with features that took 3 months.\n\nHere\'s what\'s new (and what I learned shipping it):\n\n1/ Video Signatures — your email signature now plays a 15-sec video preview. Click rates up 3x in beta.\n\n2/ Google Workspace Auto-Push — deploy signatures to your entire team. No more "please update your signature" Slack messages.\n\n3/ Analytics Dashboard — see which signatures drive clicks, which campaigns convert, which team members actually use theirs.',draft:false},
+      {id:uid(),channel:'LinkedIn',message:'After shipping UTMStamp in 13 days, I spent 3 months on v2.0.\n\nToday it\'s live.\n\nNew features:\n→ Video signatures (3x click rate in beta)\n→ Google Workspace auto-push\n→ Real analytics dashboard\n\nThe insight that changed everything: email signatures are the most undervalued marketing channel. Every employee sends 40+ emails/day. That\'s thousands of brand impressions going to waste.\n\nUTMStamp turns every signature into a trackable marketing touchpoint.\n\nFree forever plan. Link in comments 👇',draft:false},
+    ],
+    review:{
+      whatWorked:'',whatDidnt:'',keyLearnings:'',nextSteps:'',
+      metrics:{signups:'',activations:'',revenue:'',phRank:'',socialReach:'',emailOpens:''}
+    }
+  };
+  launches.push(l);
+  activeLaunchId=l.id;
+  save();
+}
+
+// ─── Render ───
+function render(){
+  renderSidebar();
+  renderTabs();
+  renderContent();
+}
+
+function renderSidebar(){
+  const list=document.getElementById('launchList');
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const filtered=launches.filter(l=>l.name.toLowerCase().includes(q)||l.product?.toLowerCase().includes(q));
+  list.innerHTML=filtered.map(l=>{
+    const pct=calcProgress(l);
+    const status=getStatus(l);
+    return `<div class="launch-item s-${status} ${l.id===activeLaunchId?'active':''}" onclick="selectLaunch('${l.id}')">
+      <div class="dot"></div>
+      <div class="info"><div class="name">${esc(l.name)}</div><div class="meta">${l.launchDate||'No date'}</div></div>
+      <div class="pct">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTabs(){
+  document.getElementById('tabsBar').innerHTML=VIEWS.map(v=>
+    `<button class="tab ${v.id===activeView?'active':''}" onclick="switchView('${v.id}')">${v.name}</button>`
+  ).join('');
+}
+
+function renderContent(){
+  const el=document.getElementById('content');
+  const l=getActiveLaunch();
+  if(!l){el.innerHTML='<div class="empty"><span>🚀</span><p>Create a launch to get started</p></div>';return}
+  switch(activeView){
+    case 'checklist':renderChecklist(el,l);break;
+    case 'timeline':renderTimeline(el,l);break;
+    case 'announcements':renderAnnouncements(el,l);break;
+    case 'review':renderReview(el,l);break;
+    case 'dashboard':renderDashboard(el,l);break;
+  }
+}
+
+function renderChecklist(el,l){
+  el.innerHTML=`<div style="margin-bottom:20px"><h2 style="font-size:20px;font-weight:800">${esc(l.name)}</h2>
+    <p style="font-size:13px;color:var(--text3);margin-top:4px">${esc(l.description||'')}</p>
+    <div style="display:flex;gap:12px;margin-top:8px">
+      <span style="font-size:12px;color:var(--text3)">📅 ${l.launchDate||'TBD'}</span>
+      <span style="font-size:12px;color:var(--text3)">📦 ${l.product||'—'}</span>
+      <span style="font-size:12px;color:var(--accent2);cursor:pointer" onclick="editLaunch()">✏️ Edit</span>
+      <span style="font-size:12px;color:var(--red);cursor:pointer" onclick="deleteLaunch()">🗑️ Delete</span>
+    </div></div>`+
+  PHASES.map(ph=>{
+    const items=l.items.filter(i=>i.phase===ph.id);
+    const done=items.filter(i=>i.done).length;
+    const pct=items.length?Math.round(done/items.length*100):0;
+    return `<div class="phase" id="phase-${ph.id}">
+      <div class="phase-header" onclick="togglePhase('${ph.id}')">
+        <span class="chevron">▼</span>
+        <h2>${ph.name}</h2>
+        <span class="badge" style="background:${ph.bg};color:${ph.color}">${done}/${items.length}</span>
+        <div class="progress-mini"><div class="bar" style="width:${pct}%;background:${ph.color}"></div></div>
+      </div>
+      <div class="phase-body">
+        <ul class="checklist">${items.map(i=>`<li class="${i.done?'done':''}" onclick="toggleItem('${i.id}')">
+          <div class="ck-box ${i.done?'checked':''}">${i.done?'✓':''}</div>
+          <div class="ck-content">
+            <div class="ck-title">${esc(i.title)}</div>
+            ${i.desc?`<div class="ck-desc">${esc(i.desc)}</div>`:''}
+            <div class="ck-tags">
+              ${i.priority?`<span class="ck-tag p-${i.priority.toLowerCase()}">${i.priority}</span>`:''}
+              ${i.owner?`<span class="ck-tag owner-tag">@${esc(i.owner)}</span>`:''}
+              ${i.time?`<span class="ck-tag" style="background:var(--blueBg);color:var(--blue)">⏰ ${esc(i.time)}</span>`:''}
+            </div>
+          </div>
+          <div class="ck-actions">
+            <button onclick="event.stopPropagation();editItem('${i.id}')">✏️</button>
+            <button class="del" onclick="event.stopPropagation();deleteItem('${i.id}')">×</button>
+          </div>
+        </li>`).join('')}</ul>
+        <div class="add-item-btn" onclick="addItem('${ph.id}')">+ Add item</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTimeline(el,l){
+  const dayItems=l.items.filter(i=>i.phase==='launch-day').sort((a,b)=>(a.time||'zz').localeCompare(b.time||'zz'));
+  const preItems=l.items.filter(i=>i.phase==='pre-launch');
+  const postItems=l.items.filter(i=>i.phase==='post-launch');
+  
+  let html=`<h2 style="font-size:20px;font-weight:800;margin-bottom:8px">📅 Launch Timeline</h2>
+    <p style="font-size:13px;color:var(--text3);margin-bottom:24px">Launch date: ${l.launchDate||'TBD'}</p>`;
+  
+  // Days until launch
+  if(l.launchDate){
+    const diff=Math.ceil((new Date(l.launchDate)-new Date())/(1000*60*60*24));
+    const label=diff>0?`${diff} days until launch`:diff===0?'🚀 LAUNCH DAY!':`${Math.abs(diff)} days since launch`;
+    const color=diff>7?'var(--green)':diff>0?'var(--amber)':diff===0?'var(--red)':'var(--accent)';
+    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;margin-bottom:32px">
+      <div style="font-size:36px;font-weight:800;color:${color}">${label}</div>
+    </div>`;
+  }
+  
+  html+=`<h3 style="font-size:15px;margin-bottom:16px;color:var(--amber)">🔧 Pre-Launch Tasks</h3>
+    <div class="timeline">${preItems.map(i=>`<div class="tl-event ${i.done?'done':''}">
+      <div class="tl-title">${i.done?'✅':'⬜'} ${esc(i.title)}</div>
+      ${i.desc?`<div class="tl-desc">${esc(i.desc)}</div>`:''}
+      ${i.owner?`<div class="tl-owner">@${esc(i.owner)}</div>`:''}
+    </div>`).join('')}</div>`;
+  
+  html+=`<h3 style="font-size:15px;margin:24px 0 16px;color:var(--red)">🚀 Launch Day Schedule</h3>
+    <div class="timeline">${dayItems.map(i=>`<div class="tl-event ${i.done?'done':'active'}">
+      <div class="tl-time">${i.time||'—'}</div>
+      <div class="tl-title">${i.done?'✅':'⬜'} ${esc(i.title)}</div>
+      ${i.desc?`<div class="tl-desc">${esc(i.desc)}</div>`:''}
+      ${i.owner?`<div class="tl-owner">@${esc(i.owner)}</div>`:''}
+    </div>`).join('')}</div>`;
+  
+  html+=`<h3 style="font-size:15px;margin:24px 0 16px;color:var(--green)">📊 Post-Launch</h3>
+    <div class="timeline">${postItems.map(i=>`<div class="tl-event ${i.done?'done':''}">
+      <div class="tl-title">${i.done?'✅':'⬜'} ${esc(i.title)}</div>
+      ${i.desc?`<div class="tl-desc">${esc(i.desc)}</div>`:''}
+      ${i.owner?`<div class="tl-owner">@${esc(i.owner)}</div>`:''}
+    </div>`).join('')}</div>`;
+  
+  el.innerHTML=html;
+}
+
+function renderAnnouncements(el,l){
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+    <div><h2 style="font-size:20px;font-weight:800">📣 Launch Announcements</h2>
+    <p style="font-size:13px;color:var(--text3);margin-top:4px">Pre-written copy for each channel</p></div>
+    <button style="padding:8px 16px;border-radius:6px;background:var(--accent);color:#fff;font-size:13px;font-weight:600" onclick="addAnnouncement()">+ Add</button>
+  </div>`;
+  
+  html+=(l.announcements||[]).map(a=>`<div class="announce-card">
+    <div class="ch">${esc(a.channel)}</div>
+    <div class="msg">${esc(a.message)}</div>
+    <div class="actions-row">
+      <button class="copy-btn" onclick="copyText(this,'${a.id}')">📋 Copy</button>
+      <button onclick="editAnnouncement('${a.id}')">✏️ Edit</button>
+      <button onclick="deleteAnnouncement('${a.id}')" style="color:var(--red)">🗑️</button>
+    </div>
+  </div>`).join('');
+  
+  if(!(l.announcements||[]).length) html+='<div class="empty" style="height:200px"><span>📣</span><p>No announcements yet</p></div>';
+  el.innerHTML=html;
+}
+
+function renderReview(el,l){
+  const r=l.review||{whatWorked:'',whatDidnt:'',keyLearnings:'',nextSteps:'',metrics:{}};
+  el.innerHTML=`<h2 style="font-size:20px;font-weight:800;margin-bottom:8px">📝 Post-Launch Review</h2>
+    <p style="font-size:13px;color:var(--text3);margin-bottom:24px">Capture results and learnings after launch</p>
+    <div class="review-section">
+      <h3>📊 Launch Metrics</h3>
+      <div class="metric-inputs">
+        <div class="metric-input"><label>Signups</label><input value="${esc(r.metrics?.signups||'')}" onchange="updateReview('metrics.signups',this.value)" placeholder="e.g. 500"></div>
+        <div class="metric-input"><label>Activations</label><input value="${esc(r.metrics?.activations||'')}" onchange="updateReview('metrics.activations',this.value)" placeholder="e.g. 200"></div>
+        <div class="metric-input"><label>Revenue</label><input value="${esc(r.metrics?.revenue||'')}" onchange="updateReview('metrics.revenue',this.value)" placeholder="e.g. $2,400"></div>
+        <div class="metric-input"><label>PH Rank</label><input value="${esc(r.metrics?.phRank||'')}" onchange="updateReview('metrics.phRank',this.value)" placeholder="e.g. #3"></div>
+        <div class="metric-input"><label>Social Reach</label><input value="${esc(r.metrics?.socialReach||'')}" onchange="updateReview('metrics.socialReach',this.value)" placeholder="e.g. 50K"></div>
+        <div class="metric-input"><label>Email Opens</label><input value="${esc(r.metrics?.emailOpens||'')}" onchange="updateReview('metrics.emailOpens',this.value)" placeholder="e.g. 45%"></div>
+      </div>
+    </div>
+    <div class="review-grid">
+      <div class="review-card"><h4>✅ What Worked</h4><textarea onchange="updateReview('whatWorked',this.value)" placeholder="What went well during the launch?">${esc(r.whatWorked||'')}</textarea></div>
+      <div class="review-card"><h4>❌ What Didn't Work</h4><textarea onchange="updateReview('whatDidnt',this.value)" placeholder="What could have been better?">${esc(r.whatDidnt||'')}</textarea></div>
+      <div class="review-card"><h4>💡 Key Learnings</h4><textarea onchange="updateReview('keyLearnings',this.value)" placeholder="What did you learn?">${esc(r.keyLearnings||'')}</textarea></div>
+      <div class="review-card"><h4>🎯 Next Steps</h4><textarea onchange="updateReview('nextSteps',this.value)" placeholder="What's the plan going forward?">${esc(r.nextSteps||'')}</textarea></div>
+    </div>`;
+}
+
+function renderDashboard(el,l){
+  const total=l.items.length;
+  const done=l.items.filter(i=>i.done).length;
+  const pct=total?Math.round(done/total*100):0;
+  const critical=l.items.filter(i=>i.priority==='Critical'&&!i.done).length;
+  const announcements=(l.announcements||[]).length;
+  
+  // Progress ring SVG
+  const r=50,c=2*Math.PI*r,offset=c-(pct/100)*c;
+  const ringColor=pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--accent)';
+  
+  let html=`<h2 style="font-size:20px;font-weight:800;margin-bottom:24px">📊 Launch Dashboard — ${esc(l.name)}</h2>`;
+  
+  html+=`<div style="text-align:center;margin-bottom:32px">
+    <div class="progress-ring">
+      <svg width="120" height="120"><circle cx="60" cy="60" r="${r}" fill="none" stroke="var(--surface3)" stroke-width="8"/>
+      <circle cx="60" cy="60" r="${r}" fill="none" stroke="${ringColor}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${offset}"/></svg>
+      <div class="pct-text" style="color:${ringColor}">${pct}%</div>
+    </div>
+    <div style="font-size:14px;font-weight:600">${done} of ${total} tasks complete</div>
+  </div>`;
+  
+  html+=`<div class="dash-grid">
+    <div class="stat-card"><div class="val" style="color:var(--accent)">${total}</div><div class="label">Total Tasks</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--green)">${done}</div><div class="label">Completed</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--red)">${critical}</div><div class="label">Critical Pending</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--purple)">${announcements}</div><div class="label">Announcements</div></div>
+  </div>`;
+  
+  // Phase breakdown chart
+  html+=`<div class="chart-row"><div class="chart-card"><h3>Phase Progress</h3><div class="bar-chart">`;
+  PHASES.forEach(ph=>{
+    const items=l.items.filter(i=>i.phase===ph.id);
+    const d=items.filter(i=>i.done).length;
+    const p=items.length?Math.round(d/items.length*100):0;
+    html+=`<div class="bar-row"><div class="bar-label">${ph.name.split(' ')[1]}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(p,8)}%;background:${ph.color}">${p}%</div></div></div>`;
+  });
+  html+=`</div></div>`;
+  
+  // Priority breakdown
+  html+=`<div class="chart-card"><h3>Priority Breakdown</h3><div class="bar-chart">`;
+  PRIORITIES.forEach(p=>{
+    const items=l.items.filter(i=>i.priority===p);
+    const d=items.filter(i=>i.done).length;
+    const pct2=items.length?Math.round(d/items.length*100):0;
+    const colors={Critical:'var(--red)',High:'var(--amber)',Medium:'var(--blue)',Low:'var(--text3)'};
+    html+=`<div class="bar-row"><div class="bar-label">${p} (${items.length})</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(pct2,8)}%;background:${colors[p]}">${d}/${items.length}</div></div></div>`;
+  });
+  html+=`</div></div></div>`;
+  
+  // Remaining critical items
+  const critItems=l.items.filter(i=>i.priority==='Critical'&&!i.done);
+  if(critItems.length){
+    html+=`<div class="chart-card" style="margin-bottom:24px"><h3>🔴 Critical Items Remaining</h3>
+      <ul style="list-style:none;margin-top:8px">${critItems.map(i=>
+        `<li style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+          <span style="color:var(--red);margin-right:8px">●</span>${esc(i.title)}
+          <span style="color:var(--text3);margin-left:8px;font-size:11px">${PHASES.find(p=>p.id===i.phase)?.name||''}</span>
+        </li>`
+      ).join('')}</ul></div>`;
+  }
+  
+  el.innerHTML=html;
+}
+
+// ─── Actions ───
+function selectLaunch(id){activeLaunchId=id;render()}
+function switchView(v){activeView=v;render()}
+function filterLaunches(){renderSidebar()}
+
+function calcProgress(l){const t=l.items.length;return t?Math.round(l.items.filter(i=>i.done).length/t*100):0}
+function getStatus(l){
+  const pct=calcProgress(l);
+  if(pct===100)return 'completed';
+  const phases=l.items.filter(i=>!i.done).map(i=>i.phase);
+  if(phases.includes('launch-day'))return 'launch-day';
+  if(phases.includes('post-launch')&&!phases.includes('pre-launch')&&!phases.includes('planning'))return 'post-launch';
+  if(phases.includes('pre-launch'))return 'pre-launch';
+  return 'planning';
+}
+
+function toggleItem(id){
+  const l=getActiveLaunch();if(!l)return;
+  const item=l.items.find(i=>i.id===id);if(item){item.done=!item.done;save();render()}
+}
+
+function togglePhase(phaseId){
+  document.getElementById('phase-'+phaseId)?.classList.toggle('collapsed');
+}
+
+function newLaunch(){
+  showModal(`<h2>🚀 New Launch</h2>
+    <div class="field"><label>Launch Name</label><input id="m-name" placeholder="e.g. UTMStamp v2.0 Launch"></div>
+    <div class="field"><label>Product</label><input id="m-product" placeholder="e.g. UTMStamp"></div>
+    <div class="field"><label>Launch Date</label><input id="m-date" type="date"></div>
+    <div class="field"><label>Description</label><textarea id="m-desc" placeholder="What are you launching?"></textarea></div>
+    <div class="field"><label>Template</label><select id="m-template">
+      <option value="blank">Blank</option>
+      <option value="product-hunt">Product Hunt Launch</option>
+      <option value="feature">Feature Release</option>
+      <option value="saas">SaaS Launch</option>
+    </select></div>
+    <div class="actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    <button class="btn-primary" onclick="saveLaunch()">Create</button></div>`);
+}
+
+function saveLaunch(){
+  const name=document.getElementById('m-name').value.trim();
+  if(!name){alert('Name is required');return}
+  const tmpl=document.getElementById('m-template').value;
+  const l={id:uid(),name,product:document.getElementById('m-product').value.trim(),
+    launchDate:document.getElementById('m-date').value,created:new Date().toISOString().slice(0,10),
+    description:document.getElementById('m-desc').value.trim(),
+    items:getTemplate(tmpl),announcements:[],review:{whatWorked:'',whatDidnt:'',keyLearnings:'',nextSteps:'',metrics:{}}};
+  launches.push(l);activeLaunchId=l.id;save();closeModal();render();
+}
+
+function getTemplate(t){
+  const templates={
+    'product-hunt':[
+      {phase:'planning',title:'Define launch goals & KPIs',priority:'Critical'},{phase:'planning',title:'Research best PH launch practices',priority:'High'},
+      {phase:'planning',title:'Identify hunter (if applicable)',priority:'Medium'},{phase:'planning',title:'Plan launch timing (day/time)',priority:'High'},
+      {phase:'pre-launch',title:'Create PH thumbnail (240x240)',priority:'Critical'},{phase:'pre-launch',title:'Write PH tagline (60 chars)',priority:'Critical'},
+      {phase:'pre-launch',title:'Prepare gallery images (5-8)',priority:'High'},{phase:'pre-launch',title:'Write maker comment',priority:'High'},
+      {phase:'pre-launch',title:'Record demo video/GIF',priority:'High'},{phase:'pre-launch',title:'Prepare social content for launch day',priority:'Medium'},
+      {phase:'pre-launch',title:'Alert supporters — ask for Day 1 upvotes',priority:'High'},{phase:'pre-launch',title:'Write launch blog post',priority:'Medium'},
+      {phase:'launch-day',title:'Submit to Product Hunt',priority:'Critical',time:'00:01'},{phase:'launch-day',title:'Post maker comment immediately',priority:'Critical',time:'00:05'},
+      {phase:'launch-day',title:'Tweet/post launch announcement',priority:'High',time:'06:00'},{phase:'launch-day',title:'DM supporters to upvote',priority:'High',time:'08:00'},
+      {phase:'launch-day',title:'Engage with every PH comment',priority:'Critical',time:'All Day'},{phase:'launch-day',title:'Share milestone updates',priority:'Medium',time:'Ongoing'},
+      {phase:'post-launch',title:'Analyze PH results',priority:'Critical'},{phase:'post-launch',title:'Thank supporters publicly',priority:'High'},
+      {phase:'post-launch',title:'Write retrospective',priority:'Medium'},{phase:'post-launch',title:'Capture new user feedback',priority:'High'},
+    ],
+    'feature':[
+      {phase:'planning',title:'Define feature scope & success criteria',priority:'Critical'},{phase:'planning',title:'Create user communication plan',priority:'High'},
+      {phase:'pre-launch',title:'QA feature end-to-end',priority:'Critical'},{phase:'pre-launch',title:'Update documentation',priority:'High'},
+      {phase:'pre-launch',title:'Prepare changelog entry',priority:'Medium'},{phase:'pre-launch',title:'Write in-app announcement',priority:'High'},
+      {phase:'pre-launch',title:'Prepare email to affected users',priority:'Medium'},{phase:'pre-launch',title:'Create feature walkthrough/guide',priority:'Medium'},
+      {phase:'launch-day',title:'Deploy to production',priority:'Critical',time:'09:00'},{phase:'launch-day',title:'Enable feature flag',priority:'Critical',time:'09:15'},
+      {phase:'launch-day',title:'Send changelog/email notification',priority:'High',time:'10:00'},{phase:'launch-day',title:'Monitor error rates',priority:'Critical',time:'All Day'},
+      {phase:'post-launch',title:'Collect user feedback',priority:'High'},{phase:'post-launch',title:'Track adoption metrics',priority:'Critical'},
+      {phase:'post-launch',title:'Fix any reported issues',priority:'High'},{phase:'post-launch',title:'Plan iteration based on feedback',priority:'Medium'},
+    ],
+    'saas':[
+      {phase:'planning',title:'Define ICP and positioning',priority:'Critical'},{phase:'planning',title:'Set pricing strategy',priority:'Critical'},
+      {phase:'planning',title:'Plan marketing channels',priority:'High'},{phase:'planning',title:'Set up analytics & tracking',priority:'High'},
+      {phase:'pre-launch',title:'Build landing page',priority:'Critical'},{phase:'pre-launch',title:'Set up payment flow',priority:'Critical'},
+      {phase:'pre-launch',title:'Create onboarding flow',priority:'High'},{phase:'pre-launch',title:'Prepare launch content',priority:'High'},
+      {phase:'pre-launch',title:'Beta test with 10+ users',priority:'High'},{phase:'pre-launch',title:'Set up support channel',priority:'Medium'},
+      {phase:'pre-launch',title:'Prepare email sequences',priority:'Medium'},{phase:'pre-launch',title:'SEO basics (meta, OG, sitemap)',priority:'Medium'},
+      {phase:'launch-day',title:'Go live — remove beta flag',priority:'Critical',time:'09:00'},{phase:'launch-day',title:'Announce on all channels',priority:'High',time:'10:00'},
+      {phase:'launch-day',title:'Monitor signups & conversions',priority:'Critical',time:'All Day'},{phase:'launch-day',title:'Respond to all inquiries',priority:'High',time:'All Day'},
+      {phase:'post-launch',title:'Analyze Day 1-7 metrics',priority:'Critical'},{phase:'post-launch',title:'Send welcome email to new users',priority:'High'},
+      {phase:'post-launch',title:'Gather testimonials',priority:'Medium'},{phase:'post-launch',title:'Plan content marketing cadence',priority:'Medium'},
+      {phase:'post-launch',title:'Optimize conversion funnel',priority:'High'},
+    ],
+  };
+  return (templates[t]||[]).map(i=>({...i,id:uid(),done:false,desc:'',owner:''}));
+}
+
+function editLaunch(){
+  const l=getActiveLaunch();if(!l)return;
+  showModal(`<h2>✏️ Edit Launch</h2>
+    <div class="field"><label>Launch Name</label><input id="m-name" value="${esc(l.name)}"></div>
+    <div class="field"><label>Product</label><input id="m-product" value="${esc(l.product||'')}"></div>
+    <div class="field"><label>Launch Date</label><input id="m-date" type="date" value="${l.launchDate||''}"></div>
+    <div class="field"><label>Description</label><textarea id="m-desc">${esc(l.description||'')}</textarea></div>
+    <div class="actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    <button class="btn-primary" onclick="updateLaunch()">Save</button></div>`);
+}
+
+function updateLaunch(){
+  const l=getActiveLaunch();if(!l)return;
+  l.name=document.getElementById('m-name').value.trim()||l.name;
+  l.product=document.getElementById('m-product').value.trim();
+  l.launchDate=document.getElementById('m-date').value;
+  l.description=document.getElementById('m-desc').value.trim();
+  save();closeModal();render();
+}
+
+function deleteLaunch(){
+  if(!confirm('Delete this launch?'))return;
+  launches=launches.filter(l=>l.id!==activeLaunchId);
+  activeLaunchId=launches[0]?.id||null;
+  save();render();
+}
+
+function addItem(phase){
+  showModal(`<h2>+ Add Task</h2>
+    <div class="field"><label>Title</label><input id="m-title" placeholder="What needs to happen?"></div>
+    <div class="field"><label>Description</label><textarea id="m-itemdesc" placeholder="Details..."></textarea></div>
+    <div class="field-row">
+      <div class="field"><label>Priority</label><select id="m-priority">${PRIORITIES.map(p=>`<option>${p}</option>`).join('')}</select></div>
+      <div class="field"><label>Owner</label><input id="m-owner" placeholder="e.g. AJ"></div>
+    </div>
+    ${phase==='launch-day'?'<div class="field"><label>Time</label><input id="m-time" placeholder="e.g. 09:00 or All Day"></div>':'<input id="m-time" type="hidden">'}
+    <div class="actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    <button class="btn-primary" onclick="saveItem('${phase}')">Add</button></div>`);
+}
+
+function saveItem(phase){
+  const l=getActiveLaunch();if(!l)return;
+  const title=document.getElementById('m-title').value.trim();if(!title)return;
+  l.items.push({id:uid(),phase,title,desc:document.getElementById('m-itemdesc').value.trim(),
+    done:false,priority:document.getElementById('m-priority').value,
+    owner:document.getElementById('m-owner').value.trim(),
+    time:document.getElementById('m-time')?.value?.trim()||''});
+  save();closeModal();render();
+}
+
+function editItem(id){
+  const l=getActiveLaunch();if(!l)return;
+  const item=l.items.find(i=>i.id===id);if(!item)return;
+  showModal(`<h2>✏️ Edit Task</h2>
+    <div class="field"><label>Title</label><input id="m-title" value="${esc(item.title)}"></div>
+    <div class="field"><label>Description</label><textarea id="m-itemdesc">${esc(item.desc||'')}</textarea></div>
+    <div class="field-row">
+      <div class="field"><label>Priority</label><select id="m-priority">${PRIORITIES.map(p=>`<option ${p===item.priority?'selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="field"><label>Owner</label><input id="m-owner" value="${esc(item.owner||'')}"></div>
+    </div>
+    <div class="field"><label>Phase</label><select id="m-phase">${PHASES.map(p=>`<option value="${p.id}" ${p.id===item.phase?'selected':''}>${p.name}</option>`).join('')}</select></div>
+    <div class="field"><label>Time (launch day)</label><input id="m-time" value="${esc(item.time||'')}" placeholder="e.g. 09:00"></div>
+    <div class="actions"><button class="btn-danger" onclick="deleteItem('${id}');closeModal()">Delete</button>
+    <span style="flex:1"></span>
+    <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    <button class="btn-primary" onclick="updateItem('${id}')">Save</button></div>`);
+}
+
+function updateItem(id){
+  const l=getActiveLaunch();if(!l)return;
+  const item=l.items.find(i=>i.id===id);if(!item)return;
+  item.title=document.getElementById('m-title').value.trim()||item.title;
+  item.desc=document.getElementById('m-itemdesc').value.trim();
+  item.priority=document.getElementById('m-priority').value;
+  item.owner=document.getElementById('m-owner').value.trim();
+  item.phase=document.getElementById('m-phase').value;
+  item.time=document.getElementById('m-time').value.trim();
+  save();closeModal();render();
+}
+
+function deleteItem(id){
+  const l=getActiveLaunch();if(!l)return;
+  l.items=l.items.filter(i=>i.id!==id);save();render();
+}
+
+function addAnnouncement(){
+  showModal(`<h2>📣 New Announcement</h2>
+    <div class="field"><label>Channel</label><select id="m-channel">${CHANNELS.map(c=>`<option>${c}</option>`).join('')}</select></div>
+    <div class="field"><label>Copy</label><textarea id="m-message" style="min-height:150px" placeholder="Write your launch announcement..."></textarea></div>
+    <div class="actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    <button class="btn-primary" onclick="saveAnnouncement()">Add</button></div>`);
+}
+
+function saveAnnouncement(){
+  const l=getActiveLaunch();if(!l)return;
+  if(!l.announcements)l.announcements=[];
+  l.announcements.push({id:uid(),channel:document.getElementById('m-channel').value,
+    message:document.getElementById('m-message').value.trim(),draft:false});
+  save();closeModal();render();
+}
+
+function editAnnouncement(id){
+  const l=getActiveLaunch();if(!l)return;
+  const a=(l.announcements||[]).find(x=>x.id===id);if(!a)return;
+  showModal(`<h2>✏️ Edit Announcement</h2>
+    <div class="field"><label>Channel</label><select id="m-channel">${CHANNELS.map(c=>`<option ${c===a.channel?'selected':''}>${c}</option>`).join('')}</select></div>
+    <div class="field"><label>Copy</label><textarea id="m-message" style="min-height:150px">${esc(a.message)}</textarea></div>
+    <div class="actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    <button class="btn-primary" onclick="updateAnnouncement('${id}')">Save</button></div>`);
+}
+
+function updateAnnouncement(id){
+  const l=getActiveLaunch();if(!l)return;
+  const a=(l.announcements||[]).find(x=>x.id===id);if(!a)return;
+  a.channel=document.getElementById('m-channel').value;
+  a.message=document.getElementById('m-message').value.trim();
+  save();closeModal();render();
+}
+
+function deleteAnnouncement(id){
+  const l=getActiveLaunch();if(!l)return;
+  l.announcements=(l.announcements||[]).filter(x=>x.id!==id);save();render();
+}
+
+function updateReview(path,val){
+  const l=getActiveLaunch();if(!l)return;
+  if(!l.review)l.review={whatWorked:'',whatDidnt:'',keyLearnings:'',nextSteps:'',metrics:{}};
+  const parts=path.split('.');
+  if(parts.length===2){if(!l.review[parts[0]])l.review[parts[0]]={};l.review[parts[0]][parts[1]]=val}
+  else l.review[path]=val;
+  save();
+}
+
+function copyText(btn,id){
+  const l=getActiveLaunch();if(!l)return;
+  const a=(l.announcements||[]).find(x=>x.id===id);if(!a)return;
+  navigator.clipboard.writeText(a.message).then(()=>{btn.classList.add('copied');btn.textContent='✅ Copied';setTimeout(()=>{btn.classList.remove('copied');btn.textContent='📋 Copy'},1500)});
+}
+
+// ─── Modal ───
+function showModal(html){document.getElementById('modalContent').innerHTML=html;document.getElementById('modalOverlay').classList.add('show');setTimeout(()=>{const fi=document.querySelector('.modal input:not([type=hidden]),.modal textarea');fi&&fi.focus()},100)}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show')}
+function showHelp(){document.getElementById('helpOverlay').classList.add('show')}
+function closeHelp(){document.getElementById('helpOverlay').classList.remove('show')}
+
+// ─── Import/Export ───
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(launches,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='launchpad-export.json';a.click();
+}
+function importJSON(){document.getElementById('fileInput').click()}
+function handleImport(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);
+    if(Array.isArray(d)){launches=d;activeLaunchId=launches[0]?.id||null;save();render();alert('Imported!')}
+    else alert('Invalid format')}catch(e){alert('Parse error')}};r.readAsText(f);e.target.value='';
+}
+
+// ─── Keyboard ───
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
+  if(e.key==='Escape'){closeModal();closeHelp();return}
+  if(document.getElementById('modalOverlay').classList.contains('show')||document.getElementById('helpOverlay').classList.contains('show'))return;
+  if(e.key==='n'||e.key==='N'){e.preventDefault();newLaunch()}
+  if(e.key==='/'){e.preventDefault();document.getElementById('searchInput').focus()}
+  if(e.key==='?'){e.preventDefault();showHelp()}
+  if(e.key==='e'||e.key==='E'){e.preventDefault();exportJSON()}
+  if(e.key==='i'&&!e.metaKey){e.preventDefault();importJSON()}
+  if(e.key>='1'&&e.key<='5'){const v=VIEWS[parseInt(e.key)-1];if(v){e.preventDefault();switchView(v.id)}}
+});
+
+function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// ─── Init ───
+load();render();
+</script>
+</body>
+</html>

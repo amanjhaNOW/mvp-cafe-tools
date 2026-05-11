@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Status Beacon — Product Status Page & Incident Tracker</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #242836;
+  --border: #2e3348;
+  --text: #e4e7f1;
+  --text2: #8b90a5;
+  --text3: #5a5f78;
+  --accent: #6c8cff;
+  --accent2: #4a6aff;
+  --green: #34d399;
+  --green-bg: rgba(52,211,153,0.12);
+  --yellow: #fbbf24;
+  --yellow-bg: rgba(251,191,36,0.12);
+  --orange: #f97316;
+  --orange-bg: rgba(249,115,22,0.12);
+  --red: #ef4444;
+  --red-bg: rgba(239,68,68,0.12);
+  --blue: #60a5fa;
+  --blue-bg: rgba(96,165,250,0.12);
+  --purple: #a78bfa;
+  --radius: 10px;
+  --shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+button { cursor: pointer; font-family: inherit; }
+input, textarea, select { font-family: inherit; }
+
+/* Layout */
+.app { display: flex; height: 100vh; }
+.sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+.sidebar-header h1 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sidebar-header h1 span.beacon { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(52,211,153,0.4);} 50% { opacity:0.8; box-shadow:0 0 0 6px rgba(52,211,153,0);} }
+.sidebar-nav { flex:1; overflow-y: auto; padding: 8px; }
+.nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text2); transition: all 0.15s; }
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--accent); background: linear-gradient(135deg, var(--accent2), var(--accent)); color: #fff; }
+.nav-item .icon { font-size: 15px; width: 20px; text-align: center; }
+.nav-item .badge { margin-left: auto; background: var(--red); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 600; }
+.sidebar-footer { padding: 12px; border-top: 1px solid var(--border); display: flex; gap: 6px; }
+.sidebar-footer button { flex:1; padding: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); border-radius: 6px; font-size: 11px; transition: all 0.15s; }
+.sidebar-footer button:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Main */
+.main { flex:1; overflow-y: auto; padding: 24px 32px; }
+.view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.view-header h2 { font-size: 20px; font-weight: 700; }
+.view-header .actions { display: flex; gap: 8px; }
+.btn { padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 12px; font-weight: 500; transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+.btn-danger { border-color: var(--red); color: var(--red); }
+.btn-danger:hover { background: var(--red); color: #fff; }
+
+/* Status badges */
+.status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+.status-badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+.status-operational { background: var(--green-bg); color: var(--green); }
+.status-operational .dot { background: var(--green); }
+.status-degraded { background: var(--yellow-bg); color: var(--yellow); }
+.status-degraded .dot { background: var(--yellow); }
+.status-partial { background: var(--orange-bg); color: var(--orange); }
+.status-partial .dot { background: var(--orange); }
+.status-major { background: var(--red-bg); color: var(--red); }
+.status-major .dot { background: var(--red); }
+.status-maintenance { background: var(--blue-bg); color: var(--blue); }
+.status-maintenance .dot { background: var(--blue); }
+.status-investigating { background: var(--red-bg); color: var(--red); }
+.status-identified { background: var(--orange-bg); color: var(--orange); }
+.status-monitoring { background: var(--yellow-bg); color: var(--yellow); }
+.status-resolved { background: var(--green-bg); color: var(--green); }
+.status-scheduled { background: var(--blue-bg); color: var(--blue); }
+.status-in_progress { background: var(--orange-bg); color: var(--orange); }
+.status-completed { background: var(--green-bg); color: var(--green); }
+
+/* Overall status banner */
+.overall-banner { padding: 16px 20px; border-radius: var(--radius); margin-bottom: 20px; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 15px; }
+.overall-banner .big-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+.overall-ok { background: var(--green-bg); border: 1px solid rgba(52,211,153,0.2); color: var(--green); }
+.overall-ok .big-dot { background: var(--green); animation: pulse 2s infinite; }
+.overall-degraded { background: var(--yellow-bg); border: 1px solid rgba(251,191,36,0.2); color: var(--yellow); }
+.overall-degraded .big-dot { background: var(--yellow); }
+.overall-partial { background: var(--orange-bg); border: 1px solid rgba(249,115,22,0.2); color: var(--orange); }
+.overall-partial .big-dot { background: var(--orange); }
+.overall-major { background: var(--red-bg); border: 1px solid rgba(239,68,68,0.2); color: var(--red); }
+.overall-major .big-dot { background: var(--red); }
+
+/* Component cards */
+.component-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; transition: all 0.15s; }
+.component-card:hover { border-color: var(--accent); }
+.component-card .left { display: flex; align-items: center; gap: 12px; }
+.component-card .comp-name { font-weight: 600; font-size: 14px; }
+.component-card .comp-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.component-card .comp-group { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Uptime bar */
+.uptime-bar { display: flex; gap: 1.5px; height: 28px; margin: 16px 0 6px; }
+.uptime-bar .day { flex:1; border-radius: 2px; cursor: pointer; transition: transform 0.1s; position: relative; }
+.uptime-bar .day:hover { transform: scaleY(1.3); z-index: 2; }
+.uptime-bar .day.up { background: var(--green); opacity: 0.8; }
+.uptime-bar .day.up:hover { opacity: 1; }
+.uptime-bar .day.degraded { background: var(--yellow); }
+.uptime-bar .day.partial { background: var(--orange); }
+.uptime-bar .day.down { background: var(--red); }
+.uptime-bar .day.maintenance { background: var(--blue); opacity: 0.6; }
+.uptime-bar .day.nodata { background: var(--surface2); }
+.uptime-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); margin-bottom: 16px; }
+.uptime-pct { font-size: 13px; color: var(--green); font-weight: 600; }
+
+/* Tooltip */
+.tooltip { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 12px; pointer-events: none; z-index: 1000; box-shadow: var(--shadow); max-width: 200px; }
+.tooltip .t-date { font-weight: 600; margin-bottom: 3px; }
+.tooltip .t-status { color: var(--text2); }
+
+/* Incident list */
+.incident-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 12px; cursor: pointer; transition: all 0.15s; }
+.incident-card:hover { border-color: var(--accent); }
+.incident-card .inc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.incident-card .inc-title { font-weight: 600; font-size: 14px; }
+.incident-card .inc-meta { display: flex; gap: 12px; font-size: 12px; color: var(--text2); }
+.incident-card .inc-meta span { display: flex; align-items: center; gap: 4px; }
+.incident-card .inc-impact { font-size: 12px; color: var(--text2); margin-top: 6px; }
+
+/* Incident detail */
+.incident-detail { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; }
+.incident-detail h3 { font-size: 18px; margin-bottom: 4px; }
+.incident-detail .detail-meta { display: flex; gap: 12px; font-size: 12px; color: var(--text2); margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.update-timeline { border-left: 2px solid var(--border); margin-left: 8px; padding-left: 20px; }
+.update-item { margin-bottom: 16px; position: relative; }
+.update-item::before { content: ''; position: absolute; left: -25px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface2); border: 2px solid var(--border); }
+.update-item.investigating::before { background: var(--red); border-color: var(--red); }
+.update-item.identified::before { background: var(--orange); border-color: var(--orange); }
+.update-item.monitoring::before { background: var(--yellow); border-color: var(--yellow); }
+.update-item.resolved::before { background: var(--green); border-color: var(--green); }
+.update-item.scheduled::before { background: var(--blue); border-color: var(--blue); }
+.update-item.in_progress::before { background: var(--orange); border-color: var(--orange); }
+.update-item.completed::before { background: var(--green); border-color: var(--green); }
+.update-item .update-header { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; }
+.update-item .update-time { font-size: 11px; color: var(--text3); }
+.update-item .update-body { font-size: 13px; color: var(--text2); line-height: 1.5; }
+
+/* Groups */
+.group-header { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); font-weight: 600; margin: 20px 0 8px; padding-left: 4px; }
+
+/* Dashboard stats */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.stat-card .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.stat-card .stat-value { font-size: 26px; font-weight: 700; }
+.stat-card .stat-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+/* Charts */
+.chart-container { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+.chart-container h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+.bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 120px; padding-top: 8px; }
+.bar-chart .bar-wrapper { flex:1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+.bar-chart .bar { width: 100%; max-width: 30px; border-radius: 3px 3px 0 0; transition: height 0.3s; min-height: 2px; }
+.bar-chart .bar-label { font-size: 9px; color: var(--text3); text-align: center; }
+.bar-chart .bar-value { font-size: 9px; color: var(--text2); font-weight: 600; }
+
+/* Response time chart */
+.resp-chart { display: flex; align-items: flex-end; gap: 2px; height: 80px; }
+.resp-chart .resp-bar { flex:1; border-radius: 2px 2px 0 0; background: var(--accent); opacity: 0.7; transition: all 0.15s; cursor: pointer; }
+.resp-chart .resp-bar:hover { opacity: 1; }
+
+/* Modal */
+.modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 560px; max-height: 85vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { font-size: 16px; font-weight: 600; }
+.modal-close { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 4px; }
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Form */
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; }
+.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; outline: none; transition: border 0.15s; }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--accent); }
+.form-group textarea { resize: vertical; min-height: 60px; }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex:1; }
+.checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.checkbox-row input[type="checkbox"] { width: auto; }
+.checkbox-row label { margin-bottom: 0; font-size: 13px; color: var(--text); }
+
+/* Component status selector */
+.status-select-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.status-select-grid .status-opt { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; background: var(--surface2); color: var(--text2); }
+.status-select-grid .status-opt:hover { border-color: var(--accent); }
+.status-select-grid .status-opt.selected { border-color: transparent; }
+.status-select-grid .status-opt.sel-operational { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+.status-select-grid .status-opt.sel-degraded { background: var(--yellow-bg); color: var(--yellow); border-color: var(--yellow); }
+.status-select-grid .status-opt.sel-partial { background: var(--orange-bg); color: var(--orange); border-color: var(--orange); }
+.status-select-grid .status-opt.sel-major { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+.status-select-grid .status-opt.sel-maintenance { background: var(--blue-bg); color: var(--blue); border-color: var(--blue); }
+
+/* Affected components chips */
+.chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip { padding: 3px 10px; border-radius: 20px; font-size: 11px; background: var(--surface2); border: 1px solid var(--border); cursor: pointer; transition: all 0.15s; }
+.chip:hover { border-color: var(--accent); }
+.chip.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Public page */
+.public-page { max-width: 720px; margin: 0 auto; padding: 40px 20px; }
+.public-page .pub-header { text-align: center; margin-bottom: 32px; }
+.public-page .pub-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+.public-page .pub-header p { color: var(--text2); font-size: 14px; }
+.pub-section { margin-bottom: 28px; }
+.pub-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text2); }
+.pub-footer { text-align: center; padding: 24px; font-size: 12px; color: var(--text3); border-top: 1px solid var(--border); margin-top: 32px; }
+
+/* Subscribers */
+.sub-list { list-style: none; }
+.sub-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.sub-list li:last-child { border: none; }
+
+/* Search */
+.search-bar { position: relative; margin-bottom: 16px; }
+.search-bar input { width: 100%; padding: 8px 12px 8px 32px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; outline: none; }
+.search-bar input:focus { border-color: var(--accent); }
+.search-bar .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 13px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 2px; margin-bottom: 16px; background: var(--surface); border-radius: 8px; padding: 3px; border: 1px solid var(--border); }
+.tab { flex:1; padding: 7px 12px; text-align: center; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; color: var(--text2); transition: all 0.15s; }
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--accent); color: #fff; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text3); }
+.empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+
+/* Keyboard shortcut help */
+.kb-help { position: fixed; bottom: 16px; right: 16px; z-index: 50; }
+.kb-help button { width: 32px; height: 32px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); color: var(--text3); font-size: 14px; font-weight: 700; }
+.kb-help button:hover { color: var(--accent); border-color: var(--accent); }
+.kb-panel { position: fixed; bottom: 56px; right: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; z-index: 50; box-shadow: var(--shadow); min-width: 240px; }
+.kb-panel h4 { font-size: 12px; font-weight: 700; margin-bottom: 8px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+.kb-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; }
+.kb-row kbd { background: var(--surface2); border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px; font-size: 11px; font-family: monospace; color: var(--text2); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { padding: 16px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .modal { width: 95%; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* Maintenance schedule */
+.maint-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--blue); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 10px; }
+.maint-card .maint-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.maint-card .maint-time { font-size: 12px; color: var(--blue); margin-bottom: 4px; }
+.maint-card .maint-desc { font-size: 12px; color: var(--text2); }
+.maint-card .maint-affected { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.maint-card .maint-chip { padding: 2px 8px; border-radius: 10px; font-size: 10px; background: var(--blue-bg); color: var(--blue); }
+
+/* Response time */
+.resp-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.resp-row:last-child { border: none; }
+.resp-row .resp-name { font-size: 13px; font-weight: 500; }
+.resp-row .resp-ms { font-size: 13px; font-weight: 600; }
+.resp-fast { color: var(--green); }
+.resp-ok { color: var(--yellow); }
+.resp-slow { color: var(--orange); }
+.resp-down { color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="app" id="app"></div>
+
+<div class="kb-help" id="kbHelp">
+  <button onclick="toggleKB()" title="Keyboard Shortcuts">?</button>
+</div>
+
+<div class="tooltip" id="tooltip" style="display:none"></div>
+
+<script>
+// ============================================================
+// Status Beacon — Product Status Page & Incident Tracker
+// ============================================================
+
+const COMP_STATUSES = ['operational','degraded','partial','major','maintenance'];
+const COMP_STATUS_LABELS = {operational:'Operational',degraded:'Degraded Performance',partial:'Partial Outage',major:'Major Outage',maintenance:'Under Maintenance'};
+const INC_TYPES = ['incident','maintenance'];
+const INC_STATUSES = {incident:['investigating','identified','monitoring','resolved'], maintenance:['scheduled','in_progress','completed']};
+const INC_STATUS_LABELS = {investigating:'Investigating',identified:'Identified',monitoring:'Monitoring',resolved:'Resolved',scheduled:'Scheduled',in_progress:'In Progress',completed:'Completed'};
+const IMPACT_LEVELS = ['none','minor','major','critical'];
+const VIEWS = ['status','incidents','maintenance','public','dashboard'];
+const VIEW_LABELS = {status:'Components',incidents:'Incidents',maintenance:'Maintenance',public:'Public Page',dashboard:'Dashboard'};
+const VIEW_ICONS = {status:'🟢',incidents:'🔥',maintenance:'🔧',public:'🌐',dashboard:'📊'};
+
+let state = {
+  view: 'status',
+  components: [],
+  incidents: [],
+  subscribers: [],
+  settings: { name: 'UTMStamp', description: 'Current status of UTMStamp services', url: 'https://status.utmstamp.com', logo: '🚦' },
+  uptimeHistory: {}, // componentId -> [{date, status}]
+  responseTime: {}, // componentId -> [{date, ms}]
+  modal: null,
+  search: '',
+  selectedIncident: null,
+  showKB: false
+};
+
+function id() { return Date.now().toString(36) + Math.random().toString(36).substr(2,5); }
+function save() { localStorage.setItem('status-beacon-data', JSON.stringify({components:state.components,incidents:state.incidents,subscribers:state.subscribers,settings:state.settings,uptimeHistory:state.uptimeHistory,responseTime:state.responseTime})); }
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem('status-beacon-data'));
+    if(d) { Object.assign(state, d); }
+  } catch(e) {}
+}
+
+function fmtDate(d) { return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function fmtDateTime(d) { return new Date(d).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+function fmtTime(d) { return new Date(d).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }
+function relTime(d) {
+  const diff = Date.now() - new Date(d).getTime();
+  if(diff < 60000) return 'just now';
+  if(diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  if(diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+  return Math.floor(diff/86400000) + 'd ago';
+}
+
+function getOverallStatus() {
+  let worst = 'operational';
+  const order = {operational:0,maintenance:1,degraded:2,partial:3,major:4};
+  state.components.forEach(c => { if(order[c.status] > order[worst]) worst = c.status; });
+  return worst;
+}
+
+function getActiveIncidents() { return state.incidents.filter(i => i.type==='incident' && i.status !== 'resolved'); }
+function getResolvedIncidents() { return state.incidents.filter(i => i.type==='incident' && i.status === 'resolved'); }
+function getScheduledMaint() { return state.incidents.filter(i => i.type==='maintenance' && i.status !== 'completed'); }
+function getCompletedMaint() { return state.incidents.filter(i => i.type==='maintenance' && i.status === 'completed'); }
+
+function getUptime(compId, days=90) {
+  const hist = state.uptimeHistory[compId] || [];
+  if(!hist.length) return 100;
+  let upDays = 0;
+  const now = new Date();
+  for(let i = 0; i < days; i++) {
+    const d = new Date(now); d.setDate(d.getDate()-i);
+    const key = d.toISOString().split('T')[0];
+    const entry = hist.find(h => h.date === key);
+    if(!entry || entry.status === 'operational') upDays++;
+    else if(entry.status === 'degraded') upDays += 0.75;
+    else if(entry.status === 'partial') upDays += 0.5;
+    else if(entry.status === 'maintenance') upDays += 0.9;
+  }
+  return Math.round((upDays/days)*10000)/100;
+}
+
+function getAvgResponse(compId, days=30) {
+  const hist = state.responseTime[compId] || [];
+  if(!hist.length) return null;
+  const now = new Date();
+  const cutoff = new Date(now); cutoff.setDate(cutoff.getDate()-days);
+  const recent = hist.filter(h => new Date(h.date) >= cutoff);
+  if(!recent.length) return null;
+  return Math.round(recent.reduce((s,h)=>s+h.ms,0)/recent.length);
+}
+
+// ===== RENDER =====
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = renderSidebar() + '<div class="main">' + renderView() + '</div>';
+  if(state.modal) renderModal();
+  renderKB();
+}
+
+function renderSidebar() {
+  const active = getActiveIncidents().length;
+  return `<div class="sidebar">
+    <div class="sidebar-header"><h1><span class="beacon"></span> Status Beacon</h1></div>
+    <div class="sidebar-nav">
+      ${VIEWS.map(v => `<div class="nav-item ${state.view===v?'active':''}" onclick="setView('${v}')">
+        <span class="icon">${VIEW_ICONS[v]}</span>${VIEW_LABELS[v]}
+        ${v==='incidents'&&active?`<span class="badge">${active}</span>`:''}
+      </div>`).join('')}
+    </div>
+    <div class="sidebar-footer">
+      <button onclick="exportJSON()" title="Export">📦 Export</button>
+      <button onclick="importJSON()" title="Import">📥 Import</button>
+    </div>
+  </div>`;
+}
+
+function renderView() {
+  switch(state.view) {
+    case 'status': return renderStatusView();
+    case 'incidents': return renderIncidentsView();
+    case 'maintenance': return renderMaintenanceView();
+    case 'public': return renderPublicView();
+    case 'dashboard': return renderDashboardView();
+  }
+}
+
+function renderStatusView() {
+  const overall = getOverallStatus();
+  const overallLabels = {operational:'All Systems Operational',degraded:'Some Systems Degraded',partial:'Partial System Outage',major:'Major System Outage',maintenance:'Maintenance in Progress'};
+  const overallClass = {operational:'overall-ok',degraded:'overall-degraded',partial:'overall-partial',major:'overall-major',maintenance:'overall-degraded'};
+
+  const groups = {};
+  state.components.forEach(c => {
+    const g = c.group || 'Ungrouped';
+    if(!groups[g]) groups[g] = [];
+    groups[g].push(c);
+  });
+
+  let html = `<div class="view-header"><h2>Service Status</h2>
+    <div class="actions"><button class="btn btn-primary" onclick="openModal('component')">+ Component</button></div></div>`;
+
+  html += `<div class="overall-banner ${overallClass[overall]}"><div class="big-dot"></div>${overallLabels[overall]}</div>`;
+
+  if(Object.keys(groups).length === 0) {
+    html += `<div class="empty-state"><div class="empty-icon">🟢</div><p>No components yet. Add your first service component.</p></div>`;
+  } else {
+    for(const [group, comps] of Object.entries(groups)) {
+      if(Object.keys(groups).length > 1 || group !== 'Ungrouped') {
+        html += `<div class="group-header">${esc(group)}</div>`;
+      }
+      comps.forEach(c => {
+        const uptime = getUptime(c.id);
+        const avg = getAvgResponse(c.id);
+        html += `<div class="component-card" ondblclick="openModal('component','${c.id}')">
+          <div class="left">
+            <div><div class="comp-name">${esc(c.name)}</div>
+            ${c.description ? `<div class="comp-desc">${esc(c.description)}</div>`:''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            ${avg !== null ? `<span class="resp-ms ${avg<200?'resp-fast':avg<500?'resp-ok':'resp-slow'}" style="font-size:12px">${avg}ms</span>`:''}
+            <span class="uptime-pct">${uptime}%</span>
+            <span class="status-badge status-${c.status}"><span class="dot"></span>${COMP_STATUS_LABELS[c.status]}</span>
+          </div>
+        </div>`;
+      });
+    }
+  }
+
+  // 90-day uptime bars for each component
+  if(state.components.length > 0) {
+    html += `<div style="margin-top:24px">`;
+    state.components.forEach(c => {
+      html += `<div style="margin-bottom:16px;"><div style="font-size:13px;font-weight:600;margin-bottom:4px">${esc(c.name)} <span style="float:right;color:var(--green);font-size:12px">${getUptime(c.id)}% uptime</span></div>`;
+      html += renderUptimeBar(c.id);
+      html += `<div class="uptime-labels"><span>90 days ago</span><span>Today</span></div></div>`;
+    });
+    html += `</div>`;
+  }
+
+  return html;
+}
+
+function renderUptimeBar(compId) {
+  const hist = state.uptimeHistory[compId] || [];
+  const now = new Date();
+  let bars = '';
+  for(let i = 89; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate()-i);
+    const key = d.toISOString().split('T')[0];
+    const entry = hist.find(h => h.date === key);
+    const s = entry ? entry.status : 'up';
+    const cls = s === 'operational' || s === 'up' ? 'up' : s === 'degraded' ? 'degraded' : s === 'partial' ? 'partial' : s === 'major' ? 'down' : s === 'maintenance' ? 'maintenance' : 'nodata';
+    bars += `<div class="day ${cls}" onmouseenter="showTip(event,'${fmtDate(d)}','${COMP_STATUS_LABELS[s]||'Operational'}')" onmouseleave="hideTip()"></div>`;
+  }
+  return `<div class="uptime-bar">${bars}</div>`;
+}
+
+function renderIncidentsView() {
+  const active = getActiveIncidents().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const resolved = getResolvedIncidents().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const q = state.search.toLowerCase();
+
+  if(state.selectedIncident) {
+    const inc = state.incidents.find(i=>i.id===state.selectedIncident);
+    if(inc) return renderIncidentDetail(inc);
+  }
+
+  let html = `<div class="view-header"><h2>Incidents</h2>
+    <div class="actions"><button class="btn btn-primary" onclick="openModal('incident')">+ Report Incident</button></div></div>`;
+
+  html += `<div class="search-bar"><span class="search-icon">🔍</span><input placeholder="Search incidents..." value="${esc(state.search)}" oninput="state.search=this.value;render()"></div>`;
+
+  const filter = i => !q || i.title.toLowerCase().includes(q) || (i.description||'').toLowerCase().includes(q);
+
+  if(active.filter(filter).length) {
+    html += `<div class="group-header">Active Incidents</div>`;
+    active.filter(filter).forEach(i => { html += renderIncidentCard(i); });
+  }
+
+  if(resolved.filter(filter).length) {
+    html += `<div class="group-header">Resolved</div>`;
+    resolved.filter(filter).slice(0,20).forEach(i => { html += renderIncidentCard(i); });
+  }
+
+  if(!active.filter(filter).length && !resolved.filter(filter).length) {
+    html += `<div class="empty-state"><div class="empty-icon">✅</div><p>No incidents${q?' matching "'+esc(q)+'"':''}. All quiet!</p></div>`;
+  }
+
+  return html;
+}
+
+function renderIncidentCard(i) {
+  const affected = i.affectedComponents.map(cid => state.components.find(c=>c.id===cid)).filter(Boolean).map(c=>c.name).join(', ');
+  return `<div class="incident-card" onclick="state.selectedIncident='${i.id}';render()">
+    <div class="inc-header">
+      <span class="inc-title">${esc(i.title)}</span>
+      <span class="status-badge status-${i.status}"><span class="dot"></span>${INC_STATUS_LABELS[i.status]}</span>
+    </div>
+    <div class="inc-meta">
+      <span>📅 ${fmtDateTime(i.createdAt)}</span>
+      ${i.impact!=='none'?`<span>⚡ ${i.impact}</span>`:''}
+      ${affected?`<span>🔗 ${affected}</span>`:''}
+    </div>
+  </div>`;
+}
+
+function renderIncidentDetail(inc) {
+  const affected = inc.affectedComponents.map(cid => state.components.find(c=>c.id===cid)).filter(Boolean);
+  const updates = (inc.updates||[]).sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+
+  let html = `<div style="margin-bottom:12px"><button class="btn btn-sm" onclick="state.selectedIncident=null;render()">← Back to Incidents</button></div>`;
+  html += `<div class="incident-detail">
+    <h3>${esc(inc.title)}</h3>
+    <div class="detail-meta">
+      <span class="status-badge status-${inc.status}"><span class="dot"></span>${INC_STATUS_LABELS[inc.status]}</span>
+      <span>📅 ${fmtDateTime(inc.createdAt)}</span>
+      ${inc.impact!=='none'?`<span>Impact: <strong>${inc.impact}</strong></span>`:''}
+      ${inc.resolvedAt?`<span>✅ Resolved: ${fmtDateTime(inc.resolvedAt)}</span>`:''}
+    </div>
+    ${inc.description?`<p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">${esc(inc.description)}</p>`:''}
+    ${affected.length?`<div style="margin-bottom:16px"><span style="font-size:12px;color:var(--text3)">Affected:</span> <div class="chip-list" style="margin-top:4px">${affected.map(c=>`<span class="chip selected">${esc(c.name)}</span>`).join('')}</div></div>`:''}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h4 style="font-size:13px;font-weight:600;color:var(--text2)">Updates</h4>
+      <button class="btn btn-sm btn-primary" onclick="openModal('update','${inc.id}')">+ Add Update</button>
+    </div>
+    <div class="update-timeline">
+      ${updates.map(u => `<div class="update-item ${u.status}">
+        <div class="update-header">
+          <span class="status-badge status-${u.status}"><span class="dot"></span>${INC_STATUS_LABELS[u.status]||u.status}</span>
+          <span class="update-time">${fmtDateTime(u.timestamp)}</span>
+        </div>
+        <div class="update-body">${esc(u.message)}</div>
+      </div>`).join('')}
+      ${!updates.length?'<div style="font-size:13px;color:var(--text3);padding:8px 0">No updates yet.</div>':''}
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn btn-sm" onclick="openModal('incident','${inc.id}')">✏️ Edit</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteIncident('${inc.id}')">🗑 Delete</button>
+    </div>
+  </div>`;
+
+  return html;
+}
+
+function renderMaintenanceView() {
+  const scheduled = getScheduledMaint().sort((a,b)=>new Date(a.scheduledStart||a.createdAt)-new Date(b.scheduledStart||b.createdAt));
+  const completed = getCompletedMaint().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+
+  let html = `<div class="view-header"><h2>Scheduled Maintenance</h2>
+    <div class="actions"><button class="btn btn-primary" onclick="openModal('maintenance')">+ Schedule</button></div></div>`;
+
+  if(scheduled.length) {
+    html += `<div class="group-header">Upcoming & In Progress</div>`;
+    scheduled.forEach(m => {
+      const affected = m.affectedComponents.map(cid => state.components.find(c=>c.id===cid)).filter(Boolean);
+      html += `<div class="maint-card" onclick="state.selectedIncident='${m.id}';state.view='incidents';render()" style="cursor:pointer">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="maint-title">${esc(m.title)}</div>
+          <span class="status-badge status-${m.status}"><span class="dot"></span>${INC_STATUS_LABELS[m.status]}</span>
+        </div>
+        ${m.scheduledStart?`<div class="maint-time">🕐 ${fmtDateTime(m.scheduledStart)}${m.scheduledEnd?' → '+fmtDateTime(m.scheduledEnd):''}</div>`:''}
+        ${m.description?`<div class="maint-desc">${esc(m.description)}</div>`:''}
+        ${affected.length?`<div class="maint-affected">${affected.map(c=>`<span class="maint-chip">${esc(c.name)}</span>`).join('')}</div>`:''}
+      </div>`;
+    });
+  }
+
+  if(completed.length) {
+    html += `<div class="group-header">Completed</div>`;
+    completed.slice(0,10).forEach(m => {
+      html += `<div class="maint-card" style="opacity:0.6;cursor:pointer" onclick="state.selectedIncident='${m.id}';state.view='incidents';render()">
+        <div class="maint-title">${esc(m.title)}</div>
+        <div class="maint-time">✅ Completed ${fmtDateTime(m.resolvedAt||m.createdAt)}</div>
+      </div>`;
+    });
+  }
+
+  if(!scheduled.length && !completed.length) {
+    html += `<div class="empty-state"><div class="empty-icon">🔧</div><p>No maintenance windows scheduled.</p></div>`;
+  }
+
+  return html;
+}
+
+function renderPublicView() {
+  const overall = getOverallStatus();
+  const overallLabels = {operational:'All Systems Operational',degraded:'Some Systems Degraded',partial:'Partial System Outage',major:'Major System Outage',maintenance:'Maintenance in Progress'};
+  const overallClass = {operational:'overall-ok',degraded:'overall-degraded',partial:'overall-partial',major:'overall-major',maintenance:'overall-degraded'};
+  const active = getActiveIncidents().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const scheduled = getScheduledMaint().sort((a,b)=>new Date(a.scheduledStart||a.createdAt)-new Date(b.scheduledStart||b.createdAt));
+  const resolved = getResolvedIncidents().sort((a,b)=>new Date(b.resolvedAt||b.createdAt)-new Date(a.resolvedAt||a.createdAt));
+
+  let html = `<div class="view-header"><h2>Public Page Preview</h2>
+    <div class="actions"><button class="btn" onclick="exportPublicHTML()">📄 Export HTML</button><button class="btn" onclick="openModal('settings')">⚙️ Settings</button></div></div>`;
+
+  html += `<div class="public-page">
+    <div class="pub-header"><h1>${esc(state.settings.logo)} ${esc(state.settings.name)} Status</h1><p>${esc(state.settings.description)}</p></div>
+    <div class="overall-banner ${overallClass[overall]}"><div class="big-dot"></div>${overallLabels[overall]}</div>`;
+
+  // Components
+  if(state.components.length) {
+    html += `<div class="pub-section">`;
+    const groups = {};
+    state.components.forEach(c => { const g=c.group||'Services'; if(!groups[g])groups[g]=[]; groups[g].push(c); });
+    for(const [g, comps] of Object.entries(groups)) {
+      html += `<h3>${esc(g)}</h3>`;
+      comps.forEach(c => {
+        html += `<div class="component-card"><div class="left"><div><div class="comp-name">${esc(c.name)}</div></div></div>
+          <span class="status-badge status-${c.status}"><span class="dot"></span>${COMP_STATUS_LABELS[c.status]}</span></div>`;
+      });
+      // Uptime bars
+      comps.forEach(c => {
+        html += `<div style="margin:8px 0 16px"><div style="font-size:12px;color:var(--text2);margin-bottom:4px">${esc(c.name)} — ${getUptime(c.id)}% uptime</div>`;
+        html += renderUptimeBar(c.id);
+        html += `<div class="uptime-labels"><span>90 days ago</span><span>Today</span></div></div>`;
+      });
+    }
+    html += `</div>`;
+  }
+
+  // Active incidents
+  if(active.length) {
+    html += `<div class="pub-section"><h3>🔥 Active Incidents</h3>`;
+    active.forEach(i => {
+      const updates = (i.updates||[]).sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+      html += `<div class="incident-card" style="cursor:default"><div class="inc-header">
+        <span class="inc-title">${esc(i.title)}</span>
+        <span class="status-badge status-${i.status}"><span class="dot"></span>${INC_STATUS_LABELS[i.status]}</span>
+      </div>
+      ${updates.length?`<div class="update-timeline" style="margin-top:12px">${updates.slice(0,3).map(u=>`<div class="update-item ${u.status}"><div class="update-header"><span class="status-badge status-${u.status}"><span class="dot"></span>${INC_STATUS_LABELS[u.status]}</span><span class="update-time">${fmtDateTime(u.timestamp)}</span></div><div class="update-body">${esc(u.message)}</div></div>`).join('')}</div>`:''}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Scheduled maintenance
+  if(scheduled.length) {
+    html += `<div class="pub-section"><h3>🔧 Scheduled Maintenance</h3>`;
+    scheduled.forEach(m => {
+      html += `<div class="maint-card"><div class="maint-title">${esc(m.title)}</div>
+        ${m.scheduledStart?`<div class="maint-time">🕐 ${fmtDateTime(m.scheduledStart)}${m.scheduledEnd?' → '+fmtDateTime(m.scheduledEnd):''}</div>`:''}
+        ${m.description?`<div class="maint-desc">${esc(m.description)}</div>`:''}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Recent resolved
+  if(resolved.length) {
+    html += `<div class="pub-section"><h3>📋 Past Incidents</h3>`;
+    // Group by date
+    const byDate = {};
+    resolved.slice(0,15).forEach(i => {
+      const d = new Date(i.resolvedAt||i.createdAt).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+      if(!byDate[d]) byDate[d]=[];
+      byDate[d].push(i);
+    });
+    for(const [date, incs] of Object.entries(byDate)) {
+      html += `<div class="group-header">${date}</div>`;
+      incs.forEach(i => {
+        const lastUpdate = (i.updates||[]).sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp))[0];
+        html += `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:500">${esc(i.title)}</span>
+          <span class="status-badge status-resolved"><span class="dot"></span>Resolved</span></div>
+          ${lastUpdate?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${esc(lastUpdate.message)}</div>`:''}
+        </div>`;
+      });
+    }
+    html += `</div>`;
+  }
+
+  html += `<div class="pub-footer">Powered by Status Beacon • Updated ${fmtDateTime(new Date())}</div></div>`;
+  return html;
+}
+
+function renderDashboardView() {
+  const total = state.components.length;
+  const operational = state.components.filter(c=>c.status==='operational').length;
+  const degraded = state.components.filter(c=>c.status==='degraded').length;
+  const down = state.components.filter(c=>c.status==='major'||c.status==='partial').length;
+  const totalInc = state.incidents.filter(i=>i.type==='incident').length;
+  const activeInc = getActiveIncidents().length;
+  const avgUptime = total ? Math.round(state.components.reduce((s,c)=>s+getUptime(c.id),0)/total*100)/100 : 100;
+
+  // MTTR calc
+  const resolvedIncs = getResolvedIncidents().filter(i=>i.resolvedAt);
+  let mttr = 0;
+  if(resolvedIncs.length) {
+    mttr = Math.round(resolvedIncs.reduce((s,i)=>{
+      const dur = new Date(i.resolvedAt)-new Date(i.createdAt);
+      return s+dur;
+    },0)/resolvedIncs.length/60000); // in minutes
+  }
+
+  let html = `<div class="view-header"><h2>Dashboard</h2></div>`;
+
+  html += `<div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Components</div><div class="stat-value">${total}</div><div class="stat-sub">${operational} operational</div></div>
+    <div class="stat-card"><div class="stat-label">Overall Uptime</div><div class="stat-value" style="color:var(--green)">${avgUptime}%</div><div class="stat-sub">90-day average</div></div>
+    <div class="stat-card"><div class="stat-label">Active Incidents</div><div class="stat-value" style="color:${activeInc?'var(--red)':'var(--green)'}">${activeInc}</div><div class="stat-sub">${totalInc} total incidents</div></div>
+    <div class="stat-card"><div class="stat-label">MTTR</div><div class="stat-value">${mttr ? (mttr < 60 ? mttr+'m' : Math.round(mttr/60*10)/10+'h') : '—'}</div><div class="stat-sub">Mean time to resolve</div></div>
+    <div class="stat-card"><div class="stat-label">Degraded</div><div class="stat-value" style="color:${degraded?'var(--yellow)':'var(--green)'}">${degraded}</div><div class="stat-sub">components</div></div>
+    <div class="stat-card"><div class="stat-label">Down</div><div class="stat-value" style="color:${down?'var(--red)':'var(--green)'}">${down}</div><div class="stat-sub">partial or major outage</div></div>
+  </div>`;
+
+  // Uptime by component
+  if(state.components.length) {
+    html += `<div class="chart-container"><h3>Component Uptime (90 days)</h3><div class="bar-chart">`;
+    state.components.forEach(c => {
+      const up = getUptime(c.id);
+      const color = up >= 99.5 ? 'var(--green)' : up >= 99 ? 'var(--yellow)' : up >= 95 ? 'var(--orange)' : 'var(--red)';
+      html += `<div class="bar-wrapper"><div class="bar-value">${up}%</div><div class="bar" style="height:${Math.max(up-90,2)*10}%;background:${color}"></div><div class="bar-label">${esc(c.name.substring(0,10))}</div></div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // Response time
+  const compsWithResp = state.components.filter(c => getAvgResponse(c.id) !== null);
+  if(compsWithResp.length) {
+    html += `<div class="chart-container"><h3>Average Response Time (30 days)</h3>`;
+    compsWithResp.forEach(c => {
+      const avg = getAvgResponse(c.id);
+      const color = avg < 200 ? 'resp-fast' : avg < 500 ? 'resp-ok' : avg < 1000 ? 'resp-slow' : 'resp-down';
+      html += `<div class="resp-row"><span class="resp-name">${esc(c.name)}</span><span class="resp-ms ${color}">${avg}ms</span></div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Incidents per month chart
+  const incByMonth = {};
+  state.incidents.filter(i=>i.type==='incident').forEach(i => {
+    const m = new Date(i.createdAt).toLocaleDateString('en-US',{month:'short',year:'2-digit'});
+    incByMonth[m] = (incByMonth[m]||0)+1;
+  });
+  if(Object.keys(incByMonth).length) {
+    html += `<div class="chart-container"><h3>Incidents Per Month</h3><div class="bar-chart">`;
+    const maxInc = Math.max(...Object.values(incByMonth));
+    Object.entries(incByMonth).forEach(([m,count]) => {
+      html += `<div class="bar-wrapper"><div class="bar-value">${count}</div><div class="bar" style="height:${(count/maxInc)*100}%;background:var(--red)"></div><div class="bar-label">${m}</div></div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // Subscribers
+  html += `<div class="chart-container"><h3>Subscribers (${state.subscribers.length})</h3>`;
+  if(state.subscribers.length) {
+    html += `<ul class="sub-list">${state.subscribers.map(s=>`<li><span>${esc(s.email)}</span><span style="color:var(--text3);font-size:11px">${fmtDate(s.addedAt)}</span></li>`).join('')}</ul>`;
+  } else {
+    html += `<p style="font-size:13px;color:var(--text3)">No subscribers yet.</p>`;
+  }
+  html += `<div style="margin-top:8px"><button class="btn btn-sm" onclick="openModal('subscriber')">+ Add Subscriber</button></div></div>`;
+
+  return html;
+}
+
+// ===== MODALS =====
+function renderModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = e => { if(e.target===overlay){state.modal=null;render();} };
+  let content = '';
+
+  if(state.modal.type === 'component') {
+    const c = state.modal.editId ? state.components.find(x=>x.id===state.modal.editId) : null;
+    content = `<div class="modal-header"><h3>${c?'Edit':'Add'} Component</h3><button class="modal-close" onclick="state.modal=null;render()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Name</label><input id="f-name" value="${esc(c?.name||'')}" placeholder="e.g. API Server"></div>
+      <div class="form-group"><label>Description</label><input id="f-desc" value="${esc(c?.description||'')}" placeholder="Brief description"></div>
+      <div class="form-group"><label>Group</label><input id="f-group" value="${esc(c?.group||'')}" placeholder="e.g. Core, Infrastructure"></div>
+      <div class="form-group"><label>Status</label><div class="status-select-grid">
+        ${COMP_STATUSES.map(s=>`<span class="status-opt ${(c?.status||'operational')===s?'selected sel-'+s:''}" onclick="this.parentNode.querySelectorAll('.status-opt').forEach(e=>{e.className='status-opt'});this.className='status-opt selected sel-${s}';this.dataset.val='${s}'" data-val="${s}">${COMP_STATUS_LABELS[s]}</span>`).join('')}
+      </div></div>
+      <div class="form-group"><label>Monitoring URL (optional)</label><input id="f-url" value="${esc(c?.url||'')}" placeholder="https://api.utmstamp.com/health"></div>
+    </div>
+    <div class="modal-footer">
+      ${c?`<button class="btn btn-danger" onclick="deleteComponent('${c.id}')">Delete</button>`:''}
+      <button class="btn" onclick="state.modal=null;render()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveComponent('${c?.id||''}')">${c?'Save':'Add'}</button>
+    </div>`;
+  }
+
+  else if(state.modal.type === 'incident' || state.modal.type === 'maintenance') {
+    const isMaint = state.modal.type === 'maintenance';
+    const inc = state.modal.editId ? state.incidents.find(x=>x.id===state.modal.editId) : null;
+    const type = isMaint ? 'maintenance' : 'incident';
+    const statuses = INC_STATUSES[type];
+    content = `<div class="modal-header"><h3>${inc?'Edit':'Report'} ${isMaint?'Maintenance':'Incident'}</h3><button class="modal-close" onclick="state.modal=null;render()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Title</label><input id="f-title" value="${esc(inc?.title||'')}" placeholder="${isMaint?'Database migration window':'API returning 500 errors'}"></div>
+      <div class="form-group"><label>Description</label><textarea id="f-idesc" placeholder="What's happening?">${esc(inc?.description||'')}</textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Status</label><select id="f-status">${statuses.map(s=>`<option value="${s}" ${(inc?.status||statuses[0])===s?'selected':''}>${INC_STATUS_LABELS[s]}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Impact</label><select id="f-impact">${IMPACT_LEVELS.map(l=>`<option value="${l}" ${(inc?.impact||'minor')===l?'selected':''}>${l.charAt(0).toUpperCase()+l.slice(1)}</option>`).join('')}</select></div>
+      </div>
+      ${isMaint?`<div class="form-row">
+        <div class="form-group"><label>Start</label><input type="datetime-local" id="f-mstart" value="${inc?.scheduledStart?new Date(inc.scheduledStart).toISOString().slice(0,16):''}"></div>
+        <div class="form-group"><label>End</label><input type="datetime-local" id="f-mend" value="${inc?.scheduledEnd?new Date(inc.scheduledEnd).toISOString().slice(0,16):''}"></div>
+      </div>`:''}
+      <div class="form-group"><label>Affected Components</label>
+        <div class="chip-list" id="f-affected">${state.components.map(c=>`<span class="chip ${inc&&inc.affectedComponents.includes(c.id)?'selected':''}" onclick="this.classList.toggle('selected')" data-id="${c.id}">${esc(c.name)}</span>`).join('')}</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="state.modal=null;render()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveIncident('${inc?.id||''}','${type}')">${inc?'Save':'Create'}</button>
+    </div>`;
+  }
+
+  else if(state.modal.type === 'update') {
+    const inc = state.incidents.find(i=>i.id===state.modal.editId);
+    const statuses = INC_STATUSES[inc?.type||'incident'];
+    content = `<div class="modal-header"><h3>Add Update</h3><button class="modal-close" onclick="state.modal=null;render()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Status</label><select id="f-ustatus">${statuses.map(s=>`<option value="${s}">${INC_STATUS_LABELS[s]}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Message</label><textarea id="f-umsg" placeholder="What's the latest update?"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="state.modal=null;render()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveUpdate('${state.modal.editId}')">Post Update</button>
+    </div>`;
+  }
+
+  else if(state.modal.type === 'settings') {
+    content = `<div class="modal-header"><h3>Page Settings</h3><button class="modal-close" onclick="state.modal=null;render()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Product Name</label><input id="f-sname" value="${esc(state.settings.name)}"></div>
+      <div class="form-group"><label>Description</label><input id="f-sdesc" value="${esc(state.settings.description)}"></div>
+      <div class="form-group"><label>Logo Emoji</label><input id="f-slogo" value="${esc(state.settings.logo)}" maxlength="4"></div>
+      <div class="form-group"><label>Status Page URL</label><input id="f-surl" value="${esc(state.settings.url||'')}"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="state.modal=null;render()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+    </div>`;
+  }
+
+  else if(state.modal.type === 'subscriber') {
+    content = `<div class="modal-header"><h3>Add Subscriber</h3><button class="modal-close" onclick="state.modal=null;render()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Email</label><input id="f-email" type="email" placeholder="team@company.com"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="state.modal=null;render()">Cancel</button>
+      <button class="btn btn-primary" onclick="addSubscriber()">Add</button>
+    </div>`;
+  }
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = content;
+  overlay.appendChild(modal);
+  document.getElementById('app').appendChild(overlay);
+
+  // Focus first input
+  setTimeout(()=>{const inp=modal.querySelector('input,textarea');if(inp)inp.focus();},50);
+}
+
+function openModal(type, editId) {
+  state.modal = { type, editId: editId||null };
+  render();
+}
+
+// ===== CRUD =====
+function saveComponent(editId) {
+  const name = document.getElementById('f-name').value.trim();
+  if(!name) return;
+  const desc = document.getElementById('f-desc').value.trim();
+  const group = document.getElementById('f-group').value.trim();
+  const url = document.getElementById('f-url').value.trim();
+  const statusEl = document.querySelector('.status-opt.selected');
+  const status = statusEl ? statusEl.dataset.val : 'operational';
+
+  if(editId) {
+    const c = state.components.find(x=>x.id===editId);
+    if(c) { Object.assign(c, {name,description:desc,group,url,status}); }
+  } else {
+    state.components.push({id:id(),name,description:desc,group:group||'',url,status,createdAt:new Date().toISOString()});
+  }
+  state.modal = null;
+  save(); render();
+}
+
+function deleteComponent(cid) {
+  if(!confirm('Delete this component?')) return;
+  state.components = state.components.filter(c=>c.id!==cid);
+  delete state.uptimeHistory[cid];
+  delete state.responseTime[cid];
+  state.modal = null;
+  save(); render();
+}
+
+function saveIncident(editId, type) {
+  const title = document.getElementById('f-title').value.trim();
+  if(!title) return;
+  const description = document.getElementById('f-idesc').value.trim();
+  const status = document.getElementById('f-status').value;
+  const impact = document.getElementById('f-impact').value;
+  const affected = [...document.querySelectorAll('#f-affected .chip.selected')].map(e=>e.dataset.id);
+  const scheduledStart = document.getElementById('f-mstart')?.value ? new Date(document.getElementById('f-mstart').value).toISOString() : null;
+  const scheduledEnd = document.getElementById('f-mend')?.value ? new Date(document.getElementById('f-mend').value).toISOString() : null;
+
+  if(editId) {
+    const inc = state.incidents.find(x=>x.id===editId);
+    if(inc) {
+      const wasResolved = inc.status === 'resolved' || inc.status === 'completed';
+      Object.assign(inc, {title,description,status,impact,affectedComponents:affected,scheduledStart,scheduledEnd});
+      if(!wasResolved && (status==='resolved'||status==='completed')) inc.resolvedAt = new Date().toISOString();
+    }
+  } else {
+    state.incidents.push({id:id(),type,title,description,status,impact,affectedComponents:affected,updates:[],createdAt:new Date().toISOString(),resolvedAt:null,scheduledStart,scheduledEnd});
+  }
+  // Update component statuses based on active incidents
+  updateComponentStatuses();
+  state.modal = null;
+  save(); render();
+}
+
+function saveUpdate(incId) {
+  const inc = state.incidents.find(i=>i.id===incId);
+  if(!inc) return;
+  const status = document.getElementById('f-ustatus').value;
+  const message = document.getElementById('f-umsg').value.trim();
+  if(!message) return;
+  inc.updates.push({id:id(),status,message,timestamp:new Date().toISOString()});
+  inc.status = status;
+  if(status === 'resolved' || status === 'completed') inc.resolvedAt = new Date().toISOString();
+  updateComponentStatuses();
+  state.modal = null;
+  save(); render();
+}
+
+function deleteIncident(incId) {
+  if(!confirm('Delete this incident?')) return;
+  state.incidents = state.incidents.filter(i=>i.id!==incId);
+  state.selectedIncident = null;
+  state.modal = null;
+  save(); render();
+}
+
+function updateComponentStatuses() {
+  // Auto-update component statuses based on active incidents
+  const activeIncs = state.incidents.filter(i=>i.status!=='resolved'&&i.status!=='completed');
+  state.components.forEach(c => {
+    const affecting = activeIncs.filter(i=>i.affectedComponents.includes(c.id));
+    if(!affecting.length) { c.status = 'operational'; return; }
+    const worst = affecting.reduce((w,i) => {
+      const order = {none:0,minor:1,major:2,critical:3};
+      return order[i.impact] > order[w] ? i.impact : w;
+    }, 'none');
+    if(worst === 'critical') c.status = 'major';
+    else if(worst === 'major') c.status = 'partial';
+    else if(worst === 'minor') c.status = 'degraded';
+    // Check if maintenance
+    const maint = affecting.find(i=>i.type==='maintenance');
+    if(maint && worst === 'none') c.status = 'maintenance';
+  });
+}
+
+function saveSettings() {
+  state.settings.name = document.getElementById('f-sname').value.trim();
+  state.settings.description = document.getElementById('f-sdesc').value.trim();
+  state.settings.logo = document.getElementById('f-slogo').value.trim();
+  state.settings.url = document.getElementById('f-surl').value.trim();
+  state.modal = null;
+  save(); render();
+}
+
+function addSubscriber() {
+  const email = document.getElementById('f-email').value.trim();
+  if(!email || !email.includes('@')) return;
+  if(state.subscribers.find(s=>s.email===email)) return;
+  state.subscribers.push({email,addedAt:new Date().toISOString()});
+  state.modal = null;
+  save(); render();
+}
+
+// ===== EXPORT/IMPORT =====
+function exportJSON() {
+  const data = {components:state.components,incidents:state.incidents,subscribers:state.subscribers,settings:state.settings,uptimeHistory:state.uptimeHistory,responseTime:state.responseTime};
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'status-beacon-backup.json';
+  a.click();
+}
+
+function importJSON() {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.json';
+  inp.onchange = e => {
+    const f = e.target.files[0];
+    if(!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if(d.components) state.components = d.components;
+        if(d.incidents) state.incidents = d.incidents;
+        if(d.subscribers) state.subscribers = d.subscribers;
+        if(d.settings) state.settings = d.settings;
+        if(d.uptimeHistory) state.uptimeHistory = d.uptimeHistory;
+        if(d.responseTime) state.responseTime = d.responseTime;
+        save(); render();
+      } catch(e) { alert('Invalid JSON file'); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+
+function exportPublicHTML() {
+  // Generate standalone public status page HTML
+  const overall = getOverallStatus();
+  const overallLabels = {operational:'All Systems Operational',degraded:'Some Systems Degraded',partial:'Partial System Outage',major:'Major System Outage',maintenance:'Maintenance in Progress'};
+  const statusColors = {operational:'#34d399',degraded:'#fbbf24',partial:'#f97316',major:'#ef4444',maintenance:'#60a5fa'};
+  const active = getActiveIncidents().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const scheduled = getScheduledMaint();
+  const resolved = getResolvedIncidents().sort((a,b)=>new Date(b.resolvedAt||b.createdAt)-new Date(a.resolvedAt||a.createdAt)).slice(0,10);
+
+  let compsHtml = '';
+  state.components.forEach(c => {
+    compsHtml += `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;margin-bottom:6px">
+      <span style="font-weight:600;font-size:14px">${esc(c.name)}</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${statusColors[c.status]}20;color:${statusColors[c.status]}"><span style="width:7px;height:7px;border-radius:50%;background:${statusColors[c.status]}"></span>${COMP_STATUS_LABELS[c.status]}</span>
+    </div>`;
+  });
+
+  let incHtml = '';
+  if(active.length) {
+    incHtml += '<h3 style="font-size:16px;margin:24px 0 12px;color:#e4e7f1">Active Incidents</h3>';
+    active.forEach(i => {
+      incHtml += `<div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:8px;padding:14px 18px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between"><strong>${esc(i.title)}</strong><span style="font-size:11px;color:${statusColors[i.status==='investigating'?'major':i.status==='identified'?'partial':'degraded']}">${INC_STATUS_LABELS[i.status]}</span></div>
+        ${i.updates.length?`<p style="font-size:12px;color:#8b90a5;margin-top:6px">${esc(i.updates.sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp))[0].message)}</p>`:''}
+      </div>`;
+    });
+  }
+
+  let pastHtml = '';
+  if(resolved.length) {
+    pastHtml = '<h3 style="font-size:16px;margin:24px 0 12px;color:#e4e7f1">Past Incidents</h3>';
+    resolved.forEach(i => {
+      pastHtml += `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+        <div style="display:flex;justify-content:space-between"><span style="font-size:13px">${esc(i.title)}</span><span style="font-size:11px;color:#34d399">Resolved</span></div>
+        <span style="font-size:11px;color:#5a5f78">${fmtDate(i.resolvedAt||i.createdAt)}</span>
+      </div>`;
+    });
+  }
+
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${esc(state.settings.name)} Status</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1117;color:#e4e7f1;min-height:100vh}.container{max-width:680px;margin:0 auto;padding:40px 20px}</style>
+</head><body><div class="container">
+<div style="text-align:center;margin-bottom:32px"><h1 style="font-size:24px">${esc(state.settings.logo)} ${esc(state.settings.name)} Status</h1><p style="color:#8b90a5;font-size:14px;margin-top:4px">${esc(state.settings.description)}</p></div>
+<div style="padding:14px 18px;border-radius:10px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;background:${statusColors[overall]}15;border:1px solid ${statusColors[overall]}30;color:${statusColors[overall]};margin-bottom:24px"><span style="width:12px;height:12px;border-radius:50%;background:${statusColors[overall]}"></span>${overallLabels[overall]}</div>
+${compsHtml}${incHtml}${pastHtml}
+<div style="text-align:center;padding:24px;font-size:12px;color:#5a5f78;border-top:1px solid rgba(255,255,255,0.06);margin-top:32px">Powered by Status Beacon &bull; Updated ${fmtDateTime(new Date())}</div>
+</div></body></html>`;
+
+  const blob = new Blob([html],{type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'status-page.html';
+  a.click();
+}
+
+// ===== UI HELPERS =====
+function setView(v) { state.view = v; state.selectedIncident = null; state.search = ''; render(); }
+function esc(s) { if(!s) return ''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+function showTip(e, date, status) {
+  const tip = document.getElementById('tooltip');
+  tip.innerHTML = `<div class="t-date">${date}</div><div class="t-status">${status}</div>`;
+  tip.style.display = 'block';
+  tip.style.left = e.clientX + 10 + 'px';
+  tip.style.top = e.clientY - 40 + 'px';
+}
+function hideTip() { document.getElementById('tooltip').style.display = 'none'; }
+
+function toggleKB() { state.showKB = !state.showKB; renderKB(); }
+function renderKB() {
+  let existing = document.getElementById('kbPanel');
+  if(existing) existing.remove();
+  if(!state.showKB) return;
+  const panel = document.createElement('div');
+  panel.className = 'kb-panel';
+  panel.id = 'kbPanel';
+  panel.innerHTML = `<h4>Keyboard Shortcuts</h4>
+    <div class="kb-row"><span>Components</span><kbd>1</kbd></div>
+    <div class="kb-row"><span>Incidents</span><kbd>2</kbd></div>
+    <div class="kb-row"><span>Maintenance</span><kbd>3</kbd></div>
+    <div class="kb-row"><span>Public Page</span><kbd>4</kbd></div>
+    <div class="kb-row"><span>Dashboard</span><kbd>5</kbd></div>
+    <div class="kb-row"><span>New Component</span><kbd>C</kbd></div>
+    <div class="kb-row"><span>New Incident</span><kbd>I</kbd></div>
+    <div class="kb-row"><span>Search</span><kbd>/</kbd></div>
+    <div class="kb-row"><span>Export</span><kbd>E</kbd></div>
+    <div class="kb-row"><span>Close</span><kbd>Esc</kbd></div>
+    <div class="kb-row"><span>Help</span><kbd>?</kbd></div>`;
+  document.body.appendChild(panel);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if(state.modal) {
+    if(e.key === 'Escape') { state.modal = null; render(); }
+    if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      const saveBtn = document.querySelector('.modal-footer .btn-primary');
+      if(saveBtn) saveBtn.click();
+    }
+    return;
+  }
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  switch(e.key) {
+    case '1': setView('status'); break;
+    case '2': setView('incidents'); break;
+    case '3': setView('maintenance'); break;
+    case '4': setView('public'); break;
+    case '5': setView('dashboard'); break;
+    case 'c': case 'C': openModal('component'); break;
+    case 'i': case 'I': openModal('incident'); break;
+    case '/': e.preventDefault(); state.view='incidents'; render(); setTimeout(()=>{const s=document.querySelector('.search-bar input');if(s)s.focus();},50); break;
+    case 'e': case 'E': exportJSON(); break;
+    case 'Escape':
+      if(state.selectedIncident) { state.selectedIncident=null; render(); }
+      if(state.showKB) { state.showKB=false; renderKB(); }
+      break;
+    case '?': toggleKB(); break;
+  }
+});
+
+// ===== SEED DATA =====
+function seedData() {
+  if(state.components.length > 0) return; // Already has data
+
+  const now = new Date();
+  const compIds = {
+    api: id(),
+    web: id(),
+    dash: id(),
+    auth: id(),
+    track: id(),
+    cdn: id(),
+    db: id(),
+    email: id()
+  };
+
+  state.settings = {
+    name: 'UTMStamp',
+    description: 'Real-time status of UTMStamp services and infrastructure',
+    url: 'https://status.utmstamp.com',
+    logo: '📊'
+  };
+
+  state.components = [
+    { id: compIds.web, name: 'Website', description: 'utmstamp.com main site', group: 'Core', url: 'https://utmstamp.com', status: 'operational', createdAt: '2026-03-01T00:00:00Z' },
+    { id: compIds.api, name: 'API', description: 'REST API for signature management', group: 'Core', url: 'https://api.utmstamp.com/health', status: 'operational', createdAt: '2026-03-01T00:00:00Z' },
+    { id: compIds.dash, name: 'Dashboard', description: 'User dashboard & analytics', group: 'Core', url: 'https://app.utmstamp.com', status: 'operational', createdAt: '2026-03-01T00:00:00Z' },
+    { id: compIds.auth, name: 'Authentication', description: 'Login, signup, SSO', group: 'Core', url: '', status: 'operational', createdAt: '2026-03-01T00:00:00Z' },
+    { id: compIds.track, name: 'Click Tracking', description: 'UTM link redirect & analytics pipeline', group: 'Analytics', url: '', status: 'operational', createdAt: '2026-03-01T00:00:00Z' },
+    { id: compIds.cdn, name: 'CDN / Assets', description: 'Static assets, signature images', group: 'Infrastructure', url: '', status: 'operational', createdAt: '2026-03-01T00:00:00Z' },
+    { id: compIds.db, name: 'Database', description: 'Primary database cluster', group: 'Infrastructure', url: '', status: 'operational', createdAt: '2026-03-01T00:00:00Z' },
+    { id: compIds.email, name: 'Email Delivery', description: 'Transactional email (welcome, alerts)', group: 'Infrastructure', url: '', status: 'operational', createdAt: '2026-03-01T00:00:00Z' }
+  ];
+
+  // Generate 90 days of uptime history
+  Object.values(compIds).forEach(cid => {
+    state.uptimeHistory[cid] = [];
+    state.responseTime[cid] = [];
+    for(let i = 89; i >= 0; i--) {
+      const d = new Date(now); d.setDate(d.getDate()-i);
+      const key = d.toISOString().split('T')[0];
+      // Mostly operational with occasional issues
+      let status = 'operational';
+      const rand = Math.random();
+      if(cid === compIds.api && i === 12) status = 'partial'; // API had a partial outage 12 days ago
+      else if(cid === compIds.db && i === 45) status = 'degraded'; // DB degraded 45 days ago
+      else if(cid === compIds.cdn && i === 30) status = 'maintenance'; // CDN maintenance 30 days ago
+      else if(rand > 0.98) status = 'degraded';
+
+      state.uptimeHistory[cid].push({ date: key, status });
+
+      // Response times
+      let baseMs;
+      if(cid === compIds.api) baseMs = 120;
+      else if(cid === compIds.web) baseMs = 85;
+      else if(cid === compIds.dash) baseMs = 150;
+      else if(cid === compIds.track) baseMs = 45;
+      else if(cid === compIds.cdn) baseMs = 25;
+      else baseMs = 100;
+      const ms = Math.round(baseMs + (Math.random()-0.5)*baseMs*0.4);
+      state.responseTime[cid].push({ date: key, ms: Math.max(10, ms) });
+    }
+  });
+
+  // Seed incidents
+  const inc1 = id(), inc2 = id(), inc3 = id(), inc4 = id(), inc5 = id();
+
+  state.incidents = [
+    {
+      id: inc1, type: 'incident', title: 'API latency spike — signature rendering slow',
+      description: 'Users reporting slow signature preview loads. API p99 latency jumped from 150ms to 2.3s.',
+      status: 'resolved', impact: 'minor',
+      affectedComponents: [compIds.api, compIds.dash],
+      createdAt: '2026-04-17T08:30:00Z',
+      resolvedAt: '2026-04-17T10:45:00Z',
+      updates: [
+        { id: id(), status: 'investigating', message: 'Received reports of slow signature rendering. Investigating API performance.', timestamp: '2026-04-17T08:35:00Z' },
+        { id: id(), status: 'identified', message: 'Root cause identified: Supabase connection pool exhausted due to a query missing an index on the signatures table. Deploying fix.', timestamp: '2026-04-17T09:15:00Z' },
+        { id: id(), status: 'monitoring', message: 'Index deployed. p99 latency dropping — now at 280ms and falling. Monitoring.', timestamp: '2026-04-17T09:50:00Z' },
+        { id: id(), status: 'resolved', message: 'Latency back to normal levels (~140ms p99). Root cause was a missing composite index. Added monitoring alert for connection pool usage.', timestamp: '2026-04-17T10:45:00Z' }
+      ]
+    },
+    {
+      id: inc2, type: 'incident', title: 'Click tracking pipeline delayed',
+      description: 'UTM click events queued but not processing. Analytics dashboard showing stale data.',
+      status: 'resolved', impact: 'major',
+      affectedComponents: [compIds.track],
+      createdAt: '2026-04-10T14:00:00Z',
+      resolvedAt: '2026-04-10T16:30:00Z',
+      updates: [
+        { id: id(), status: 'investigating', message: 'Analytics dashboard showing clicks from 2+ hours ago as latest. Pipeline appears stalled.', timestamp: '2026-04-10T14:05:00Z' },
+        { id: id(), status: 'identified', message: 'Edge function processing click events hit memory limit. Vercel Edge runtime OOM on a batch of 50K clicks from a large team deployment. Implementing batch chunking.', timestamp: '2026-04-10T15:00:00Z' },
+        { id: id(), status: 'monitoring', message: 'Fix deployed. Backlog of 127K events draining. Currently processing ~2K events/min.', timestamp: '2026-04-10T15:45:00Z' },
+        { id: id(), status: 'resolved', message: 'All queued events processed. Pipeline running normally with new 10K batch limit. No data was lost.', timestamp: '2026-04-10T16:30:00Z' }
+      ]
+    },
+    {
+      id: inc3, type: 'incident', title: 'Authentication service 502 errors',
+      description: 'Intermittent 502 errors on login and signup endpoints.',
+      status: 'resolved', impact: 'critical',
+      affectedComponents: [compIds.auth, compIds.api, compIds.dash],
+      createdAt: '2026-03-28T06:15:00Z',
+      resolvedAt: '2026-03-28T07:40:00Z',
+      updates: [
+        { id: id(), status: 'investigating', message: 'Multiple users unable to log in. Auth endpoints returning 502. All other services operational.', timestamp: '2026-03-28T06:20:00Z' },
+        { id: id(), status: 'identified', message: 'Supabase Auth service experiencing upstream issues. Confirmed via Supabase status page. We have no action except to wait and retry.', timestamp: '2026-03-28T06:45:00Z' },
+        { id: id(), status: 'monitoring', message: 'Supabase Auth recovering. Login success rate climbing — now at 94%. Some users may need to retry.', timestamp: '2026-03-28T07:15:00Z' },
+        { id: id(), status: 'resolved', message: 'All auth services restored. 100% login success rate. Supabase confirmed the issue was a regional node failure in ap-south-1. Adding auth health monitoring endpoint.', timestamp: '2026-03-28T07:40:00Z' }
+      ]
+    },
+    {
+      id: inc4, type: 'maintenance', title: 'Database migration — new team features schema',
+      description: 'Adding tables and indexes for upcoming team management features. Brief read-only period expected.',
+      status: 'completed', impact: 'minor',
+      affectedComponents: [compIds.db, compIds.api],
+      createdAt: '2026-03-25T00:00:00Z',
+      resolvedAt: '2026-03-27T04:30:00Z',
+      scheduledStart: '2026-03-27T03:00:00Z',
+      scheduledEnd: '2026-03-27T04:00:00Z',
+      updates: [
+        { id: id(), status: 'scheduled', message: 'Maintenance window scheduled for March 27, 3:00-4:00 AM UTC. API will be in read-only mode during migration.', timestamp: '2026-03-25T10:00:00Z' },
+        { id: id(), status: 'in_progress', message: 'Migration started. API in read-only mode. Signature viewing works, editing temporarily disabled.', timestamp: '2026-03-27T03:05:00Z' },
+        { id: id(), status: 'completed', message: 'Migration completed successfully. All services fully operational. New team schema ready.', timestamp: '2026-03-27T04:30:00Z' }
+      ]
+    },
+    {
+      id: inc5, type: 'maintenance', title: 'CDN cache purge & edge redeployment',
+      description: 'Deploying new edge configuration for faster signature image delivery. Expect brief cache misses.',
+      status: 'scheduled', impact: 'none',
+      affectedComponents: [compIds.cdn],
+      createdAt: '2026-04-28T00:00:00Z',
+      resolvedAt: null,
+      scheduledStart: '2026-05-01T02:00:00Z',
+      scheduledEnd: '2026-05-01T02:30:00Z',
+      updates: [
+        { id: id(), status: 'scheduled', message: 'Scheduled for May 1, 2:00-2:30 AM UTC. Signature images may load slightly slower for ~5 minutes during cache rebuild.', timestamp: '2026-04-28T10:00:00Z' }
+      ]
+    }
+  ];
+
+  // Subscribers
+  state.subscribers = [
+    { email: 'aj@utmstamp.com', addedAt: '2026-03-01T00:00:00Z' },
+    { email: 'team@utmstamp.com', addedAt: '2026-03-15T00:00:00Z' },
+    { email: 'ops-alerts@utmstamp.com', addedAt: '2026-04-01T00:00:00Z' }
+  ];
+
+  save();
+}
+
+// ===== INIT =====
+load();
+seedData();
+render();
+</script>
+</body>
+</html>

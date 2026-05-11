@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schema Forge — Visual Database Schema & ERD Builder</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --bg2: #1a1d27;
+  --bg3: #242836;
+  --bg4: #2e3344;
+  --border: #353a4a;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --accent3: #4f46e5;
+  --green: #22c55e;
+  --green2: #16a34a;
+  --yellow: #eab308;
+  --red: #ef4444;
+  --orange: #f97316;
+  --blue: #3b82f6;
+  --purple: #a855f7;
+  --pink: #ec4899;
+  --cyan: #06b6d4;
+  --teal: #14b8a6;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; }
+
+/* Sidebar */
+.sidebar { width: 260px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+.sidebar-header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.sidebar-header h1 span { font-size: 22px; }
+.sidebar-search { width: 100%; padding: 8px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; margin-top: 10px; outline: none; }
+.sidebar-search:focus { border-color: var(--accent); }
+.sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
+.sidebar-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; transition: background .15s; }
+.sidebar-item:hover { background: var(--bg3); }
+.sidebar-item.active { background: var(--accent3); color: white; }
+.sidebar-item .table-count { font-size: 11px; color: var(--text3); background: var(--bg4); padding: 2px 7px; border-radius: 10px; }
+.sidebar-item.active .table-count { background: rgba(255,255,255,.2); color: rgba(255,255,255,.8); }
+.sidebar-actions { padding: 8px; border-top: 1px solid var(--border); display: flex; gap: 6px; }
+.sidebar-actions button { flex: 1; }
+
+/* Buttons */
+button { padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); font-size: 12px; cursor: pointer; transition: all .15s; white-space: nowrap; }
+button:hover { background: var(--bg4); border-color: var(--text3); }
+button.primary { background: var(--accent); border-color: var(--accent); color: white; }
+button.primary:hover { background: var(--accent3); }
+button.danger { color: var(--red); }
+button.danger:hover { background: rgba(239,68,68,.15); }
+button.sm { padding: 4px 10px; font-size: 11px; }
+
+/* Main */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.toolbar { padding: 8px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.toolbar .views { display: flex; gap: 4px; }
+.toolbar .views button { padding: 6px 14px; }
+.toolbar .views button.active { background: var(--accent); border-color: var(--accent); color: white; }
+.toolbar .spacer { flex: 1; }
+.toolbar .zoom-info { font-size: 12px; color: var(--text3); min-width: 50px; text-align: center; }
+
+/* Canvas */
+.canvas-wrap { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
+.canvas-bg { position: absolute; inset: 0; }
+.canvas { position: absolute; transform-origin: 0 0; }
+
+/* Table Entity */
+.table-entity { position: absolute; background: var(--bg2); border: 2px solid var(--border); border-radius: 10px; min-width: 220px; cursor: grab; user-select: none; box-shadow: 0 4px 20px rgba(0,0,0,.3); transition: box-shadow .2s; z-index: 1; }
+.table-entity:hover { box-shadow: 0 6px 30px rgba(0,0,0,.5); }
+.table-entity.selected { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,.3); z-index: 10; }
+.table-entity.dragging { cursor: grabbing; opacity: .9; z-index: 100; }
+.table-header { padding: 10px 14px; border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 14px; cursor: grab; }
+.table-header .icons { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+.table-entity:hover .table-header .icons { opacity: 1; }
+.table-header .icons button { padding: 3px 6px; font-size: 11px; border: none; background: rgba(255,255,255,.15); color: white; border-radius: 4px; }
+.table-header .icons button:hover { background: rgba(255,255,255,.3); }
+.table-cols { padding: 0; }
+.table-col { padding: 6px 14px; font-size: 12px; display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--border); transition: background .1s; cursor: pointer; }
+.table-col:hover { background: var(--bg3); }
+.col-icon { width: 16px; font-size: 11px; text-align: center; flex-shrink: 0; }
+.col-name { flex: 1; font-weight: 500; }
+.col-type { color: var(--text3); font-size: 11px; font-family: 'SF Mono', 'Fira Code', monospace; }
+.col-badges { display: flex; gap: 3px; }
+.col-badge { font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
+.col-badge.pk { background: rgba(234,179,8,.2); color: var(--yellow); }
+.col-badge.fk { background: rgba(99,102,241,.2); color: var(--accent2); }
+.col-badge.uq { background: rgba(168,85,247,.2); color: var(--purple); }
+.col-badge.nn { background: rgba(239,68,68,.2); color: var(--red); }
+.col-badge.idx { background: rgba(6,182,212,.2); color: var(--cyan); }
+.table-add-col { padding: 8px 14px; text-align: center; font-size: 12px; color: var(--text3); cursor: pointer; border-top: 1px solid var(--border); border-radius: 0 0 8px 8px; transition: all .15s; }
+.table-add-col:hover { background: var(--bg3); color: var(--accent2); }
+
+/* Relationship lines - SVG */
+.rel-svg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0; }
+.rel-line { stroke-width: 2; fill: none; pointer-events: stroke; cursor: pointer; }
+.rel-line:hover { stroke-width: 3; }
+.rel-label { font-size: 10px; fill: var(--text3); font-family: -apple-system, sans-serif; pointer-events: auto; cursor: pointer; }
+.rel-marker { fill: var(--text3); }
+
+/* Table list view */
+.list-view { flex: 1; overflow-y: auto; padding: 20px; }
+.list-table { width: 100%; border-collapse: collapse; }
+.list-table th { text-align: left; padding: 10px 14px; font-size: 12px; color: var(--text3); border-bottom: 2px solid var(--border); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.list-table td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid var(--border); }
+.list-table tr:hover td { background: var(--bg2); }
+.list-section { margin-bottom: 30px; }
+.list-section h3 { font-size: 16px; margin-bottom: 12px; padding-left: 4px; display: flex; align-items: center; gap: 8px; }
+
+/* SQL View */
+.sql-view { flex: 1; overflow-y: auto; padding: 20px; }
+.sql-content { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-break: break-all; color: var(--text); }
+.sql-toolbar { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; }
+.sql-toolbar select { padding: 6px 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; }
+.sql-kw { color: var(--accent2); font-weight: 600; }
+.sql-type { color: var(--cyan); }
+.sql-str { color: var(--green); }
+.sql-comment { color: var(--text3); font-style: italic; }
+.sql-constraint { color: var(--yellow); }
+.sql-table-name { color: var(--orange); }
+
+/* Dashboard */
+.dash-view { flex: 1; overflow-y: auto; padding: 20px; }
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+.stat-val { font-size: 28px; font-weight: 700; }
+.stat-label { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.dash-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+.dash-section h3 { font-size: 14px; margin-bottom: 14px; color: var(--text2); }
+.dash-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+.dash-bar-label { min-width: 120px; color: var(--text2); }
+.dash-bar { flex: 1; height: 22px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+.dash-bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 11px; color: white; font-weight: 600; min-width: 30px; transition: width .3s; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; width: 560px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-header h2 { font-size: 16px; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Form */
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; outline: none; font-family: inherit; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+.form-row { display: flex; gap: 10px; }
+.form-row .form-group { flex: 1; }
+.form-check { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.form-check input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+.form-check label { font-size: 13px; color: var(--text); margin-bottom: 0; }
+
+/* Color picker inline */
+.color-options { display: flex; gap: 6px; flex-wrap: wrap; }
+.color-opt { width: 28px; height: 28px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: all .15s; }
+.color-opt:hover { transform: scale(1.15); }
+.color-opt.active { border-color: white; box-shadow: 0 0 0 2px var(--accent); }
+
+/* Relation mode indicator */
+.rel-mode-banner { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: white; padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 500; box-shadow: 0 4px 20px rgba(99,102,241,.4); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .7; } }
+
+/* Toast */
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--bg3); border: 1px solid var(--border); padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 2000; animation: slideUp .3s; }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* Help */
+.help-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 3000; display: flex; align-items: center; justify-content: center; }
+.help-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 24px 32px; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+.help-box h2 { margin-bottom: 16px; }
+.help-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+.help-key { background: var(--bg4); padding: 2px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* Relationship list */
+.rel-list-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.rel-list-item:last-child { border-bottom: none; }
+.rel-type-badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+.rel-type-badge.one-one { background: rgba(34,197,94,.15); color: var(--green); }
+.rel-type-badge.one-many { background: rgba(99,102,241,.15); color: var(--accent2); }
+.rel-type-badge.many-many { background: rgba(168,85,247,.15); color: var(--purple); }
+
+/* Connection port dots */
+.conn-port { position: absolute; width: 10px; height: 10px; background: var(--accent); border-radius: 50%; cursor: crosshair; opacity: 0; transition: opacity .15s; z-index: 5; }
+.table-entity:hover .conn-port { opacity: .6; }
+.conn-port:hover { opacity: 1 !important; transform: scale(1.3); }
+.conn-port.left { left: -5px; top: 50%; margin-top: -5px; }
+.conn-port.right { right: -5px; top: 50%; margin-top: -5px; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span>🔧</span> Schema Forge</h1>
+    <input class="sidebar-search" id="schemaSearch" placeholder="Search schemas... (/)" />
+  </div>
+  <div class="sidebar-list" id="schemaList"></div>
+  <div class="sidebar-actions">
+    <button class="primary" onclick="newSchema()">+ Schema</button>
+    <button onclick="importData()">Import</button>
+    <button onclick="exportData()">Export</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="toolbar">
+    <div class="views">
+      <button id="viewCanvas" class="active" onclick="setView('canvas')">🎨 Canvas</button>
+      <button id="viewList" onclick="setView('list')">📋 Tables</button>
+      <button id="viewSql" onclick="setView('sql')">💾 SQL</button>
+      <button id="viewDash" onclick="setView('dashboard')">📊 Dashboard</button>
+    </div>
+    <div class="spacer"></div>
+    <div id="canvasTools" style="display:flex;gap:6px;align-items:center;">
+      <button class="primary sm" onclick="addTable()">+ Table</button>
+      <button class="sm" onclick="startRelMode()">🔗 Relation</button>
+      <button class="sm" onclick="autoLayout()">⚡ Auto Layout</button>
+      <span class="zoom-info" id="zoomInfo">100%</span>
+      <button class="sm" onclick="zoomCanvas(0.1)">+</button>
+      <button class="sm" onclick="zoomCanvas(-0.1)">−</button>
+      <button class="sm" onclick="fitView()">Fit</button>
+    </div>
+  </div>
+
+  <div class="canvas-wrap" id="canvasWrap">
+    <svg class="canvas-bg" id="gridBg"></svg>
+    <svg class="rel-svg" id="relSvg"></svg>
+    <div class="canvas" id="canvas"></div>
+  </div>
+
+  <div class="list-view" id="listView" style="display:none;"></div>
+  <div class="sql-view" id="sqlView" style="display:none;"></div>
+  <div class="dash-view" id="dashView" style="display:none;"></div>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+<div id="helpRoot"></div>
+<div id="relBanner" style="display:none;" class="rel-mode-banner">🔗 Click source table, then target table — Esc to cancel</div>
+
+<script>
+// ==================== STATE ====================
+const LS_KEY = 'schema-forge-data';
+const TABLE_COLORS = [
+  {name:'Indigo',val:'#6366f1'},{name:'Blue',val:'#3b82f6'},{name:'Cyan',val:'#06b6d4'},
+  {name:'Teal',val:'#14b8a6'},{name:'Green',val:'#22c55e'},{name:'Yellow',val:'#eab308'},
+  {name:'Orange',val:'#f97316'},{name:'Red',val:'#ef4444'},{name:'Pink',val:'#ec4899'},
+  {name:'Purple',val:'#a855f7'}
+];
+const COL_TYPES = [
+  'UUID','SERIAL','BIGSERIAL','INT','BIGINT','SMALLINT','FLOAT','DECIMAL','NUMERIC',
+  'VARCHAR(255)','VARCHAR(100)','VARCHAR(50)','TEXT','CHAR(1)',
+  'BOOLEAN','DATE','TIME','TIMESTAMP','TIMESTAMPTZ',
+  'JSON','JSONB','BYTEA','INET','CIDR','MACADDR','POINT','INTERVAL'
+];
+const SQL_DIALECTS = ['PostgreSQL','MySQL','SQLite'];
+
+let state = { schemas: [], activeSchema: null };
+let view = 'canvas';
+let zoom = 1, panX = 0, panY = 0;
+let isPanning = false, panStartX = 0, panStartY = 0, panStartPX = 0, panStartPY = 0;
+let dragTable = null, dragOffX = 0, dragOffY = 0;
+let relMode = false, relSource = null;
+let selectedTable = null;
+let sqlDialect = 'PostgreSQL';
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+function load() {
+  try { const d = localStorage.getItem(LS_KEY); if (d) state = JSON.parse(d); } catch(e) {}
+  if (!state.schemas || !state.schemas.length) seedData();
+}
+function save() { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+function getSchema() { return state.schemas.find(s => s.id === state.activeSchema); }
+
+// ==================== RENDER ====================
+function render() {
+  renderSidebar();
+  if (view === 'canvas') renderCanvas();
+  else if (view === 'list') renderListView();
+  else if (view === 'sql') renderSqlView();
+  else if (view === 'dashboard') renderDashView();
+  save();
+}
+
+function renderSidebar() {
+  const q = document.getElementById('schemaSearch').value.toLowerCase();
+  const list = document.getElementById('schemaList');
+  const filtered = state.schemas.filter(s => !q || s.name.toLowerCase().includes(q));
+  list.innerHTML = filtered.map(s => `
+    <div class="sidebar-item ${s.id === state.activeSchema ? 'active' : ''}" onclick="selectSchema('${s.id}')" ondblclick="renameSchema('${s.id}')">
+      <span>${s.name}</span>
+      <span class="table-count">${s.tables.length} tables</span>
+    </div>
+  `).join('');
+}
+
+function renderCanvas() {
+  const schema = getSchema();
+  const canvasEl = document.getElementById('canvas');
+  const wrap = document.getElementById('canvasWrap');
+  document.getElementById('canvasTools').style.display = 'flex';
+  document.getElementById('listView').style.display = 'none';
+  document.getElementById('sqlView').style.display = 'none';
+  document.getElementById('dashView').style.display = 'none';
+  wrap.style.display = 'block';
+
+  if (!schema) { canvasEl.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text3);">Select or create a schema to start</div>'; return; }
+
+  canvasEl.innerHTML = schema.tables.map(t => renderTableEntity(t)).join('');
+  applyTransform();
+  renderRelationships();
+  drawGrid();
+}
+
+function renderTableEntity(t) {
+  const color = t.color || '#6366f1';
+  const sel = selectedTable === t.id ? 'selected' : '';
+  return `
+    <div class="table-entity ${sel}" id="te-${t.id}" data-id="${t.id}"
+         style="left:${t.x}px;top:${t.y}px;border-top-color:${color};"
+         onmousedown="startDrag(event,'${t.id}')" onclick="onTableClick(event,'${t.id}')">
+      <div class="table-header" style="background:${color};">
+        <span>📦 ${esc(t.name)}</span>
+        <div class="icons">
+          <button onclick="event.stopPropagation();editTable('${t.id}')">✏️</button>
+          <button onclick="event.stopPropagation();deleteTable('${t.id}')">🗑</button>
+        </div>
+      </div>
+      <div class="table-cols">
+        ${t.columns.map((c,i) => renderCol(t.id, c, i)).join('')}
+      </div>
+      <div class="table-add-col" onclick="event.stopPropagation();addColumn('${t.id}')">+ Add Column</div>
+      <div class="conn-port left" onmousedown="event.stopPropagation();startRelFromPort(event,'${t.id}','left')"></div>
+      <div class="conn-port right" onmousedown="event.stopPropagation();startRelFromPort(event,'${t.id}','right')"></div>
+    </div>`;
+}
+
+function renderCol(tid, c, idx) {
+  const icon = c.pk ? '🔑' : c.fk ? '🔗' : '◦';
+  let badges = '';
+  if (c.pk) badges += '<span class="col-badge pk">PK</span>';
+  if (c.fk) badges += '<span class="col-badge fk">FK</span>';
+  if (c.unique) badges += '<span class="col-badge uq">UQ</span>';
+  if (c.notNull) badges += '<span class="col-badge nn">NN</span>';
+  if (c.indexed) badges += '<span class="col-badge idx">IDX</span>';
+  return `<div class="table-col" onclick="event.stopPropagation();editColumn('${tid}',${idx})" title="${esc(c.name)} (${c.type})${c.defaultVal ? ' DEFAULT ' + c.defaultVal : ''}">
+    <span class="col-icon">${icon}</span>
+    <span class="col-name">${esc(c.name)}</span>
+    <span class="col-type">${c.type}</span>
+    <div class="col-badges">${badges}</div>
+  </div>`;
+}
+
+// ==================== RELATIONSHIPS SVG ====================
+function renderRelationships() {
+  const schema = getSchema();
+  if (!schema) return;
+  const svg = document.getElementById('relSvg');
+  const wrap = document.getElementById('canvasWrap');
+  svg.setAttribute('width', wrap.clientWidth * 3);
+  svg.setAttribute('height', wrap.clientHeight * 3);
+  svg.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+
+  let html = `<defs>
+    <marker id="arrowOne" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 Z" class="rel-marker"/></marker>
+    <marker id="arrowMany" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L12,6 L0,12 M8,0 L8,12" stroke="var(--text3)" fill="none" stroke-width="1.5"/></marker>
+  </defs>`;
+
+  schema.relationships.forEach(r => {
+    const fromT = schema.tables.find(t => t.id === r.from);
+    const toT = schema.tables.find(t => t.id === r.to);
+    if (!fromT || !toT) return;
+
+    const fromEl = document.getElementById('te-' + r.from);
+    const toEl = document.getElementById('te-' + r.to);
+    if (!fromEl || !toEl) return;
+
+    // Calculate connection points
+    const fw = fromEl.offsetWidth, fh = fromEl.offsetHeight;
+    const tw = toEl.offsetWidth, th = toEl.offsetHeight;
+    const fcx = fromT.x + fw/2, fcy = fromT.y + fh/2;
+    const tcx = toT.x + tw/2, tcy = toT.y + th/2;
+
+    let fx, fy, tx, ty;
+    if (fcx < tcx) {
+      fx = fromT.x + fw; fy = fcy;
+      tx = toT.x; ty = tcy;
+    } else {
+      fx = fromT.x; fy = fcy;
+      tx = toT.x + tw; ty = tcy;
+    }
+
+    const dx = tx - fx;
+    const cp = Math.abs(dx) * 0.5;
+    const path = `M${fx},${fy} C${fx+Math.sign(dx)*cp},${fy} ${tx-Math.sign(dx)*cp},${ty} ${tx},${ty}`;
+
+    const markerEnd = r.type === '1:1' ? 'url(#arrowOne)' : 'url(#arrowMany)';
+    const color = r.type === '1:1' ? 'var(--green)' : r.type === '1:N' ? 'var(--accent2)' : 'var(--purple)';
+
+    html += `<path class="rel-line" d="${path}" stroke="${color}" marker-end="${markerEnd}" onclick="editRelation('${r.id}')"/>`;
+
+    const mx = (fx+tx)/2, my = (fy+ty)/2;
+    const label = r.label || r.type;
+    html += `<text class="rel-label" x="${mx}" y="${my-8}" text-anchor="middle" onclick="editRelation('${r.id}')">${esc(label)}</text>`;
+  });
+
+  svg.innerHTML = html;
+}
+
+// ==================== GRID ====================
+function drawGrid() {
+  const svg = document.getElementById('gridBg');
+  const w = svg.clientWidth, h = svg.clientHeight;
+  const step = 20 * zoom;
+  const offX = panX % step, offY = panY % step;
+  let lines = '';
+  for (let x = offX; x < w; x += step) {
+    lines += `<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="var(--bg3)" stroke-width="0.5"/>`;
+  }
+  for (let y = offY; y < h; y += step) {
+    lines += `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="var(--bg3)" stroke-width="0.5"/>`;
+  }
+  svg.innerHTML = lines;
+}
+
+function applyTransform() {
+  const c = document.getElementById('canvas');
+  c.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+  document.getElementById('zoomInfo').textContent = Math.round(zoom * 100) + '%';
+  const svg = document.getElementById('relSvg');
+  svg.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+}
+
+// ==================== CANVAS INTERACTIONS ====================
+function initCanvasEvents() {
+  const wrap = document.getElementById('canvasWrap');
+
+  wrap.addEventListener('mousedown', e => {
+    if (e.target === wrap || e.target.tagName === 'svg' || e.target.classList.contains('canvas-bg')) {
+      isPanning = true;
+      panStartX = e.clientX; panStartY = e.clientY;
+      panStartPX = panX; panStartPY = panY;
+      wrap.style.cursor = 'grabbing';
+      selectedTable = null;
+      render();
+    }
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (isPanning) {
+      panX = panStartPX + (e.clientX - panStartX);
+      panY = panStartPY + (e.clientY - panStartY);
+      applyTransform();
+      drawGrid();
+      renderRelationships();
+    }
+    if (dragTable) {
+      const schema = getSchema();
+      const t = schema.tables.find(tb => tb.id === dragTable);
+      if (t) {
+        t.x = Math.round(((e.clientX - panX) / zoom - dragOffX) / 20) * 20;
+        t.y = Math.round(((e.clientY - panY) / zoom - dragOffY) / 20) * 20;
+        const el = document.getElementById('te-' + t.id);
+        if (el) { el.style.left = t.x + 'px'; el.style.top = t.y + 'px'; }
+        renderRelationships();
+      }
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isPanning) { isPanning = false; wrap.style.cursor = ''; }
+    if (dragTable) {
+      const el = document.getElementById('te-' + dragTable);
+      if (el) el.classList.remove('dragging');
+      dragTable = null;
+      save();
+    }
+  });
+
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.08 : 0.08;
+    const newZoom = Math.max(0.2, Math.min(3, zoom + delta));
+    const rect = wrap.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    panX = mx - (mx - panX) * (newZoom / zoom);
+    panY = my - (my - panY) * (newZoom / zoom);
+    zoom = newZoom;
+    applyTransform();
+    drawGrid();
+    renderRelationships();
+  }, { passive: false });
+}
+
+function startDrag(e, id) {
+  if (relMode) return;
+  if (e.target.tagName === 'BUTTON') return;
+  e.stopPropagation();
+  dragTable = id;
+  const schema = getSchema();
+  const t = schema.tables.find(tb => tb.id === id);
+  const rect = document.getElementById('canvasWrap').getBoundingClientRect();
+  dragOffX = (e.clientX - rect.left - panX) / zoom - t.x;
+  dragOffY = (e.clientY - rect.top - panY) / zoom - t.y;
+  const el = document.getElementById('te-' + id);
+  if (el) el.classList.add('dragging');
+}
+
+function onTableClick(e, id) {
+  if (relMode) {
+    e.stopPropagation();
+    if (!relSource) {
+      relSource = id;
+      const el = document.getElementById('te-' + id);
+      if (el) el.classList.add('selected');
+      document.getElementById('relBanner').innerHTML = '🔗 Now click the target table — Esc to cancel';
+    } else if (relSource !== id) {
+      showRelModal(relSource, id);
+      endRelMode();
+    }
+    return;
+  }
+  selectedTable = id;
+  render();
+}
+
+// ==================== ZOOM/PAN ====================
+function zoomCanvas(delta) {
+  zoom = Math.max(0.2, Math.min(3, zoom + delta));
+  applyTransform(); drawGrid(); renderRelationships();
+}
+function fitView() {
+  const schema = getSchema();
+  if (!schema || !schema.tables.length) return;
+  const wrap = document.getElementById('canvasWrap');
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  schema.tables.forEach(t => {
+    const el = document.getElementById('te-'+t.id);
+    const w = el ? el.offsetWidth : 220;
+    const h = el ? el.offsetHeight : 200;
+    if (t.x < minX) minX = t.x;
+    if (t.y < minY) minY = t.y;
+    if (t.x+w > maxX) maxX = t.x+w;
+    if (t.y+h > maxY) maxY = t.y+h;
+  });
+  const pw = wrap.clientWidth, ph = wrap.clientHeight;
+  const cw = maxX-minX+100, ch = maxY-minY+100;
+  zoom = Math.min(pw/cw, ph/ch, 1.5);
+  panX = (pw - cw*zoom)/2 - minX*zoom;
+  panY = (ph - ch*zoom)/2 - minY*zoom;
+  applyTransform(); drawGrid(); renderRelationships();
+}
+
+// ==================== SCHEMA CRUD ====================
+function newSchema() {
+  const name = prompt('Schema name:', 'New Schema');
+  if (!name) return;
+  const s = { id: uid(), name, tables: [], relationships: [], createdAt: new Date().toISOString() };
+  state.schemas.push(s);
+  state.activeSchema = s.id;
+  render();
+}
+function selectSchema(id) { state.activeSchema = id; selectedTable = null; render(); setTimeout(fitView, 50); }
+function renameSchema(id) {
+  const s = state.schemas.find(x => x.id === id);
+  if (!s) return;
+  const name = prompt('Rename schema:', s.name);
+  if (name) { s.name = name; render(); }
+}
+function deleteSchema(id) {
+  if (!confirm('Delete this schema?')) return;
+  state.schemas = state.schemas.filter(s => s.id !== id);
+  if (state.activeSchema === id) state.activeSchema = state.schemas[0]?.id || null;
+  render();
+}
+
+// ==================== TABLE CRUD ====================
+function addTable() {
+  const schema = getSchema();
+  if (!schema) return;
+  showTableModal(null);
+}
+
+function editTable(id) {
+  showTableModal(id);
+}
+
+function deleteTable(id) {
+  const schema = getSchema();
+  if (!confirm('Delete this table and all its relationships?')) return;
+  schema.tables = schema.tables.filter(t => t.id !== id);
+  schema.relationships = schema.relationships.filter(r => r.from !== id && r.to !== id);
+  if (selectedTable === id) selectedTable = null;
+  render();
+}
+
+function showTableModal(editId) {
+  const schema = getSchema();
+  const existing = editId ? schema.tables.find(t => t.id === editId) : null;
+  const title = existing ? 'Edit Table' : 'New Table';
+  const name = existing ? existing.name : '';
+  const color = existing ? existing.color : TABLE_COLORS[schema.tables.length % TABLE_COLORS.length].val;
+  const desc = existing ? (existing.description || '') : '';
+
+  const colorOpts = TABLE_COLORS.map(c =>
+    `<div class="color-opt ${c.val === color ? 'active' : ''}" style="background:${c.val}" data-color="${c.val}" onclick="document.querySelectorAll('.color-opt').forEach(x=>x.classList.remove('active'));this.classList.add('active');"></div>`
+  ).join('');
+
+  showModal(title, `
+    <div class="form-group"><label>Table Name</label><input id="mTableName" value="${esc(name)}" placeholder="users" autofocus/></div>
+    <div class="form-group"><label>Description</label><textarea id="mTableDesc" rows="2" placeholder="Optional description...">${esc(desc)}</textarea></div>
+    <div class="form-group"><label>Color</label><div class="color-options">${colorOpts}</div></div>
+  `, () => {
+    const n = document.getElementById('mTableName').value.trim();
+    if (!n) return;
+    const selColor = document.querySelector('.color-opt.active')?.dataset.color || color;
+    const d = document.getElementById('mTableDesc').value.trim();
+    if (existing) {
+      existing.name = n; existing.color = selColor; existing.description = d;
+    } else {
+      const tables = schema.tables;
+      const maxX = tables.length ? Math.max(...tables.map(t => t.x)) : 0;
+      const newT = {
+        id: uid(), name: n, color: selColor, description: d,
+        x: tables.length ? maxX + 300 : 60, y: tables.length ? 60 : 60,
+        columns: [
+          { name: 'id', type: 'UUID', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'gen_random_uuid()' }
+        ]
+      };
+      schema.tables.push(newT);
+      selectedTable = newT.id;
+    }
+    render();
+  });
+  setTimeout(() => document.getElementById('mTableName')?.focus(), 100);
+}
+
+// ==================== COLUMN CRUD ====================
+function addColumn(tid) {
+  showColumnModal(tid, null);
+}
+
+function editColumn(tid, idx) {
+  showColumnModal(tid, idx);
+}
+
+function showColumnModal(tid, editIdx) {
+  const schema = getSchema();
+  const table = schema.tables.find(t => t.id === tid);
+  const existing = editIdx !== null ? table.columns[editIdx] : null;
+  const title = existing ? `Edit Column — ${table.name}` : `Add Column — ${table.name}`;
+
+  const typeOpts = COL_TYPES.map(t => `<option ${existing && existing.type === t ? 'selected' : ''}>${t}</option>`).join('');
+
+  // FK references
+  const otherTables = schema.tables.filter(t => t.id !== tid);
+  let fkOpts = '<option value="">None</option>';
+  otherTables.forEach(ot => {
+    ot.columns.forEach(c => {
+      const val = `${ot.id}.${c.name}`;
+      const sel = existing && existing.fkRef === val ? 'selected' : '';
+      fkOpts += `<option value="${val}" ${sel}>${ot.name}.${c.name}</option>`;
+    });
+  });
+
+  showModal(title, `
+    <div class="form-row">
+      <div class="form-group"><label>Column Name</label><input id="mColName" value="${existing ? esc(existing.name) : ''}" placeholder="email" autofocus/></div>
+      <div class="form-group"><label>Type</label><select id="mColType">${typeOpts}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Default Value</label><input id="mColDefault" value="${existing ? esc(existing.defaultVal || '') : ''}" placeholder="NULL"/></div>
+      <div class="form-group"><label>Foreign Key Reference</label><select id="mColFk">${fkOpts}</select></div>
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:4px;">
+      <div class="form-check"><input type="checkbox" id="mColPk" ${existing?.pk ? 'checked' : ''}/><label for="mColPk">Primary Key</label></div>
+      <div class="form-check"><input type="checkbox" id="mColNN" ${existing?.notNull ? 'checked' : ''}/><label for="mColNN">NOT NULL</label></div>
+      <div class="form-check"><input type="checkbox" id="mColUQ" ${existing?.unique ? 'checked' : ''}/><label for="mColUQ">Unique</label></div>
+      <div class="form-check"><input type="checkbox" id="mColIdx" ${existing?.indexed ? 'checked' : ''}/><label for="mColIdx">Indexed</label></div>
+    </div>
+    ${existing ? `<div style="margin-top:14px;"><button class="danger sm" onclick="deleteColumn('${tid}',${editIdx})">🗑 Delete Column</button></div>` : ''}
+  `, () => {
+    const name = document.getElementById('mColName').value.trim();
+    if (!name) return;
+    const col = {
+      name,
+      type: document.getElementById('mColType').value,
+      pk: document.getElementById('mColPk').checked,
+      notNull: document.getElementById('mColNN').checked,
+      unique: document.getElementById('mColUQ').checked,
+      indexed: document.getElementById('mColIdx').checked,
+      fk: !!document.getElementById('mColFk').value,
+      fkRef: document.getElementById('mColFk').value || null,
+      defaultVal: document.getElementById('mColDefault').value.trim() || null
+    };
+    if (existing) {
+      table.columns[editIdx] = col;
+    } else {
+      table.columns.push(col);
+    }
+    render();
+  });
+  setTimeout(() => document.getElementById('mColName')?.focus(), 100);
+}
+
+function deleteColumn(tid, idx) {
+  const schema = getSchema();
+  const table = schema.tables.find(t => t.id === tid);
+  table.columns.splice(idx, 1);
+  closeModal();
+  render();
+  toast('Column deleted');
+}
+
+// ==================== RELATIONSHIP CRUD ====================
+function startRelMode() {
+  relMode = true;
+  relSource = null;
+  document.getElementById('relBanner').style.display = 'block';
+  document.getElementById('relBanner').innerHTML = '🔗 Click source table, then target table — Esc to cancel';
+}
+function endRelMode() {
+  relMode = false;
+  relSource = null;
+  document.getElementById('relBanner').style.display = 'none';
+}
+function startRelFromPort(e, tid) {
+  e.stopPropagation();
+  relMode = true;
+  relSource = tid;
+  document.getElementById('relBanner').style.display = 'block';
+  document.getElementById('relBanner').innerHTML = '🔗 Now click the target table — Esc to cancel';
+}
+
+function showRelModal(fromId, toId, editId) {
+  const schema = getSchema();
+  const existing = editId ? schema.relationships.find(r => r.id === editId) : null;
+  const from = existing ? existing.from : fromId;
+  const to = existing ? existing.to : toId;
+  const fromT = schema.tables.find(t => t.id === from);
+  const toT = schema.tables.find(t => t.id === to);
+  const title = existing ? 'Edit Relationship' : 'New Relationship';
+  const type = existing ? existing.type : '1:N';
+  const label = existing ? (existing.label || '') : '';
+
+  // FK column selectors
+  let fromColOpts = '<option value="">—</option>';
+  fromT.columns.forEach(c => {
+    const sel = existing && existing.fromCol === c.name ? 'selected' : '';
+    fromColOpts += `<option value="${esc(c.name)}" ${sel}>${c.name}</option>`;
+  });
+  let toColOpts = '<option value="">—</option>';
+  toT.columns.forEach(c => {
+    const sel = existing && existing.toCol === c.name ? 'selected' : '';
+    toColOpts += `<option value="${esc(c.name)}" ${sel}>${c.name}</option>`;
+  });
+
+  showModal(title, `
+    <div class="form-row">
+      <div class="form-group"><label>From Table</label><input value="${esc(fromT.name)}" disabled/></div>
+      <div class="form-group"><label>To Table</label><input value="${esc(toT.name)}" disabled/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>From Column</label><select id="mRelFromCol">${fromColOpts}</select></div>
+      <div class="form-group"><label>To Column</label><select id="mRelToCol">${toColOpts}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Type</label>
+        <select id="mRelType">
+          <option value="1:1" ${type==='1:1'?'selected':''}>One-to-One (1:1)</option>
+          <option value="1:N" ${type==='1:N'?'selected':''}>One-to-Many (1:N)</option>
+          <option value="N:M" ${type==='N:M'?'selected':''}>Many-to-Many (N:M)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Label</label><input id="mRelLabel" value="${esc(label)}" placeholder="Optional"/></div>
+    </div>
+    ${existing ? `<div style="margin-top:10px;"><button class="danger sm" onclick="deleteRelation('${editId}')">🗑 Delete Relationship</button></div>` : ''}
+  `, () => {
+    const rel = {
+      id: existing ? existing.id : uid(),
+      from, to,
+      fromCol: document.getElementById('mRelFromCol').value,
+      toCol: document.getElementById('mRelToCol').value,
+      type: document.getElementById('mRelType').value,
+      label: document.getElementById('mRelLabel').value.trim()
+    };
+    if (existing) {
+      const idx = schema.relationships.findIndex(r => r.id === editId);
+      schema.relationships[idx] = rel;
+    } else {
+      schema.relationships.push(rel);
+    }
+    render();
+  });
+}
+
+function editRelation(id) { showRelModal(null, null, id); }
+function deleteRelation(id) {
+  const schema = getSchema();
+  schema.relationships = schema.relationships.filter(r => r.id !== id);
+  closeModal();
+  render();
+  toast('Relationship deleted');
+}
+
+// ==================== AUTO LAYOUT ====================
+function autoLayout() {
+  const schema = getSchema();
+  if (!schema || !schema.tables.length) return;
+
+  // Topological sort-ish: tables with most outgoing relationships first
+  const relCount = {};
+  schema.tables.forEach(t => relCount[t.id] = 0);
+  schema.relationships.forEach(r => { relCount[r.from] = (relCount[r.from]||0) + 1; relCount[r.to] = (relCount[r.to]||0) + 1; });
+
+  const sorted = [...schema.tables].sort((a,b) => (relCount[b.id]||0) - (relCount[a.id]||0));
+  const cols = Math.ceil(Math.sqrt(sorted.length));
+  const gapX = 320, gapY = 300;
+
+  sorted.forEach((t, i) => {
+    t.x = (i % cols) * gapX + 60;
+    t.y = Math.floor(i / cols) * gapY + 60;
+  });
+
+  render();
+  setTimeout(fitView, 100);
+  toast('Auto-layout applied');
+}
+
+// ==================== LIST VIEW ====================
+function renderListView() {
+  document.getElementById('canvasWrap').style.display = 'none';
+  document.getElementById('sqlView').style.display = 'none';
+  document.getElementById('dashView').style.display = 'none';
+  document.getElementById('canvasTools').style.display = 'none';
+  const el = document.getElementById('listView');
+  el.style.display = 'block';
+
+  const schema = getSchema();
+  if (!schema) { el.innerHTML = '<p style="padding:40px;color:var(--text3);">No schema selected.</p>'; return; }
+
+  let html = `<h2 style="margin-bottom:20px;">${esc(schema.name)} — Tables & Columns</h2>`;
+
+  schema.tables.forEach(t => {
+    html += `<div class="list-section">
+      <h3><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${t.color};"></span> ${esc(t.name)} <span style="font-size:12px;color:var(--text3);font-weight:400;">${t.columns.length} columns</span></h3>
+      ${t.description ? `<p style="font-size:13px;color:var(--text2);margin-bottom:10px;padding-left:4px;">${esc(t.description)}</p>` : ''}
+      <table class="list-table">
+        <thead><tr><th>Name</th><th>Type</th><th>Constraints</th><th>Default</th><th>FK Reference</th></tr></thead>
+        <tbody>
+          ${t.columns.map(c => {
+            let constraints = [];
+            if (c.pk) constraints.push('<span class="col-badge pk">PK</span>');
+            if (c.notNull) constraints.push('<span class="col-badge nn">NOT NULL</span>');
+            if (c.unique) constraints.push('<span class="col-badge uq">UNIQUE</span>');
+            if (c.indexed) constraints.push('<span class="col-badge idx">INDEX</span>');
+            if (c.fk) constraints.push('<span class="col-badge fk">FK</span>');
+            const fkRef = c.fkRef ? (() => { const [tid,col] = c.fkRef.split('.'); const rt = schema.tables.find(x=>x.id===tid); return rt ? `${rt.name}.${col}` : c.fkRef; })() : '—';
+            return `<tr>
+              <td><strong>${esc(c.name)}</strong></td>
+              <td style="font-family:monospace;color:var(--cyan);">${c.type}</td>
+              <td>${constraints.join(' ') || '—'}</td>
+              <td style="font-family:monospace;font-size:12px;">${c.defaultVal || '—'}</td>
+              <td style="color:var(--accent2);">${fkRef}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  });
+
+  // Relationships section
+  if (schema.relationships.length) {
+    html += `<div class="list-section"><h3>🔗 Relationships</h3>`;
+    schema.relationships.forEach(r => {
+      const fromT = schema.tables.find(t => t.id === r.from);
+      const toT = schema.tables.find(t => t.id === r.to);
+      if (!fromT || !toT) return;
+      const typeClass = r.type === '1:1' ? 'one-one' : r.type === '1:N' ? 'one-many' : 'many-many';
+      html += `<div class="rel-list-item">
+        <span class="rel-type-badge ${typeClass}">${r.type}</span>
+        <strong>${esc(fromT.name)}</strong>${r.fromCol ? '.'+esc(r.fromCol) : ''}
+        <span style="color:var(--text3);">→</span>
+        <strong>${esc(toT.name)}</strong>${r.toCol ? '.'+esc(r.toCol) : ''}
+        ${r.label ? `<span style="color:var(--text3);font-size:12px;">(${esc(r.label)})</span>` : ''}
+        <span style="flex:1;"></span>
+        <button class="sm" onclick="editRelation('${r.id}')">Edit</button>
+        <button class="sm danger" onclick="if(confirm('Delete?')){const s=getSchema();s.relationships=s.relationships.filter(x=>x.id!=='${r.id}');render();}">🗑</button>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// ==================== SQL VIEW ====================
+function renderSqlView() {
+  document.getElementById('canvasWrap').style.display = 'none';
+  document.getElementById('listView').style.display = 'none';
+  document.getElementById('dashView').style.display = 'none';
+  document.getElementById('canvasTools').style.display = 'none';
+  const el = document.getElementById('sqlView');
+  el.style.display = 'block';
+
+  const schema = getSchema();
+  if (!schema) { el.innerHTML = '<p style="padding:40px;color:var(--text3);">No schema selected.</p>'; return; }
+
+  const sql = generateSQL(schema, sqlDialect);
+  const highlighted = highlightSQL(sql);
+
+  el.innerHTML = `
+    <div class="sql-toolbar">
+      <select onchange="sqlDialect=this.value;renderSqlView();">
+        ${SQL_DIALECTS.map(d => `<option ${d===sqlDialect?'selected':''}>${d}</option>`).join('')}
+      </select>
+      <button class="sm" onclick="copySQL()">📋 Copy</button>
+      <button class="sm" onclick="downloadSQL()">💾 Download .sql</button>
+      <span style="flex:1;"></span>
+      <span style="font-size:12px;color:var(--text3);">${schema.tables.length} tables · ${schema.relationships.length} relationships</span>
+    </div>
+    <div class="sql-content" id="sqlContent">${highlighted}</div>`;
+}
+
+function generateSQL(schema, dialect) {
+  let sql = `-- Schema: ${schema.name}\n-- Generated by Schema Forge\n-- Dialect: ${dialect}\n-- Date: ${new Date().toISOString().split('T')[0]}\n\n`;
+
+  // Topological sort: tables without FK deps first
+  const deps = {};
+  schema.tables.forEach(t => deps[t.id] = new Set());
+  schema.tables.forEach(t => {
+    t.columns.forEach(c => {
+      if (c.fkRef) {
+        const [refTid] = c.fkRef.split('.');
+        if (refTid !== t.id) deps[t.id].add(refTid);
+      }
+    });
+  });
+
+  const sorted = [];
+  const visited = new Set();
+  function visit(id) {
+    if (visited.has(id)) return;
+    visited.add(id);
+    deps[id].forEach(d => visit(d));
+    sorted.push(id);
+  }
+  schema.tables.forEach(t => visit(t.id));
+
+  sorted.forEach(tid => {
+    const t = schema.tables.find(x => x.id === tid);
+    if (!t) return;
+
+    sql += `CREATE TABLE ${quoteId(t.name, dialect)} (\n`;
+    const lines = [];
+
+    t.columns.forEach(c => {
+      let line = `  ${quoteId(c.name, dialect)} ${mapType(c.type, dialect)}`;
+      if (c.pk && dialect === 'SQLite' && (c.type === 'SERIAL' || c.type === 'BIGSERIAL')) {
+        line = `  ${quoteId(c.name, dialect)} INTEGER PRIMARY KEY AUTOINCREMENT`;
+      } else {
+        if (c.pk) line += ' PRIMARY KEY';
+        if (c.notNull && !c.pk) line += ' NOT NULL';
+        if (c.unique && !c.pk) line += ' UNIQUE';
+        if (c.defaultVal && !c.pk) line += ` DEFAULT ${c.defaultVal}`;
+      }
+      lines.push(line);
+    });
+
+    // FK constraints
+    t.columns.forEach(c => {
+      if (c.fkRef) {
+        const [refTid, refCol] = c.fkRef.split('.');
+        const refT = schema.tables.find(x => x.id === refTid);
+        if (refT) {
+          lines.push(`  FOREIGN KEY (${quoteId(c.name, dialect)}) REFERENCES ${quoteId(refT.name, dialect)}(${quoteId(refCol, dialect)})`);
+        }
+      }
+    });
+
+    sql += lines.join(',\n') + '\n);\n\n';
+
+    // Indexes
+    t.columns.forEach(c => {
+      if (c.indexed && !c.pk) {
+        sql += `CREATE INDEX idx_${t.name.toLowerCase()}_${c.name.toLowerCase()} ON ${quoteId(t.name, dialect)} (${quoteId(c.name, dialect)});\n`;
+      }
+    });
+    sql += '\n';
+  });
+
+  return sql.trim();
+}
+
+function quoteId(name, dialect) {
+  if (dialect === 'MySQL') return '`' + name + '`';
+  return '"' + name + '"';
+}
+
+function mapType(type, dialect) {
+  if (dialect === 'MySQL') {
+    const map = { 'UUID': 'CHAR(36)', 'SERIAL': 'INT AUTO_INCREMENT', 'BIGSERIAL': 'BIGINT AUTO_INCREMENT', 'TIMESTAMPTZ': 'TIMESTAMP', 'JSONB': 'JSON', 'BYTEA': 'BLOB', 'TEXT': 'TEXT', 'BOOLEAN': 'TINYINT(1)', 'INET': 'VARCHAR(45)', 'CIDR': 'VARCHAR(45)', 'MACADDR': 'VARCHAR(17)', 'POINT': 'POINT', 'INTERVAL': 'VARCHAR(50)' };
+    return map[type] || type;
+  }
+  if (dialect === 'SQLite') {
+    const map = { 'UUID': 'TEXT', 'SERIAL': 'INTEGER', 'BIGSERIAL': 'INTEGER', 'BIGINT': 'INTEGER', 'SMALLINT': 'INTEGER', 'INT': 'INTEGER', 'FLOAT': 'REAL', 'DECIMAL': 'REAL', 'NUMERIC': 'REAL', 'BOOLEAN': 'INTEGER', 'TIMESTAMPTZ': 'TEXT', 'TIMESTAMP': 'TEXT', 'DATE': 'TEXT', 'TIME': 'TEXT', 'JSON': 'TEXT', 'JSONB': 'TEXT', 'BYTEA': 'BLOB', 'INET': 'TEXT', 'CIDR': 'TEXT', 'MACADDR': 'TEXT', 'INTERVAL': 'TEXT' };
+    return map[type] || type;
+  }
+  return type;
+}
+
+function highlightSQL(sql) {
+  return esc(sql)
+    .replace(/\b(CREATE TABLE|CREATE INDEX|PRIMARY KEY|FOREIGN KEY|REFERENCES|NOT NULL|UNIQUE|DEFAULT|ON|AUTOINCREMENT|AUTO_INCREMENT|IF NOT EXISTS)\b/g, '<span class="sql-kw">$1</span>')
+    .replace(/\b(UUID|SERIAL|BIGSERIAL|INT|BIGINT|SMALLINT|FLOAT|DECIMAL|NUMERIC|VARCHAR\(\d+\)|TEXT|CHAR\(\d+\)|BOOLEAN|DATE|TIME|TIMESTAMP|TIMESTAMPTZ|JSON|JSONB|BYTEA|INET|CIDR|MACADDR|POINT|INTERVAL|INTEGER|REAL|BLOB|TINYINT\(1\))\b/g, '<span class="sql-type">$1</span>')
+    .replace(/(--[^\n]*)/g, '<span class="sql-comment">$1</span>');
+}
+
+function copySQL() {
+  const schema = getSchema();
+  if (!schema) return;
+  navigator.clipboard.writeText(generateSQL(schema, sqlDialect));
+  toast('SQL copied to clipboard');
+}
+
+function downloadSQL() {
+  const schema = getSchema();
+  if (!schema) return;
+  const sql = generateSQL(schema, sqlDialect);
+  const blob = new Blob([sql], { type: 'text/sql' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${schema.name.toLowerCase().replace(/\s+/g, '_')}.sql`;
+  a.click();
+  toast('SQL downloaded');
+}
+
+// ==================== DASHBOARD ====================
+function renderDashView() {
+  document.getElementById('canvasWrap').style.display = 'none';
+  document.getElementById('listView').style.display = 'none';
+  document.getElementById('sqlView').style.display = 'none';
+  document.getElementById('canvasTools').style.display = 'none';
+  const el = document.getElementById('dashView');
+  el.style.display = 'block';
+
+  const schema = getSchema();
+  if (!schema) { el.innerHTML = '<p style="padding:40px;color:var(--text3);">No schema selected.</p>'; return; }
+
+  const totalCols = schema.tables.reduce((s,t) => s + t.columns.length, 0);
+  const totalPK = schema.tables.reduce((s,t) => s + t.columns.filter(c=>c.pk).length, 0);
+  const totalFK = schema.tables.reduce((s,t) => s + t.columns.filter(c=>c.fk).length, 0);
+  const totalIdx = schema.tables.reduce((s,t) => s + t.columns.filter(c=>c.indexed).length, 0);
+  const totalRel = schema.relationships.length;
+  const avgCols = schema.tables.length ? (totalCols / schema.tables.length).toFixed(1) : 0;
+
+  // Type distribution
+  const typeDist = {};
+  schema.tables.forEach(t => t.columns.forEach(c => { typeDist[c.type] = (typeDist[c.type]||0) + 1; }));
+  const typeEntries = Object.entries(typeDist).sort((a,b) => b[1] - a[1]);
+  const maxTypeCount = typeEntries.length ? typeEntries[0][1] : 1;
+
+  // Table sizes
+  const tableSizes = schema.tables.map(t => ({ name: t.name, cols: t.columns.length, color: t.color })).sort((a,b) => b.cols - a.cols);
+  const maxTableSize = tableSizes.length ? tableSizes[0].cols : 1;
+
+  // Relationship type dist
+  const relTypes = { '1:1': 0, '1:N': 0, 'N:M': 0 };
+  schema.relationships.forEach(r => relTypes[r.type] = (relTypes[r.type]||0) + 1);
+
+  el.innerHTML = `
+    <h2 style="margin-bottom:20px;">${esc(schema.name)} — Dashboard</h2>
+    <div class="dash-grid">
+      <div class="stat-card"><div class="stat-val" style="color:var(--accent);">${schema.tables.length}</div><div class="stat-label">Tables</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--blue);">${totalCols}</div><div class="stat-label">Columns</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--yellow);">${totalPK}</div><div class="stat-label">Primary Keys</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--purple);">${totalFK}</div><div class="stat-label">Foreign Keys</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--cyan);">${totalIdx}</div><div class="stat-label">Indexes</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green);">${totalRel}</div><div class="stat-label">Relationships</div></div>
+    </div>
+
+    <div class="dash-section">
+      <h3>📦 Tables by Column Count</h3>
+      ${tableSizes.map(t => `<div class="dash-bar-row">
+        <span class="dash-bar-label">${esc(t.name)}</span>
+        <div class="dash-bar"><div class="dash-bar-fill" style="width:${(t.cols/maxTableSize)*100}%;background:${t.color};">${t.cols}</div></div>
+      </div>`).join('')}
+    </div>
+
+    <div class="dash-section">
+      <h3>🔤 Column Type Distribution</h3>
+      ${typeEntries.slice(0,12).map(([type, count]) => `<div class="dash-bar-row">
+        <span class="dash-bar-label" style="font-family:monospace;font-size:12px;">${type}</span>
+        <div class="dash-bar"><div class="dash-bar-fill" style="width:${(count/maxTypeCount)*100}%;background:var(--cyan);">${count}</div></div>
+      </div>`).join('')}
+    </div>
+
+    <div class="dash-section">
+      <h3>🔗 Relationship Types</h3>
+      <div style="display:flex;gap:30px;font-size:14px;">
+        <div><span style="color:var(--green);font-weight:700;font-size:24px;">${relTypes['1:1']}</span><div style="color:var(--text3);font-size:12px;">One-to-One</div></div>
+        <div><span style="color:var(--accent2);font-weight:700;font-size:24px;">${relTypes['1:N']}</span><div style="color:var(--text3);font-size:12px;">One-to-Many</div></div>
+        <div><span style="color:var(--purple);font-weight:700;font-size:24px;">${relTypes['N:M']}</span><div style="color:var(--text3);font-size:12px;">Many-to-Many</div></div>
+      </div>
+    </div>
+
+    <div class="dash-section">
+      <h3>📊 Schema Health</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="padding:12px;background:var(--bg3);border-radius:8px;">
+          <div style="font-size:12px;color:var(--text3);">Avg Columns/Table</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);">${avgCols}</div>
+        </div>
+        <div style="padding:12px;background:var(--bg3);border-radius:8px;">
+          <div style="font-size:12px;color:var(--text3);">Tables w/o Relationships</div>
+          <div style="font-size:20px;font-weight:700;color:${schema.tables.filter(t => !schema.relationships.some(r => r.from===t.id || r.to===t.id)).length > 0 ? 'var(--yellow)' : 'var(--green)'};">
+            ${schema.tables.filter(t => !schema.relationships.some(r => r.from===t.id || r.to===t.id)).length}
+          </div>
+        </div>
+        <div style="padding:12px;background:var(--bg3);border-radius:8px;">
+          <div style="font-size:12px;color:var(--text3);">Tables w/o PK</div>
+          <div style="font-size:20px;font-weight:700;color:${schema.tables.filter(t => !t.columns.some(c=>c.pk)).length > 0 ? 'var(--red)' : 'var(--green)'};">
+            ${schema.tables.filter(t => !t.columns.some(c=>c.pk)).length}
+          </div>
+        </div>
+        <div style="padding:12px;background:var(--bg3);border-radius:8px;">
+          <div style="font-size:12px;color:var(--text3);">FK Coverage</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);">${totalFK > 0 ? Math.round(totalFK/totalCols*100) : 0}%</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ==================== VIEW SWITCHING ====================
+function setView(v) {
+  view = v;
+  document.querySelectorAll('.toolbar .views button').forEach(b => b.classList.remove('active'));
+  document.getElementById('view' + v.charAt(0).toUpperCase() + v.slice(1))?.classList.add('active');
+  render();
+}
+
+// ==================== MODAL ====================
+function showModal(title, bodyHtml, onSave) {
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal();">
+    <div class="modal">
+      <div class="modal-header"><h2>${title}</h2><button onclick="closeModal()">✕</button></div>
+      <div class="modal-body">${bodyHtml}</div>
+      <div class="modal-footer">
+        <button onclick="closeModal()">Cancel</button>
+        <button class="primary" id="modalSave">Save</button>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('modalSave').onclick = () => { onSave(); closeModal(); };
+  // Enter to save
+  root.querySelector('.modal').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { onSave(); closeModal(); }
+  });
+}
+function closeModal() { document.getElementById('modalRoot').innerHTML = ''; }
+
+// ==================== TOAST ====================
+function toast(msg) {
+  const root = document.getElementById('toastRoot');
+  root.innerHTML = `<div class="toast">${msg}</div>`;
+  setTimeout(() => root.innerHTML = '', 2500);
+}
+
+// ==================== HELP ====================
+function showHelp() {
+  const root = document.getElementById('helpRoot');
+  root.innerHTML = `<div class="help-overlay" onclick="if(event.target===this)closeHelp();">
+    <div class="help-box">
+      <h2>⌨️ Keyboard Shortcuts</h2>
+      <div class="help-row"><span>New table</span><span class="help-key">T</span></div>
+      <div class="help-row"><span>New relation</span><span class="help-key">R</span></div>
+      <div class="help-row"><span>Auto layout</span><span class="help-key">A</span></div>
+      <div class="help-row"><span>Fit to view</span><span class="help-key">F</span></div>
+      <div class="help-row"><span>Search schemas</span><span class="help-key">/</span></div>
+      <div class="help-row"><span>Canvas view</span><span class="help-key">1</span></div>
+      <div class="help-row"><span>Tables view</span><span class="help-key">2</span></div>
+      <div class="help-row"><span>SQL view</span><span class="help-key">3</span></div>
+      <div class="help-row"><span>Dashboard</span><span class="help-key">4</span></div>
+      <div class="help-row"><span>Export JSON</span><span class="help-key">E</span></div>
+      <div class="help-row"><span>Import JSON</span><span class="help-key">I</span></div>
+      <div class="help-row"><span>Zoom in/out</span><span class="help-key">+ / −</span></div>
+      <div class="help-row"><span>Pan canvas</span><span class="help-key">Click + drag background</span></div>
+      <div class="help-row"><span>Cancel / Close</span><span class="help-key">Esc</span></div>
+      <div class="help-row"><span>Save in modal</span><span class="help-key">⌘/Ctrl + Enter</span></div>
+      <div class="help-row"><span>Help</span><span class="help-key">?</span></div>
+      <div style="margin-top:16px;text-align:center;"><button onclick="closeHelp()">Close</button></div>
+    </div>
+  </div>`;
+}
+function closeHelp() { document.getElementById('helpRoot').innerHTML = ''; }
+
+// ==================== IMPORT/EXPORT ====================
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'schema-forge-export.json';
+  a.click();
+  toast('Exported');
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.schemas) {
+          data.schemas.forEach(s => {
+            if (!state.schemas.find(x => x.id === s.id)) state.schemas.push(s);
+          });
+          render();
+          toast(`Imported ${data.schemas.length} schema(s)`);
+        }
+      } catch(err) { toast('Invalid JSON file'); }
+    };
+    reader.readAsText(f);
+  };
+  input.click();
+}
+
+// ==================== KEYBOARD ====================
+document.addEventListener('keydown', e => {
+  if (document.getElementById('modalRoot').innerHTML) {
+    if (e.key === 'Escape') closeModal();
+    return;
+  }
+  if (document.getElementById('helpRoot').innerHTML) {
+    if (e.key === 'Escape') closeHelp();
+    return;
+  }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+  if (e.key === 'Escape') { endRelMode(); selectedTable = null; render(); return; }
+  if (e.key === '?') { e.preventDefault(); showHelp(); return; }
+  if (e.key === '/') { e.preventDefault(); document.getElementById('schemaSearch').focus(); return; }
+  if (e.key === '1') { setView('canvas'); return; }
+  if (e.key === '2') { setView('list'); return; }
+  if (e.key === '3') { setView('sql'); return; }
+  if (e.key === '4') { setView('dashboard'); return; }
+  if (e.key === 't' || e.key === 'T') { addTable(); return; }
+  if (e.key === 'r') { startRelMode(); return; }
+  if (e.key === 'a') { autoLayout(); return; }
+  if (e.key === 'f') { fitView(); return; }
+  if (e.key === 'e') { exportData(); return; }
+  if (e.key === 'i') { importData(); return; }
+  if (e.key === '+' || e.key === '=') { zoomCanvas(0.1); return; }
+  if (e.key === '-') { zoomCanvas(-0.1); return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selectedTable) { deleteTable(selectedTable); }
+  }
+});
+
+document.getElementById('schemaSearch').addEventListener('input', renderSidebar);
+document.getElementById('schemaSearch').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.target.value = ''; e.target.blur(); renderSidebar(); }
+});
+
+// ==================== HELPERS ====================
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ==================== SEED DATA ====================
+function seedData() {
+  const usersId = uid(), orgsId = uid(), sigId = uid(), clicksId = uid(), campaignId = uid(), templatesId = uid(), plansId = uid(), subsId = uid();
+
+  state = {
+    activeSchema: null,
+    schemas: [{
+      id: uid(),
+      name: 'UTMStamp — Production',
+      createdAt: new Date().toISOString(),
+      tables: [
+        {
+          id: orgsId, name: 'organizations', color: '#6366f1', x: 60, y: 60,
+          description: 'Multi-tenant organizations (companies/teams)',
+          columns: [
+            { name: 'id', type: 'UUID', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'gen_random_uuid()' },
+            { name: 'name', type: 'VARCHAR(255)', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'slug', type: 'VARCHAR(100)', pk: false, notNull: true, unique: true, indexed: true, fk: false, defaultVal: null },
+            { name: 'plan_id', type: 'UUID', pk: false, notNull: false, unique: false, indexed: true, fk: true, fkRef: plansId+'.id', defaultVal: null },
+            { name: 'logo_url', type: 'TEXT', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'domain', type: 'VARCHAR(255)', pk: false, notNull: false, unique: true, indexed: true, fk: false, defaultVal: null },
+            { name: 'settings', type: 'JSONB', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: "'{}'" },
+            { name: 'created_at', type: 'TIMESTAMPTZ', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'NOW()' },
+            { name: 'updated_at', type: 'TIMESTAMPTZ', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'NOW()' }
+          ]
+        },
+        {
+          id: usersId, name: 'users', color: '#3b82f6', x: 420, y: 60,
+          description: 'User accounts with org membership',
+          columns: [
+            { name: 'id', type: 'UUID', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'gen_random_uuid()' },
+            { name: 'org_id', type: 'UUID', pk: false, notNull: true, unique: false, indexed: true, fk: true, fkRef: orgsId+'.id', defaultVal: null },
+            { name: 'email', type: 'VARCHAR(255)', pk: false, notNull: true, unique: true, indexed: true, fk: false, defaultVal: null },
+            { name: 'full_name', type: 'VARCHAR(255)', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'role', type: 'VARCHAR(50)', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: "'member'" },
+            { name: 'avatar_url', type: 'TEXT', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'is_active', type: 'BOOLEAN', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'true' },
+            { name: 'last_login', type: 'TIMESTAMPTZ', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'created_at', type: 'TIMESTAMPTZ', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'NOW()' }
+          ]
+        },
+        {
+          id: templatesId, name: 'signature_templates', color: '#22c55e', x: 60, y: 400,
+          description: 'Reusable email signature templates',
+          columns: [
+            { name: 'id', type: 'UUID', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'gen_random_uuid()' },
+            { name: 'org_id', type: 'UUID', pk: false, notNull: true, unique: false, indexed: true, fk: true, fkRef: orgsId+'.id', defaultVal: null },
+            { name: 'created_by', type: 'UUID', pk: false, notNull: true, unique: false, indexed: false, fk: true, fkRef: usersId+'.id', defaultVal: null },
+            { name: 'name', type: 'VARCHAR(255)', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'html_content', type: 'TEXT', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'css_styles', type: 'TEXT', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'variables', type: 'JSONB', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: "'[]'" },
+            { name: 'is_default', type: 'BOOLEAN', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'false' },
+            { name: 'preview_url', type: 'TEXT', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'created_at', type: 'TIMESTAMPTZ', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'NOW()' }
+          ]
+        },
+        {
+          id: sigId, name: 'signatures', color: '#14b8a6', x: 420, y: 400,
+          description: 'Deployed signature instances per user',
+          columns: [
+            { name: 'id', type: 'UUID', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'gen_random_uuid()' },
+            { name: 'user_id', type: 'UUID', pk: false, notNull: true, unique: false, indexed: true, fk: true, fkRef: usersId+'.id', defaultVal: null },
+            { name: 'template_id', type: 'UUID', pk: false, notNull: true, unique: false, indexed: true, fk: true, fkRef: templatesId+'.id', defaultVal: null },
+            { name: 'rendered_html', type: 'TEXT', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'utm_source', type: 'VARCHAR(100)', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'utm_medium', type: 'VARCHAR(100)', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: "'email'" },
+            { name: 'is_active', type: 'BOOLEAN', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'true' },
+            { name: 'deployed_at', type: 'TIMESTAMPTZ', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'created_at', type: 'TIMESTAMPTZ', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'NOW()' }
+          ]
+        },
+        {
+          id: campaignId, name: 'campaigns', color: '#f97316', x: 780, y: 60,
+          description: 'UTM campaign definitions for tracking',
+          columns: [
+            { name: 'id', type: 'UUID', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'gen_random_uuid()' },
+            { name: 'org_id', type: 'UUID', pk: false, notNull: true, unique: false, indexed: true, fk: true, fkRef: orgsId+'.id', defaultVal: null },
+            { name: 'name', type: 'VARCHAR(255)', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'utm_campaign', type: 'VARCHAR(255)', pk: false, notNull: true, unique: false, indexed: true, fk: false, defaultVal: null },
+            { name: 'utm_source', type: 'VARCHAR(100)', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'utm_medium', type: 'VARCHAR(100)', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: "'email'" },
+            { name: 'utm_term', type: 'VARCHAR(255)', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'utm_content', type: 'VARCHAR(255)', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'banner_url', type: 'TEXT', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'banner_link', type: 'TEXT', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'starts_at', type: 'TIMESTAMPTZ', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'ends_at', type: 'TIMESTAMPTZ', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'is_active', type: 'BOOLEAN', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'true' },
+            { name: 'created_at', type: 'TIMESTAMPTZ', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'NOW()' }
+          ]
+        },
+        {
+          id: clicksId, name: 'click_events', color: '#ec4899', x: 780, y: 400,
+          description: 'Analytics — every signature link click tracked',
+          columns: [
+            { name: 'id', type: 'BIGSERIAL', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'signature_id', type: 'UUID', pk: false, notNull: true, unique: false, indexed: true, fk: true, fkRef: sigId+'.id', defaultVal: null },
+            { name: 'campaign_id', type: 'UUID', pk: false, notNull: false, unique: false, indexed: true, fk: true, fkRef: campaignId+'.id', defaultVal: null },
+            { name: 'link_url', type: 'TEXT', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'referrer', type: 'TEXT', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'user_agent', type: 'TEXT', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'ip_address', type: 'INET', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'country', type: 'VARCHAR(2)', pk: false, notNull: false, unique: false, indexed: true, fk: false, defaultVal: null },
+            { name: 'city', type: 'VARCHAR(100)', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'device_type', type: 'VARCHAR(20)', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'browser', type: 'VARCHAR(50)', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'clicked_at', type: 'TIMESTAMPTZ', pk: false, notNull: true, unique: false, indexed: true, fk: false, defaultVal: 'NOW()' }
+          ]
+        },
+        {
+          id: plansId, name: 'plans', color: '#eab308', x: 60, y: 740,
+          description: 'Subscription plan definitions',
+          columns: [
+            { name: 'id', type: 'UUID', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'gen_random_uuid()' },
+            { name: 'name', type: 'VARCHAR(100)', pk: false, notNull: true, unique: true, indexed: false, fk: false, defaultVal: null },
+            { name: 'slug', type: 'VARCHAR(50)', pk: false, notNull: true, unique: true, indexed: true, fk: false, defaultVal: null },
+            { name: 'price_monthly', type: 'DECIMAL', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: '0' },
+            { name: 'price_yearly', type: 'DECIMAL', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: '0' },
+            { name: 'max_users', type: 'INT', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: '5' },
+            { name: 'max_signatures', type: 'INT', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: '10' },
+            { name: 'max_campaigns', type: 'INT', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: '3' },
+            { name: 'features', type: 'JSONB', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: "'[]'" },
+            { name: 'is_active', type: 'BOOLEAN', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'true' }
+          ]
+        },
+        {
+          id: subsId, name: 'subscriptions', color: '#a855f7', x: 420, y: 740,
+          description: 'Active org subscriptions with Stripe billing',
+          columns: [
+            { name: 'id', type: 'UUID', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'gen_random_uuid()' },
+            { name: 'org_id', type: 'UUID', pk: false, notNull: true, unique: false, indexed: true, fk: true, fkRef: orgsId+'.id', defaultVal: null },
+            { name: 'plan_id', type: 'UUID', pk: false, notNull: true, unique: false, indexed: true, fk: true, fkRef: plansId+'.id', defaultVal: null },
+            { name: 'stripe_sub_id', type: 'VARCHAR(255)', pk: false, notNull: false, unique: true, indexed: true, fk: false, defaultVal: null },
+            { name: 'stripe_customer_id', type: 'VARCHAR(255)', pk: false, notNull: false, unique: false, indexed: true, fk: false, defaultVal: null },
+            { name: 'status', type: 'VARCHAR(50)', pk: false, notNull: true, unique: false, indexed: true, fk: false, defaultVal: "'active'" },
+            { name: 'billing_cycle', type: 'VARCHAR(20)', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: "'monthly'" },
+            { name: 'current_period_start', type: 'TIMESTAMPTZ', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'current_period_end', type: 'TIMESTAMPTZ', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'canceled_at', type: 'TIMESTAMPTZ', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'created_at', type: 'TIMESTAMPTZ', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'NOW()' }
+          ]
+        }
+      ],
+      relationships: [
+        { id: uid(), from: usersId, to: orgsId, fromCol: 'org_id', toCol: 'id', type: '1:N', label: 'belongs to' },
+        { id: uid(), from: sigId, to: usersId, fromCol: 'user_id', toCol: 'id', type: '1:N', label: 'owned by' },
+        { id: uid(), from: sigId, to: templatesId, fromCol: 'template_id', toCol: 'id', type: '1:N', label: 'uses' },
+        { id: uid(), from: templatesId, to: orgsId, fromCol: 'org_id', toCol: 'id', type: '1:N', label: 'belongs to' },
+        { id: uid(), from: templatesId, to: usersId, fromCol: 'created_by', toCol: 'id', type: '1:N', label: 'created by' },
+        { id: uid(), from: campaignId, to: orgsId, fromCol: 'org_id', toCol: 'id', type: '1:N', label: 'belongs to' },
+        { id: uid(), from: clicksId, to: sigId, fromCol: 'signature_id', toCol: 'id', type: '1:N', label: 'tracks' },
+        { id: uid(), from: clicksId, to: campaignId, fromCol: 'campaign_id', toCol: 'id', type: '1:N', label: 'attributed to' },
+        { id: uid(), from: orgsId, to: plansId, fromCol: 'plan_id', toCol: 'id', type: '1:N', label: 'on plan' },
+        { id: uid(), from: subsId, to: orgsId, fromCol: 'org_id', toCol: 'id', type: '1:N', label: 'for org' },
+        { id: uid(), from: subsId, to: plansId, fromCol: 'plan_id', toCol: 'id', type: '1:N', label: 'subscribes to' }
+      ]
+    },
+    {
+      id: uid(),
+      name: 'SaaS Starter Kit',
+      createdAt: new Date().toISOString(),
+      tables: [
+        {
+          id: uid(), name: 'tenants', color: '#6366f1', x: 60, y: 60,
+          description: 'Multi-tenant accounts',
+          columns: [
+            { name: 'id', type: 'UUID', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'gen_random_uuid()' },
+            { name: 'name', type: 'VARCHAR(255)', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'subdomain', type: 'VARCHAR(100)', pk: false, notNull: true, unique: true, indexed: true, fk: false, defaultVal: null },
+            { name: 'settings', type: 'JSONB', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: "'{}'" },
+            { name: 'created_at', type: 'TIMESTAMPTZ', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'NOW()' }
+          ]
+        },
+        {
+          id: uid(), name: 'users', color: '#3b82f6', x: 400, y: 60,
+          description: 'User accounts',
+          columns: [
+            { name: 'id', type: 'UUID', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'gen_random_uuid()' },
+            { name: 'email', type: 'VARCHAR(255)', pk: false, notNull: true, unique: true, indexed: true, fk: false, defaultVal: null },
+            { name: 'password_hash', type: 'TEXT', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'full_name', type: 'VARCHAR(255)', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'role', type: 'VARCHAR(50)', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: "'user'" },
+            { name: 'is_verified', type: 'BOOLEAN', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'false' },
+            { name: 'created_at', type: 'TIMESTAMPTZ', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'NOW()' }
+          ]
+        },
+        {
+          id: uid(), name: 'api_keys', color: '#22c55e', x: 60, y: 350,
+          description: 'API key management',
+          columns: [
+            { name: 'id', type: 'UUID', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'gen_random_uuid()' },
+            { name: 'key_hash', type: 'VARCHAR(255)', pk: false, notNull: true, unique: true, indexed: true, fk: false, defaultVal: null },
+            { name: 'name', type: 'VARCHAR(100)', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'scopes', type: 'JSONB', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: "'[]'" },
+            { name: 'last_used', type: 'TIMESTAMPTZ', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'expires_at', type: 'TIMESTAMPTZ', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'created_at', type: 'TIMESTAMPTZ', pk: false, notNull: true, unique: false, indexed: false, fk: false, defaultVal: 'NOW()' }
+          ]
+        },
+        {
+          id: uid(), name: 'audit_logs', color: '#f97316', x: 400, y: 350,
+          description: 'Activity audit trail',
+          columns: [
+            { name: 'id', type: 'BIGSERIAL', pk: true, notNull: true, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'action', type: 'VARCHAR(100)', pk: false, notNull: true, unique: false, indexed: true, fk: false, defaultVal: null },
+            { name: 'resource_type', type: 'VARCHAR(50)', pk: false, notNull: true, unique: false, indexed: true, fk: false, defaultVal: null },
+            { name: 'resource_id', type: 'VARCHAR(255)', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'metadata', type: 'JSONB', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'ip_address', type: 'INET', pk: false, notNull: false, unique: false, indexed: false, fk: false, defaultVal: null },
+            { name: 'created_at', type: 'TIMESTAMPTZ', pk: false, notNull: true, unique: false, indexed: true, fk: false, defaultVal: 'NOW()' }
+          ]
+        }
+      ],
+      relationships: []
+    }]
+  };
+
+  state.activeSchema = state.schemas[0].id;
+}
+
+// ==================== INIT ====================
+load();
+render();
+initCanvasEvents();
+setTimeout(fitView, 200);
+
+window.addEventListener('resize', () => { drawGrid(); renderRelationships(); });
+</script>
+</body>
+</html>

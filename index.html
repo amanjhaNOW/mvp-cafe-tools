@@ -1,47 +1,496 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MVP Cafe — Free Founder Tools</title>
+<title>Overnight Builds — 50 free tools shipped by AJ | mvp.cafe</title>
+<meta name="description" content="50 small useful tools, one shipped every night. Built in public by AJ. All free. All single-file HTML. No login, no tracking, no BS.">
+<meta property="og:title" content="Overnight Builds — 50 free tools by mvp.cafe">
+<meta property="og:description" content="50 small useful tools, one shipped every night. All free, no login, single-file HTML.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://tools.mvp.cafe/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛠️%3C/text%3E%3C/svg%3E">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',system-ui,sans-serif;background:#0a0a0a;color:#f0f0f0;min-height:100vh;padding:40px 20px}
-.container{max-width:800px;margin:0 auto}
-h1{font-size:32px;font-weight:800;margin-bottom:8px;background:linear-gradient(135deg,#8B2F9E,#00BCD4);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.sub{color:#888;font-size:14px;margin-bottom:40px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:600px){.grid{grid-template-columns:1fr}}
-.card{background:#151515;border:1px solid #222;border-radius:12px;padding:20px;transition:all .2s;text-decoration:none;color:#f0f0f0;display:block}
-.card:hover{border-color:#8B2F9E;transform:translateY(-2px);box-shadow:0 4px 20px rgba(139,47,158,0.15)}
-.card .num{font-size:11px;color:#555;font-weight:600;margin-bottom:6px}
-.card .name{font-size:16px;font-weight:700;margin-bottom:6px}
-.card .desc{font-size:12px;color:#888;line-height:1.5}
-.footer{text-align:center;margin-top:40px;color:#444;font-size:12px}
-.footer a{color:#8B2F9E;text-decoration:none}
+  :root {
+    --bg: #0a0a0f;
+    --bg-card: #131320;
+    --bg-card-hover: #1a1a2e;
+    --border: #252540;
+    --text: #e8e8f0;
+    --text-dim: #9090a8;
+    --accent: #a78bfa;
+    --accent-bright: #c4b5fd;
+    --success: #4ade80;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  body { background: radial-gradient(ellipse at top, #1a1530 0%, var(--bg) 60%); min-height: 100vh; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 4rem 1.5rem; }
+  header { text-align: center; margin-bottom: 3.5rem; }
+  .eyebrow { display: inline-block; padding: 0.35rem 0.9rem; background: rgba(167, 139, 250, 0.12); border: 1px solid rgba(167, 139, 250, 0.3); color: var(--accent-bright); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 999px; margin-bottom: 1.25rem; }
+  h1 { font-size: clamp(2.25rem, 5vw, 3.5rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 1rem; background: linear-gradient(135deg, #fff 0%, var(--accent-bright) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-size: 1.15rem; color: var(--text-dim); max-width: 620px; margin: 0 auto 2rem; }
+  .stats { display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem; }
+  .stat { text-align: center; }
+  .stat__num { font-size: 1.75rem; font-weight: 700; color: var(--accent-bright); display: block; line-height: 1; }
+  .stat__label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.35rem; }
+  .latest-banner { background: linear-gradient(135deg, rgba(167, 139, 250, 0.15) 0%, rgba(74, 222, 128, 0.08) 100%); border: 1px solid rgba(167, 139, 250, 0.3); border-radius: 14px; padding: 1.5rem 1.75rem; margin-bottom: 3rem; display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+  .latest-banner__icon { font-size: 2.5rem; line-height: 1; }
+  .latest-banner__content { flex: 1; min-width: 220px; }
+  .latest-banner__label { font-size: 0.75rem; font-weight: 700; color: var(--success); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.25rem; }
+  .latest-banner__title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.15rem; }
+  .latest-banner__tag { font-size: 0.95rem; color: var(--text-dim); }
+  .latest-banner__cta { background: var(--accent); color: #0a0a0f; padding: 0.7rem 1.25rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: background 0.15s; white-space: nowrap; }
+  .latest-banner__cta:hover { background: var(--accent-bright); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; text-decoration: none; color: var(--text); transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s; display: flex; flex-direction: column; }
+  .card:hover { background: var(--bg-card-hover); border-color: var(--accent); transform: translateY(-2px); }
+  .card--latest { border-color: rgba(167, 139, 250, 0.5); background: linear-gradient(135deg, var(--bg-card) 0%, rgba(167, 139, 250, 0.08) 100%); }
+  .card__head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.85rem; }
+  .card__emoji { font-size: 1.5rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", "EmojiOne Color", sans-serif; }
+  .card__day { font-size: 0.7rem; color: var(--text-dim); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-left: auto; opacity: 0.6; }
+  .card__title { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem; line-height: 1.25; }
+  .card__tagline { font-size: 0.88rem; color: var(--text-dim); line-height: 1.45; flex: 1; min-height: 2.5em; }
+  footer { text-align: center; margin-top: 5rem; padding-top: 2.5rem; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 0.9rem; }
+  footer a { color: var(--accent-bright); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  .footer__row + .footer__row { margin-top: 0.5rem; }
+  @media (max-width: 600px) {
+    .container { padding: 2.5rem 1rem; }
+    .latest-banner { flex-direction: column; text-align: center; }
+  }
 </style>
 </head>
 <body>
-<div class="container">
-<h1>Free Founder Tools</h1>
-<p class="sub">14 tools built in 14 nights. All free. All local. No signup required.</p>
-<div class="grid">
-<a class="card" href="idea-validator/"><div class="num">Day 1</div><div class="name">Idea Validator</div><div class="desc">Score startup ideas on viability, market fit, and effort</div></a>
-<a class="card" href="job-pipeline/"><div class="num">Day 2</div><div class="name">Job Pipeline</div><div class="desc">Track applications, interviews, and follow-ups</div></a>
-<a class="card" href="offer-compass/"><div class="num">Day 3</div><div class="name">Offer Compass</div><div class="desc">Compare job offers — salary, equity, benefits, growth</div></a>
-<a class="card" href="network-crm/"><div class="num">Day 4</div><div class="name">Network CRM</div><div class="desc">Track contacts, interactions, and follow-up reminders</div></a>
-<a class="card" href="invoice-forge/"><div class="num">Day 5</div><div class="name">Invoice Forge</div><div class="desc">Generate professional invoices instantly</div></a>
-<a class="card" href="ship-log/"><div class="num">Day 6</div><div class="name">Ship Log</div><div class="desc">Daily build log for building in public</div></a>
-<a class="card" href="content-calendar/"><div class="num">Day 7</div><div class="name">Content Calendar</div><div class="desc">Plan and schedule content across platforms</div></a>
-<a class="card" href="interview-ace/"><div class="num">Day 8</div><div class="name">Interview Ace</div><div class="desc">Interview prep — questions, frameworks, STAR stories</div></a>
-<a class="card" href="pricing-lab/"><div class="num">Day 9</div><div class="name">Pricing Lab</div><div class="desc">Test and model SaaS pricing strategies</div></a>
-<a class="card" href="ab-tester/"><div class="num">Day 10</div><div class="name">A/B Tester</div><div class="desc">Plan and track A/B experiments</div></a>
-<a class="card" href="roadmap-hero/"><div class="num">Day 11</div><div class="name">Roadmap Hero</div><div class="desc">Visual product roadmap builder</div></a>
-<a class="card" href="metric-pulse/"><div class="num">Day 12</div><div class="name">Metric Pulse</div><div class="desc">Dashboard for tracking key business metrics</div></a>
-<a class="card" href="competitor-radar/"><div class="num">Day 13</div><div class="name">Competitor Radar</div><div class="desc">Competitive intelligence tracker</div></a>
-<a class="card" href="decision-journal/"><div class="num">Day 14</div><div class="name">Decision Journal</div><div class="desc">Log decisions, review outcomes, catch patterns</div></a>
-</div>
-<div class="footer">Built with ☕ by <a href="https://mvp.cafe">MVP Cafe</a></div>
-</div>
+  <div class="container">
+    <header>
+      <div class="eyebrow">🌙 50 nights · 50 tools</div>
+      <h1>Overnight Builds</h1>
+      <p class="subtitle">Small useful tools, one shipped every night by <a href="https://mvp.cafe" style="color:var(--accent-bright);text-decoration:none;">AJ</a>. All free. All single-file HTML. No login, no tracking, no BS.</p>
+      <div class="stats">
+        <div class="stat"><span class="stat__num">50</span><span class="stat__label">Builds shipped</span></div>
+        <div class="stat"><span class="stat__num">100%</span><span class="stat__label">Free forever</span></div>
+        <div class="stat"><span class="stat__num">0</span><span class="stat__label">Logins required</span></div>
+      </div>
+    </header>
+
+    <div class="latest-banner">
+      <div class="latest-banner__icon">💗</div>
+      <div class="latest-banner__content">
+        <div class="latest-banner__label">Just shipped · Day 50</div>
+        <div class="latest-banner__title">Team Pulse</div>
+        <div class="latest-banner__tag">Squad Health Check & Mood Tracker</div>
+      </div>
+      <a class="latest-banner__cta" href="team-pulse/">Open →</a>
+    </div>
+
+    <div class="grid">
+      <a href="team-pulse/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">💗</span>
+          <span class="card__day">Day 50</span>
+        </div>
+        <h3 class="card__title">Team Pulse</h3>
+        <p class="card__tagline">Squad Health Check & Mood Tracker</p>
+      </a>
+      <a href="design-tokens/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🎨</span>
+          <span class="card__day">Day 49</span>
+        </div>
+        <h3 class="card__title">Design Token Studio</h3>
+        <p class="card__tagline">Build & export design system tokens</p>
+      </a>
+      <a href="snippet-vault/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🧬</span>
+          <span class="card__day">Day 48</span>
+        </div>
+        <h3 class="card__title">Snippet Vault</h3>
+        <p class="card__tagline">Code Snippet Manager</p>
+      </a>
+      <a href="estimate-engine/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">📐</span>
+          <span class="card__day">Day 47</span>
+        </div>
+        <h3 class="card__title">Estimate Engine</h3>
+        <p class="card__tagline">Project Estimation & Planning Tool</p>
+      </a>
+      <a href="flashcard-forge/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🃏</span>
+          <span class="card__day">Day 46</span>
+        </div>
+        <h3 class="card__title">Flashcard Forge</h3>
+        <p class="card__tagline">Spaced Repetition Learning</p>
+      </a>
+      <a href="dev-toolkit/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🧰</span>
+          <span class="card__day">Day 45</span>
+        </div>
+        <h3 class="card__title">Dev Toolkit</h3>
+        <p class="card__tagline">Swiss Army Knife for Developers</p>
+      </a>
+      <a href="terminal-portfolio/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">⌨️</span>
+          <span class="card__day">Day 44</span>
+        </div>
+        <h3 class="card__title">Terminal Portfolio</h3>
+        <p class="card__tagline">Retro CLI-style personal site</p>
+      </a>
+      <a href="api-playground/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🛰️</span>
+          <span class="card__day">Day 43</span>
+        </div>
+        <h3 class="card__title">API Playground</h3>
+        <p class="card__tagline">Browser-Based REST Client</p>
+      </a>
+      <a href="schema-forge/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🗄️</span>
+          <span class="card__day">Day 42</span>
+        </div>
+        <h3 class="card__title">Schema Forge</h3>
+        <p class="card__tagline">Visual Database Schema & ERD Builder</p>
+      </a>
+      <a href="wireframe-kit/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">📐</span>
+          <span class="card__day">Day 41</span>
+        </div>
+        <h3 class="card__title">Wireframe Kit</h3>
+        <p class="card__tagline">Drag & Drop Product Mockups</p>
+      </a>
+      <a href="mind-map/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🧠</span>
+          <span class="card__day">Day 40</span>
+        </div>
+        <h3 class="card__title">Mind Map</h3>
+        <p class="card__tagline">Visual brainstorming & idea mapping</p>
+      </a>
+      <a href="postmortem-forge/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🔍</span>
+          <span class="card__day">Day 39</span>
+        </div>
+        <h3 class="card__title">Postmortem Forge</h3>
+        <p class="card__tagline">Incident Postmortem & Root Cause Analysis Builder</p>
+      </a>
+      <a href="meeting-forge/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">📋</span>
+          <span class="card__day">Day 38</span>
+        </div>
+        <h3 class="card__title">Meeting Forge</h3>
+        <p class="card__tagline">Structured Meeting Notes & Action Tracker</p>
+      </a>
+      <a href="status-beacon/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🟢</span>
+          <span class="card__day">Day 37</span>
+        </div>
+        <h3 class="card__title">Status Beacon</h3>
+        <p class="card__tagline">Product Status Page & Incident Tracker</p>
+      </a>
+      <a href="habit-stack/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🧱</span>
+          <span class="card__day">Day 36</span>
+        </div>
+        <h3 class="card__title">Habit Stack</h3>
+        <p class="card__tagline">Daily Habit Tracker</p>
+      </a>
+      <a href="knowledge-garden/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🌱</span>
+          <span class="card__day">Day 35</span>
+        </div>
+        <h3 class="card__title">Knowledge Garden</h3>
+        <p class="card__tagline">Second Brain & Zettelkasten</p>
+      </a>
+      <a href="raid-log/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🚨</span>
+          <span class="card__day">Day 34</span>
+        </div>
+        <h3 class="card__title">RAID Log</h3>
+        <p class="card__tagline">Risks, Assumptions, Issues & Dependencies</p>
+      </a>
+      <a href="survey-forge/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">📋</span>
+          <span class="card__day">Day 33</span>
+        </div>
+        <h3 class="card__title">Survey Forge</h3>
+        <p class="card__tagline">Beautiful Survey & Form Builder</p>
+      </a>
+      <a href="email-craft/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">✉️</span>
+          <span class="card__day">Day 32</span>
+        </div>
+        <h3 class="card__title">Email Craft</h3>
+        <p class="card__tagline">Cold Email & Outreach Sequence Builder</p>
+      </a>
+      <a href="focus-flow/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🎧</span>
+          <span class="card__day">Day 31</span>
+        </div>
+        <h3 class="card__title">Focus Flow</h3>
+        <p class="card__tagline">Deep Work Timer & Productivity Tracker</p>
+      </a>
+      <a href="canvas-lab/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🎨</span>
+          <span class="card__day">Day 30</span>
+        </div>
+        <h3 class="card__title">Canvas Lab</h3>
+        <p class="card__tagline">Business Model Canvas Builder</p>
+      </a>
+      <a href="launch-pad/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🚀</span>
+          <span class="card__day">Day 29</span>
+        </div>
+        <h3 class="card__title">Launch Pad</h3>
+        <p class="card__tagline">Product Launch Planner</p>
+      </a>
+      <a href="growth-lab/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">📈</span>
+          <span class="card__day">Day 28</span>
+        </div>
+        <h3 class="card__title">Growth Lab</h3>
+        <p class="card__tagline">Growth Experiment & Loop Tracker</p>
+      </a>
+      <a href="stakeholder-map/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🗺️</span>
+          <span class="card__day">Day 27</span>
+        </div>
+        <h3 class="card__title">Stakeholder Map</h3>
+        <p class="card__tagline">Manage, Align & Communicate</p>
+      </a>
+      <a href="prd-forge/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">📝</span>
+          <span class="card__day">Day 26</span>
+        </div>
+        <h3 class="card__title">PRD Forge</h3>
+        <p class="card__tagline">Product Requirements Document Builder</p>
+      </a>
+      <a href="okr-forge/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🎯</span>
+          <span class="card__day">Day 25</span>
+        </div>
+        <h3 class="card__title">OKR Forge</h3>
+        <p class="card__tagline">Objectives & Key Results Tracker</p>
+      </a>
+      <a href="sprint-board/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🏃</span>
+          <span class="card__day">Day 24</span>
+        </div>
+        <h3 class="card__title">Sprint Board</h3>
+        <p class="card__tagline">Scrum Sprint Planner & Velocity Tracker</p>
+      </a>
+      <a href="tech-radar/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🛰️</span>
+          <span class="card__day">Day 23</span>
+        </div>
+        <h3 class="card__title">Tech Radar</h3>
+        <p class="card__tagline">Technology Decision Tracker</p>
+      </a>
+      <a href="changelog/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">📜</span>
+          <span class="card__day">Day 22</span>
+        </div>
+        <h3 class="card__title">Changelog Studio</h3>
+        <p class="card__tagline">Beautiful Release Notes Builder</p>
+      </a>
+      <a href="persona-forge/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🎭</span>
+          <span class="card__day">Day 21</span>
+        </div>
+        <h3 class="card__title">Persona Forge</h3>
+        <p class="card__tagline">User Persona & Empathy Map Builder</p>
+      </a>
+      <a href="link-hub/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🔗</span>
+          <span class="card__day">Day 20</span>
+        </div>
+        <h3 class="card__title">Link Hub</h3>
+        <p class="card__tagline">Personal Link Page Builder</p>
+      </a>
+      <a href="retro-board/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🔄</span>
+          <span class="card__day">Day 19</span>
+        </div>
+        <h3 class="card__title">Retro Board</h3>
+        <p class="card__tagline">Sprint Retrospectives Done Right</p>
+      </a>
+      <a href="feedback-board/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">💬</span>
+          <span class="card__day">Day 18</span>
+        </div>
+        <h3 class="card__title">Feedback Board</h3>
+        <p class="card__tagline">Collect & Prioritize User Feedback</p>
+      </a>
+      <a href="pitch-deck/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🎬</span>
+          <span class="card__day">Day 17</span>
+        </div>
+        <h3 class="card__title">Pitch Deck</h3>
+        <p class="card__tagline">Build & Present Decks</p>
+      </a>
+      <a href="runway-calc/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">📉</span>
+          <span class="card__day">Day 16</span>
+        </div>
+        <h3 class="card__title">Runway</h3>
+        <p class="card__tagline">Startup Financial Modeler</p>
+      </a>
+      <a href="case-study-forge/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">📚</span>
+          <span class="card__day">Day 15</span>
+        </div>
+        <h3 class="card__title">Case Study Forge</h3>
+        <p class="card__tagline">PM Portfolio Builder</p>
+      </a>
+      <a href="decision-journal/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">📓</span>
+          <span class="card__day">Day 14</span>
+        </div>
+        <h3 class="card__title">Decision Journal</h3>
+        <p class="card__tagline">Track, Review, Learn</p>
+      </a>
+      <a href="competitor-radar/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🎯</span>
+          <span class="card__day">Day 13</span>
+        </div>
+        <h3 class="card__title">Competitor Radar</h3>
+        <p class="card__tagline">Competitive Intelligence Tracker</p>
+      </a>
+      <a href="metric-pulse/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">📊</span>
+          <span class="card__day">Day 12</span>
+        </div>
+        <h3 class="card__title">Metric Pulse</h3>
+        <p class="card__tagline">KPI Tracker & Reporting</p>
+      </a>
+      <a href="roadmap-hero/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🗺️</span>
+          <span class="card__day">Day 11</span>
+        </div>
+        <h3 class="card__title">Roadmap Hero</h3>
+        <p class="card__tagline">Product Roadmap Builder</p>
+      </a>
+      <a href="ab-tester/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🧪</span>
+          <span class="card__day">Day 10</span>
+        </div>
+        <h3 class="card__title">AB Tester</h3>
+        <p class="card__tagline">Experiment Calculator & Tracker</p>
+      </a>
+      <a href="pricing-lab/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">💰</span>
+          <span class="card__day">Day 9</span>
+        </div>
+        <h3 class="card__title">Pricing Lab</h3>
+        <p class="card__tagline">Revenue Modeling & Pricing Strategy Tool</p>
+      </a>
+      <a href="interview-ace/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🎤</span>
+          <span class="card__day">Day 8</span>
+        </div>
+        <h3 class="card__title">Interview Ace</h3>
+        <p class="card__tagline">PM Interview Prep & Practice</p>
+      </a>
+      <a href="content-calendar/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🗓️</span>
+          <span class="card__day">Day 7</span>
+        </div>
+        <h3 class="card__title">Content Planner</h3>
+        <p class="card__tagline">Plan, Ship, Grow</p>
+      </a>
+      <a href="ship-log/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🚢</span>
+          <span class="card__day">Day 6</span>
+        </div>
+        <h3 class="card__title">Ship Log</h3>
+        <p class="card__tagline">Build in Public Tracker</p>
+      </a>
+      <a href="invoice-forge/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🧾</span>
+          <span class="card__day">Day 5</span>
+        </div>
+        <h3 class="card__title">Invoice Forge</h3>
+        <p class="card__tagline">Professional Invoice Generator</p>
+      </a>
+      <a href="network-crm/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🤝</span>
+          <span class="card__day">Day 4</span>
+        </div>
+        <h3 class="card__title">NetMap</h3>
+        <p class="card__tagline">Networking CRM</p>
+      </a>
+      <a href="offer-compass/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🧭</span>
+          <span class="card__day">Day 3</span>
+        </div>
+        <h3 class="card__title">Offer Compass</h3>
+        <p class="card__tagline">Job Offer Comparison Tool</p>
+      </a>
+      <a href="job-pipeline/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">💼</span>
+          <span class="card__day">Day 2</span>
+        </div>
+        <h3 class="card__title">Job Pipeline</h3>
+        <p class="card__tagline">Track Your Hunt</p>
+      </a>
+      <a href="idea-validator/" class="card">
+        <div class="card__head">
+          <span class="card__emoji">🚀</span>
+          <span class="card__day">Day 1</span>
+        </div>
+        <h3 class="card__title">Startup Idea Validator</h3>
+        <p class="card__tagline">Validate Before You Build</p>
+      </a>
+    </div>
+
+    <footer>
+      <div class="footer__row">Built in public by <a href="https://mvp.cafe">AJ @ mvp.cafe</a> · <a href="https://github.com/amanjhaNOW/mvp-cafe-tools">source on github</a></div>
+      <div class="footer__row" style="margin-top: 0.75rem; font-size: 0.8rem;">All tools are static HTML. Save the page, run offline. Your data stays in your browser.</div>
+    </footer>
+  </div>
 </body>
 </html>

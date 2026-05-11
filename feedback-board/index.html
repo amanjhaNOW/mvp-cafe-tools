@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback Board — Collect & Prioritize User Feedback</title>
+<style>
+:root {
+  --bg: #f8f9fa; --surface: #ffffff; --surface2: #f1f3f5; --border: #dee2e6;
+  --text: #212529; --text2: #495057; --text3: #868e96; --accent: #4263eb;
+  --accent2: #5c7cfa; --accent-bg: #edf2ff; --green: #2b8a3e; --green-bg: #ebfbee;
+  --orange: #e67700; --orange-bg: #fff9db; --red: #c92a2a; --red-bg: #fff5f5;
+  --purple: #7048e8; --purple-bg: #f3f0ff; --teal: #0c8599; --teal-bg: #e6fcf5;
+  --shadow: 0 1px 3px rgba(0,0,0,.08); --shadow2: 0 4px 12px rgba(0,0,0,.1);
+  --radius: 10px; --radius-sm: 6px;
+}
+.dark {
+  --bg: #1a1b1e; --surface: #25262b; --surface2: #2c2e33; --border: #373a40;
+  --text: #f1f3f5; --text2: #adb5bd; --text3: #868e96; --accent: #5c7cfa;
+  --accent2: #748ffc; --accent-bg: #1c2541; --green-bg: #1a3a2a; --orange-bg: #3d2e00;
+  --red-bg: #3d1a1a; --purple-bg: #2a1f4e; --teal-bg: #0a3d3d;
+  --shadow: 0 1px 3px rgba(0,0,0,.3); --shadow2: 0 4px 12px rgba(0,0,0,.4);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; transition:background .2s,color .2s; }
+button { cursor:pointer; font-family:inherit; border:none; background:none; color:inherit; }
+input,textarea,select { font-family:inherit; font-size:14px; color:var(--text); background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; outline:none; transition:border .15s; width:100%; }
+input:focus,textarea:focus,select:focus { border-color:var(--accent); }
+textarea { resize:vertical; min-height:80px; }
+
+/* Layout */
+.app { max-width:960px; margin:0 auto; padding:20px; }
+header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+header h1 { font-size:24px; font-weight:700; }
+header h1 span { color:var(--accent); }
+.header-actions { display:flex; gap:8px; align-items:center; }
+
+/* Buttons */
+.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; transition:all .15s; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { background:var(--accent2); }
+.btn-outline { border:1.5px solid var(--border); background:var(--surface); }
+.btn-outline:hover { border-color:var(--accent); color:var(--accent); }
+.btn-sm { padding:5px 10px; font-size:12px; }
+.btn-danger { background:var(--red); color:#fff; }
+.btn-danger:hover { opacity:.85; }
+.btn-icon { width:36px; height:36px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; border:1.5px solid var(--border); background:var(--surface); }
+.btn-icon:hover { border-color:var(--accent); color:var(--accent); }
+
+/* Tabs/Filters */
+.toolbar { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
+.search-box { position:relative; flex:1; min-width:200px; }
+.search-box input { padding-left:32px; }
+.search-box::before { content:'🔍'; position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:13px; }
+.filter-group { display:flex; gap:4px; flex-wrap:wrap; }
+.filter-btn { padding:5px 12px; border-radius:20px; font-size:12px; font-weight:600; background:var(--surface2); border:1.5px solid transparent; transition:all .15s; }
+.filter-btn:hover { border-color:var(--accent); }
+.filter-btn.active { background:var(--accent-bg); border-color:var(--accent); color:var(--accent); }
+.sort-select { width:auto; padding:5px 10px; font-size:12px; border-radius:20px; }
+
+/* Stats bar */
+.stats-bar { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; flex:1; min-width:100px; box-shadow:var(--shadow); }
+.stat-card .num { font-size:22px; font-weight:700; color:var(--accent); }
+.stat-card .label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+
+/* Post list */
+.post-list { display:flex; flex-direction:column; gap:10px; }
+.post-card { display:flex; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); transition:box-shadow .15s,border-color .15s; }
+.post-card:hover { box-shadow:var(--shadow2); border-color:var(--accent); }
+
+/* Vote column */
+.vote-col { display:flex; flex-direction:column; align-items:center; min-width:48px; }
+.vote-btn { width:42px; height:42px; border-radius:var(--radius-sm); display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:11px; font-weight:700; border:1.5px solid var(--border); background:var(--surface2); transition:all .15s; line-height:1; }
+.vote-btn:hover { border-color:var(--accent); color:var(--accent); }
+.vote-btn.voted { background:var(--accent); color:#fff; border-color:var(--accent); }
+.vote-btn .arrow { font-size:14px; margin-bottom:1px; }
+.vote-btn .count { font-size:14px; }
+
+/* Post content */
+.post-content { flex:1; min-width:0; }
+.post-title { font-size:16px; font-weight:600; margin-bottom:4px; cursor:pointer; }
+.post-title:hover { color:var(--accent); }
+.post-desc { font-size:13px; color:var(--text2); line-height:1.5; margin-bottom:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.post-meta { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+.badge-category { background:var(--surface2); color:var(--text2); }
+.badge-status { color:#fff; }
+.status-open { background:var(--accent); }
+.status-under-review { background:var(--orange); }
+.status-planned { background:var(--purple); }
+.status-in-progress { background:var(--teal); }
+.status-done { background:var(--green); }
+.status-declined { background:var(--red); }
+.post-author { font-size:11px; color:var(--text3); }
+.post-date { font-size:11px; color:var(--text3); }
+.comment-count { font-size:11px; color:var(--text3); display:inline-flex; align-items:center; gap:3px; }
+
+/* Modal */
+.modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.5); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .2s; }
+.modal-overlay.show { opacity:1; pointer-events:all; }
+.modal { background:var(--surface); border-radius:var(--radius); width:100%; max-width:600px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow2); }
+.modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); }
+.modal-header h2 { font-size:18px; }
+.modal-body { padding:20px; }
+.modal-footer { padding:12px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+.form-group { margin-bottom:14px; }
+.form-group label { display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:var(--text2); }
+.form-row { display:flex; gap:12px; }
+.form-row .form-group { flex:1; }
+
+/* Detail view */
+.detail-view { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); }
+.detail-header { display:flex; gap:16px; align-items:flex-start; margin-bottom:20px; }
+.detail-title { font-size:22px; font-weight:700; margin-bottom:8px; }
+.detail-desc { font-size:14px; color:var(--text2); line-height:1.7; white-space:pre-wrap; }
+.detail-meta { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+.detail-admin { margin-top:16px; padding-top:16px; border-top:1px solid var(--border); }
+.detail-admin label { font-size:12px; font-weight:600; color:var(--text3); display:block; margin-bottom:4px; }
+.detail-admin select { width:auto; }
+.admin-response-box { margin-top:12px; }
+.admin-response { background:var(--accent-bg); border-left:3px solid var(--accent); padding:12px 16px; border-radius:0 var(--radius-sm) var(--radius-sm) 0; margin-top:12px; }
+.admin-response .label { font-size:11px; font-weight:600; color:var(--accent); text-transform:uppercase; margin-bottom:4px; }
+.admin-response p { font-size:13px; color:var(--text2); line-height:1.5; }
+.back-btn { margin-bottom:16px; }
+
+/* Comments */
+.comments-section { margin-top:24px; }
+.comments-section h3 { font-size:15px; font-weight:600; margin-bottom:12px; }
+.comment { padding:12px; background:var(--surface2); border-radius:var(--radius-sm); margin-bottom:8px; }
+.comment-header { display:flex; justify-content:space-between; margin-bottom:4px; }
+.comment-author { font-size:12px; font-weight:600; }
+.comment-date { font-size:11px; color:var(--text3); }
+.comment-text { font-size:13px; color:var(--text2); line-height:1.5; }
+.comment-form { display:flex; gap:8px; margin-top:12px; }
+.comment-form input { flex:1; }
+
+/* Admin bar */
+.admin-bar { background:var(--accent-bg); border:1px solid var(--accent); border-radius:var(--radius-sm); padding:8px 14px; display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; font-size:13px; }
+.admin-bar .label { font-weight:600; color:var(--accent); }
+
+/* Board settings */
+.board-settings { margin-bottom:20px; }
+.board-title-display { font-size:28px; font-weight:800; background:linear-gradient(135deg,var(--accent),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.board-desc { font-size:14px; color:var(--text2); margin-top:4px; }
+
+/* Empty state */
+.empty-state { text-align:center; padding:60px 20px; color:var(--text3); }
+.empty-state .icon { font-size:48px; margin-bottom:12px; }
+.empty-state p { font-size:14px; }
+
+/* Responsive */
+@media(max-width:600px) {
+  .form-row { flex-direction:column; gap:0; }
+  .stats-bar { gap:8px; }
+  .stat-card { min-width:80px; padding:10px 12px; }
+  .stat-card .num { font-size:18px; }
+  .post-card { padding:12px; gap:10px; }
+  .toolbar { gap:6px; }
+  header h1 { font-size:20px; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// ── Data Layer ──
+const STATUSES = ['Open','Under Review','Planned','In Progress','Done','Declined'];
+const STATUS_CLASSES = {'Open':'status-open','Under Review':'status-under-review','Planned':'status-planned','In Progress':'status-in-progress','Done':'status-done','Declined':'status-declined'};
+const DEFAULT_CATEGORIES = ['Feature Request','Bug Report','Improvement','Integration','UX/UI','Other'];
+
+const defaultBoard = {
+  title: 'Feedback Board',
+  description: 'Help us build a better product. Share your ideas, vote on what matters, and track progress.',
+  categories: [...DEFAULT_CATEGORIES],
+  adminPass: 'admin123',
+  brandColor: '#4263eb'
+};
+
+function loadData() {
+  try {
+    return JSON.parse(localStorage.getItem('fb_data')) || { board: {...defaultBoard}, posts: [], nextId: 1 };
+  } catch { return { board: {...defaultBoard}, posts: [], nextId: 1 }; }
+}
+function saveData() { localStorage.setItem('fb_data', JSON.stringify(state)); }
+
+let state = loadData();
+let isAdmin = false;
+let currentView = 'list'; // list | detail
+let detailId = null;
+let filterStatus = 'All';
+let filterCategory = 'All';
+let searchQuery = '';
+let sortBy = 'votes'; // votes | newest | oldest | status
+let darkMode = localStorage.getItem('fb_dark') === 'true';
+let votedPosts = JSON.parse(localStorage.getItem('fb_votes') || '{}');
+let userName = localStorage.getItem('fb_user') || '';
+
+if (darkMode) document.documentElement.classList.add('dark');
+
+// Seed demo data
+if (state.posts.length === 0) {
+  const demo = [
+    { title:'Google Workspace auto-push signatures', desc:'Ability to push email signatures directly to all Google Workspace users without them having to copy-paste. Admin should be able to deploy org-wide.', category:'Feature Request', status:'Planned', author:'Sarah K.', votes:47, comments:[{author:'Mike T.',text:'This would be huge for our 200-person org!',date:'2026-03-20'},{author:'Admin',text:'We\'re actively working on this. ETA: May 2026.',date:'2026-03-22'}], adminResponse:'This is our #1 priority feature. Google Workspace integration is in active development. Expect early access in May.', date:'2026-03-15' },
+    { title:'Video signatures with embedded GIFs', desc:'Let users add a short looping video or animated GIF to their email signature. Would make signatures way more engaging.', category:'Feature Request', status:'Under Review', author:'Priya M.', votes:32, comments:[{author:'Dev J.',text:'Love this! Would increase click-through rates for sure.',date:'2026-03-18'}], date:'2026-03-10' },
+    { title:'UTM parameter analytics dashboard', desc:'A dedicated dashboard showing click-through rates, top-performing campaigns, geographic data, and time-series charts for all UTM-tracked links across the team.', category:'Improvement', status:'In Progress', author:'Alex R.', votes:28, comments:[], adminResponse:'Dashboard v1 is in development. Will include campaign performance, team leaderboard, and export capability.', date:'2026-03-08' },
+    { title:'Outlook / Microsoft 365 support', desc:'Currently only works with Gmail. Need support for Outlook desktop, Outlook web, and Microsoft 365 admin deployment.', category:'Integration', status:'Planned', author:'James L.', votes:41, comments:[{author:'Nina P.',text:'Our company uses M365 exclusively. This is blocking us from adopting.',date:'2026-03-25'}], date:'2026-03-12' },
+    { title:'Signature not rendering correctly in Apple Mail', desc:'When I copy the signature to Apple Mail on macOS, the layout breaks — images stack vertically instead of side-by-side. Works fine in Gmail.', category:'Bug Report', status:'Open', author:'Tom H.', votes:15, comments:[], date:'2026-03-20' },
+    { title:'Team templates with role-based fields', desc:'Allow admins to create signature templates where certain fields auto-populate based on role (e.g., Sales gets phone number, Engineering gets GitHub link).', category:'Feature Request', status:'Open', author:'Lisa W.', votes:22, comments:[{author:'Mark D.',text:'YES. Managing 50+ unique signatures manually is painful.',date:'2026-04-01'}], date:'2026-03-28' },
+    { title:'Dark mode for the dashboard', desc:'The dashboard is too bright for late-night work sessions. Would love a dark mode toggle.', category:'UX/UI', status:'Done', author:'Raj P.', votes:19, comments:[{author:'Admin',text:'Shipped! Toggle is in the top-right corner.',date:'2026-04-02'}], adminResponse:'Dark mode is now live! 🎉', date:'2026-03-05' },
+    { title:'Slack integration for signature updates', desc:'Get notified in Slack when signatures are updated, new campaigns go live, or click milestones are hit.', category:'Integration', status:'Open', author:'Amy C.', votes:11, comments:[], date:'2026-04-01' },
+    { title:'A/B test different signature designs', desc:'Ability to run A/B tests on signature designs and track which version gets more clicks. Essential for optimizing CTR.', category:'Feature Request', status:'Under Review', author:'Chris B.', votes:35, comments:[{author:'Emily S.',text:'This + the analytics dashboard would be killer.',date:'2026-04-03'}], date:'2026-03-30' },
+    { title:'Export click data to CSV', desc:'Need to export all click/impression data to CSV for our quarterly marketing reports. Currently no way to get data out.', category:'Improvement', status:'Done', author:'Karen F.', votes:8, comments:[], adminResponse:'CSV export is available from the Analytics tab.', date:'2026-02-28' },
+    { title:'Banner rotation / scheduling', desc:'Schedule different campaign banners for different date ranges. E.g., show holiday banner Dec 15-Jan 2, then switch back to default.', category:'Feature Request', status:'Open', author:'Dave N.', votes:26, comments:[], date:'2026-04-05' },
+    { title:'HubSpot CRM integration', desc:'Sync signature click data with HubSpot contacts so sales team can see which prospects engaged with signature CTAs.', category:'Integration', status:'Open', author:'Monica S.', votes:18, comments:[], date:'2026-04-07' }
+  ];
+  demo.forEach((d, i) => {
+    state.posts.push({
+      id: i + 1, title: d.title, description: d.desc, category: d.category,
+      status: d.status, author: d.author, votes: d.votes,
+      comments: d.comments || [], adminResponse: d.adminResponse || '',
+      createdAt: d.date, updatedAt: d.date
+    });
+  });
+  state.nextId = demo.length + 1;
+  saveData();
+}
+
+// ── Helpers ──
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function ago(dateStr) {
+  const d = new Date(dateStr), now = new Date();
+  const diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  if (diff < 2592000) return Math.floor(diff/86400) + 'd ago';
+  return d.toLocaleDateString();
+}
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function getFiltered() {
+  let posts = [...state.posts];
+  if (filterStatus !== 'All') posts = posts.filter(p => p.status === filterStatus);
+  if (filterCategory !== 'All') posts = posts.filter(p => p.category === filterCategory);
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    posts = posts.filter(p => p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.author.toLowerCase().includes(q));
+  }
+  switch(sortBy) {
+    case 'votes': posts.sort((a,b) => b.votes - a.votes); break;
+    case 'newest': posts.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)); break;
+    case 'oldest': posts.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt)); break;
+    case 'comments': posts.sort((a,b) => b.comments.length - a.comments.length); break;
+  }
+  return posts;
+}
+
+function getStats() {
+  const p = state.posts;
+  return {
+    total: p.length,
+    open: p.filter(x => x.status === 'Open').length,
+    planned: p.filter(x => x.status === 'Planned' || x.status === 'In Progress').length,
+    done: p.filter(x => x.status === 'Done').length,
+    totalVotes: p.reduce((s,x) => s + x.votes, 0)
+  };
+}
+
+// ── Render ──
+function render() {
+  if (currentView === 'detail') return renderDetail();
+  const app = document.getElementById('app');
+  const stats = getStats();
+  const posts = getFiltered();
+
+  app.innerHTML = `
+    ${state.board.title !== 'Feedback Board' ? `
+      <div class="board-settings">
+        <div class="board-title-display">${esc(state.board.title)}</div>
+        ${state.board.description ? `<div class="board-desc">${esc(state.board.description)}</div>` : ''}
+      </div>
+    ` : ''}
+    <header>
+      <h1>💬 <span>Feedback Board</span></h1>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="openNewPost()">＋ New Feedback</button>
+        ${isAdmin ? `<button class="btn btn-outline btn-sm" onclick="openBoardSettings()">⚙️ Settings</button>` : ''}
+        <button class="btn-icon" onclick="toggleAdmin()" title="${isAdmin ? 'Exit admin' : 'Admin login'}">
+          ${isAdmin ? '🔓' : '🔒'}
+        </button>
+        <button class="btn-icon" onclick="toggleDark()" title="Toggle dark mode">
+          ${darkMode ? '☀️' : '🌙'}
+        </button>
+        <button class="btn-icon" onclick="openImportExport()" title="Import/Export">📦</button>
+      </div>
+    </header>
+
+    ${isAdmin ? `<div class="admin-bar"><span class="label">🛡️ Admin Mode</span><button class="btn btn-sm btn-outline" onclick="toggleAdmin()">Exit</button></div>` : ''}
+
+    <div class="stats-bar">
+      <div class="stat-card"><div class="num">${stats.total}</div><div class="label">Total</div></div>
+      <div class="stat-card"><div class="num">${stats.open}</div><div class="label">Open</div></div>
+      <div class="stat-card"><div class="num">${stats.planned}</div><div class="label">Planned</div></div>
+      <div class="stat-card"><div class="num">${stats.done}</div><div class="label">Done</div></div>
+      <div class="stat-card"><div class="num">${stats.totalVotes}</div><div class="label">Votes</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <input type="text" placeholder="Search feedback..." value="${esc(searchQuery)}" oninput="searchQuery=this.value;render()">
+      </div>
+      <select class="sort-select" onchange="sortBy=this.value;render()">
+        <option value="votes" ${sortBy==='votes'?'selected':''}>Most Votes</option>
+        <option value="newest" ${sortBy==='newest'?'selected':''}>Newest</option>
+        <option value="oldest" ${sortBy==='oldest'?'selected':''}>Oldest</option>
+        <option value="comments" ${sortBy==='comments'?'selected':''}>Most Comments</option>
+      </select>
+    </div>
+
+    <div class="toolbar">
+      <div class="filter-group">
+        <button class="filter-btn ${filterStatus==='All'?'active':''}" onclick="filterStatus='All';render()">All</button>
+        ${STATUSES.map(s => `<button class="filter-btn ${filterStatus===s?'active':''}" onclick="filterStatus='${s}';render()">${s}</button>`).join('')}
+      </div>
+    </div>
+    <div class="toolbar" style="margin-top:-12px">
+      <div class="filter-group">
+        <button class="filter-btn ${filterCategory==='All'?'active':''}" onclick="filterCategory='All';render()">All Categories</button>
+        ${state.board.categories.map(c => `<button class="filter-btn ${filterCategory===c?'active':''}" onclick="filterCategory='${esc(c)}';render()">${esc(c)}</button>`).join('')}
+      </div>
+    </div>
+
+    <div class="post-list">
+      ${posts.length === 0 ? `
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <p>No feedback yet. Be the first to share an idea!</p>
+        </div>
+      ` : posts.map(p => `
+        <div class="post-card">
+          <div class="vote-col">
+            <button class="vote-btn ${votedPosts[p.id]?'voted':''}" onclick="vote(${p.id})">
+              <span class="arrow">▲</span>
+              <span class="count">${p.votes}</span>
+            </button>
+          </div>
+          <div class="post-content">
+            <div class="post-title" onclick="viewPost(${p.id})">${esc(p.title)}</div>
+            <div class="post-desc">${esc(p.description)}</div>
+            <div class="post-meta">
+              <span class="badge badge-status ${STATUS_CLASSES[p.status]}">${p.status}</span>
+              <span class="badge badge-category">${esc(p.category)}</span>
+              <span class="post-author">by ${esc(p.author)}</span>
+              <span class="post-date">${ago(p.createdAt)}</span>
+              ${p.comments.length ? `<span class="comment-count">💬 ${p.comments.length}</span>` : ''}
+              ${isAdmin ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deletePost(${p.id})">🗑</button>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderDetail() {
+  const p = state.posts.find(x => x.id === detailId);
+  if (!p) { currentView = 'list'; return render(); }
+  const app = document.getElementById('app');
+
+  app.innerHTML = `
+    <button class="btn btn-outline back-btn" onclick="currentView='list';render()">← Back to all feedback</button>
+    <div class="detail-view">
+      <div class="detail-header">
+        <div class="vote-col">
+          <button class="vote-btn ${votedPosts[p.id]?'voted':''}" onclick="vote(${p.id})">
+            <span class="arrow">▲</span>
+            <span class="count">${p.votes}</span>
+          </button>
+        </div>
+        <div style="flex:1">
+          <div class="detail-title">${esc(p.title)}</div>
+          <div class="detail-meta">
+            <span class="badge badge-status ${STATUS_CLASSES[p.status]}">${p.status}</span>
+            <span class="badge badge-category">${esc(p.category)}</span>
+            <span class="post-author">by ${esc(p.author)}</span>
+            <span class="post-date">${ago(p.createdAt)}</span>
+          </div>
+          <div class="detail-desc" style="margin-top:16px">${esc(p.description)}</div>
+
+          ${p.adminResponse ? `
+            <div class="admin-response">
+              <div class="label">Official Response</div>
+              <p>${esc(p.adminResponse)}</p>
+            </div>
+          ` : ''}
+
+          ${isAdmin ? `
+            <div class="detail-admin">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Status</label>
+                  <select onchange="updateStatus(${p.id},this.value)">
+                    ${STATUSES.map(s => `<option ${p.status===s?'selected':''}>${s}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Category</label>
+                  <select onchange="updateCategory(${p.id},this.value)">
+                    ${state.board.categories.map(c => `<option ${p.category===c?'selected':''}>${esc(c)}</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+              <div class="admin-response-box">
+                <label style="font-size:12px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px">Official Response</label>
+                <textarea id="adminResp" style="min-height:60px">${esc(p.adminResponse)}</textarea>
+                <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveAdminResponse(${p.id})">Save Response</button>
+              </div>
+              <button class="btn btn-danger btn-sm" style="margin-top:12px" onclick="deletePost(${p.id})">🗑 Delete Post</button>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+
+      <div class="comments-section">
+        <h3>💬 Comments (${p.comments.length})</h3>
+        ${p.comments.map((c, i) => `
+          <div class="comment">
+            <div class="comment-header">
+              <span class="comment-author">${esc(c.author)}</span>
+              <span class="comment-date">${ago(c.date)}</span>
+            </div>
+            <div class="comment-text">${esc(c.text)}</div>
+          </div>
+        `).join('')}
+        <div class="comment-form">
+          <input type="text" id="commentName" placeholder="Your name" style="max-width:150px" value="${esc(userName)}">
+          <input type="text" id="commentText" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')addComment(${p.id})">
+          <button class="btn btn-primary btn-sm" onclick="addComment(${p.id})">Post</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Actions ──
+function vote(id) {
+  const p = state.posts.find(x => x.id === id);
+  if (!p) return;
+  if (votedPosts[id]) { p.votes--; delete votedPosts[id]; }
+  else { p.votes++; votedPosts[id] = true; }
+  localStorage.setItem('fb_votes', JSON.stringify(votedPosts));
+  saveData(); render();
+}
+
+function viewPost(id) { detailId = id; currentView = 'detail'; render(); }
+
+function updateStatus(id, status) {
+  const p = state.posts.find(x => x.id === id);
+  if (p) { p.status = status; p.updatedAt = today(); saveData(); render(); }
+}
+function updateCategory(id, cat) {
+  const p = state.posts.find(x => x.id === id);
+  if (p) { p.category = cat; p.updatedAt = today(); saveData(); render(); }
+}
+function saveAdminResponse(id) {
+  const p = state.posts.find(x => x.id === id);
+  if (p) { p.adminResponse = document.getElementById('adminResp').value; p.updatedAt = today(); saveData(); render(); }
+}
+
+function addComment(id) {
+  const name = document.getElementById('commentName').value.trim() || 'Anonymous';
+  const text = document.getElementById('commentText').value.trim();
+  if (!text) return;
+  userName = name;
+  localStorage.setItem('fb_user', userName);
+  const p = state.posts.find(x => x.id === id);
+  if (p) { p.comments.push({ author: name, text, date: today() }); saveData(); render(); }
+}
+
+function deletePost(id) {
+  if (!confirm('Delete this feedback?')) return;
+  state.posts = state.posts.filter(x => x.id !== id);
+  saveData();
+  if (currentView === 'detail') { currentView = 'list'; }
+  render();
+}
+
+// ── Modals ──
+function showModal(html) {
+  let overlay = document.querySelector('.modal-overlay');
+  if (!overlay) { overlay = document.createElement('div'); overlay.className = 'modal-overlay'; document.body.appendChild(overlay); }
+  overlay.innerHTML = `<div class="modal">${html}</div>`;
+  requestAnimationFrame(() => overlay.classList.add('show'));
+  overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+}
+function closeModal() {
+  const o = document.querySelector('.modal-overlay');
+  if (o) { o.classList.remove('show'); setTimeout(() => o.remove(), 200); }
+}
+
+function openNewPost() {
+  showModal(`
+    <div class="modal-header"><h2>✨ Submit Feedback</h2><button onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Your Name</label><input id="np_author" value="${esc(userName)}" placeholder="Enter your name"></div>
+      <div class="form-group"><label>Title</label><input id="np_title" placeholder="Short, descriptive title"></div>
+      <div class="form-group"><label>Description</label><textarea id="np_desc" placeholder="Describe your idea, bug, or suggestion in detail..."></textarea></div>
+      <div class="form-group"><label>Category</label>
+        <select id="np_cat">${state.board.categories.map(c => `<option>${esc(c)}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitNewPost()">Submit</button>
+    </div>
+  `);
+  document.getElementById('np_title').focus();
+}
+
+function submitNewPost() {
+  const title = document.getElementById('np_title').value.trim();
+  const desc = document.getElementById('np_desc').value.trim();
+  const cat = document.getElementById('np_cat').value;
+  const author = document.getElementById('np_author').value.trim() || 'Anonymous';
+  if (!title) return alert('Title is required');
+  userName = author;
+  localStorage.setItem('fb_user', userName);
+  state.posts.push({
+    id: state.nextId++, title, description: desc, category: cat,
+    status: 'Open', author, votes: 0, comments: [], adminResponse: '',
+    createdAt: today(), updatedAt: today()
+  });
+  saveData(); closeModal(); render();
+}
+
+function toggleAdmin() {
+  if (isAdmin) { isAdmin = false; render(); return; }
+  showModal(`
+    <div class="modal-header"><h2>🔒 Admin Login</h2><button onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Password</label><input id="admin_pass" type="password" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+      <p style="font-size:12px;color:var(--text3);margin-top:8px">Default: admin123 (change in Settings)</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doAdminLogin()">Login</button>
+    </div>
+  `);
+  document.getElementById('admin_pass').focus();
+}
+function doAdminLogin() {
+  if (document.getElementById('admin_pass').value === state.board.adminPass) {
+    isAdmin = true; closeModal(); render();
+  } else { alert('Wrong password'); }
+}
+
+function openBoardSettings() {
+  showModal(`
+    <div class="modal-header"><h2>⚙️ Board Settings</h2><button onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Board Title</label><input id="bs_title" value="${esc(state.board.title)}"></div>
+      <div class="form-group"><label>Description</label><textarea id="bs_desc">${esc(state.board.description)}</textarea></div>
+      <div class="form-group"><label>Categories (comma-separated)</label><input id="bs_cats" value="${state.board.categories.map(esc).join(', ')}"></div>
+      <div class="form-group"><label>Admin Password</label><input id="bs_pass" value="${esc(state.board.adminPass)}"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBoardSettings()">Save</button>
+    </div>
+  `);
+}
+function saveBoardSettings() {
+  state.board.title = document.getElementById('bs_title').value.trim() || 'Feedback Board';
+  state.board.description = document.getElementById('bs_desc').value.trim();
+  state.board.categories = document.getElementById('bs_cats').value.split(',').map(s=>s.trim()).filter(Boolean);
+  state.board.adminPass = document.getElementById('bs_pass').value || 'admin123';
+  saveData(); closeModal(); render();
+}
+
+function openImportExport() {
+  showModal(`
+    <div class="modal-header"><h2>📦 Import / Export</h2><button onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Export</label>
+        <button class="btn btn-outline" onclick="doExport()">📥 Download JSON</button>
+      </div>
+      <div class="form-group" style="margin-top:16px">
+        <label>Import</label>
+        <input type="file" accept=".json" onchange="doImport(event)">
+        <p style="font-size:11px;color:var(--text3);margin-top:4px">⚠️ This will replace all existing data</p>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Close</button></div>
+  `);
+}
+function doExport() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'feedback-board-' + today() + '.json'; a.click();
+}
+function doImport(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (d.board && d.posts) { state = d; saveData(); closeModal(); render(); }
+      else alert('Invalid file format');
+    } catch { alert('Failed to parse JSON'); }
+  };
+  r.readAsText(file);
+}
+
+function toggleDark() {
+  darkMode = !darkMode;
+  document.documentElement.classList.toggle('dark');
+  localStorage.setItem('fb_dark', darkMode);
+  render();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openNewPost(); }
+  if (e.key === '/' ) { e.preventDefault(); const s = document.querySelector('.search-box input'); if (s) s.focus(); }
+  if (e.key === 'Escape') { if (document.querySelector('.modal-overlay.show')) closeModal(); else if (currentView === 'detail') { currentView = 'list'; render(); } }
+  if (e.key === 'd' || e.key === 'D') { e.preventDefault(); toggleDark(); }
+});
+
+render();
+</script>
+</body>
+</html>

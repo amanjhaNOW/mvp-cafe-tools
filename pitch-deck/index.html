@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pitch Deck — Build & Present Decks</title>
+<style>
+:root {
+  --bg: #0f0f13;
+  --surface: #1a1a24;
+  --surface2: #22223a;
+  --border: #2d2d4a;
+  --text: #e8e8f0;
+  --text2: #9090b0;
+  --accent: #6c5ce7;
+  --accent2: #a29bfe;
+  --green: #00b894;
+  --red: #e17055;
+  --yellow: #fdcb6e;
+  --blue: #74b9ff;
+  --pink: #fd79a8;
+  --orange: #e17055;
+  --radius: 12px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height:100vh; }
+button { cursor:pointer; font-family:inherit; border:none; }
+input, textarea, select { font-family:inherit; background: var(--surface2); color: var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 12px; outline:none; }
+input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+textarea { resize: vertical; }
+::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+/* Layout */
+.app { display:flex; height:100vh; }
+.sidebar { width:280px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; }
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+/* Sidebar */
+.sidebar-header { padding:16px; border-bottom:1px solid var(--border); }
+.sidebar-header h1 { font-size:18px; display:flex; align-items:center; gap:8px; }
+.sidebar-header h1 span { font-size:22px; }
+.deck-list { flex:1; overflow-y:auto; padding:8px; }
+.deck-item { padding:10px 12px; border-radius:8px; cursor:pointer; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; }
+.deck-item:hover { background:var(--surface2); }
+.deck-item.active { background:var(--accent); color:#fff; }
+.deck-item .deck-name { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
+.deck-item .deck-count { font-size:11px; opacity:0.6; margin-left:8px; }
+.deck-item .deck-delete { opacity:0; font-size:14px; color:var(--red); background:none; padding:2px 6px; border-radius:4px; }
+.deck-item:hover .deck-delete { opacity:0.6; }
+.deck-item .deck-delete:hover { opacity:1; background:rgba(225,112,85,0.15); }
+.sidebar-footer { padding:12px; border-top:1px solid var(--border); display:flex; gap:8px; }
+.sidebar-footer button { flex:1; padding:8px; border-radius:8px; font-size:12px; font-weight:600; }
+.btn-new-deck { background:var(--accent); color:#fff; }
+.btn-new-deck:hover { background:var(--accent2); }
+.btn-import { background:var(--surface2); color:var(--text2); }
+.btn-import:hover { background:var(--border); color:var(--text); }
+
+/* Top bar */
+.topbar { padding:12px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; background:var(--surface); }
+.topbar input { flex:1; font-size:16px; font-weight:600; background:transparent; border:1px solid transparent; padding:6px 10px; }
+.topbar input:hover { border-color:var(--border); }
+.topbar input:focus { border-color:var(--accent); background:var(--surface2); }
+.topbar-actions { display:flex; gap:8px; }
+.topbar-actions button { padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; }
+.btn-present { background:var(--green); color:#fff; }
+.btn-present:hover { filter:brightness(1.1); }
+.btn-export { background:var(--surface2); color:var(--text2); }
+.btn-export:hover { background:var(--border); color:var(--text); }
+.btn-theme { background:var(--surface2); color:var(--text2); position:relative; }
+.btn-theme:hover { background:var(--border); color:var(--text); }
+
+/* Content area */
+.content { flex:1; display:flex; overflow:hidden; }
+.slide-panel { width:220px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; }
+.slide-panel-header { padding:10px 12px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.slide-panel-header span { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--text2); }
+.btn-add-slide { background:var(--accent); color:#fff; width:26px; height:26px; border-radius:6px; font-size:16px; display:flex; align-items:center; justify-content:center; }
+.slide-thumbs { flex:1; overflow-y:auto; padding:8px; }
+.slide-thumb { padding:8px 10px; border-radius:8px; cursor:pointer; margin-bottom:4px; border:2px solid transparent; position:relative; }
+.slide-thumb:hover { background:var(--surface2); }
+.slide-thumb.active { border-color:var(--accent); background:var(--surface2); }
+.slide-thumb-num { font-size:10px; color:var(--text2); position:absolute; left:10px; top:8px; }
+.slide-thumb-title { font-size:12px; margin-left:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.slide-thumb-type { font-size:10px; color:var(--accent2); margin-left:18px; margin-top:2px; }
+.slide-thumb-actions { position:absolute; right:6px; top:50%; transform:translateY(-50%); display:flex; gap:2px; opacity:0; }
+.slide-thumb:hover .slide-thumb-actions { opacity:1; }
+.slide-thumb-actions button { background:none; color:var(--text2); font-size:12px; padding:2px 4px; border-radius:4px; }
+.slide-thumb-actions button:hover { background:var(--border); color:var(--text); }
+.slide-thumb-actions .del-slide:hover { color:var(--red); }
+
+/* Editor */
+.editor { flex:1; overflow-y:auto; padding:24px; display:flex; flex-direction:column; gap:16px; }
+.editor-section { background:var(--surface); border-radius:var(--radius); padding:20px; border:1px solid var(--border); }
+.editor-section h3 { font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--text2); margin-bottom:12px; }
+.form-row { display:flex; gap:12px; margin-bottom:12px; }
+.form-group { flex:1; display:flex; flex-direction:column; gap:4px; }
+.form-group label { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px; }
+.form-group input, .form-group textarea, .form-group select { width:100%; }
+.form-group textarea { min-height:80px; }
+
+/* Bullets editor */
+.bullets-editor { display:flex; flex-direction:column; gap:6px; }
+.bullet-row { display:flex; gap:8px; align-items:center; }
+.bullet-row input { flex:1; }
+.bullet-row button { background:none; color:var(--text2); font-size:16px; padding:4px 8px; border-radius:4px; }
+.bullet-row button:hover { color:var(--red); background:var(--surface2); }
+.btn-add-bullet { background:var(--surface2); color:var(--accent2); padding:6px 12px; border-radius:6px; font-size:12px; font-weight:500; align-self:flex-start; }
+.btn-add-bullet:hover { background:var(--border); }
+
+/* Metrics editor */
+.metrics-editor { display:flex; flex-direction:column; gap:8px; }
+.metric-row { display:flex; gap:8px; align-items:center; }
+.metric-row input:first-child { width:120px; flex-shrink:0; }
+.metric-row input:nth-child(2) { flex:1; }
+
+/* Preview */
+.preview-container { margin-top:8px; }
+.slide-preview { width:100%; aspect-ratio:16/9; border-radius:var(--radius); overflow:hidden; position:relative; }
+
+/* Presentation mode */
+.presentation-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9999; display:none; }
+.presentation-overlay.active { display:flex; flex-direction:column; }
+.presentation-slide { flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.presentation-controls { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:12px; align-items:center; background:rgba(0,0,0,0.7); padding:8px 16px; border-radius:20px; opacity:0; transition:opacity 0.3s; z-index:10000; }
+.presentation-overlay:hover .presentation-controls { opacity:1; }
+.presentation-controls button { background:none; color:#fff; font-size:18px; padding:4px 10px; border-radius:6px; }
+.presentation-controls button:hover { background:rgba(255,255,255,0.15); }
+.presentation-controls .slide-counter { color:rgba(255,255,255,0.6); font-size:13px; min-width:60px; text-align:center; }
+.speaker-notes-bar { background:rgba(0,0,0,0.85); color:rgba(255,255,255,0.7); padding:10px 24px; font-size:13px; line-height:1.5; max-height:80px; overflow-y:auto; display:none; }
+.speaker-notes-bar.visible { display:block; }
+.btn-exit-pres { position:fixed; top:16px; right:16px; z-index:10001; background:rgba(0,0,0,0.5); color:#fff; padding:6px 14px; border-radius:8px; font-size:12px; opacity:0; transition:opacity 0.3s; }
+.presentation-overlay:hover .btn-exit-pres { opacity:1; }
+
+/* Slide rendering */
+.rendered-slide { width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; padding:8%; position:relative; overflow:hidden; }
+.rendered-slide.type-title { align-items:center; text-align:center; }
+.rendered-slide .slide-label { position:absolute; top:5%; right:5%; font-size:0.7em; text-transform:uppercase; letter-spacing:2px; opacity:0.4; }
+.rendered-slide .slide-heading { font-weight:800; line-height:1.15; margin-bottom:0.4em; }
+.rendered-slide .slide-subtitle { opacity:0.7; line-height:1.5; }
+.rendered-slide .slide-bullets { list-style:none; padding:0; margin-top:0.5em; }
+.rendered-slide .slide-bullets li { padding:0.25em 0; padding-left:1.2em; position:relative; line-height:1.6; }
+.rendered-slide .slide-bullets li::before { content:'▸'; position:absolute; left:0; opacity:0.6; }
+.rendered-slide .metrics-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:1em; margin-top:0.8em; }
+.rendered-slide .metric-card { background:rgba(255,255,255,0.08); border-radius:12px; padding:1em; text-align:center; }
+.rendered-slide .metric-value { font-weight:800; margin-bottom:0.15em; }
+.rendered-slide .metric-label { opacity:0.6; }
+.rendered-slide .team-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:1em; margin-top:0.8em; }
+.rendered-slide .team-card { background:rgba(255,255,255,0.06); border-radius:12px; padding:1em; display:flex; align-items:center; gap:0.8em; }
+.rendered-slide .team-avatar { width:2.5em; height:2.5em; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
+.rendered-slide .team-name { font-weight:600; }
+.rendered-slide .team-role { opacity:0.6; margin-top:0.15em; }
+.rendered-slide .timeline-list { margin-top:0.5em; }
+.rendered-slide .timeline-item { display:flex; gap:0.8em; padding:0.4em 0; align-items:flex-start; }
+.rendered-slide .timeline-dot { width:0.6em; height:0.6em; border-radius:50%; margin-top:0.35em; flex-shrink:0; }
+.rendered-slide .timeline-date { font-weight:600; min-width:5em; }
+.rendered-slide .timeline-text { opacity:0.8; }
+.rendered-slide .two-col { display:grid; grid-template-columns:1fr 1fr; gap:2em; margin-top:0.5em; }
+.rendered-slide .col-header { font-weight:700; margin-bottom:0.5em; padding-bottom:0.3em; border-bottom:2px solid rgba(255,255,255,0.15); }
+
+/* Theme colors for slides */
+.theme-midnight { background: linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 100%); color: #e8e8f0; }
+.theme-ocean { background: linear-gradient(135deg, #0a1628 0%, #0d3b66 100%); color: #e0f0ff; }
+.theme-forest { background: linear-gradient(135deg, #0a1a0a 0%, #1a3a2a 100%); color: #e0f0e8; }
+.theme-sunset { background: linear-gradient(135deg, #1a0a0a 0%, #3a1a1a 50%, #2a1a0a 100%); color: #ffe8e0; }
+.theme-royal { background: linear-gradient(135deg, #1a0a2a 0%, #2a1a4a 100%); color: #f0e0ff; }
+.theme-ember { background: linear-gradient(135deg, #1a0f0a 0%, #2d1810 50%, #1a1a0a 100%); color: #ffe8d0; }
+.theme-clean { background: #ffffff; color: #1a1a2e; }
+.theme-clean .slide-label { color: #666; }
+.theme-clean .metric-card { background: rgba(0,0,0,0.04); }
+.theme-clean .team-card { background: rgba(0,0,0,0.03); }
+
+/* Theme picker */
+.theme-dropdown { position:absolute; top:100%; right:0; margin-top:8px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px; display:none; z-index:100; min-width:160px; box-shadow:var(--shadow); }
+.theme-dropdown.open { display:block; }
+.theme-option { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:6px; cursor:pointer; font-size:13px; }
+.theme-option:hover { background:var(--surface2); }
+.theme-option.active { background:var(--accent); color:#fff; }
+.theme-swatch { width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.1); }
+
+/* Add slide modal */
+.modal-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); z-index:1000; display:none; align-items:center; justify-content:center; }
+.modal-overlay.active { display:flex; }
+.modal { background:var(--surface); border-radius:16px; padding:24px; width:480px; max-width:90vw; max-height:80vh; overflow-y:auto; border:1px solid var(--border); box-shadow:var(--shadow); }
+.modal h2 { font-size:16px; margin-bottom:16px; }
+.slide-type-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+.slide-type-btn { padding:14px 8px; border-radius:10px; background:var(--surface2); color:var(--text); text-align:center; font-size:12px; font-weight:500; border:2px solid transparent; transition:all 0.15s; }
+.slide-type-btn:hover { border-color:var(--accent); background:var(--border); }
+.slide-type-btn .type-icon { font-size:22px; margin-bottom:6px; display:block; }
+
+/* Empty states */
+.empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text2); gap:12px; }
+.empty-state .empty-icon { font-size:48px; opacity:0.3; }
+.empty-state p { font-size:14px; }
+
+/* Keyboard hints */
+.kbd { background:var(--surface2); padding:2px 6px; border-radius:4px; font-size:10px; font-family:monospace; color:var(--text2); margin-left:4px; }
+
+/* Responsive */
+@media (max-width:900px) {
+  .sidebar { width:220px; }
+  .slide-panel { width:180px; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1><span>🎯</span> Pitch Deck</h1>
+    </div>
+    <div class="deck-list" id="deckList"></div>
+    <div class="sidebar-footer">
+      <button class="btn-new-deck" onclick="createDeck()">+ New Deck</button>
+      <button class="btn-import" onclick="importData()">Import</button>
+    </div>
+  </div>
+  <div class="main" id="mainArea">
+    <div class="topbar" id="topbar" style="display:none">
+      <input type="text" id="deckTitle" placeholder="Deck Title..." onchange="updateDeckTitle(this.value)">
+      <div class="topbar-actions">
+        <button class="btn-export" onclick="exportData()">📦 Export</button>
+        <div style="position:relative">
+          <button class="btn-theme" onclick="toggleThemeDropdown()">🎨 Theme</button>
+          <div class="theme-dropdown" id="themeDropdown"></div>
+        </div>
+        <button class="btn-present" onclick="startPresentation()">▶ Present</button>
+      </div>
+    </div>
+    <div class="content" id="contentArea">
+      <div class="empty-state" id="emptyMain">
+        <div class="empty-icon">🎯</div>
+        <p>Create or select a deck to get started</p>
+        <p style="font-size:12px;opacity:0.6">Press <span class="kbd">N</span> for new deck</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add slide modal -->
+<div class="modal-overlay" id="addSlideModal">
+  <div class="modal">
+    <h2>Add Slide</h2>
+    <div class="slide-type-grid" id="slideTypeGrid"></div>
+  </div>
+</div>
+
+<!-- Presentation overlay -->
+<div class="presentation-overlay" id="presOverlay">
+  <button class="btn-exit-pres" onclick="exitPresentation()">✕ Exit <span class="kbd">Esc</span></button>
+  <div class="presentation-slide" id="presSlide"></div>
+  <div class="speaker-notes-bar" id="presNotes"></div>
+  <div class="presentation-controls">
+    <button onclick="presNav(-1)">◀</button>
+    <span class="slide-counter" id="presCounter">1 / 1</span>
+    <button onclick="presNav(1)">▶</button>
+    <button onclick="togglePresNotes()" title="Toggle speaker notes">📝</button>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleImport(event)">
+
+<script>
+const STORAGE_KEY = 'pitchdeck_data';
+const THEMES = [
+  { id:'midnight', name:'Midnight', swatch:'linear-gradient(135deg,#0c0c1d,#1a1a3e)' },
+  { id:'ocean', name:'Ocean', swatch:'linear-gradient(135deg,#0a1628,#0d3b66)' },
+  { id:'forest', name:'Forest', swatch:'linear-gradient(135deg,#0a1a0a,#1a3a2a)' },
+  { id:'sunset', name:'Sunset', swatch:'linear-gradient(135deg,#1a0a0a,#3a1a1a)' },
+  { id:'royal', name:'Royal', swatch:'linear-gradient(135deg,#1a0a2a,#2a1a4a)' },
+  { id:'ember', name:'Ember', swatch:'linear-gradient(135deg,#1a0f0a,#2d1810)' },
+  { id:'clean', name:'Clean (Light)', swatch:'linear-gradient(135deg,#fff,#f0f0f5)' }
+];
+const SLIDE_TYPES = [
+  { id:'title', name:'Title', icon:'🎬', fields:['heading','subtitle'] },
+  { id:'problem', name:'Problem', icon:'🔥', fields:['heading','bullets'] },
+  { id:'solution', name:'Solution', icon:'💡', fields:['heading','subtitle','bullets'] },
+  { id:'market', name:'Market', icon:'🌍', fields:['heading','subtitle','metrics'] },
+  { id:'product', name:'Product', icon:'🛠', fields:['heading','subtitle','bullets'] },
+  { id:'traction', name:'Traction', icon:'📈', fields:['heading','metrics','bullets'] },
+  { id:'business', name:'Business Model', icon:'💰', fields:['heading','subtitle','bullets'] },
+  { id:'team', name:'Team', icon:'👥', fields:['heading','team'] },
+  { id:'competition', name:'Competition', icon:'⚔️', fields:['heading','cols'] },
+  { id:'roadmap', name:'Roadmap', icon:'🗺', fields:['heading','timeline'] },
+  { id:'ask', name:'The Ask', icon:'🎯', fields:['heading','subtitle','metrics','bullets'] },
+  { id:'custom', name:'Custom', icon:'✏️', fields:['heading','subtitle','bullets'] },
+];
+const ACCENT_COLORS = {
+  midnight:'#6c5ce7', ocean:'#0984e3', forest:'#00b894', sunset:'#e17055',
+  royal:'#a29bfe', ember:'#e17055', clean:'#6c5ce7'
+};
+
+let state = { decks:[], activeDeckId:null, activeSlideIdx:0, presIdx:0, presNotesVisible:false };
+
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (d && d.decks) { state.decks = d.decks; state.activeDeckId = d.activeDeckId; state.activeSlideIdx = d.activeSlideIdx||0; }
+  } catch(e) {}
+  if (!state.decks.length) seedDemo();
+}
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ decks:state.decks, activeDeckId:state.activeDeckId, activeSlideIdx:state.activeSlideIdx }));
+}
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function getDeck(id) { return state.decks.find(d=>d.id===id); }
+function activeDeck() { return getDeck(state.activeDeckId); }
+function activeSlide() { const d=activeDeck(); return d&&d.slides[state.activeSlideIdx]; }
+
+function seedDemo() {
+  state.decks = [{
+    id: uid(), name: 'UTMStamp — Investor Pitch', theme: 'ocean', created: Date.now(),
+    slides: [
+      { type:'title', heading:'UTMStamp', subtitle:'Every Signature. Every Click. Tracked.\n\nEmail signatures that drive measurable marketing ROI.', notes:'Open with the hook — $50B+ spent on email marketing, but signatures are untapped.' },
+      { type:'problem', heading:'The Problem', bullets:['Companies send 300+ emails/day per employee — signatures are wasted real estate','Marketing teams can\'t track signature-driven traffic','No unified way to manage signatures across teams','Manual UTM tagging is error-prone and inconsistent'], notes:'Emphasize the scale: 1000 employees = 300K daily signature impressions, zero tracking.' },
+      { type:'solution', heading:'The Solution', subtitle:'UTMStamp turns every email signature into a trackable marketing channel.', bullets:['Beautiful, on-brand signature templates','Automatic UTM parameter injection on every link','Click analytics dashboard — see what converts','One-click team-wide deployment'], notes:'Demo the product here if possible. Show the template builder → analytics flow.' },
+      { type:'market', heading:'Market Opportunity', subtitle:'Email signature management is a $2.1B market growing at 12% CAGR.', metrics:[{value:'$2.1B',label:'TAM (Email Sig Mgmt)'},{value:'300M+',label:'Business Email Users'},{value:'12%',label:'CAGR Growth'},{value:'$0',label:'Acquisition Cost (PLG)'}], notes:'Sources: Radicati Group, Statista. Most competitors are enterprise-only, leaving SMB wide open.' },
+      { type:'traction', heading:'Traction', metrics:[{value:'13 Days',label:'Concept → Launch'},{value:'500+',label:'Early Signups'},{value:'87%',label:'Activation Rate'},{value:'4.8★',label:'User Rating'}], bullets:['Launched via Product Hunt — Top 10 of the day','Growing through build-in-public content (10K+ followers)','Zero paid marketing spend','3 enterprise pilot conversations in progress'], notes:'Highlight the speed of shipping and organic growth. This is a capital-efficient operation.' },
+      { type:'business', heading:'Business Model', subtitle:'Freemium SaaS with team-based pricing.', bullets:['Free: 1 user, basic templates, UTM tracking','Pro ($8/user/mo): Custom branding, analytics, A/B testing','Team ($15/user/mo): Admin controls, Google Workspace push, API','Enterprise: Custom pricing, SSO, dedicated support','Expansion revenue through seat growth within orgs'], notes:'Key insight: once one person in a team uses it, they need it for the whole org. Natural virality.' },
+      { type:'competition', heading:'Competitive Landscape', cols:{ left:{ header:'Them (Exclaimer, WiseStamp)', items:['Enterprise-only pricing ($$$)','No UTM tracking built in','Complex deployment','Legacy UX, slow innovation'] }, right:{ header:'Us (UTMStamp)', items:['Free tier, PLG motion','UTM tracking is core, not bolted on','One-click setup','Modern UX, shipping weekly'] }}, notes:'Don\'t trash competitors — acknowledge they own enterprise. We own the SMB→mid-market gap.' },
+      { type:'roadmap', heading:'Roadmap', timeline:[{date:'Q1 2026',text:'✅ Launch MVP, signature builder, basic analytics'},{date:'Q2 2026',text:'Google Workspace integration, team management, A/B testing'},{date:'Q3 2026',text:'Video signatures, advanced analytics, API'},{date:'Q4 2026',text:'Enterprise features, SSO, Salesforce integration'}], notes:'Show we have a clear path. Q2 is about stickiness, Q3 about differentiation, Q4 about enterprise readiness.' },
+      { type:'team', heading:'Team', team:[{name:'Aman Jha (AJ)',role:'Founder & CEO — 10yr product leader, 4 products 0→1, $15M revenue impact',color:'#0984e3'}], notes:'Solo founder advantage — low burn, fast decisions. Mention ZYOD, GoMechanic, IoT background.' },
+      { type:'ask', heading:'The Ask', subtitle:'Raising $500K pre-seed to accelerate growth.', metrics:[{value:'$500K',label:'Raise Amount'},{value:'18 mo',label:'Runway'},{value:'10K users',label:'Target by EOY'},{value:'$50K MRR',label:'Target by EOY'}], bullets:['Hire 2 engineers (Google Workspace + analytics)','Content marketing amplification','Enterprise pilot support','Infrastructure & security compliance (SOC2)'], notes:'Close strong. Reiterate: proven builder, validated product, massive market, capital-efficient.' }
+    ]
+  }];
+  state.activeDeckId = state.decks[0].id;
+  state.activeSlideIdx = 0;
+  save();
+}
+
+function render() {
+  renderDeckList();
+  const deck = activeDeck();
+  document.getElementById('topbar').style.display = deck ? 'flex' : 'none';
+  if (deck) {
+    document.getElementById('deckTitle').value = deck.name;
+    renderContent(deck);
+  } else {
+    document.getElementById('contentArea').innerHTML = '<div class="empty-state" id="emptyMain"><div class="empty-icon">🎯</div><p>Create or select a deck to get started</p><p style="font-size:12px;opacity:0.6">Press <span class="kbd">N</span> for new deck</p></div>';
+  }
+  renderThemeDropdown();
+}
+
+function renderDeckList() {
+  const el = document.getElementById('deckList');
+  el.innerHTML = state.decks.map(d => `
+    <div class="deck-item ${d.id===state.activeDeckId?'active':''}" onclick="selectDeck('${d.id}')">
+      <span class="deck-name">${esc(d.name)}</span>
+      <span class="deck-count">${d.slides.length}</span>
+      <button class="deck-delete" onclick="event.stopPropagation();deleteDeck('${d.id}')" title="Delete">✕</button>
+    </div>
+  `).join('');
+}
+
+function renderContent(deck) {
+  const ca = document.getElementById('contentArea');
+  if (!deck.slides.length) {
+    ca.innerHTML = `
+      <div class="slide-panel">
+        <div class="slide-panel-header"><span>Slides</span><button class="btn-add-slide" onclick="openAddSlide()">+</button></div>
+        <div class="slide-thumbs"></div>
+      </div>
+      <div class="empty-state"><div class="empty-icon">📄</div><p>Add your first slide</p><p style="font-size:12px;opacity:0.6">Press <span class="kbd">A</span> to add</p></div>`;
+    return;
+  }
+  if (state.activeSlideIdx >= deck.slides.length) state.activeSlideIdx = deck.slides.length - 1;
+  const slide = deck.slides[state.activeSlideIdx];
+  const typeDef = SLIDE_TYPES.find(t=>t.id===slide.type) || SLIDE_TYPES[SLIDE_TYPES.length-1];
+
+  ca.innerHTML = `
+    <div class="slide-panel">
+      <div class="slide-panel-header"><span>Slides (${deck.slides.length})</span><button class="btn-add-slide" onclick="openAddSlide()">+</button></div>
+      <div class="slide-thumbs" id="slideThumbs">
+        ${deck.slides.map((s,i) => {
+          const t = SLIDE_TYPES.find(x=>x.id===s.type);
+          return `<div class="slide-thumb ${i===state.activeSlideIdx?'active':''}" onclick="selectSlide(${i})" draggable="true" ondragstart="dragSlide(event,${i})" ondragover="event.preventDefault()" ondrop="dropSlide(event,${i})">
+            <span class="slide-thumb-num">${i+1}</span>
+            <div class="slide-thumb-title">${esc(s.heading||'Untitled')}</div>
+            <div class="slide-thumb-type">${t?t.icon+' '+t.name:'✏️ Custom'}</div>
+            <div class="slide-thumb-actions">
+              ${i>0?'<button onclick="event.stopPropagation();moveSlide('+i+',-1)" title="Move up">↑</button>':''}
+              ${i<deck.slides.length-1?'<button onclick="event.stopPropagation();moveSlide('+i+',1)" title="Move down">↓</button>':''}
+              <button class="del-slide" onclick="event.stopPropagation();deleteSlide(${i})" title="Delete">✕</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="editor" id="editorArea">
+      <div class="editor-section">
+        <h3>${typeDef.icon} ${typeDef.name} Slide</h3>
+        ${renderSlideFields(slide, typeDef)}
+      </div>
+      <div class="editor-section">
+        <h3>📝 Speaker Notes</h3>
+        <textarea id="notesInput" placeholder="Notes visible only to you during presentation..." oninput="updateSlideField('notes',this.value)" style="min-height:60px">${esc(slide.notes||'')}</textarea>
+      </div>
+      <div class="editor-section">
+        <h3>👁 Preview</h3>
+        <div class="preview-container">
+          <div class="slide-preview">${renderSlideHTML(slide, deck.theme, false)}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSlideFields(slide, typeDef) {
+  let html = '';
+  const fields = typeDef.fields;
+  if (fields.includes('heading')) {
+    html += `<div class="form-group"><label>Heading</label><input type="text" value="${esc(slide.heading||'')}" oninput="updateSlideField('heading',this.value)" placeholder="Slide heading..."></div>`;
+  }
+  if (fields.includes('subtitle')) {
+    html += `<div class="form-group"><label>Subtitle / Description</label><textarea oninput="updateSlideField('subtitle',this.value)" placeholder="Supporting text...">${esc(slide.subtitle||'')}</textarea></div>`;
+  }
+  if (fields.includes('bullets')) {
+    const bullets = slide.bullets || [''];
+    html += `<div class="form-group"><label>Bullet Points</label><div class="bullets-editor" id="bulletsEditor">
+      ${bullets.map((b,i) => `<div class="bullet-row"><input type="text" value="${esc(b)}" oninput="updateBullet(${i},this.value)" placeholder="Point ${i+1}..."><button onclick="removeBullet(${i})">✕</button></div>`).join('')}
+      <button class="btn-add-bullet" onclick="addBullet()">+ Add Point</button>
+    </div></div>`;
+  }
+  if (fields.includes('metrics')) {
+    const metrics = slide.metrics || [{value:'',label:''}];
+    html += `<div class="form-group"><label>Key Metrics</label><div class="metrics-editor" id="metricsEditor">
+      ${metrics.map((m,i) => `<div class="metric-row"><input type="text" value="${esc(m.value)}" oninput="updateMetric(${i},'value',this.value)" placeholder="Value"><input type="text" value="${esc(m.label)}" oninput="updateMetric(${i},'label',this.value)" placeholder="Label"><button onclick="removeMetric(${i})" style="background:none;color:var(--text2);font-size:14px;padding:4px 6px;border-radius:4px;">✕</button></div>`).join('')}
+      <button class="btn-add-bullet" onclick="addMetric()">+ Add Metric</button>
+    </div></div>`;
+  }
+  if (fields.includes('team')) {
+    const team = slide.team || [{name:'',role:'',color:'#6c5ce7'}];
+    html += `<div class="form-group"><label>Team Members</label><div class="metrics-editor" id="teamEditor">
+      ${team.map((t,i) => `<div class="metric-row"><input type="text" value="${esc(t.name)}" oninput="updateTeam(${i},'name',this.value)" placeholder="Name"><input type="text" value="${esc(t.role)}" oninput="updateTeam(${i},'role',this.value)" placeholder="Role"><input type="color" value="${t.color||'#6c5ce7'}" oninput="updateTeam(${i},'color',this.value)" style="width:36px;padding:2px;border-radius:4px;"><button onclick="removeTeam(${i})" style="background:none;color:var(--text2);font-size:14px;padding:4px 6px;">✕</button></div>`).join('')}
+      <button class="btn-add-bullet" onclick="addTeam()">+ Add Member</button>
+    </div></div>`;
+  }
+  if (fields.includes('timeline')) {
+    const tl = slide.timeline || [{date:'',text:''}];
+    html += `<div class="form-group"><label>Timeline</label><div class="metrics-editor" id="timelineEditor">
+      ${tl.map((t,i) => `<div class="metric-row"><input type="text" value="${esc(t.date)}" oninput="updateTimeline(${i},'date',this.value)" placeholder="Date/Phase" style="width:100px"><input type="text" value="${esc(t.text)}" oninput="updateTimeline(${i},'text',this.value)" placeholder="Milestone"><button onclick="removeTimeline(${i})" style="background:none;color:var(--text2);font-size:14px;padding:4px 6px;">✕</button></div>`).join('')}
+      <button class="btn-add-bullet" onclick="addTimeline()">+ Add Milestone</button>
+    </div></div>`;
+  }
+  if (fields.includes('cols')) {
+    const cols = slide.cols || { left:{header:'',items:['']}, right:{header:'',items:['']} };
+    html += `<div class="form-row">
+      <div class="form-group"><label>Left Column Header</label><input type="text" value="${esc(cols.left.header)}" oninput="updateCol('left','header',this.value)"></div>
+      <div class="form-group"><label>Right Column Header</label><input type="text" value="${esc(cols.right.header)}" oninput="updateCol('right','header',this.value)"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Left Items</label><div class="bullets-editor">
+        ${(cols.left.items||['']).map((b,i) => `<div class="bullet-row"><input type="text" value="${esc(b)}" oninput="updateColItem('left',${i},this.value)"><button onclick="removeColItem('left',${i})">✕</button></div>`).join('')}
+        <button class="btn-add-bullet" onclick="addColItem('left')">+ Add</button>
+      </div></div>
+      <div class="form-group"><label>Right Items</label><div class="bullets-editor">
+        ${(cols.right.items||['']).map((b,i) => `<div class="bullet-row"><input type="text" value="${esc(b)}" oninput="updateColItem('right',${i},this.value)"><button onclick="removeColItem('right',${i})">✕</button></div>`).join('')}
+        <button class="btn-add-bullet" onclick="addColItem('right')">+ Add</button>
+      </div></div>
+    </div>`;
+  }
+  return html;
+}
+
+function renderSlideHTML(slide, theme, fullscreen) {
+  const th = theme || 'midnight';
+  const accent = ACCENT_COLORS[th] || '#6c5ce7';
+  const fs = fullscreen ? 'font-size:2.8vw;' : 'font-size:11px;';
+  const headingFs = fullscreen ? 'font-size:2em;' : 'font-size:1.6em;';
+  const subFs = fullscreen ? 'font-size:0.85em;' : 'font-size:0.85em;';
+  const typeClass = slide.type === 'title' ? 'type-title' : '';
+
+  let inner = '';
+  const typeDef = SLIDE_TYPES.find(t=>t.id===slide.type);
+  if (typeDef) inner += `<div class="slide-label">${typeDef.icon} ${typeDef.name}</div>`;
+
+  if (slide.heading) inner += `<div class="slide-heading" style="${headingFs}">${esc(slide.heading)}</div>`;
+  if (slide.subtitle) inner += `<div class="slide-subtitle" style="${subFs}">${esc(slide.subtitle).replace(/\n/g,'<br>')}</div>`;
+
+  if (slide.metrics && slide.metrics.length && slide.metrics[0].value) {
+    const metricFs = fullscreen ? 'font-size:1.4em;' : 'font-size:1.2em;';
+    const labelFs = fullscreen ? 'font-size:0.55em;' : 'font-size:0.55em;';
+    inner += `<div class="metrics-grid">${slide.metrics.filter(m=>m.value).map(m =>
+      `<div class="metric-card"><div class="metric-value" style="${metricFs}color:${accent}">${esc(m.value)}</div><div class="metric-label" style="${labelFs}">${esc(m.label)}</div></div>`
+    ).join('')}</div>`;
+  }
+
+  if (slide.bullets && slide.bullets.length && slide.bullets[0]) {
+    inner += `<ul class="slide-bullets">${slide.bullets.filter(b=>b).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
+  }
+
+  if (slide.team && slide.team.length && slide.team[0].name) {
+    inner += `<div class="team-grid">${slide.team.filter(t=>t.name).map(t =>
+      `<div class="team-card"><div class="team-avatar" style="background:${t.color||accent}">${t.name[0]}</div><div><div class="team-name">${esc(t.name)}</div><div class="team-role" style="font-size:0.8em">${esc(t.role)}</div></div></div>`
+    ).join('')}</div>`;
+  }
+
+  if (slide.timeline && slide.timeline.length && slide.timeline[0].date) {
+    inner += `<div class="timeline-list">${slide.timeline.filter(t=>t.date).map(t =>
+      `<div class="timeline-item"><div class="timeline-dot" style="background:${accent}"></div><div class="timeline-date">${esc(t.date)}</div><div class="timeline-text">${esc(t.text)}</div></div>`
+    ).join('')}</div>`;
+  }
+
+  if (slide.cols && slide.cols.left) {
+    inner += `<div class="two-col">
+      <div><div class="col-header">${esc(slide.cols.left.header)}</div><ul class="slide-bullets">${(slide.cols.left.items||[]).filter(b=>b).map(b=>`<li>${esc(b)}</li>`).join('')}</ul></div>
+      <div><div class="col-header">${esc(slide.cols.right.header)}</div><ul class="slide-bullets">${(slide.cols.right.items||[]).filter(b=>b).map(b=>`<li>${esc(b)}</li>`).join('')}</ul></div>
+    </div>`;
+  }
+
+  return `<div class="rendered-slide theme-${th} ${typeClass}" style="${fs}">${inner}</div>`;
+}
+
+// Deck operations
+function createDeck() {
+  const deck = { id:uid(), name:'Untitled Deck', theme:'midnight', slides:[], created:Date.now() };
+  state.decks.push(deck);
+  state.activeDeckId = deck.id;
+  state.activeSlideIdx = 0;
+  save(); render();
+  document.getElementById('deckTitle').select();
+}
+function selectDeck(id) { state.activeDeckId=id; state.activeSlideIdx=0; save(); render(); }
+function deleteDeck(id) {
+  if (!confirm('Delete this deck?')) return;
+  state.decks = state.decks.filter(d=>d.id!==id);
+  if (state.activeDeckId===id) state.activeDeckId = state.decks[0]?.id || null;
+  save(); render();
+}
+function updateDeckTitle(v) { const d=activeDeck(); if(d){d.name=v; save(); renderDeckList();} }
+
+// Slide operations
+function openAddSlide() {
+  const grid = document.getElementById('slideTypeGrid');
+  grid.innerHTML = SLIDE_TYPES.map(t =>
+    `<button class="slide-type-btn" onclick="addSlide('${t.id}')"><span class="type-icon">${t.icon}</span>${t.name}</button>`
+  ).join('');
+  document.getElementById('addSlideModal').classList.add('active');
+}
+function closeAddSlide() { document.getElementById('addSlideModal').classList.remove('active'); }
+function addSlide(type) {
+  const d = activeDeck(); if(!d) return;
+  const slide = { type, heading:'', subtitle:'', notes:'' };
+  if (['problem','solution','product','traction','business','ask','custom'].includes(type)) slide.bullets = [''];
+  if (['market','traction','ask'].includes(type)) slide.metrics = [{value:'',label:''}];
+  if (type==='team') slide.team = [{name:'',role:'',color:'#6c5ce7'}];
+  if (type==='roadmap') slide.timeline = [{date:'',text:''}];
+  if (type==='competition') slide.cols = {left:{header:'Them',items:['']},right:{header:'Us',items:['']}};
+  d.slides.splice(state.activeSlideIdx+1, 0, slide);
+  state.activeSlideIdx = Math.min(state.activeSlideIdx+1, d.slides.length-1);
+  closeAddSlide(); save(); render();
+}
+function selectSlide(i) { state.activeSlideIdx=i; save(); render(); }
+function deleteSlide(i) {
+  const d=activeDeck(); if(!d||d.slides.length<=0) return;
+  d.slides.splice(i,1);
+  if (state.activeSlideIdx>=d.slides.length) state.activeSlideIdx=Math.max(0,d.slides.length-1);
+  save(); render();
+}
+function moveSlide(i,dir) {
+  const d=activeDeck(); if(!d) return;
+  const ni=i+dir; if(ni<0||ni>=d.slides.length) return;
+  [d.slides[i],d.slides[ni]]=[d.slides[ni],d.slides[i]];
+  state.activeSlideIdx=ni; save(); render();
+}
+function dragSlide(e,i) { e.dataTransfer.setData('text/plain',i); }
+function dropSlide(e,target) {
+  e.preventDefault();
+  const src=parseInt(e.dataTransfer.getData('text/plain'));
+  const d=activeDeck(); if(!d||src===target) return;
+  const [slide]=d.slides.splice(src,1);
+  d.slides.splice(target,0,slide);
+  state.activeSlideIdx=target; save(); render();
+}
+
+// Field updates
+function updateSlideField(field, val) {
+  const s=activeSlide(); if(!s) return;
+  s[field]=val; save(); debouncePreview();
+}
+function updateBullet(i,val) { const s=activeSlide(); if(!s) return; if(!s.bullets) s.bullets=[]; s.bullets[i]=val; save(); debouncePreview(); }
+function addBullet() { const s=activeSlide(); if(!s) return; if(!s.bullets) s.bullets=[]; s.bullets.push(''); save(); render(); }
+function removeBullet(i) { const s=activeSlide(); if(!s||!s.bullets) return; s.bullets.splice(i,1); if(!s.bullets.length) s.bullets=['']; save(); render(); }
+function updateMetric(i,f,v) { const s=activeSlide(); if(!s||!s.metrics) return; s.metrics[i][f]=v; save(); debouncePreview(); }
+function addMetric() { const s=activeSlide(); if(!s) return; if(!s.metrics) s.metrics=[]; s.metrics.push({value:'',label:''}); save(); render(); }
+function removeMetric(i) { const s=activeSlide(); if(!s||!s.metrics) return; s.metrics.splice(i,1); if(!s.metrics.length) s.metrics=[{value:'',label:''}]; save(); render(); }
+function updateTeam(i,f,v) { const s=activeSlide(); if(!s||!s.team) return; s.team[i][f]=v; save(); debouncePreview(); }
+function addTeam() { const s=activeSlide(); if(!s) return; if(!s.team) s.team=[]; s.team.push({name:'',role:'',color:'#6c5ce7'}); save(); render(); }
+function removeTeam(i) { const s=activeSlide(); if(!s||!s.team) return; s.team.splice(i,1); if(!s.team.length) s.team=[{name:'',role:'',color:'#6c5ce7'}]; save(); render(); }
+function updateTimeline(i,f,v) { const s=activeSlide(); if(!s||!s.timeline) return; s.timeline[i][f]=v; save(); debouncePreview(); }
+function addTimeline() { const s=activeSlide(); if(!s) return; if(!s.timeline) s.timeline=[]; s.timeline.push({date:'',text:''}); save(); render(); }
+function removeTimeline(i) { const s=activeSlide(); if(!s||!s.timeline) return; s.timeline.splice(i,1); if(!s.timeline.length) s.timeline=[{date:'',text:''}]; save(); render(); }
+function updateCol(side,field,v) { const s=activeSlide(); if(!s||!s.cols) return; s.cols[side][field]=v; save(); debouncePreview(); }
+function updateColItem(side,i,v) { const s=activeSlide(); if(!s||!s.cols) return; s.cols[side].items[i]=v; save(); debouncePreview(); }
+function addColItem(side) { const s=activeSlide(); if(!s||!s.cols) return; s.cols[side].items.push(''); save(); render(); }
+function removeColItem(side,i) { const s=activeSlide(); if(!s||!s.cols) return; s.cols[side].items.splice(i,1); if(!s.cols[side].items.length) s.cols[side].items=['']; save(); render(); }
+
+let previewTimer;
+function debouncePreview() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(() => {
+    const prev = document.querySelector('.slide-preview');
+    if (prev && activeSlide()) {
+      prev.innerHTML = renderSlideHTML(activeSlide(), activeDeck().theme, false);
+    }
+  }, 200);
+}
+
+// Theme
+function renderThemeDropdown() {
+  const d=activeDeck(); if(!d) return;
+  const el=document.getElementById('themeDropdown');
+  el.innerHTML = THEMES.map(t =>
+    `<div class="theme-option ${d.theme===t.id?'active':''}" onclick="setTheme('${t.id}')"><div class="theme-swatch" style="background:${t.swatch}"></div>${t.name}</div>`
+  ).join('');
+}
+function toggleThemeDropdown() { document.getElementById('themeDropdown').classList.toggle('open'); }
+function setTheme(id) { const d=activeDeck(); if(d){d.theme=id; save(); render();} document.getElementById('themeDropdown').classList.remove('open'); }
+
+// Presentation
+function startPresentation() {
+  const d=activeDeck(); if(!d||!d.slides.length) return;
+  state.presIdx=state.activeSlideIdx;
+  renderPresSlide();
+  document.getElementById('presOverlay').classList.add('active');
+  document.body.style.overflow='hidden';
+}
+function exitPresentation() {
+  document.getElementById('presOverlay').classList.remove('active');
+  document.body.style.overflow='';
+}
+function renderPresSlide() {
+  const d=activeDeck(); if(!d) return;
+  const slide=d.slides[state.presIdx];
+  document.getElementById('presSlide').innerHTML = renderSlideHTML(slide, d.theme, true);
+  document.getElementById('presCounter').textContent = `${state.presIdx+1} / ${d.slides.length}`;
+  const nb = document.getElementById('presNotes');
+  nb.textContent = slide.notes||'No speaker notes for this slide.';
+  nb.className = 'speaker-notes-bar' + (state.presNotesVisible?' visible':'');
+}
+function presNav(dir) {
+  const d=activeDeck(); if(!d) return;
+  state.presIdx = Math.max(0, Math.min(d.slides.length-1, state.presIdx+dir));
+  renderPresSlide();
+}
+function togglePresNotes() { state.presNotesVisible=!state.presNotesVisible; renderPresSlide(); }
+
+// Import/Export
+function exportData() {
+  const blob = new Blob([JSON.stringify({decks:state.decks},null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`pitch-decks-${new Date().toISOString().slice(0,10)}.json`; a.click();
+}
+function importData() { document.getElementById('fileInput').click(); }
+function handleImport(e) {
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=ev=>{
+    try {
+      const d=JSON.parse(ev.target.result);
+      if(d.decks) { state.decks=d.decks; state.activeDeckId=state.decks[0]?.id||null; state.activeSlideIdx=0; save(); render(); }
+    } catch(err) { alert('Invalid file'); }
+  }; r.readAsText(f);
+  e.target.value='';
+}
+
+// Utils
+function esc(s) { if(!s) return ''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  const pres = document.getElementById('presOverlay').classList.contains('active');
+  if (pres) {
+    if (e.key==='Escape') exitPresentation();
+    else if (e.key==='ArrowRight'||e.key===' '||e.key==='ArrowDown') { e.preventDefault(); presNav(1); }
+    else if (e.key==='ArrowLeft'||e.key==='ArrowUp') { e.preventDefault(); presNav(-1); }
+    else if (e.key==='n'||e.key==='N') togglePresNotes();
+    return;
+  }
+  if (document.getElementById('addSlideModal').classList.contains('active')) {
+    if (e.key==='Escape') closeAddSlide();
+    return;
+  }
+  if (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') {
+    if (e.key==='Escape') e.target.blur();
+    return;
+  }
+  if (e.key==='n'||e.key==='N') { e.preventDefault(); createDeck(); }
+  else if (e.key==='a'||e.key==='A') { e.preventDefault(); if(activeDeck()) openAddSlide(); }
+  else if (e.key==='p'||e.key==='P') { e.preventDefault(); startPresentation(); }
+  else if (e.key==='e'||e.key==='E') { e.preventDefault(); exportData(); }
+  else if (e.key==='d'||e.key==='D') { e.preventDefault(); toggleThemeDropdown(); }
+  else if (e.key==='ArrowDown'||e.key==='j') { e.preventDefault(); const d=activeDeck(); if(d&&state.activeSlideIdx<d.slides.length-1){state.activeSlideIdx++;save();render();} }
+  else if (e.key==='ArrowUp'||e.key==='k') { e.preventDefault(); if(state.activeSlideIdx>0){state.activeSlideIdx--;save();render();} }
+  else if (e.key==='Escape') { document.getElementById('themeDropdown').classList.remove('open'); }
+});
+
+// Click outside to close theme dropdown
+document.addEventListener('click', e => {
+  if (!e.target.closest('.btn-theme') && !e.target.closest('.theme-dropdown')) {
+    document.getElementById('themeDropdown').classList.remove('open');
+  }
+  if (e.target.classList.contains('modal-overlay')) closeAddSlide();
+});
+
+// Init
+load();
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Craft — Cold Email & Outreach Sequence Builder</title>
+<style>
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #242836; --surface3: #2e3345;
+  --border: #363b4e; --text: #e4e6f0; --text2: #9498ab; --text3: #6b7085;
+  --accent: #6c5ce7; --accent2: #a29bfe; --accent-bg: rgba(108,92,231,0.12);
+  --green: #00b894; --green-bg: rgba(0,184,148,0.12);
+  --red: #ff6b6b; --red-bg: rgba(255,107,107,0.12);
+  --yellow: #fdcb6e; --yellow-bg: rgba(253,203,110,0.12);
+  --blue: #74b9ff; --blue-bg: rgba(116,185,255,0.12);
+  --orange: #e17055; --orange-bg: rgba(225,112,85,0.12);
+  --pink: #fd79a8; --pink-bg: rgba(253,121,168,0.12);
+  --radius: 10px; --radius-sm: 6px;
+  --shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+button { cursor: pointer; font-family: inherit; border: none; background: none; color: var(--text); }
+input, textarea, select { font-family: inherit; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 8px 12px; outline: none; transition: border-color 0.2s; }
+input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 80px; }
+
+/* Layout */
+.app { display: flex; height: 100vh; }
+.sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-header { padding: 20px 16px 12px; border-bottom: 1px solid var(--border); }
+.sidebar-header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.sidebar-header h1 span { font-size: 22px; }
+.sidebar-search { padding: 8px 12px; }
+.sidebar-search input { width: 100%; font-size: 13px; padding: 7px 10px; }
+.sidebar-nav { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.nav-btn { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-sm); font-size: 14px; text-align: left; width: 100%; transition: all 0.15s; }
+.nav-btn:hover { background: var(--surface2); }
+.nav-btn.active { background: var(--accent-bg); color: var(--accent2); }
+.nav-btn .icon { font-size: 16px; width: 22px; text-align: center; }
+.nav-btn .badge { margin-left: auto; font-size: 11px; padding: 2px 7px; border-radius: 10px; background: var(--surface3); color: var(--text2); }
+.sidebar-section { padding: 12px 12px 4px; }
+.sidebar-section h3 { font-size: 11px; text-transform: uppercase; color: var(--text3); letter-spacing: 1px; margin-bottom: 8px; }
+.seq-list { flex: 1; overflow-y: auto; padding: 4px 8px; display: flex; flex-direction: column; gap: 2px; }
+.seq-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; transition: all 0.15s; }
+.seq-item:hover { background: var(--surface2); }
+.seq-item.active { background: var(--accent-bg); color: var(--accent2); }
+.seq-item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.seq-item .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seq-item .count { font-size: 11px; color: var(--text3); }
+
+/* Main */
+.main { flex: 1; overflow-y: auto; padding: 0; }
+.main-header { padding: 20px 28px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--bg); z-index: 10; }
+.main-header h2 { font-size: 20px; display: flex; align-items: center; gap: 10px; }
+.header-actions { display: flex; gap: 8px; }
+.btn { padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #5b4bd5; }
+.btn-secondary { background: var(--surface2); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--surface3); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-danger { background: var(--red-bg); color: var(--red); }
+.btn-danger:hover { background: rgba(255,107,107,0.2); }
+.content { padding: 24px 28px; }
+
+/* Templates View */
+.templates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+.template-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; cursor: pointer; transition: all 0.2s; }
+.template-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+.template-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.template-card h3 { font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.template-tag { font-size: 11px; padding: 3px 8px; border-radius: 10px; font-weight: 500; }
+.tag-outreach { background: var(--accent-bg); color: var(--accent2); }
+.tag-sales { background: var(--green-bg); color: var(--green); }
+.tag-job { background: var(--blue-bg); color: var(--blue); }
+.tag-networking { background: var(--yellow-bg); color: var(--yellow); }
+.tag-followup { background: var(--orange-bg); color: var(--orange); }
+.tag-partnership { background: var(--pink-bg); color: var(--pink); }
+.template-card .subject { font-size: 13px; color: var(--text2); margin-bottom: 8px; }
+.template-card .preview { font-size: 12px; color: var(--text3); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.template-card .meta { display: flex; gap: 12px; margin-top: 12px; font-size: 11px; color: var(--text3); }
+.template-card .meta span { display: flex; align-items: center; gap: 4px; }
+.template-vars { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+.var-chip { font-size: 10px; padding: 2px 6px; background: var(--surface3); border-radius: 4px; color: var(--accent2); font-family: monospace; }
+
+/* Sequence View */
+.seq-editor { display: flex; flex-direction: column; gap: 20px; }
+.seq-info { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+.seq-info .field { display: flex; flex-direction: column; gap: 4px; }
+.seq-info .field label { font-size: 12px; color: var(--text2); }
+.seq-info .field input, .seq-info .field select { font-size: 13px; }
+.steps-container { display: flex; flex-direction: column; gap: 0; }
+.step-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.step-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+.step-header .step-label { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.step-header .step-label .num { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.step-header .step-actions { display: flex; gap: 6px; }
+.step-delay { display: flex; align-items: center; gap: 8px; padding: 0 16px; }
+.step-delay .connector { width: 2px; height: 30px; background: var(--border); margin-left: 11px; }
+.step-delay-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+.step-delay-row span { font-size: 12px; color: var(--text3); }
+.step-delay-row input { width: 50px; font-size: 12px; padding: 4px 8px; text-align: center; }
+.step-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.step-body .field { display: flex; flex-direction: column; gap: 4px; }
+.step-body .field label { font-size: 12px; color: var(--text2); font-weight: 500; }
+.step-body textarea { min-height: 120px; font-size: 13px; line-height: 1.6; }
+.step-body input { font-size: 13px; }
+.step-connector { display: flex; align-items: center; gap: 8px; padding: 4px 0 4px 16px; }
+.step-connector .line { width: 2px; height: 24px; background: var(--border); margin-left: 10px; }
+.step-connector .delay-badge { font-size: 11px; color: var(--text3); background: var(--surface2); padding: 2px 8px; border-radius: 10px; }
+
+/* Variable Insert */
+.var-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.var-bar span { font-size: 11px; color: var(--text3); }
+.var-insert { font-size: 11px; padding: 3px 8px; background: var(--surface3); border-radius: 4px; color: var(--accent2); font-family: monospace; cursor: pointer; transition: all 0.15s; }
+.var-insert:hover { background: var(--accent-bg); }
+
+/* Preview */
+.preview-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); max-width: 700px; }
+.preview-email { padding: 0; }
+.preview-header-bar { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+.preview-field { display: flex; gap: 8px; font-size: 13px; }
+.preview-field .label { color: var(--text3); min-width: 50px; }
+.preview-field .value { color: var(--text); }
+.preview-body { padding: 20px; font-size: 14px; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
+.preview-vars-form { padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--surface2); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.preview-vars-form .field { display: flex; flex-direction: column; gap: 3px; }
+.preview-vars-form .field label { font-size: 11px; color: var(--text3); }
+.preview-vars-form .field input { font-size: 12px; padding: 5px 8px; width: 160px; }
+.copy-bar { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+/* Sequences List */
+.sequences-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.sequence-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; cursor: pointer; transition: all 0.2s; }
+.sequence-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.sequence-card h3 { font-size: 15px; margin-bottom: 6px; }
+.sequence-card .desc { font-size: 12px; color: var(--text3); margin-bottom: 12px; }
+.sequence-card .steps-preview { display: flex; align-items: center; gap: 6px; }
+.sequence-card .step-dot { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-bg); color: var(--accent2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+.sequence-card .step-arrow { color: var(--text3); font-size: 12px; }
+.sequence-card .meta { display: flex; gap: 12px; margin-top: 12px; font-size: 11px; color: var(--text3); }
+
+/* Dashboard */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.stat-card .stat-value { font-size: 28px; font-weight: 700; }
+.stat-card .stat-label { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.chart-card h3 { font-size: 14px; margin-bottom: 16px; color: var(--text2); }
+.bar-chart { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: flex; align-items: center; gap: 10px; }
+.bar-label { font-size: 12px; color: var(--text2); width: 100px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { flex: 1; height: 22px; background: var(--surface2); border-radius: 4px; overflow: hidden; position: relative; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; display: flex; align-items: center; padding-left: 8px; }
+.bar-fill span { font-size: 11px; color: #fff; font-weight: 600; white-space: nowrap; }
+.top-templates { display: flex; flex-direction: column; gap: 8px; }
+.top-template-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--surface2); border-radius: var(--radius-sm); }
+.top-template-row .rank { font-size: 14px; font-weight: 700; color: var(--accent2); width: 24px; }
+.top-template-row .info { flex: 1; }
+.top-template-row .info .name { font-size: 13px; }
+.top-template-row .info .uses { font-size: 11px; color: var(--text3); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); width: 560px; max-height: 85vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-header h3 { font-size: 16px; }
+.modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.modal-body .field { display: flex; flex-direction: column; gap: 4px; }
+.modal-body .field label { font-size: 12px; color: var(--text2); font-weight: 500; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+/* AB Variants */
+.variant-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+.variant-tab { padding: 5px 12px; font-size: 12px; border-radius: var(--radius-sm); background: var(--surface2); cursor: pointer; transition: all 0.15s; }
+.variant-tab:hover { background: var(--surface3); }
+.variant-tab.active { background: var(--accent-bg); color: var(--accent2); }
+.variant-tab.add { color: var(--text3); }
+
+/* Performance */
+.perf-row { display: flex; gap: 12px; align-items: center; padding: 8px 0; }
+.perf-row .field { flex: 1; }
+.perf-row .field label { font-size: 11px; color: var(--text3); }
+.perf-row .field input { width: 100%; font-size: 12px; }
+
+/* Snippets */
+.snippet-list { display: flex; flex-direction: column; gap: 8px; }
+.snippet-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; }
+.snippet-card .snippet-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.snippet-card .snippet-text { font-size: 12px; color: var(--text3); line-height: 1.5; white-space: pre-wrap; max-height: 60px; overflow: hidden; }
+.snippet-card .snippet-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+/* Toast */
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--green); color: #fff; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; z-index: 200; transform: translateY(60px); opacity: 0; transition: all 0.3s; }
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* Keyboard help */
+.kbd-help { position: fixed; bottom: 12px; left: 280px; font-size: 11px; color: var(--text3); z-index: 5; }
+.kbd { background: var(--surface2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: 10px; }
+
+/* Empty state */
+.empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+.empty .icon { font-size: 48px; margin-bottom: 12px; }
+.empty p { font-size: 14px; margin-bottom: 16px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+
+@media (max-width: 768px) {
+  .sidebar { width: 220px; }
+  .chart-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1><span>✉️</span> Email Craft</h1>
+    </div>
+    <div class="sidebar-search">
+      <input type="text" id="searchInput" placeholder="Search... ( / )" />
+    </div>
+    <div class="sidebar-nav">
+      <button class="nav-btn active" data-view="templates" onclick="switchView('templates')">
+        <span class="icon">📝</span> Templates <span class="badge" id="tmplCount">0</span>
+      </button>
+      <button class="nav-btn" data-view="sequences" onclick="switchView('sequences')">
+        <span class="icon">🔗</span> Sequences <span class="badge" id="seqCount">0</span>
+      </button>
+      <button class="nav-btn" data-view="snippets" onclick="switchView('snippets')">
+        <span class="icon">✂️</span> Snippets <span class="badge" id="snipCount">0</span>
+      </button>
+      <button class="nav-btn" data-view="dashboard" onclick="switchView('dashboard')">
+        <span class="icon">📊</span> Dashboard
+      </button>
+    </div>
+    <div class="sidebar-section"><h3>Recent Templates</h3></div>
+    <div class="seq-list" id="recentList"></div>
+  </div>
+  <div class="main" id="mainContent"></div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="kbd-help">
+  <kbd class="kbd">N</kbd> New &nbsp; <kbd class="kbd">/</kbd> Search &nbsp; <kbd class="kbd">1-4</kbd> Views &nbsp; <kbd class="kbd">?</kbd> Help &nbsp; <kbd class="kbd">Esc</kbd> Close
+</div>
+
+<script>
+// ============ STATE ============
+const STORAGE_KEY = 'emailcraft_data';
+const DEFAULT_VARS = ['firstName','lastName','company','role','yourName','yourRole','product'];
+
+let state = {
+  templates: [],
+  sequences: [],
+  snippets: [],
+  currentView: 'templates',
+  editingTemplate: null,
+  editingSequence: null,
+  editingSnippet: null,
+  previewTemplate: null,
+  previewVars: {}
+};
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify({templates:state.templates,sequences:state.sequences,snippets:state.snippets})); }
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(d) { state.templates=d.templates||[]; state.sequences=d.sequences||[]; state.snippets=d.snippets||[]; }
+  } catch(e) {}
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ============ SEED DATA ============
+function seedData() {
+  if(state.templates.length > 0) return;
+  
+  state.templates = [
+    {
+      id: genId(), name: 'Job Application — Head of Product', category: 'job',
+      subject: 'Re: {{role}} — 10 years building product, $15M impact',
+      body: `Hi {{firstName}},
+
+I came across the {{role}} opening at {{company}} and it resonated. I've spent 10 years in product leadership — most recently leading Product, Tech & Design at a $24M ARR manufacturing company (30+ team).
+
+A few highlights that might be relevant:
+• Built a QR-based WMS that unlocked $1.4M in blocked working capital
+• Reduced fabric cycle time 70% (23→7 days) through process digitization
+• Took 4 products from 0→1 across IoT, SaaS, and marketplace domains
+
+I'd love to learn more about what you're solving at {{company}}. Would you have 20 minutes this week for a quick chat?
+
+Best,
+{{yourName}}`,
+      variants: [],
+      tags: ['job-hunt', 'head-of-product'],
+      useCount: 3,
+      createdAt: '2026-04-10T10:00:00Z',
+      updatedAt: '2026-04-20T14:00:00Z'
+    },
+    {
+      id: genId(), name: 'UTMStamp — Cold Outreach to Marketing Heads', category: 'sales',
+      subject: 'Your team sends {{emailCount}} emails/month — are you tracking signature clicks?',
+      body: `Hey {{firstName}},
+
+Quick question — does {{company}}'s marketing team know which email signatures drive the most clicks?
+
+Most teams treat signatures as an afterthought. But with {{emailCount}} emails going out monthly, each one is a micro-billboard. UTMStamp lets you:
+
+→ Build beautiful branded signatures in minutes
+→ Add dynamic campaign banners (swap them without touching every signature)  
+→ Track every click with automatic UTM parameters
+→ Deploy across your whole team from one dashboard
+
+Free to start, takes 5 minutes to set up.
+
+Worth a look? utmstamp.com
+
+Cheers,
+{{yourName}}`,
+      variants: [
+        {
+          name: 'Variant B — Pain-first',
+          subject: '{{company}}\'s email signatures are leaving money on the table',
+          body: `{{firstName}},
+
+Every email your team sends has a signature. Most companies ignore this real estate entirely. That's a problem.
+
+At {{company}}, with a team of {{teamSize}}, you're sending thousands of emails monthly — each one a chance to drive traffic, promote launches, or track engagement. But only if your signatures are working for you.
+
+UTMStamp turns email signatures into a trackable marketing channel:
+• One dashboard to manage every signature across your team
+• Dynamic banners you can swap without IT tickets
+• Click analytics with automatic UTM tracking
+
+The ROI math is simple: if even 1% of signature impressions convert, at your volume that's significant.
+
+5-minute setup, free plan available: utmstamp.com
+
+{{yourName}}`,
+        }
+      ],
+      tags: ['utmstamp', 'marketing', 'cold-outreach'],
+      useCount: 7,
+      createdAt: '2026-04-05T08:00:00Z',
+      updatedAt: '2026-04-22T09:00:00Z'
+    },
+    {
+      id: genId(), name: 'Warm Intro Request — Networking', category: 'networking',
+      subject: 'Quick ask — intro to {{targetName}} at {{targetCompany}}?',
+      body: `Hey {{firstName}},
+
+Hope you're doing well! I noticed you're connected with {{targetName}} at {{targetCompany}} on LinkedIn.
+
+I'm exploring {{role}} opportunities and {{targetCompany}} caught my eye because {{reason}}.
+
+Would you be comfortable making a quick intro? Happy to draft the email for you to make it zero-effort on your end. And of course, totally fine if it doesn't feel right — no pressure at all.
+
+Thanks!
+{{yourName}}`,
+      variants: [],
+      tags: ['networking', 'warm-intro'],
+      useCount: 2,
+      createdAt: '2026-04-08T11:00:00Z',
+      updatedAt: '2026-04-18T16:00:00Z'
+    },
+    {
+      id: genId(), name: 'Follow-up — No Response (Day 3)', category: 'followup',
+      subject: 'Re: {{originalSubject}}',
+      body: `Hi {{firstName}},
+
+Just bumping this up in case it got buried. I know inboxes are ruthless.
+
+tl;dr — {{oneLiner}}
+
+Happy to work around your schedule if there's interest. If not, no worries at all.
+
+{{yourName}}`,
+      variants: [],
+      tags: ['follow-up', 'bump'],
+      useCount: 5,
+      createdAt: '2026-04-06T09:00:00Z',
+      updatedAt: '2026-04-21T11:00:00Z'
+    },
+    {
+      id: genId(), name: 'Follow-up — Final (Day 7)', category: 'followup',
+      subject: 'Re: {{originalSubject}}',
+      body: `{{firstName}},
+
+Last follow-up from me — I respect your time.
+
+If {{topic}} isn't a priority right now, totally understand. I'll leave the door open.
+
+If timing changes down the road, I'm at {{yourEmail}}.
+
+Best,
+{{yourName}}`,
+      variants: [],
+      tags: ['follow-up', 'breakup'],
+      useCount: 4,
+      createdAt: '2026-04-06T09:30:00Z',
+      updatedAt: '2026-04-19T10:00:00Z'
+    },
+    {
+      id: genId(), name: 'Partnership Proposal — Integration', category: 'partnership',
+      subject: 'UTMStamp × {{company}} — integration idea',
+      body: `Hi {{firstName}},
+
+I'm building UTMStamp (utmstamp.com) — an email signature manager with built-in UTM tracking and click analytics.
+
+I think there's a natural integration opportunity with {{company}}:
+
+{{integrationIdea}}
+
+Our users already ask about {{company}} support, so the demand is there. An integration could be a win-win — more value for both user bases.
+
+Would love to explore this over a quick call. What does your week look like?
+
+{{yourName}}
+Founder, UTMStamp`,
+      variants: [],
+      tags: ['partnership', 'utmstamp', 'integration'],
+      useCount: 1,
+      createdAt: '2026-04-15T14:00:00Z',
+      updatedAt: '2026-04-15T14:00:00Z'
+    },
+    {
+      id: genId(), name: 'Recruiter Response — Interested', category: 'job',
+      subject: 'Re: {{role}} at {{company}}',
+      body: `Hi {{firstName}},
+
+Thanks for reaching out — the {{role}} role at {{company}} sounds interesting.
+
+A bit about my fit:
+• 10 years product leadership, currently Head of Product at a $24M ARR company (30+ team)
+• Taken 4 products 0→1 across IoT, SaaS, and B2B2C
+• Strong in {{relevantSkills}}
+
+I'd love to learn more about the team structure and what success looks like for this role in the first 6 months.
+
+Are you free for a 20-minute call this week? I'm flexible on timing.
+
+Best,
+{{yourName}}`,
+      variants: [],
+      tags: ['job-hunt', 'recruiter'],
+      useCount: 6,
+      createdAt: '2026-04-03T10:00:00Z',
+      updatedAt: '2026-04-23T08:00:00Z'
+    },
+    {
+      id: genId(), name: 'Content Collaboration — LinkedIn', category: 'networking',
+      subject: 'Loved your post on {{topic}} — collab idea',
+      body: `Hey {{firstName}},
+
+Came across your post on {{topic}} and it genuinely resonated. {{specificComment}}
+
+I've been writing about {{myTopic}} on LinkedIn — building in public, sharing product lessons from 10 years in the trenches.
+
+Would you be up for a collaboration? Could be:
+→ A joint post breaking down {{sharedTopic}}
+→ Swapping guest posts  
+→ A LinkedIn Live discussion
+
+Either way, keep shipping great content. 🙌
+
+{{yourName}}`,
+      variants: [],
+      tags: ['content', 'linkedin', 'collaboration'],
+      useCount: 2,
+      createdAt: '2026-04-12T16:00:00Z',
+      updatedAt: '2026-04-12T16:00:00Z'
+    }
+  ];
+
+  state.sequences = [
+    {
+      id: genId(), name: 'Job Hunt — Decision Maker Outreach', description: 'For reaching out to hiring managers / VPs directly',
+      category: 'job',
+      steps: [
+        { templateId: state.templates[0].id, delayDays: 0, note: 'Initial cold email' },
+        { templateId: state.templates[3].id, delayDays: 3, note: 'Gentle bump' },
+        { templateId: state.templates[4].id, delayDays: 7, note: 'Final follow-up / breakup' }
+      ],
+      createdAt: '2026-04-10T10:00:00Z'
+    },
+    {
+      id: genId(), name: 'UTMStamp — SaaS Sales Sequence', description: 'Cold outreach to marketing heads for UTMStamp',
+      category: 'sales',
+      steps: [
+        { templateId: state.templates[1].id, delayDays: 0, note: 'Value prop email' },
+        { templateId: state.templates[3].id, delayDays: 3, note: 'Quick follow-up' },
+        { templateId: state.templates[4].id, delayDays: 7, note: 'Breakup email' }
+      ],
+      createdAt: '2026-04-12T08:00:00Z'
+    }
+  ];
+
+  state.snippets = [
+    { id: genId(), name: 'Social Proof — ZYOD', text: 'At ZYOD ($24M ARR), I led a 30+ team across product, design, and engineering. Key wins: $1.4M capital unlocked via QR-WMS, 70% cycle time reduction, IoT deployment across 700+ machines.', category: 'credentials' },
+    { id: genId(), name: 'Social Proof — GoMechanic', text: 'At GoMechanic (Series C), I drove 200% membership growth through Miles loyalty program, reduced CAC by 70% via referral system redesign, and led Malaysia expansion partnerships.', category: 'credentials' },
+    { id: genId(), name: 'UTMStamp Pitch — One Liner', text: 'UTMStamp turns email signatures into a trackable marketing channel — beautiful branded signatures with built-in UTM tracking, dynamic banners, and click analytics for teams.', category: 'pitch' },
+    { id: genId(), name: 'Soft CTA', text: 'Would you have 20 minutes this week for a quick chat? Happy to work around your schedule.', category: 'cta' },
+    { id: genId(), name: 'Hard CTA', text: 'I\'m free Tuesday 2-4pm or Thursday morning. Which works better for you?', category: 'cta' },
+    { id: genId(), name: 'Breakup Line', text: 'Last follow-up from me — I respect your time. If timing changes down the road, my door\'s always open.', category: 'closing' },
+    { id: genId(), name: 'Build-in-Public Hook', text: 'I shipped UTMStamp from idea to live product in 13 days — grinder mode, 50+ hour coding sessions. Building in public because the journey is the content.', category: 'hook' },
+  ];
+
+  save();
+}
+
+// ============ RENDER ============
+function switchView(view) {
+  state.currentView = view;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  render();
+}
+
+function updateCounts() {
+  document.getElementById('tmplCount').textContent = state.templates.length;
+  document.getElementById('seqCount').textContent = state.sequences.length;
+  document.getElementById('snipCount').textContent = state.snippets.length;
+}
+
+function renderRecentList() {
+  const list = document.getElementById('recentList');
+  const recent = [...state.templates].sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 8);
+  const colors = { job: 'var(--blue)', sales: 'var(--green)', networking: 'var(--yellow)', followup: 'var(--orange)', partnership: 'var(--pink)', outreach: 'var(--accent)' };
+  list.innerHTML = recent.map(t => `
+    <div class="seq-item ${state.previewTemplate?.id===t.id?'active':''}" onclick="previewTemplate('${t.id}')">
+      <div class="dot" style="background:${colors[t.category]||'var(--accent)'}"></div>
+      <span class="name">${t.name}</span>
+      <span class="count">${t.useCount||0}×</span>
+    </div>
+  `).join('');
+}
+
+function render() {
+  updateCounts();
+  renderRecentList();
+  const main = document.getElementById('mainContent');
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  
+  switch(state.currentView) {
+    case 'templates': renderTemplates(main, search); break;
+    case 'sequences': renderSequences(main, search); break;
+    case 'snippets': renderSnippets(main, search); break;
+    case 'dashboard': renderDashboard(main); break;
+  }
+}
+
+function extractVars(text) {
+  const matches = text.match(/\{\{(\w+)\}\}/g) || [];
+  return [...new Set(matches.map(m => m.replace(/[{}]/g, '')))];
+}
+
+function replaceVars(text, vars) {
+  return text.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] || `{{${key}}}`);
+}
+
+function getCategoryTag(cat) {
+  const map = { job: ['Job Hunt','tag-job'], sales: ['Sales','tag-sales'], networking: ['Networking','tag-networking'], followup: ['Follow-up','tag-followup'], partnership: ['Partnership','tag-partnership'], outreach: ['Outreach','tag-outreach'] };
+  const [label, cls] = map[cat] || ['Other', 'tag-outreach'];
+  return `<span class="template-tag ${cls}">${label}</span>`;
+}
+
+// ============ TEMPLATES VIEW ============
+function renderTemplates(main, search) {
+  const filtered = state.templates.filter(t => 
+    !search || t.name.toLowerCase().includes(search) || t.subject.toLowerCase().includes(search) || (t.tags||[]).some(tg => tg.includes(search))
+  );
+  
+  if(state.previewTemplate) {
+    renderTemplatePreview(main);
+    return;
+  }
+  
+  main.innerHTML = `
+    <div class="main-header">
+      <h2>📝 Email Templates</h2>
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="importData()">📥 Import</button>
+        <button class="btn btn-secondary" onclick="exportData()">📤 Export</button>
+        <button class="btn btn-primary" onclick="newTemplate()">+ New Template</button>
+      </div>
+    </div>
+    <div class="content">
+      ${filtered.length === 0 ? '<div class="empty"><div class="icon">📝</div><p>No templates yet. Create your first one!</p><button class="btn btn-primary" onclick="newTemplate()">+ New Template</button></div>' :
+      `<div class="templates-grid">${filtered.map(t => {
+        const vars = extractVars(t.subject + ' ' + t.body);
+        return `
+          <div class="template-card" onclick="previewTemplate('${t.id}')">
+            <div class="template-card-header">
+              <h3>${t.name}</h3>
+              ${getCategoryTag(t.category)}
+            </div>
+            <div class="subject">📧 ${escHtml(t.subject)}</div>
+            <div class="preview">${escHtml(t.body.slice(0, 200))}...</div>
+            ${vars.length ? `<div class="template-vars">${vars.slice(0,5).map(v => `<span class="var-chip">{{${v}}}</span>`).join('')}${vars.length > 5 ? `<span class="var-chip">+${vars.length-5}</span>` : ''}</div>` : ''}
+            <div class="meta">
+              <span>📨 Used ${t.useCount||0}×</span>
+              ${t.variants?.length ? `<span>🔀 ${t.variants.length} variant${t.variants.length>1?'s':''}</span>` : ''}
+              <span>🏷️ ${(t.tags||[]).join(', ') || 'no tags'}</span>
+            </div>
+          </div>`;
+      }).join('')}</div>`}
+    </div>`;
+}
+
+function renderTemplatePreview(main) {
+  const t = state.previewTemplate;
+  const activeVariant = state.activeVariant || 0; // 0 = original
+  const currentSubject = activeVariant === 0 ? t.subject : t.variants[activeVariant-1].subject;
+  const currentBody = activeVariant === 0 ? t.body : t.variants[activeVariant-1].body;
+  const vars = extractVars(currentSubject + ' ' + currentBody);
+  const pv = state.previewVars;
+  
+  main.innerHTML = `
+    <div class="main-header">
+      <h2><button class="btn btn-sm btn-secondary" onclick="closePreview()" style="margin-right:8px">← Back</button> ${escHtml(t.name)}</h2>
+      <div class="header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="editTemplate('${t.id}')">✏️ Edit</button>
+        <button class="btn btn-secondary btn-sm" onclick="duplicateTemplate('${t.id}')">📋 Duplicate</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTemplate('${t.id}')">🗑️ Delete</button>
+      </div>
+    </div>
+    <div class="content">
+      ${t.variants?.length ? `
+        <div class="variant-tabs" style="margin-bottom:16px">
+          <button class="variant-tab ${activeVariant===0?'active':''}" onclick="switchVariant(0)">Original</button>
+          ${t.variants.map((v,i) => `<button class="variant-tab ${activeVariant===i+1?'active':''}" onclick="switchVariant(${i+1})">${v.name || 'Variant '+(i+1)}</button>`).join('')}
+          <button class="variant-tab add" onclick="addVariant('${t.id}')">+ Add Variant</button>
+        </div>
+      ` : `<div style="margin-bottom:12px"><button class="btn btn-sm btn-secondary" onclick="addVariant('${t.id}')">🔀 Add A/B Variant</button></div>`}
+      
+      <div class="preview-panel">
+        ${vars.length ? `
+          <div class="preview-vars-form">
+            ${vars.map(v => `
+              <div class="field">
+                <label>{{${v}}}</label>
+                <input type="text" value="${escHtml(pv[v]||'')}" oninput="updatePreviewVar('${v}', this.value)" placeholder="${v}" />
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+        <div class="preview-email">
+          <div class="preview-header-bar">
+            <div class="preview-field"><span class="label">Subject:</span> <span class="value">${escHtml(replaceVars(currentSubject, pv))}</span></div>
+          </div>
+          <div class="preview-body">${escHtml(replaceVars(currentBody, pv))}</div>
+        </div>
+        <div class="copy-bar">
+          <button class="btn btn-secondary btn-sm" onclick="copySubject()">📋 Copy Subject</button>
+          <button class="btn btn-secondary btn-sm" onclick="copyBody()">📋 Copy Body</button>
+          <button class="btn btn-primary btn-sm" onclick="copyFull()">📋 Copy Full Email</button>
+        </div>
+      </div>
+      
+      <div style="margin-top:24px">
+        <h3 style="font-size:14px;color:var(--text2);margin-bottom:12px">📊 Performance Tracking</h3>
+        <div class="perf-row">
+          <div class="field"><label>Sent</label><input type="number" value="${t.sent||0}" onchange="updatePerf('${t.id}','sent',this.value)" /></div>
+          <div class="field"><label>Opened</label><input type="number" value="${t.opened||0}" onchange="updatePerf('${t.id}','opened',this.value)" /></div>
+          <div class="field"><label>Replied</label><input type="number" value="${t.replied||0}" onchange="updatePerf('${t.id}','replied',this.value)" /></div>
+          <div class="field"><label>Meetings</label><input type="number" value="${t.meetings||0}" onchange="updatePerf('${t.id}','meetings',this.value)" /></div>
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text3)">
+          ${t.sent > 0 ? `Open rate: ${Math.round((t.opened||0)/(t.sent)*100)}% · Reply rate: ${Math.round((t.replied||0)/(t.sent)*100)}% · Meeting rate: ${Math.round((t.meetings||0)/(t.sent)*100)}%` : 'No sends tracked yet'}
+        </div>
+      </div>
+      
+      <div style="margin-top:24px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <h3 style="font-size:14px;color:var(--text2)">🏷️ Tags</h3>
+        </div>
+        <div class="template-vars">${(t.tags||[]).map(tg => `<span class="var-chip" style="cursor:pointer" onclick="removeTag('${t.id}','${tg}')">🏷️ ${tg} ×</span>`).join('')}
+          <input type="text" placeholder="Add tag + Enter" style="font-size:11px;padding:3px 8px;width:120px" onkeydown="if(event.key==='Enter'){addTag('${t.id}',this.value);this.value='';}" />
+        </div>
+      </div>
+    </div>`;
+}
+
+function previewTemplate(id) {
+  state.previewTemplate = state.templates.find(t => t.id === id);
+  state.activeVariant = 0;
+  state.previewVars = {};
+  // increment use count
+  const t = state.templates.find(t => t.id === id);
+  if(t) { t.useCount = (t.useCount||0) + 1; t.updatedAt = new Date().toISOString(); save(); }
+  render();
+}
+
+function closePreview() {
+  state.previewTemplate = null;
+  state.activeVariant = 0;
+  render();
+}
+
+function switchVariant(idx) {
+  state.activeVariant = idx;
+  render();
+}
+
+function updatePreviewVar(key, val) {
+  state.previewVars[key] = val;
+  // live update without full re-render
+  const t = state.previewTemplate;
+  if(!t) return;
+  const av = state.activeVariant || 0;
+  const subj = av === 0 ? t.subject : t.variants[av-1].subject;
+  const body = av === 0 ? t.body : t.variants[av-1].body;
+  const headerVal = document.querySelector('.preview-field .value');
+  const bodyEl = document.querySelector('.preview-body');
+  if(headerVal) headerVal.textContent = replaceVars(subj, state.previewVars);
+  if(bodyEl) bodyEl.textContent = replaceVars(body, state.previewVars);
+}
+
+function copySubject() {
+  const t = state.previewTemplate; if(!t) return;
+  const av = state.activeVariant || 0;
+  const subj = av === 0 ? t.subject : t.variants[av-1].subject;
+  navigator.clipboard.writeText(replaceVars(subj, state.previewVars));
+  toast('Subject copied!');
+}
+
+function copyBody() {
+  const t = state.previewTemplate; if(!t) return;
+  const av = state.activeVariant || 0;
+  const body = av === 0 ? t.body : t.variants[av-1].body;
+  navigator.clipboard.writeText(replaceVars(body, state.previewVars));
+  toast('Body copied!');
+}
+
+function copyFull() {
+  const t = state.previewTemplate; if(!t) return;
+  const av = state.activeVariant || 0;
+  const subj = av === 0 ? t.subject : t.variants[av-1].subject;
+  const body = av === 0 ? t.body : t.variants[av-1].body;
+  const pv = state.previewVars;
+  navigator.clipboard.writeText(`Subject: ${replaceVars(subj,pv)}\n\n${replaceVars(body,pv)}`);
+  toast('Full email copied!');
+}
+
+function updatePerf(id, field, val) {
+  const t = state.templates.find(t => t.id === id);
+  if(t) { t[field] = parseInt(val) || 0; save(); render(); }
+}
+
+function addTag(id, tag) {
+  if(!tag.trim()) return;
+  const t = state.templates.find(t => t.id === id);
+  if(t) { if(!t.tags) t.tags = []; if(!t.tags.includes(tag.trim())) { t.tags.push(tag.trim()); save(); render(); } }
+}
+
+function removeTag(id, tag) {
+  const t = state.templates.find(t => t.id === id);
+  if(t) { t.tags = (t.tags||[]).filter(tg => tg !== tag); save(); render(); }
+}
+
+function addVariant(id) {
+  const t = state.templates.find(t => t.id === id);
+  if(!t) return;
+  if(!t.variants) t.variants = [];
+  t.variants.push({ name: `Variant ${String.fromCharCode(66 + t.variants.length)}`, subject: t.subject, body: t.body });
+  save();
+  state.previewTemplate = t;
+  state.activeVariant = t.variants.length;
+  render();
+  // open edit for the new variant
+  editTemplate(id);
+}
+
+// ============ TEMPLATE CRUD ============
+function newTemplate() {
+  showTemplateModal({
+    id: null, name: '', category: 'outreach', subject: '', body: '', tags: [], variants: []
+  });
+}
+
+function editTemplate(id) {
+  const t = state.templates.find(t => t.id === id);
+  if(t) showTemplateModal({...t});
+}
+
+function duplicateTemplate(id) {
+  const t = state.templates.find(t => t.id === id);
+  if(!t) return;
+  const dup = {...t, id: genId(), name: t.name + ' (copy)', useCount: 0, sent: 0, opened: 0, replied: 0, meetings: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()};
+  state.templates.push(dup);
+  save();
+  toast('Template duplicated!');
+  render();
+}
+
+function deleteTemplate(id) {
+  if(!confirm('Delete this template?')) return;
+  state.templates = state.templates.filter(t => t.id !== id);
+  state.previewTemplate = null;
+  save();
+  toast('Template deleted');
+  render();
+}
+
+function showTemplateModal(tmpl) {
+  state.editingTemplate = tmpl;
+  const isEdit = !!tmpl.id;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'templateModal';
+  overlay.onclick = e => { if(e.target === overlay) overlay.remove(); };
+  
+  overlay.innerHTML = `
+    <div class="modal" style="width:640px">
+      <div class="modal-header">
+        <h3>${isEdit ? 'Edit' : 'New'} Template</h3>
+        <button onclick="document.getElementById('templateModal').remove()" style="font-size:18px">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Template Name</label>
+          <input id="tmplName" value="${escHtml(tmpl.name)}" placeholder="e.g., Cold Outreach — SaaS Founders" />
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select id="tmplCat">
+            <option value="outreach" ${tmpl.category==='outreach'?'selected':''}>Outreach</option>
+            <option value="sales" ${tmpl.category==='sales'?'selected':''}>Sales</option>
+            <option value="job" ${tmpl.category==='job'?'selected':''}>Job Hunt</option>
+            <option value="networking" ${tmpl.category==='networking'?'selected':''}>Networking</option>
+            <option value="followup" ${tmpl.category==='followup'?'selected':''}>Follow-up</option>
+            <option value="partnership" ${tmpl.category==='partnership'?'selected':''}>Partnership</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Subject Line</label>
+          <input id="tmplSubject" value="${escHtml(tmpl.subject)}" placeholder="Use {{variables}} for personalization" />
+          <div class="var-bar" style="margin-top:4px">
+            <span>Insert:</span>
+            ${DEFAULT_VARS.map(v => `<button class="var-insert" onclick="insertVar('tmplSubject','${v}')">{{${v}}}</button>`).join('')}
+          </div>
+        </div>
+        <div class="field">
+          <label>Email Body</label>
+          <textarea id="tmplBody" rows="12" placeholder="Write your email here. Use {{variables}} for personalization.">${escHtml(tmpl.body)}</textarea>
+          <div class="var-bar" style="margin-top:4px">
+            <span>Insert:</span>
+            ${DEFAULT_VARS.map(v => `<button class="var-insert" onclick="insertVar('tmplBody','${v}')">{{${v}}}</button>`).join('')}
+          </div>
+        </div>
+        <div class="field">
+          <label>Tags (comma separated)</label>
+          <input id="tmplTags" value="${(tmpl.tags||[]).join(', ')}" placeholder="cold-outreach, saas, marketing" />
+        </div>
+        
+        <div style="margin-top:8px">
+          <h4 style="font-size:13px;color:var(--text2);margin-bottom:8px">✂️ Quick Insert Snippet</h4>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${state.snippets.map(s => `<button class="btn btn-sm btn-secondary" onclick="insertSnippet('tmplBody','${s.id}')" title="${escHtml(s.text.slice(0,100))}">${escHtml(s.name)}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('templateModal').remove()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTemplate()">💾 Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('tmplName').focus();
+}
+
+function insertVar(fieldId, varName) {
+  const el = document.getElementById(fieldId);
+  const start = el.selectionStart, end = el.selectionEnd;
+  const text = `{{${varName}}}`;
+  el.value = el.value.slice(0, start) + text + el.value.slice(end);
+  el.selectionStart = el.selectionEnd = start + text.length;
+  el.focus();
+}
+
+function insertSnippet(fieldId, snippetId) {
+  const snippet = state.snippets.find(s => s.id === snippetId);
+  if(!snippet) return;
+  const el = document.getElementById(fieldId);
+  const start = el.selectionStart;
+  el.value = el.value.slice(0, start) + snippet.text + el.value.slice(el.selectionEnd);
+  el.selectionStart = el.selectionEnd = start + snippet.text.length;
+  el.focus();
+}
+
+function saveTemplate() {
+  const name = document.getElementById('tmplName').value.trim();
+  const category = document.getElementById('tmplCat').value;
+  const subject = document.getElementById('tmplSubject').value.trim();
+  const body = document.getElementById('tmplBody').value.trim();
+  const tags = document.getElementById('tmplTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  
+  if(!name || !subject || !body) { toast('Fill in name, subject, and body'); return; }
+  
+  const tmpl = state.editingTemplate;
+  if(tmpl.id) {
+    const existing = state.templates.find(t => t.id === tmpl.id);
+    if(existing) { Object.assign(existing, { name, category, subject, body, tags, updatedAt: new Date().toISOString() }); }
+  } else {
+    state.templates.push({ id: genId(), name, category, subject, body, tags, variants: [], useCount: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+  }
+  
+  save();
+  document.getElementById('templateModal').remove();
+  toast(tmpl.id ? 'Template updated!' : 'Template created!');
+  if(state.previewTemplate?.id === tmpl.id) state.previewTemplate = state.templates.find(t => t.id === tmpl.id);
+  render();
+}
+
+// ============ SEQUENCES VIEW ============
+function renderSequences(main, search) {
+  const filtered = state.sequences.filter(s =>
+    !search || s.name.toLowerCase().includes(search) || (s.description||'').toLowerCase().includes(search)
+  );
+  
+  if(state.editingSequence) {
+    renderSequenceEditor(main);
+    return;
+  }
+  
+  main.innerHTML = `
+    <div class="main-header">
+      <h2>🔗 Email Sequences</h2>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="newSequence()">+ New Sequence</button>
+      </div>
+    </div>
+    <div class="content">
+      ${filtered.length === 0 ? '<div class="empty"><div class="icon">🔗</div><p>No sequences yet. Chain templates together!</p><button class="btn btn-primary" onclick="newSequence()">+ New Sequence</button></div>' :
+      `<div class="sequences-grid">${filtered.map(s => `
+        <div class="sequence-card" onclick="editSequence('${s.id}')">
+          <h3>${escHtml(s.name)}</h3>
+          <div class="desc">${escHtml(s.description || 'No description')}</div>
+          <div class="steps-preview">
+            ${s.steps.map((step, i) => {
+              const t = state.templates.find(t => t.id === step.templateId);
+              return `${i > 0 ? `<span class="step-arrow">→ Day ${step.delayDays}</span>` : ''}
+                <span class="step-dot" title="${t ? escHtml(t.name) : 'Unknown'}">${i+1}</span>`;
+            }).join('')}
+          </div>
+          <div class="meta">
+            <span>📨 ${s.steps.length} step${s.steps.length!==1?'s':''}</span>
+            <span>⏱️ ${s.steps.reduce((a,st) => a+st.delayDays, 0)} days total</span>
+          </div>
+        </div>
+      `).join('')}</div>`}
+    </div>`;
+}
+
+function renderSequenceEditor(main) {
+  const seq = state.editingSequence;
+  main.innerHTML = `
+    <div class="main-header">
+      <h2><button class="btn btn-sm btn-secondary" onclick="closeSequenceEditor()" style="margin-right:8px">← Back</button> ${seq.id ? 'Edit' : 'New'} Sequence</h2>
+      <div class="header-actions">
+        ${seq.id ? `<button class="btn btn-danger btn-sm" onclick="deleteSequence('${seq.id}')">🗑️ Delete</button>` : ''}
+        <button class="btn btn-primary" onclick="saveSequence()">💾 Save</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="seq-info" style="margin-bottom:24px">
+        <div class="field" style="flex:1"><label>Sequence Name</label><input id="seqName" value="${escHtml(seq.name||'')}" placeholder="e.g., Job Hunt Outreach" style="width:100%" /></div>
+        <div class="field" style="flex:1"><label>Description</label><input id="seqDesc" value="${escHtml(seq.description||'')}" placeholder="Brief description" style="width:100%" /></div>
+        <div class="field"><label>Category</label>
+          <select id="seqCat">
+            <option value="outreach" ${seq.category==='outreach'?'selected':''}>Outreach</option>
+            <option value="sales" ${seq.category==='sales'?'selected':''}>Sales</option>
+            <option value="job" ${seq.category==='job'?'selected':''}>Job Hunt</option>
+            <option value="networking" ${seq.category==='networking'?'selected':''}>Networking</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="steps-container" id="stepsContainer">
+        ${(seq.steps||[]).map((step, i) => `
+          ${i > 0 ? `
+            <div class="step-connector">
+              <div class="line"></div>
+              <div class="delay-badge">Wait <input type="number" value="${step.delayDays}" min="0" style="width:40px;font-size:11px;padding:2px 4px;text-align:center;background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:3px" onchange="updateStepDelay(${i}, this.value)" /> days</div>
+            </div>
+          ` : ''}
+          <div class="step-card">
+            <div class="step-header">
+              <span class="step-label"><span class="num">${i+1}</span> Step ${i+1}</span>
+              <div class="step-actions">
+                ${i > 0 ? `<button class="btn btn-sm btn-secondary" onclick="moveStep(${i},-1)">↑</button>` : ''}
+                ${i < (seq.steps||[]).length-1 ? `<button class="btn btn-sm btn-secondary" onclick="moveStep(${i},1)">↓</button>` : ''}
+                <button class="btn btn-sm btn-danger" onclick="removeStep(${i})">✕</button>
+              </div>
+            </div>
+            <div class="step-body">
+              <div class="field">
+                <label>Template</label>
+                <select onchange="updateStepTemplate(${i}, this.value)">
+                  <option value="">— Select a template —</option>
+                  ${state.templates.map(t => `<option value="${t.id}" ${step.templateId===t.id?'selected':''}>${escHtml(t.name)}</option>`).join('')}
+                </select>
+              </div>
+              ${step.templateId ? `<div style="font-size:12px;color:var(--text3);background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)">
+                📧 ${escHtml(state.templates.find(t=>t.id===step.templateId)?.subject || 'Template not found')}
+              </div>` : ''}
+              <div class="field">
+                <label>Step Note</label>
+                <input value="${escHtml(step.note||'')}" placeholder="e.g., Gentle bump" onchange="updateStepNote(${i}, this.value)" />
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      
+      <button class="btn btn-secondary" onclick="addStep()" style="margin-top:16px">+ Add Step</button>
+    </div>`;
+}
+
+function newSequence() {
+  state.editingSequence = { id: null, name: '', description: '', category: 'outreach', steps: [{ templateId: '', delayDays: 0, note: '' }] };
+  render();
+}
+
+function editSequence(id) {
+  const s = state.sequences.find(s => s.id === id);
+  if(s) { state.editingSequence = JSON.parse(JSON.stringify(s)); render(); }
+}
+
+function closeSequenceEditor() {
+  state.editingSequence = null;
+  render();
+}
+
+function addStep() {
+  if(!state.editingSequence) return;
+  state.editingSequence.steps.push({ templateId: '', delayDays: 3, note: '' });
+  render();
+}
+
+function removeStep(idx) {
+  if(!state.editingSequence) return;
+  state.editingSequence.steps.splice(idx, 1);
+  render();
+}
+
+function moveStep(idx, dir) {
+  if(!state.editingSequence) return;
+  const s = state.editingSequence.steps;
+  const ni = idx + dir;
+  if(ni < 0 || ni >= s.length) return;
+  [s[idx], s[ni]] = [s[ni], s[idx]];
+  render();
+}
+
+function updateStepTemplate(idx, val) { if(state.editingSequence) { state.editingSequence.steps[idx].templateId = val; render(); } }
+function updateStepDelay(idx, val) { if(state.editingSequence) state.editingSequence.steps[idx].delayDays = parseInt(val)||0; }
+function updateStepNote(idx, val) { if(state.editingSequence) state.editingSequence.steps[idx].note = val; }
+
+function saveSequence() {
+  const name = document.getElementById('seqName').value.trim();
+  const desc = document.getElementById('seqDesc').value.trim();
+  const cat = document.getElementById('seqCat').value;
+  if(!name) { toast('Enter a sequence name'); return; }
+  
+  const seq = state.editingSequence;
+  if(seq.id) {
+    const existing = state.sequences.find(s => s.id === seq.id);
+    if(existing) Object.assign(existing, { name, description: desc, category: cat, steps: seq.steps });
+  } else {
+    state.sequences.push({ id: genId(), name, description: desc, category: cat, steps: seq.steps, createdAt: new Date().toISOString() });
+  }
+  save();
+  state.editingSequence = null;
+  toast(seq.id ? 'Sequence updated!' : 'Sequence created!');
+  render();
+}
+
+function deleteSequence(id) {
+  if(!confirm('Delete this sequence?')) return;
+  state.sequences = state.sequences.filter(s => s.id !== id);
+  state.editingSequence = null;
+  save(); toast('Sequence deleted'); render();
+}
+
+// ============ SNIPPETS VIEW ============
+function renderSnippets(main, search) {
+  const filtered = state.snippets.filter(s =>
+    !search || s.name.toLowerCase().includes(search) || s.text.toLowerCase().includes(search) || (s.category||'').includes(search)
+  );
+  const cats = [...new Set(state.snippets.map(s => s.category || 'uncategorized'))];
+  
+  main.innerHTML = `
+    <div class="main-header">
+      <h2>✂️ Reusable Snippets</h2>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="newSnippet()">+ New Snippet</button>
+      </div>
+    </div>
+    <div class="content">
+      ${filtered.length === 0 ? '<div class="empty"><div class="icon">✂️</div><p>No snippets yet. Save reusable paragraphs!</p><button class="btn btn-primary" onclick="newSnippet()">+ New Snippet</button></div>' :
+      cats.map(cat => {
+        const items = filtered.filter(s => (s.category||'uncategorized') === cat);
+        if(!items.length) return '';
+        return `
+          <h3 style="font-size:13px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">${cat}</h3>
+          <div class="snippet-list">${items.map(s => `
+            <div class="snippet-card">
+              <div class="snippet-name">${escHtml(s.name)}</div>
+              <div class="snippet-text">${escHtml(s.text)}</div>
+              <div class="snippet-actions">
+                <button class="btn btn-sm btn-secondary" onclick="copySnippet('${s.id}')">📋 Copy</button>
+                <button class="btn btn-sm btn-secondary" onclick="editSnippet('${s.id}')">✏️ Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteSnippet('${s.id}')">🗑️</button>
+              </div>
+            </div>
+          `).join('')}</div>`;
+      }).join('')}
+    </div>`;
+}
+
+function newSnippet() { showSnippetModal({ id: null, name: '', text: '', category: '' }); }
+
+function editSnippet(id) {
+  const s = state.snippets.find(s => s.id === id);
+  if(s) showSnippetModal({...s});
+}
+
+function copySnippet(id) {
+  const s = state.snippets.find(s => s.id === id);
+  if(s) { navigator.clipboard.writeText(s.text); toast('Snippet copied!'); }
+}
+
+function deleteSnippet(id) {
+  if(!confirm('Delete snippet?')) return;
+  state.snippets = state.snippets.filter(s => s.id !== id);
+  save(); toast('Snippet deleted'); render();
+}
+
+function showSnippetModal(snip) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'snippetModal';
+  overlay.onclick = e => { if(e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="modal" style="width:500px">
+      <div class="modal-header">
+        <h3>${snip.id ? 'Edit' : 'New'} Snippet</h3>
+        <button onclick="document.getElementById('snippetModal').remove()" style="font-size:18px">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field"><label>Name</label><input id="snipName" value="${escHtml(snip.name)}" placeholder="e.g., Social Proof — ZYOD" /></div>
+        <div class="field"><label>Category</label><input id="snipCat" value="${escHtml(snip.category||'')}" placeholder="e.g., credentials, cta, hook" /></div>
+        <div class="field"><label>Text</label><textarea id="snipText" rows="6">${escHtml(snip.text)}</textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('snippetModal').remove()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSnippet('${snip.id||''}')">💾 Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('snipName').focus();
+}
+
+function saveSnippet(existingId) {
+  const name = document.getElementById('snipName').value.trim();
+  const cat = document.getElementById('snipCat').value.trim();
+  const text = document.getElementById('snipText').value.trim();
+  if(!name || !text) { toast('Fill in name and text'); return; }
+  
+  if(existingId) {
+    const s = state.snippets.find(s => s.id === existingId);
+    if(s) Object.assign(s, { name, category: cat, text });
+  } else {
+    state.snippets.push({ id: genId(), name, category: cat, text });
+  }
+  save();
+  document.getElementById('snippetModal').remove();
+  toast(existingId ? 'Snippet updated!' : 'Snippet created!');
+  render();
+}
+
+// ============ DASHBOARD VIEW ============
+function renderDashboard(main) {
+  const totalTemplates = state.templates.length;
+  const totalSeqs = state.sequences.length;
+  const totalSnippets = state.snippets.length;
+  const totalSent = state.templates.reduce((a,t) => a + (t.sent||0), 0);
+  const totalReplied = state.templates.reduce((a,t) => a + (t.replied||0), 0);
+  const totalMeetings = state.templates.reduce((a,t) => a + (t.meetings||0), 0);
+  const avgReplyRate = totalSent > 0 ? Math.round(totalReplied/totalSent*100) : 0;
+  
+  // Category breakdown
+  const catCounts = {};
+  state.templates.forEach(t => { catCounts[t.category] = (catCounts[t.category]||0) + 1; });
+  const catColors = { job: 'var(--blue)', sales: 'var(--green)', networking: 'var(--yellow)', followup: 'var(--orange)', partnership: 'var(--pink)', outreach: 'var(--accent)' };
+  const maxCat = Math.max(...Object.values(catCounts), 1);
+  
+  // Top templates by usage
+  const topTemplates = [...state.templates].sort((a,b) => (b.useCount||0) - (a.useCount||0)).slice(0, 5);
+  
+  // Performance by category
+  const catPerf = {};
+  state.templates.forEach(t => {
+    if(!catPerf[t.category]) catPerf[t.category] = { sent: 0, replied: 0 };
+    catPerf[t.category].sent += (t.sent||0);
+    catPerf[t.category].replied += (t.replied||0);
+  });
+  
+  main.innerHTML = `
+    <div class="main-header"><h2>📊 Dashboard</h2></div>
+    <div class="content">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-value" style="color:var(--accent)">${totalTemplates}</div><div class="stat-label">Templates</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--blue)">${totalSeqs}</div><div class="stat-label">Sequences</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--green)">${totalSnippets}</div><div class="stat-label">Snippets</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--yellow)">${totalSent}</div><div class="stat-label">Emails Sent</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--orange)">${totalReplied}</div><div class="stat-label">Replies</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--pink)">${avgReplyRate}%</div><div class="stat-label">Reply Rate</div></div>
+      </div>
+      
+      <div class="chart-row">
+        <div class="chart-card">
+          <h3>Templates by Category</h3>
+          <div class="bar-chart">
+            ${Object.entries(catCounts).map(([cat, count]) => `
+              <div class="bar-row">
+                <span class="bar-label">${cat}</span>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width:${count/maxCat*100}%;background:${catColors[cat]||'var(--accent)'}"><span>${count}</span></div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        
+        <div class="chart-card">
+          <h3>Most Used Templates</h3>
+          <div class="top-templates">
+            ${topTemplates.map((t, i) => `
+              <div class="top-template-row" style="cursor:pointer" onclick="previewTemplate('${t.id}');switchView('templates')">
+                <span class="rank">#${i+1}</span>
+                <div class="info">
+                  <div class="name">${escHtml(t.name)}</div>
+                  <div class="uses">${t.useCount||0} uses · ${t.sent||0} sent · ${t.replied||0} replies</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+      
+      <div class="chart-row">
+        <div class="chart-card">
+          <h3>Reply Rate by Category</h3>
+          <div class="bar-chart">
+            ${Object.entries(catPerf).filter(([_,v]) => v.sent > 0).map(([cat, v]) => {
+              const rate = Math.round(v.replied/v.sent*100);
+              return `
+                <div class="bar-row">
+                  <span class="bar-label">${cat} (${v.sent})</span>
+                  <div class="bar-track">
+                    <div class="bar-fill" style="width:${rate}%;background:${rate >= 30 ? 'var(--green)' : rate >= 15 ? 'var(--yellow)' : 'var(--red)'}"><span>${rate}%</span></div>
+                  </div>
+                </div>`;
+            }).join('') || '<div style="color:var(--text3);font-size:13px;padding:12px">No performance data yet. Track sends & replies on templates.</div>'}
+          </div>
+        </div>
+        
+        <div class="chart-card">
+          <h3>Conversion Funnel</h3>
+          <div style="display:flex;flex-direction:column;gap:12px;padding:8px 0">
+            ${[
+              { label: 'Sent', val: totalSent, color: 'var(--accent)', pct: 100 },
+              { label: 'Opened', val: state.templates.reduce((a,t)=>a+(t.opened||0),0), color: 'var(--blue)', pct: totalSent ? Math.round(state.templates.reduce((a,t)=>a+(t.opened||0),0)/totalSent*100) : 0 },
+              { label: 'Replied', val: totalReplied, color: 'var(--yellow)', pct: totalSent ? Math.round(totalReplied/totalSent*100) : 0 },
+              { label: 'Meetings', val: totalMeetings, color: 'var(--green)', pct: totalSent ? Math.round(totalMeetings/totalSent*100) : 0 }
+            ].map(step => `
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:70px;font-size:12px;color:var(--text2);text-align:right">${step.label}</span>
+                <div style="flex:1;height:28px;background:var(--surface2);border-radius:4px;overflow:hidden;position:relative">
+                  <div style="height:100%;width:${step.pct}%;background:${step.color};border-radius:4px;display:flex;align-items:center;padding-left:8px;transition:width 0.3s">
+                    <span style="font-size:11px;color:#fff;font-weight:600">${step.val} (${step.pct}%)</span>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ============ IMPORT/EXPORT ============
+function exportData() {
+  const data = { templates: state.templates, sequences: state.sequences, snippets: state.snippets, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `emailcraft-export-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('Data exported!');
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if(data.templates) state.templates = data.templates;
+        if(data.sequences) state.sequences = data.sequences;
+        if(data.snippets) state.snippets = data.snippets;
+        save();
+        toast('Data imported!');
+        render();
+      } catch(e) { toast('Invalid JSON file'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ============ KEYBOARD ============
+function escHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+document.addEventListener('keydown', e => {
+  // Don't capture when in input/textarea
+  const tag = document.activeElement.tagName;
+  const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  
+  if(e.key === 'Escape') {
+    const modal = document.querySelector('.modal-overlay');
+    if(modal) { modal.remove(); return; }
+    if(state.previewTemplate) { closePreview(); return; }
+    if(state.editingSequence) { closeSequenceEditor(); return; }
+  }
+  
+  if(inInput) {
+    if(e.key === '/' && tag !== 'TEXTAREA') { /* allow */ } else return;
+  }
+  
+  if(e.key === '/') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+  else if(e.key === 'n' || e.key === 'N') {
+    e.preventDefault();
+    if(state.currentView === 'templates') newTemplate();
+    else if(state.currentView === 'sequences') newSequence();
+    else if(state.currentView === 'snippets') newSnippet();
+  }
+  else if(e.key === '1') switchView('templates');
+  else if(e.key === '2') switchView('sequences');
+  else if(e.key === '3') switchView('snippets');
+  else if(e.key === '4') switchView('dashboard');
+  else if(e.key === 'e' || e.key === 'E') { if(e.metaKey || e.ctrlKey) return; exportData(); }
+  else if(e.key === '?') {
+    toast('N=New · /=Search · 1-4=Views · E=Export · Esc=Close');
+  }
+});
+
+document.getElementById('searchInput').addEventListener('input', () => render());
+
+// ============ INIT ============
+load();
+seedData();
+render();
+</script>
+</body>
+</html>

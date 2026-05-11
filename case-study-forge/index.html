@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Study Forge — PM Portfolio Builder</title>
+<style>
+:root {
+  --bg: #f8f9fa; --surface: #ffffff; --surface2: #f1f3f5; --border: #dee2e6;
+  --text: #212529; --text2: #495057; --text3: #868e96;
+  --primary: #4263eb; --primary-light: #dbe4ff; --primary-dark: #3b5bdb;
+  --green: #2b8a3e; --green-light: #d3f9d8; --amber: #e67700; --amber-light: #fff3bf;
+  --red: #c92a2a; --red-light: #ffe3e3; --purple: #7048e8; --purple-light: #e5dbff;
+  --teal: #0c8599; --teal-light: #c3fae8; --pink: #d6336c; --pink-light: #ffdeeb;
+  --radius: 10px; --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --transition: 0.2s ease;
+}
+.dark {
+  --bg: #1a1b1e; --surface: #25262b; --surface2: #2c2e33; --border: #373a40;
+  --text: #e9ecef; --text2: #adb5bd; --text3: #868e96;
+  --primary: #5c7cfa; --primary-light: #2b3a67; --primary-dark: #748ffc;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3); --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.4);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+button { cursor: pointer; font-family: inherit; border: none; background: none; color: inherit; }
+input, textarea, select { font-family: inherit; font-size: 14px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; width: 100%; outline: none; transition: border var(--transition); }
+input:focus, textarea:focus, select:focus { border-color: var(--primary); }
+textarea { resize: vertical; min-height: 80px; }
+
+/* Layout */
+.app { display: flex; height: 100vh; overflow: hidden; }
+.sidebar { width: 280px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.main { flex: 1; overflow-y: auto; padding: 32px; }
+
+/* Sidebar */
+.sidebar-header { padding: 20px 16px 12px; border-bottom: 1px solid var(--border); }
+.sidebar-header h1 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sidebar-header h1 span { font-size: 20px; }
+.sidebar-header p { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.sidebar-actions { padding: 12px 16px; display: flex; gap: 8px; }
+.sidebar-actions button { flex: 1; padding: 8px; border-radius: 6px; font-size: 13px; font-weight: 600; transition: all var(--transition); }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-outline { border: 1px solid var(--border); color: var(--text2); }
+.btn-outline:hover { background: var(--surface2); }
+.case-list { flex: 1; overflow-y: auto; padding: 8px; }
+.case-item { padding: 12px; border-radius: 8px; cursor: pointer; transition: all var(--transition); margin-bottom: 4px; }
+.case-item:hover { background: var(--surface2); }
+.case-item.active { background: var(--primary-light); }
+.case-item-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.case-item-meta { font-size: 12px; color: var(--text3); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+.case-item-company { background: var(--surface2); padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+.sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.sidebar-footer button { flex: 1; padding: 6px; border-radius: 6px; font-size: 12px; border: 1px solid var(--border); color: var(--text3); transition: all var(--transition); }
+.sidebar-footer button:hover { background: var(--surface2); color: var(--text); }
+
+/* Empty State */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--text3); }
+.empty-state .icon { font-size: 64px; margin-bottom: 16px; }
+.empty-state h2 { font-size: 20px; color: var(--text2); margin-bottom: 8px; }
+.empty-state p { font-size: 14px; max-width: 400px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface2); padding: 4px; border-radius: 8px; width: fit-content; }
+.tab { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--text3); transition: all var(--transition); }
+.tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.tab:hover:not(.active) { color: var(--text2); }
+
+/* Editor */
+.editor { max-width: 900px; }
+.field-group { margin-bottom: 20px; }
+.field-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+/* Sections */
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.section-header h3 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.section-header h3 .emoji { font-size: 18px; }
+
+/* Metrics */
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.metric-card { background: var(--surface2); border-radius: 8px; padding: 16px; text-align: center; position: relative; }
+.metric-card .value { font-size: 28px; font-weight: 800; color: var(--primary); }
+.metric-card .label { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.metric-card .remove { position: absolute; top: 4px; right: 8px; font-size: 16px; color: var(--text3); cursor: pointer; opacity: 0; transition: opacity var(--transition); }
+.metric-card:hover .remove { opacity: 1; }
+
+/* Timeline */
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+.timeline-item { position: relative; margin-bottom: 16px; }
+.timeline-item::before { content: ''; position: absolute; left: -20px; top: 8px; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); border: 2px solid var(--surface); }
+.timeline-item .phase { font-size: 13px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
+.timeline-item .desc { font-size: 14px; color: var(--text); margin-top: 4px; }
+.timeline-item .remove-step { font-size: 12px; color: var(--text3); cursor: pointer; margin-left: 8px; }
+.timeline-item .remove-step:hover { color: var(--red); }
+
+/* Tags */
+.tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+.tag-skill { background: var(--primary-light); color: var(--primary); }
+.tag-tool { background: var(--purple-light); color: var(--purple); }
+.tag-remove { cursor: pointer; font-size: 14px; opacity: 0.6; }
+.tag-remove:hover { opacity: 1; }
+.tags-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tag-input-row { display: flex; gap: 8px; margin-top: 8px; }
+.tag-input-row input { flex: 1; }
+.tag-input-row button { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+
+/* Learnings */
+.learning-item { background: var(--surface2); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px; position: relative; }
+.learning-item .bullet { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.learning-item .text { flex: 1; font-size: 14px; }
+.learning-item .remove { position: absolute; top: 8px; right: 12px; font-size: 14px; color: var(--text3); cursor: pointer; opacity: 0; }
+.learning-item:hover .remove { opacity: 1; }
+
+/* Preview */
+.preview { max-width: 800px; margin: 0 auto; }
+.preview-hero { text-align: center; margin-bottom: 40px; }
+.preview-hero h1 { font-size: 32px; font-weight: 800; margin-bottom: 8px; }
+.preview-hero .company { font-size: 18px; color: var(--primary); font-weight: 600; }
+.preview-hero .role { font-size: 14px; color: var(--text3); margin-top: 4px; }
+.preview-hero .duration { font-size: 13px; color: var(--text3); margin-top: 8px; background: var(--surface2); display: inline-block; padding: 4px 12px; border-radius: 20px; }
+.preview-section { margin-bottom: 36px; }
+.preview-section h2 { font-size: 20px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+.preview-section p { font-size: 15px; color: var(--text2); white-space: pre-wrap; }
+.preview-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 36px; }
+.preview-metric { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; border-radius: var(--radius); padding: 20px; text-align: center; }
+.preview-metric .val { font-size: 32px; font-weight: 800; }
+.preview-metric .lbl { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+.preview-timeline { position: relative; padding-left: 32px; }
+.preview-timeline::before { content: ''; position: absolute; left: 12px; top: 0; bottom: 0; width: 3px; background: linear-gradient(to bottom, var(--primary), var(--teal)); border-radius: 2px; }
+.preview-timeline-item { position: relative; margin-bottom: 24px; }
+.preview-timeline-item::before { content: ''; position: absolute; left: -26px; top: 6px; width: 14px; height: 14px; border-radius: 50%; background: var(--primary); border: 3px solid var(--surface); }
+.preview-timeline-item .phase { font-size: 14px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
+.preview-timeline-item .desc { font-size: 14px; color: var(--text2); margin-top: 4px; }
+.preview-learnings { list-style: none; }
+.preview-learnings li { padding: 10px 16px; background: var(--surface2); border-radius: 8px; margin-bottom: 8px; font-size: 14px; display: flex; align-items: flex-start; gap: 8px; }
+.preview-learnings li::before { content: '💡'; flex-shrink: 0; }
+.preview-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.preview-tags .tag { font-size: 13px; padding: 4px 14px; }
+
+/* Presentation View */
+.presentation { position: fixed; inset: 0; background: var(--bg); z-index: 1000; overflow-y: auto; }
+.presentation .close-pres { position: fixed; top: 16px; right: 16px; z-index: 1001; background: var(--surface); border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; box-shadow: var(--shadow-lg); }
+.presentation .close-pres:hover { background: var(--surface2); }
+.presentation .preview { padding: 60px 40px; }
+
+/* Portfolio View */
+.portfolio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
+.portfolio-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); transition: all var(--transition); cursor: pointer; }
+.portfolio-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+.portfolio-card-header { padding: 24px 24px 16px; }
+.portfolio-card-header h3 { font-size: 18px; font-weight: 700; }
+.portfolio-card-header .company { font-size: 14px; color: var(--primary); font-weight: 600; margin-top: 4px; }
+.portfolio-card-body { padding: 0 24px 20px; }
+.portfolio-card-body p { font-size: 13px; color: var(--text2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.portfolio-card-metrics { display: flex; gap: 16px; padding: 16px 24px; background: var(--surface2); border-top: 1px solid var(--border); }
+.portfolio-card-metrics .m { text-align: center; flex: 1; }
+.portfolio-card-metrics .m .v { font-size: 16px; font-weight: 800; color: var(--primary); }
+.portfolio-card-metrics .m .l { font-size: 11px; color: var(--text3); }
+
+/* Search */
+.search-bar { position: relative; margin-bottom: 16px; }
+.search-bar input { padding-left: 36px; }
+.search-bar .icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
+.modal { background: var(--surface); border-radius: 12px; padding: 28px; width: 90%; max-width: 500px; box-shadow: var(--shadow-lg); }
+.modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.modal-actions button { padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+
+/* Print */
+@media print {
+  .sidebar, .tabs, .modal-overlay, .close-pres, .no-print { display: none !important; }
+  .app { display: block; }
+  .main { padding: 0; }
+  .preview-metric { background: var(--primary) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { padding: 16px; }
+  .field-row, .field-row-3 { grid-template-columns: 1fr; }
+}
+
+/* Add step/metric row */
+.add-row { display: flex; gap: 8px; margin-top: 12px; }
+.add-row input { flex: 1; }
+.add-row button { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+
+/* Status badge */
+.status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.status-draft { background: var(--amber-light); color: var(--amber); }
+.status-complete { background: var(--green-light); color: var(--green); }
+.status-featured { background: var(--purple-light); color: var(--purple); }
+
+/* Keyboard shortcuts help */
+.shortcuts-help { position: fixed; bottom: 16px; right: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; font-size: 11px; color: var(--text3); box-shadow: var(--shadow); z-index: 50; }
+.shortcuts-help kbd { background: var(--surface2); padding: 1px 5px; border-radius: 3px; font-size: 11px; border: 1px solid var(--border); }
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<div class="shortcuts-help no-print">
+  <kbd>N</kbd> New &nbsp; <kbd>/</kbd> Search &nbsp; <kbd>D</kbd> Dark &nbsp; <kbd>1-3</kbd> Views &nbsp; <kbd>P</kbd> Present &nbsp; <kbd>E</kbd> Export &nbsp; <kbd>Esc</kbd> Close
+</div>
+
+<script>
+// ===================== STATE =====================
+const STORAGE_KEY = 'case-study-forge';
+let state = {
+  cases: [],
+  activeCaseId: null,
+  activeTab: 'edit', // edit, preview, portfolio
+  darkMode: false,
+  searchQuery: '',
+  showPresentation: false,
+  showNewModal: false,
+  showProfileModal: false,
+  profile: { name: '', title: '', email: '', linkedin: '', website: '' }
+};
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function load() {
+  const d = localStorage.getItem(STORAGE_KEY);
+  if (d) {
+    const parsed = JSON.parse(d);
+    state = { ...state, ...parsed };
+  }
+  if (!state.cases.length) seedDemo();
+}
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 5); }
+
+function newCase() {
+  return {
+    id: genId(),
+    title: '',
+    company: '',
+    role: '',
+    duration: '',
+    status: 'draft', // draft, complete, featured
+    problem: '',
+    approach: '',
+    solution: '',
+    impact: '',
+    metrics: [], // {value, label}
+    steps: [], // {phase, description}
+    skills: [],
+    tools: [],
+    learnings: [],
+    testimonial: '',
+    testimonialAuthor: '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function getActive() { return state.cases.find(c => c.id === state.activeCaseId); }
+
+// ===================== DEMO DATA =====================
+function seedDemo() {
+  state.profile = { name: 'Aman Jha', title: 'Head of Product, Tech & Design', email: '', linkedin: 'linkedin.com/in/amanjhanow', website: '' };
+  state.cases = [
+    {
+      ...newCase(), id: 'demo1', title: 'QR-Code WMS: Unlocking $1.4M Blocked Capital',
+      company: 'ZYOD', role: 'Head of Product, Tech & Design', duration: 'Apr 2023 – Present', status: 'featured',
+      problem: 'ZYOD had ₹11-12 Cr (~$1.4M) working capital blocked because fabric inventory across 3 warehouses was tracked manually on spreadsheets. Nobody knew exact stock positions in real time. Finance couldn\'t release capital because they couldn\'t verify inventory against purchase orders. Production was delayed because teams spent hours hunting for the right fabric rolls.',
+      approach: 'Mapped the entire fabric lifecycle: procurement → inward → storage → cutting → production → dispatch. Identified that the core bottleneck was the gap between "what POs say we bought" and "what\'s physically in the warehouse." Proposed a QR-code based WMS that tracks every fabric roll from the moment it enters the facility.',
+      solution: 'Built a lightweight QR-code warehouse management system. Every fabric roll gets a unique QR at inward. Workers scan on receive, move, cut, and dispatch. Real-time dashboard shows exact inventory by warehouse, fabric type, and PO. Auto-reconciliation between POs and physical stock. Mobile-first — warehouse workers use their phones.',
+      impact: 'Finance unlocked ₹11-12 Cr in working capital within weeks of deployment. Fabric cycle time dropped from 23 days to under 7 days (70% reduction). Zero manual stock counting needed. Production planning accuracy improved dramatically — teams know exactly what\'s available.',
+      metrics: [
+        { value: '$1.4M', label: 'Capital Unlocked' },
+        { value: '70%', label: 'Cycle Time Reduction' },
+        { value: '23→7', label: 'Days Fabric Cycle' },
+        { value: '3', label: 'Warehouses Digitized' }
+      ],
+      steps: [
+        { phase: 'Discovery', description: 'Shadowed warehouse workers for 2 weeks. Mapped fabric lifecycle across 3 warehouses. Identified manual reconciliation as the core bottleneck.' },
+        { phase: 'Design', description: 'Designed QR-code tracking system. Mobile-first interface for warehouse workers. Real-time dashboard for management and finance.' },
+        { phase: 'Build', description: 'Shipped MVP in 3 weeks. QR generation, scanning, inward/outward flows. Integrated with existing ERP for PO reconciliation.' },
+        { phase: 'Scale', description: 'Rolled out across all 3 warehouses. Trained 50+ warehouse staff. Added cutting room integration and dispatch tracking.' }
+      ],
+      skills: ['Product Strategy', 'IoT', 'Supply Chain', 'Stakeholder Management', 'Mobile-First Design'],
+      tools: ['React Native', 'Node.js', 'PostgreSQL', 'QR Code', 'Warehouse Operations'],
+      learnings: [
+        'The best solutions aren\'t always technically complex — a QR code + phone solved a $1.4M problem',
+        'Shadowing users in the warehouse revealed problems no meeting room discussion ever could',
+        'Finance alignment is critical — they were the real champions who pushed for adoption',
+        'Training warehouse workers required simplifying the UI to essentially one action: scan'
+      ]
+    },
+    {
+      ...newCase(), id: 'demo2', title: 'IoT Factory Floor: 700+ Sewing Machines Connected',
+      company: 'ZYOD', role: 'Head of Product, Tech & Design', duration: 'Apr 2023 – Present', status: 'complete',
+      problem: 'ZYOD operates garment factories with 700+ sewing machines. Production efficiency was measured manually — supervisors did headcounts and visual estimates. No real-time data on machine utilization, operator performance, or production bottlenecks. Factory managers were flying blind, making decisions on gut feel.',
+      approach: 'Partnered with IIT Delhi for IoT R&D. Evaluated commercial solutions — all too expensive at scale (700+ machines). Decided to build custom IoT sensors that could retrofit onto existing machines without modifications. Focus on capturing the minimum viable signal: machine running vs idle.',
+      solution: 'Custom IoT sensors deployed on 700+ sewing machines. Real-time dashboard showing machine status, operator efficiency, line-level production rates. Automatic downtime detection with root cause categorization. Shift-level production reports auto-generated.',
+      impact: 'First-ever real-time visibility into factory floor performance. Identified 25-30% idle time that was previously invisible. Enabled data-driven production planning and operator allocation. Secured $0.8M annual product budget based on demonstrated ROI.',
+      metrics: [
+        { value: '700+', label: 'Machines Connected' },
+        { value: '$0.8M', label: 'Annual Budget Secured' },
+        { value: '30%', label: 'Hidden Idle Time Found' },
+        { value: 'IIT Delhi', label: 'R&D Partnership' }
+      ],
+      steps: [
+        { phase: 'Research', description: 'Evaluated 5 commercial IoT solutions. All priced at $50-100/machine/month — unsustainable at scale. Partnered with IIT Delhi IoT lab.' },
+        { phase: 'Prototype', description: 'Built custom sensor prototypes. Tested on 10 machines for 4 weeks. Validated data accuracy against manual counts.' },
+        { phase: 'Deploy', description: 'Rolled out to 700+ machines across factory floors. Built real-time dashboard for floor managers. Mobile alerts for extended downtime.' },
+        { phase: 'Optimize', description: 'Used data to rebalance production lines. Identified top/bottom performing operators. Created shift optimization algorithms.' }
+      ],
+      skills: ['IoT Strategy', 'Hardware-Software Integration', 'Data Analytics', 'R&D Management', 'Vendor Management'],
+      tools: ['Custom IoT Sensors', 'MQTT', 'React', 'Time-Series DB', 'Python'],
+      learnings: [
+        'Commercial IoT solutions are overpriced for manufacturing — custom hardware was 10x cheaper at scale',
+        'The hardest part wasn\'t the tech — it was convincing factory supervisors to trust the data over their gut',
+        'Simple metrics (running vs idle) delivered 80% of the value. Complex analytics came later.',
+        'IIT Delhi partnership gave us R&D credibility and access to engineering talent'
+      ]
+    },
+    {
+      ...newCase(), id: 'demo3', title: 'UTMStamp: 0→1 in 13 Days',
+      company: 'UTMStamp', role: 'Founder / Solo Builder', duration: 'Feb 2026 – Present', status: 'complete',
+      problem: 'Marketing teams spend hours manually adding UTM parameters to links in email signatures. Most don\'t track signature clicks at all — it\'s a massive blind spot in attribution. Existing email signature tools focus on design, not analytics. No product connects signatures to campaign tracking.',
+      approach: 'Validate the gap: talked to marketers, checked competitors (Exclaimer, WiseStamp, etc.). None offered UTM tracking as a core feature. Decided to build fast — full product in under 2 weeks. Ship first, polish later. Building in public to generate buzz and prove speed-to-market.',
+      solution: 'Email signature manager with built-in UTM tracking. Beautiful templates, drag-and-drop editor. Every link in every signature automatically gets UTM parameters. Click analytics dashboard showing which signatures, campaigns, and team members drive the most clicks. Team deployment features.',
+      impact: 'Shipped complete product in 13 days. Live at utmstamp.com. Building in public content reaching thousands of impressions. Proof of concept that a single builder can ship competitive SaaS products at startup speed.',
+      metrics: [
+        { value: '13', label: 'Days to Ship' },
+        { value: '50+', label: 'Hours Build Sprint' },
+        { value: '1', label: 'Solo Builder' },
+        { value: 'Live', label: 'Status' }
+      ],
+      steps: [
+        { phase: 'Validate', description: 'Researched competitors. Talked to 10+ marketers about signature pain points. Confirmed UTM tracking gap.' },
+        { phase: 'Sprint', description: '13-day build sprint. 50+ hour sessions. Midnight café shipping. Template editor, UTM engine, analytics dashboard, team features.' },
+        { phase: 'Launch', description: 'Deployed to utmstamp.com. Free forever plan for product-led growth. Building in public on LinkedIn and Twitter.' },
+        { phase: 'Grow', description: 'Content marketing through build-in-public. Adding Google Workspace auto-push, video signatures, advanced analytics.' }
+      ],
+      skills: ['0→1 Product Building', 'Product-Led Growth', 'Full-Stack Development', 'Content Marketing', 'Speed Shipping'],
+      tools: ['Next.js', 'TypeScript', 'Vercel', 'Analytics', 'Email Rendering'],
+      learnings: [
+        '13 days proves that speed is a real competitive advantage — most teams would take 3 months',
+        'Building in public is both marketing and accountability — it forces you to ship',
+        'The gap between "designed" and "done" is where most products die. Just ship.',
+        'Free tier + product-led growth beats paid marketing for solo builders'
+      ]
+    },
+    {
+      ...newCase(), id: 'demo4', title: 'GoMechanic: 200% Membership Growth & 70% CAC Cut',
+      company: 'GoMechanic', role: 'Senior Product Manager', duration: '2022 – 2023', status: 'complete',
+      problem: 'GoMechanic had a Miles membership program with declining signups and high customer acquisition costs. The referral engine was underperforming. Garage partner app lacked engagement mechanics to keep partners active on the platform.',
+      approach: 'Analyzed the full funnel: awareness → signup → first service → retention → referral. Found that the referral mechanism was buried and rewards were uninspiring. Garage app had no gamification. Redesigned both systems with behavioral nudges and instant gratification loops.',
+      solution: 'Rebuilt the referral engine with instant rewards, tiered benefits, and social sharing. Implemented gamified reward system for garage partners. Launched iOS app with improved service booking flow. Ran A/B tests on pricing and package combinations.',
+      impact: 'Miles membership grew 200%. Customer acquisition cost dropped 70%. Garage partner engagement increased significantly. Successfully launched and managed iOS app release.',
+      metrics: [
+        { value: '200%', label: 'Membership Growth' },
+        { value: '70%', label: 'CAC Reduction' },
+        { value: 'iOS', label: 'App Launched' },
+        { value: 'Malaysia', label: 'Expansion Led' }
+      ],
+      steps: [
+        { phase: 'Audit', description: 'Deep-dived into membership and referral funnels. Mapped drop-off points. Interviewed power users and churned users.' },
+        { phase: 'Redesign', description: 'Rebuilt referral engine with instant rewards. Added gamification to garage partner app. Simplified iOS booking flow.' },
+        { phase: 'Test', description: 'A/B tested pricing packages, referral reward amounts, and gamification mechanics. Iterated on winners.' },
+        { phase: 'Expand', description: 'Led Malaysia expansion — partnerships, localization, launch. Secured Kotak IOCL and Ola Cabs partnerships.' }
+      ],
+      skills: ['Growth Product', 'Gamification', 'Referral Systems', 'iOS Product Management', 'International Expansion'],
+      tools: ['Analytics', 'A/B Testing', 'Jira', 'Product Analytics', 'iOS Development'],
+      learnings: [
+        'Instant gratification in referrals works 10x better than delayed rewards',
+        'Gamification for B2B partners (garages) needs different mechanics than consumer gamification',
+        'International expansion is 30% product, 70% partnerships and local operations',
+        'Reducing CAC is more valuable than increasing top-of-funnel — unit economics first'
+      ]
+    }
+  ];
+  save();
+}
+
+// ===================== RENDER =====================
+function render() {
+  document.body.className = state.darkMode ? 'dark' : '';
+  const active = getActive();
+  const filtered = state.cases.filter(c => {
+    if (!state.searchQuery) return true;
+    const q = state.searchQuery.toLowerCase();
+    return c.title.toLowerCase().includes(q) || c.company.toLowerCase().includes(q);
+  });
+
+  let html = '';
+
+  // Presentation overlay
+  if (state.showPresentation && active) {
+    html += renderPresentation(active);
+  }
+
+  // Sidebar
+  html += `<div class="sidebar">
+    <div class="sidebar-header">
+      <h1><span>🔨</span> Case Study Forge</h1>
+      <p>PM Portfolio Builder</p>
+    </div>
+    <div class="sidebar-actions">
+      <button class="btn-primary" onclick="createCase()">+ New</button>
+      <button class="btn-outline" onclick="setState({showProfileModal:true})">👤 Profile</button>
+    </div>
+    <div style="padding:0 12px">
+      <div class="search-bar">
+        <span class="icon">🔍</span>
+        <input type="text" placeholder="Search cases..." value="${esc(state.searchQuery)}" oninput="setState({searchQuery:this.value})" />
+      </div>
+    </div>
+    <div class="case-list">`;
+
+  filtered.forEach(c => {
+    const statusClass = c.status === 'featured' ? 'status-featured' : c.status === 'complete' ? 'status-complete' : 'status-draft';
+    html += `<div class="case-item ${c.id === state.activeCaseId ? 'active' : ''}" onclick="selectCase('${c.id}')">
+      <div class="case-item-title">${esc(c.title) || 'Untitled Case Study'}</div>
+      <div class="case-item-meta">
+        ${c.company ? `<span class="case-item-company">${esc(c.company)}</span>` : ''}
+        <span class="status-badge ${statusClass}">${c.status}</span>
+      </div>
+    </div>`;
+  });
+
+  html += `</div>
+    <div class="sidebar-footer">
+      <button onclick="exportAll()">📦 Export</button>
+      <button onclick="importAll()">📥 Import</button>
+      <button onclick="toggleDark()">🌓 Theme</button>
+    </div>
+  </div>`;
+
+  // Main area
+  html += `<div class="main">`;
+
+  if (!active) {
+    if (state.activeTab === 'portfolio') {
+      html += renderPortfolio();
+    } else {
+      html += `<div class="tabs no-print">
+        <button class="tab ${state.activeTab !== 'portfolio' ? '' : 'active'}" onclick="setState({activeTab:'edit'})">✏️ Editor</button>
+        <button class="tab ${state.activeTab === 'portfolio' ? 'active' : ''}" onclick="setState({activeTab:'portfolio'})">🎨 Portfolio</button>
+      </div>`;
+      html += `<div class="empty-state">
+        <div class="icon">🔨</div>
+        <h2>Build Your PM Portfolio</h2>
+        <p>Create structured case studies that showcase your product work. Click <strong>+ New</strong> to start, or switch to <strong>Portfolio</strong> view to see all your case studies as a portfolio page.</p>
+      </div>`;
+    }
+  } else {
+    // Tabs
+    html += `<div class="tabs no-print">
+      <button class="tab ${state.activeTab === 'edit' ? 'active' : ''}" onclick="setState({activeTab:'edit'})">✏️ Editor</button>
+      <button class="tab ${state.activeTab === 'preview' ? 'active' : ''}" onclick="setState({activeTab:'preview'})">👁️ Preview</button>
+      <button class="tab ${state.activeTab === 'portfolio' ? 'active' : ''}" onclick="setState({activeTab:'portfolio'})">🎨 Portfolio</button>
+    </div>`;
+
+    if (state.activeTab === 'edit') {
+      html += renderEditor(active);
+    } else if (state.activeTab === 'preview') {
+      html += renderPreview(active);
+    } else {
+      html += renderPortfolio();
+    }
+  }
+
+  html += `</div>`;
+
+  // Modals
+  if (state.showProfileModal) html += renderProfileModal();
+
+  document.getElementById('app').innerHTML = html;
+}
+
+function renderEditor(c) {
+  let html = `<div class="editor">`;
+
+  // Header section
+  html += `<div class="section">
+    <div class="section-header">
+      <h3><span class="emoji">📋</span> Case Study Details</h3>
+      <div style="display:flex;gap:8px;">
+        <select value="${c.status}" onchange="updateCase('${c.id}','status',this.value)" style="width:auto;padding:6px 12px;font-size:12px;">
+          <option value="draft" ${c.status==='draft'?'selected':''}>📝 Draft</option>
+          <option value="complete" ${c.status==='complete'?'selected':''}>✅ Complete</option>
+          <option value="featured" ${c.status==='featured'?'selected':''}>⭐ Featured</option>
+        </select>
+        <button class="btn-outline" style="padding:6px 12px;font-size:12px;border:1px solid var(--border);border-radius:6px;" onclick="deleteCase('${c.id}')">🗑️ Delete</button>
+      </div>
+    </div>
+    <div class="field-group">
+      <label>Case Study Title</label>
+      <input type="text" value="${esc(c.title)}" placeholder="e.g., QR-Code WMS: Unlocking $1.4M Blocked Capital" oninput="updateCase('${c.id}','title',this.value)" />
+    </div>
+    <div class="field-row">
+      <div class="field-group">
+        <label>Company</label>
+        <input type="text" value="${esc(c.company)}" placeholder="e.g., ZYOD" oninput="updateCase('${c.id}','company',this.value)" />
+      </div>
+      <div class="field-group">
+        <label>Your Role</label>
+        <input type="text" value="${esc(c.role)}" placeholder="e.g., Head of Product" oninput="updateCase('${c.id}','role',this.value)" />
+      </div>
+    </div>
+    <div class="field-group">
+      <label>Duration</label>
+      <input type="text" value="${esc(c.duration)}" placeholder="e.g., Apr 2023 – Present" oninput="updateCase('${c.id}','duration',this.value)" />
+    </div>
+  </div>`;
+
+  // Problem
+  html += `<div class="section">
+    <div class="section-header"><h3><span class="emoji">🔥</span> The Problem</h3></div>
+    <div class="field-group">
+      <textarea rows="4" placeholder="What problem were you solving? Why did it matter? What was the business impact of NOT solving it?" oninput="updateCase('${c.id}','problem',this.value)">${esc(c.problem)}</textarea>
+    </div>
+  </div>`;
+
+  // Approach
+  html += `<div class="section">
+    <div class="section-header"><h3><span class="emoji">🧭</span> Your Approach</h3></div>
+    <div class="field-group">
+      <textarea rows="4" placeholder="How did you think about the problem? What was your strategy? Why this approach over alternatives?" oninput="updateCase('${c.id}','approach',this.value)">${esc(c.approach)}</textarea>
+    </div>
+  </div>`;
+
+  // Process Steps (Timeline)
+  html += `<div class="section">
+    <div class="section-header"><h3><span class="emoji">🛤️</span> Process & Steps</h3></div>
+    <div class="timeline">`;
+  c.steps.forEach((s, i) => {
+    html += `<div class="timeline-item">
+      <div class="phase">${esc(s.phase)} <span class="remove-step" onclick="removeStep('${c.id}',${i})">✕</span></div>
+      <div class="desc">${esc(s.description)}</div>
+    </div>`;
+  });
+  html += `</div>
+    <div class="add-row">
+      <input type="text" id="newStepPhase" placeholder="Phase name (e.g., Discovery)" style="flex:0.4" />
+      <input type="text" id="newStepDesc" placeholder="What you did in this phase" />
+      <button class="btn-primary" onclick="addStep('${c.id}')">+ Step</button>
+    </div>
+  </div>`;
+
+  // Solution
+  html += `<div class="section">
+    <div class="section-header"><h3><span class="emoji">💡</span> The Solution</h3></div>
+    <div class="field-group">
+      <textarea rows="4" placeholder="What did you build/implement? How does it work? Key features?" oninput="updateCase('${c.id}','solution',this.value)">${esc(c.solution)}</textarea>
+    </div>
+  </div>`;
+
+  // Impact & Metrics
+  html += `<div class="section">
+    <div class="section-header"><h3><span class="emoji">📊</span> Impact & Metrics</h3></div>
+    <div class="field-group">
+      <textarea rows="3" placeholder="What was the overall business impact? Tell the story behind the numbers." oninput="updateCase('${c.id}','impact',this.value)">${esc(c.impact)}</textarea>
+    </div>
+    <label style="font-size:13px;font-weight:600;color:var(--text2);margin:16px 0 8px;display:block;">Key Metrics</label>
+    <div class="metrics-grid">`;
+  c.metrics.forEach((m, i) => {
+    html += `<div class="metric-card">
+      <span class="remove" onclick="removeMetric('${c.id}',${i})">✕</span>
+      <div class="value">${esc(m.value)}</div>
+      <div class="label">${esc(m.label)}</div>
+    </div>`;
+  });
+  html += `</div>
+    <div class="add-row">
+      <input type="text" id="newMetricVal" placeholder="Value (e.g., 70%)" style="flex:0.4" />
+      <input type="text" id="newMetricLabel" placeholder="Label (e.g., Cost Reduction)" />
+      <button class="btn-primary" onclick="addMetric('${c.id}')">+ Metric</button>
+    </div>
+  </div>`;
+
+  // Skills & Tools
+  html += `<div class="section">
+    <div class="section-header"><h3><span class="emoji">🛠️</span> Skills & Tools</h3></div>
+    <label style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:6px;display:block;">Skills Demonstrated</label>
+    <div class="tags-container">`;
+  c.skills.forEach((s, i) => {
+    html += `<span class="tag tag-skill">${esc(s)} <span class="tag-remove" onclick="removeSkill('${c.id}',${i})">✕</span></span>`;
+  });
+  html += `</div>
+    <div class="tag-input-row">
+      <input type="text" id="newSkill" placeholder="Add skill (e.g., Product Strategy)" onkeydown="if(event.key==='Enter')addSkill('${c.id}')" />
+      <button class="btn-primary" onclick="addSkill('${c.id}')">+ Add</button>
+    </div>
+    <label style="font-size:13px;font-weight:600;color:var(--text2);margin:16px 0 6px;display:block;">Tools & Tech</label>
+    <div class="tags-container">`;
+  c.tools.forEach((t, i) => {
+    html += `<span class="tag tag-tool">${esc(t)} <span class="tag-remove" onclick="removeTool('${c.id}',${i})">✕</span></span>`;
+  });
+  html += `</div>
+    <div class="tag-input-row">
+      <input type="text" id="newTool" placeholder="Add tool (e.g., React, Figma)" onkeydown="if(event.key==='Enter')addTool('${c.id}')" />
+      <button class="btn-primary" onclick="addTool('${c.id}')">+ Add</button>
+    </div>
+  </div>`;
+
+  // Learnings
+  html += `<div class="section">
+    <div class="section-header"><h3><span class="emoji">💡</span> Key Learnings</h3></div>`;
+  c.learnings.forEach((l, i) => {
+    html += `<div class="learning-item">
+      <span class="bullet">💡</span>
+      <span class="text">${esc(l)}</span>
+      <span class="remove" onclick="removeLearning('${c.id}',${i})">✕</span>
+    </div>`;
+  });
+  html += `<div class="add-row">
+      <input type="text" id="newLearning" placeholder="What did you learn? What would you do differently?" onkeydown="if(event.key==='Enter')addLearning('${c.id}')" />
+      <button class="btn-primary" onclick="addLearning('${c.id}')">+ Add</button>
+    </div>
+  </div>`;
+
+  // Testimonial
+  html += `<div class="section">
+    <div class="section-header"><h3><span class="emoji">💬</span> Testimonial (Optional)</h3></div>
+    <div class="field-group">
+      <textarea rows="2" placeholder="Quote from stakeholder, manager, or team member" oninput="updateCase('${c.id}','testimonial',this.value)">${esc(c.testimonial)}</textarea>
+    </div>
+    <div class="field-group">
+      <input type="text" value="${esc(c.testimonialAuthor)}" placeholder="— Author Name, Title" oninput="updateCase('${c.id}','testimonialAuthor',this.value)" />
+    </div>
+  </div>`;
+
+  // Actions
+  html += `<div style="display:flex;gap:12px;margin-top:24px;" class="no-print">
+    <button class="btn-primary" style="padding:10px 24px;border-radius:8px;font-size:14px;" onclick="setState({activeTab:'preview'})">👁️ Preview</button>
+    <button class="btn-primary" style="padding:10px 24px;border-radius:8px;font-size:14px;background:var(--purple);" onclick="presentCase()">🎤 Present</button>
+    <button class="btn-outline" style="padding:10px 24px;border-radius:8px;font-size:14px;border:1px solid var(--border);" onclick="exportCase('${c.id}')">📄 Export MD</button>
+  </div>`;
+
+  html += `</div>`;
+  return html;
+}
+
+function renderPreview(c) {
+  let html = `<div class="preview">`;
+  // Hero
+  html += `<div class="preview-hero">
+    <h1>${esc(c.title) || 'Untitled Case Study'}</h1>
+    <div class="company">${esc(c.company)}</div>
+    <div class="role">${esc(c.role)}</div>
+    ${c.duration ? `<div class="duration">${esc(c.duration)}</div>` : ''}
+  </div>`;
+
+  // Metrics banner
+  if (c.metrics.length) {
+    html += `<div class="preview-metrics">`;
+    c.metrics.forEach(m => {
+      html += `<div class="preview-metric"><div class="val">${esc(m.value)}</div><div class="lbl">${esc(m.label)}</div></div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Problem
+  if (c.problem) {
+    html += `<div class="preview-section"><h2>🔥 The Problem</h2><p>${esc(c.problem)}</p></div>`;
+  }
+  // Approach
+  if (c.approach) {
+    html += `<div class="preview-section"><h2>🧭 The Approach</h2><p>${esc(c.approach)}</p></div>`;
+  }
+  // Process
+  if (c.steps.length) {
+    html += `<div class="preview-section"><h2>🛤️ The Process</h2><div class="preview-timeline">`;
+    c.steps.forEach(s => {
+      html += `<div class="preview-timeline-item"><div class="phase">${esc(s.phase)}</div><div class="desc">${esc(s.description)}</div></div>`;
+    });
+    html += `</div></div>`;
+  }
+  // Solution
+  if (c.solution) {
+    html += `<div class="preview-section"><h2>💡 The Solution</h2><p>${esc(c.solution)}</p></div>`;
+  }
+  // Impact
+  if (c.impact) {
+    html += `<div class="preview-section"><h2>📊 The Impact</h2><p>${esc(c.impact)}</p></div>`;
+  }
+  // Learnings
+  if (c.learnings.length) {
+    html += `<div class="preview-section"><h2>💡 Key Learnings</h2><ul class="preview-learnings">`;
+    c.learnings.forEach(l => { html += `<li>${esc(l)}</li>`; });
+    html += `</ul></div>`;
+  }
+  // Testimonial
+  if (c.testimonial) {
+    html += `<div class="preview-section" style="background:var(--surface2);border-radius:var(--radius);padding:24px;margin-top:24px;">
+      <p style="font-style:italic;font-size:16px;color:var(--text);">"${esc(c.testimonial)}"</p>
+      ${c.testimonialAuthor ? `<p style="margin-top:8px;font-size:13px;color:var(--text3);">${esc(c.testimonialAuthor)}</p>` : ''}
+    </div>`;
+  }
+  // Skills & Tools
+  if (c.skills.length || c.tools.length) {
+    html += `<div class="preview-section"><h2>🛠️ Skills & Tools</h2><div class="preview-tags">`;
+    c.skills.forEach(s => { html += `<span class="tag tag-skill">${esc(s)}</span>`; });
+    c.tools.forEach(t => { html += `<span class="tag tag-tool">${esc(t)}</span>`; });
+    html += `</div></div>`;
+  }
+
+  // Actions
+  html += `<div style="display:flex;gap:12px;margin-top:32px;" class="no-print">
+    <button class="btn-primary" style="padding:10px 24px;border-radius:8px;font-size:14px;background:var(--purple);" onclick="presentCase()">🎤 Full-Screen Present</button>
+    <button class="btn-outline" style="padding:10px 24px;border-radius:8px;font-size:14px;border:1px solid var(--border);" onclick="window.print()">🖨️ Print</button>
+    <button class="btn-outline" style="padding:10px 24px;border-radius:8px;font-size:14px;border:1px solid var(--border);" onclick="exportCase('${c.id}')">📄 Export Markdown</button>
+  </div>`;
+
+  html += `</div>`;
+  return html;
+}
+
+function renderPortfolio() {
+  const cases = state.cases.filter(c => c.status === 'complete' || c.status === 'featured');
+  const featured = cases.filter(c => c.status === 'featured');
+  const rest = cases.filter(c => c.status === 'complete');
+  const p = state.profile;
+
+  let html = `<div style="max-width:960px;margin:0 auto;">`;
+  // Portfolio header
+  html += `<div style="text-align:center;margin-bottom:40px;">
+    <h1 style="font-size:32px;font-weight:800;">${esc(p.name) || 'Your Name'}</h1>
+    <p style="font-size:16px;color:var(--primary);font-weight:600;">${esc(p.title) || 'Product Leader'}</p>
+    <div style="margin-top:8px;font-size:13px;color:var(--text3);display:flex;justify-content:center;gap:16px;">
+      ${p.linkedin ? `<span>🔗 ${esc(p.linkedin)}</span>` : ''}
+      ${p.email ? `<span>✉️ ${esc(p.email)}</span>` : ''}
+      ${p.website ? `<span>🌐 ${esc(p.website)}</span>` : ''}
+    </div>
+    <p style="margin-top:12px;font-size:14px;color:var(--text2);">${cases.length} Case ${cases.length === 1 ? 'Study' : 'Studies'} · ${featured.length} Featured</p>
+  </div>`;
+
+  if (featured.length) {
+    html += `<h2 style="font-size:18px;font-weight:700;margin-bottom:16px;">⭐ Featured</h2>`;
+    html += `<div class="portfolio-grid" style="margin-bottom:32px;">`;
+    featured.forEach(c => { html += portfolioCard(c); });
+    html += `</div>`;
+  }
+  if (rest.length) {
+    html += `<h2 style="font-size:18px;font-weight:700;margin-bottom:16px;">📋 All Case Studies</h2>`;
+    html += `<div class="portfolio-grid">`;
+    rest.forEach(c => { html += portfolioCard(c); });
+    html += `</div>`;
+  }
+  if (!cases.length) {
+    html += `<div class="empty-state" style="height:300px;"><div class="icon">📂</div><h2>No Published Case Studies</h2><p>Mark case studies as "Complete" or "Featured" to show them in your portfolio.</p></div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function portfolioCard(c) {
+  const topMetrics = c.metrics.slice(0, 3);
+  return `<div class="portfolio-card" onclick="selectCase('${c.id}');setState({activeTab:'preview'})">
+    <div class="portfolio-card-header">
+      <h3>${esc(c.title) || 'Untitled'}</h3>
+      <div class="company">${esc(c.company)} · ${esc(c.role)}</div>
+    </div>
+    <div class="portfolio-card-body">
+      <p>${esc(c.problem ? c.problem.substring(0, 200) + (c.problem.length > 200 ? '...' : '') : 'No description yet')}</p>
+    </div>
+    ${topMetrics.length ? `<div class="portfolio-card-metrics">${topMetrics.map(m => `<div class="m"><div class="v">${esc(m.value)}</div><div class="l">${esc(m.label)}</div></div>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+function renderPresentation(c) {
+  let html = `<div class="presentation">
+    <button class="close-pres" onclick="setState({showPresentation:false})">✕ Close</button>
+    <div class="preview" style="padding:60px 40px;">`;
+  // Reuse preview content
+  html += `<div class="preview-hero">
+    <h1>${esc(c.title) || 'Untitled Case Study'}</h1>
+    <div class="company">${esc(c.company)}</div>
+    <div class="role">${esc(c.role)}</div>
+    ${c.duration ? `<div class="duration">${esc(c.duration)}</div>` : ''}
+  </div>`;
+  if (c.metrics.length) {
+    html += `<div class="preview-metrics">`;
+    c.metrics.forEach(m => { html += `<div class="preview-metric"><div class="val">${esc(m.value)}</div><div class="lbl">${esc(m.label)}</div></div>`; });
+    html += `</div>`;
+  }
+  if (c.problem) html += `<div class="preview-section"><h2>🔥 The Problem</h2><p>${esc(c.problem)}</p></div>`;
+  if (c.approach) html += `<div class="preview-section"><h2>🧭 The Approach</h2><p>${esc(c.approach)}</p></div>`;
+  if (c.steps.length) {
+    html += `<div class="preview-section"><h2>🛤️ The Process</h2><div class="preview-timeline">`;
+    c.steps.forEach(s => { html += `<div class="preview-timeline-item"><div class="phase">${esc(s.phase)}</div><div class="desc">${esc(s.description)}</div></div>`; });
+    html += `</div></div>`;
+  }
+  if (c.solution) html += `<div class="preview-section"><h2>💡 The Solution</h2><p>${esc(c.solution)}</p></div>`;
+  if (c.impact) html += `<div class="preview-section"><h2>📊 The Impact</h2><p>${esc(c.impact)}</p></div>`;
+  if (c.learnings.length) {
+    html += `<div class="preview-section"><h2>💡 Key Learnings</h2><ul class="preview-learnings">`;
+    c.learnings.forEach(l => { html += `<li>${esc(l)}</li>`; });
+    html += `</ul></div>`;
+  }
+  if (c.testimonial) {
+    html += `<div style="background:var(--surface2);border-radius:var(--radius);padding:24px;margin-top:24px;">
+      <p style="font-style:italic;font-size:16px;">"${esc(c.testimonial)}"</p>
+      ${c.testimonialAuthor ? `<p style="margin-top:8px;font-size:13px;color:var(--text3);">${esc(c.testimonialAuthor)}</p>` : ''}
+    </div>`;
+  }
+  if (c.skills.length || c.tools.length) {
+    html += `<div class="preview-section"><h2>🛠️ Skills & Tools</h2><div class="preview-tags">`;
+    c.skills.forEach(s => { html += `<span class="tag tag-skill">${esc(s)}</span>`; });
+    c.tools.forEach(t => { html += `<span class="tag tag-tool">${esc(t)}</span>`; });
+    html += `</div></div>`;
+  }
+  html += `</div></div>`;
+  return html;
+}
+
+function renderProfileModal() {
+  const p = state.profile;
+  return `<div class="modal-overlay" onclick="if(event.target===this)setState({showProfileModal:false})">
+    <div class="modal">
+      <h2>👤 Portfolio Profile</h2>
+      <div class="field-group"><label>Full Name</label><input type="text" value="${esc(p.name)}" oninput="state.profile.name=this.value;save()" /></div>
+      <div class="field-group"><label>Title</label><input type="text" value="${esc(p.title)}" oninput="state.profile.title=this.value;save()" /></div>
+      <div class="field-group"><label>Email</label><input type="text" value="${esc(p.email)}" oninput="state.profile.email=this.value;save()" /></div>
+      <div class="field-group"><label>LinkedIn</label><input type="text" value="${esc(p.linkedin)}" oninput="state.profile.linkedin=this.value;save()" /></div>
+      <div class="field-group"><label>Website</label><input type="text" value="${esc(p.website)}" oninput="state.profile.website=this.value;save()" /></div>
+      <div class="modal-actions">
+        <button class="btn-outline" style="border:1px solid var(--border);border-radius:6px;" onclick="setState({showProfileModal:false})">Close</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ===================== ACTIONS =====================
+function setState(updates) {
+  Object.assign(state, updates);
+  save();
+  render();
+}
+
+function selectCase(id) {
+  state.activeCaseId = id;
+  if (state.activeTab === 'portfolio') state.activeTab = 'edit';
+  save();
+  render();
+}
+
+function createCase() {
+  const c = newCase();
+  state.cases.unshift(c);
+  state.activeCaseId = c.id;
+  state.activeTab = 'edit';
+  save();
+  render();
+}
+
+function updateCase(id, field, value) {
+  const c = state.cases.find(x => x.id === id);
+  if (c) { c[field] = value; c.updatedAt = new Date().toISOString(); save(); }
+  // Don't re-render for text inputs to avoid cursor jump
+}
+
+function deleteCase(id) {
+  if (!confirm('Delete this case study?')) return;
+  state.cases = state.cases.filter(c => c.id !== id);
+  state.activeCaseId = state.cases.length ? state.cases[0].id : null;
+  save();
+  render();
+}
+
+function addMetric(id) {
+  const v = document.getElementById('newMetricVal');
+  const l = document.getElementById('newMetricLabel');
+  if (!v.value.trim() || !l.value.trim()) return;
+  const c = state.cases.find(x => x.id === id);
+  c.metrics.push({ value: v.value.trim(), label: l.value.trim() });
+  save(); render();
+}
+function removeMetric(id, i) {
+  state.cases.find(x => x.id === id).metrics.splice(i, 1);
+  save(); render();
+}
+
+function addStep(id) {
+  const p = document.getElementById('newStepPhase');
+  const d = document.getElementById('newStepDesc');
+  if (!p.value.trim() || !d.value.trim()) return;
+  state.cases.find(x => x.id === id).steps.push({ phase: p.value.trim(), description: d.value.trim() });
+  save(); render();
+}
+function removeStep(id, i) {
+  state.cases.find(x => x.id === id).steps.splice(i, 1);
+  save(); render();
+}
+
+function addSkill(id) {
+  const el = document.getElementById('newSkill');
+  if (!el.value.trim()) return;
+  state.cases.find(x => x.id === id).skills.push(el.value.trim());
+  save(); render();
+}
+function removeSkill(id, i) { state.cases.find(x => x.id === id).skills.splice(i, 1); save(); render(); }
+
+function addTool(id) {
+  const el = document.getElementById('newTool');
+  if (!el.value.trim()) return;
+  state.cases.find(x => x.id === id).tools.push(el.value.trim());
+  save(); render();
+}
+function removeTool(id, i) { state.cases.find(x => x.id === id).tools.splice(i, 1); save(); render(); }
+
+function addLearning(id) {
+  const el = document.getElementById('newLearning');
+  if (!el.value.trim()) return;
+  state.cases.find(x => x.id === id).learnings.push(el.value.trim());
+  save(); render();
+}
+function removeLearning(id, i) { state.cases.find(x => x.id === id).learnings.splice(i, 1); save(); render(); }
+
+function presentCase() {
+  state.showPresentation = true;
+  save(); render();
+}
+
+function toggleDark() {
+  state.darkMode = !state.darkMode;
+  save(); render();
+}
+
+function exportCase(id) {
+  const c = state.cases.find(x => x.id === id);
+  if (!c) return;
+  let md = `# ${c.title}\n\n`;
+  md += `**Company:** ${c.company}  \n**Role:** ${c.role}  \n**Duration:** ${c.duration}\n\n`;
+  if (c.metrics.length) {
+    md += `## Key Metrics\n\n`;
+    c.metrics.forEach(m => { md += `- **${m.value}** — ${m.label}\n`; });
+    md += `\n`;
+  }
+  if (c.problem) md += `## The Problem\n\n${c.problem}\n\n`;
+  if (c.approach) md += `## The Approach\n\n${c.approach}\n\n`;
+  if (c.steps.length) {
+    md += `## The Process\n\n`;
+    c.steps.forEach((s, i) => { md += `### ${i+1}. ${s.phase}\n${s.description}\n\n`; });
+  }
+  if (c.solution) md += `## The Solution\n\n${c.solution}\n\n`;
+  if (c.impact) md += `## The Impact\n\n${c.impact}\n\n`;
+  if (c.learnings.length) {
+    md += `## Key Learnings\n\n`;
+    c.learnings.forEach(l => { md += `- ${l}\n`; });
+    md += `\n`;
+  }
+  if (c.testimonial) md += `## Testimonial\n\n> "${c.testimonial}"\n> — ${c.testimonialAuthor}\n\n`;
+  if (c.skills.length) md += `## Skills\n\n${c.skills.join(', ')}\n\n`;
+  if (c.tools.length) md += `## Tools & Tech\n\n${c.tools.join(', ')}\n\n`;
+
+  download(`${slugify(c.title || 'case-study')}.md`, md, 'text/markdown');
+}
+
+function exportAll() {
+  const data = JSON.stringify({ cases: state.cases, profile: state.profile }, null, 2);
+  download('case-study-forge-backup.json', data, 'application/json');
+}
+
+function importAll() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.cases) state.cases = data.cases;
+        if (data.profile) state.profile = data.profile;
+        state.activeCaseId = state.cases.length ? state.cases[0].id : null;
+        save(); render();
+      } catch (e) { alert('Invalid JSON file'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ===================== UTILS =====================
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''); }
+function download(name, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ===================== KEYBOARD SHORTCUTS =====================
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  const key = e.key.toLowerCase();
+  if (key === 'n') { e.preventDefault(); createCase(); }
+  if (key === '/') { e.preventDefault(); document.querySelector('.search-bar input')?.focus(); }
+  if (key === 'd') { e.preventDefault(); toggleDark(); }
+  if (key === '1') { e.preventDefault(); setState({ activeTab: 'edit' }); }
+  if (key === '2') { e.preventDefault(); setState({ activeTab: 'preview' }); }
+  if (key === '3') { e.preventDefault(); setState({ activeTab: 'portfolio' }); }
+  if (key === 'p') { e.preventDefault(); presentCase(); }
+  if (key === 'e') { e.preventDefault(); exportAll(); }
+  if (key === 'escape') {
+    if (state.showPresentation) setState({ showPresentation: false });
+    else if (state.showProfileModal) setState({ showProfileModal: false });
+  }
+});
+
+// ===================== INIT =====================
+load();
+render();
+</script>
+</body>
+</html>

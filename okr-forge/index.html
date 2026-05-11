@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OKR Forge — Objectives & Key Results Tracker</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #232734;
+  --surface3: #2c3041;
+  --border: #363b4e;
+  --text: #e4e7f1;
+  --text2: #9ba1b7;
+  --text3: #6b7190;
+  --accent: #6c5ce7;
+  --accent2: #a29bfe;
+  --green: #00b894;
+  --green-bg: rgba(0,184,148,0.12);
+  --yellow: #fdcb6e;
+  --yellow-bg: rgba(253,203,110,0.12);
+  --red: #ff6b6b;
+  --red-bg: rgba(255,107,107,0.12);
+  --blue: #74b9ff;
+  --blue-bg: rgba(116,185,255,0.12);
+  --orange: #e17055;
+  --purple: #a29bfe;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+button { cursor: pointer; font-family: inherit; border: none; background: none; color: inherit; }
+input, textarea, select { font-family: inherit; color: var(--text); background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; outline: none; width: 100%; }
+input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 60px; }
+select { cursor: pointer; }
+
+/* Layout */
+.app { display: flex; height: 100vh; overflow: hidden; }
+.sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-header { padding: 20px 16px 12px; border-bottom: 1px solid var(--border); }
+.sidebar-header h1 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sidebar-header h1 span { font-size: 20px; }
+.sidebar-nav { flex: 1; padding: 8px; overflow-y: auto; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm); font-size: 14px; color: var(--text2); cursor: pointer; transition: all 0.15s; }
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--accent); color: #fff; }
+.nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-section { padding: 16px 12px 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-weight: 600; }
+.sidebar-footer { padding: 12px; border-top: 1px solid var(--border); }
+.quarter-select { display: flex; align-items: center; gap: 8px; }
+.quarter-select label { font-size: 12px; color: var(--text2); white-space: nowrap; }
+.quarter-select select { flex: 1; padding: 6px 8px; font-size: 13px; }
+
+/* Main */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.topbar h2 { font-size: 20px; font-weight: 600; }
+.topbar-actions { display: flex; gap: 8px; }
+.btn { padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #5b4bd5; }
+.btn-secondary { background: var(--surface2); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--surface3); }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover { opacity: 0.9; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-icon { width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); background: var(--surface2); border: 1px solid var(--border); font-size: 16px; }
+.btn-icon:hover { background: var(--surface3); }
+
+.content { flex: 1; overflow-y: auto; padding: 24px; }
+
+/* Search */
+.search-bar { position: relative; max-width: 300px; }
+.search-bar input { padding-left: 32px; }
+.search-bar::before { content: '🔍'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; }
+
+/* Empty state */
+.empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+.empty .icon { font-size: 48px; margin-bottom: 16px; }
+.empty p { margin-bottom: 16px; }
+
+/* Cards */
+.obj-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
+.obj-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 16px 20px; cursor: pointer; }
+.obj-header:hover { background: var(--surface2); }
+.obj-title-area { flex: 1; }
+.obj-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.obj-meta { display: flex; gap: 12px; font-size: 12px; color: var(--text3); flex-wrap: wrap; }
+.obj-meta span { display: flex; align-items: center; gap: 4px; }
+.obj-progress-area { display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-left: 20px; }
+.obj-progress-ring { position: relative; width: 48px; height: 48px; }
+.obj-progress-ring svg { transform: rotate(-90deg); }
+.obj-progress-ring .pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.obj-actions { display: flex; gap: 4px; margin-left: 8px; }
+
+.kr-list { border-top: 1px solid var(--border); }
+.kr-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border); }
+.kr-item:last-child { border-bottom: none; }
+.kr-item:hover { background: rgba(108,92,231,0.04); }
+.kr-icon { font-size: 14px; width: 24px; text-align: center; flex-shrink: 0; }
+.kr-info { flex: 1; min-width: 0; }
+.kr-title { font-size: 14px; margin-bottom: 2px; }
+.kr-detail { font-size: 12px; color: var(--text3); display: flex; gap: 12px; align-items: center; }
+.kr-progress-bar { flex: 0 0 160px; }
+.progress-track { height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.kr-pct { font-size: 13px; font-weight: 600; width: 42px; text-align: right; flex-shrink: 0; }
+.kr-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.kr-actions button { font-size: 12px; padding: 4px 6px; border-radius: 4px; }
+.kr-actions button:hover { background: var(--surface3); }
+
+/* Confidence badge */
+.confidence { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.confidence.high { background: var(--green-bg); color: var(--green); }
+.confidence.medium { background: var(--yellow-bg); color: var(--yellow); }
+.confidence.low { background: var(--red-bg); color: var(--red); }
+
+/* Owner badge */
+.owner-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: var(--blue-bg); color: var(--blue); }
+
+/* Type badge */
+.type-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.type-badge.company { background: rgba(162,155,254,0.15); color: var(--purple); }
+.type-badge.team { background: rgba(116,185,255,0.15); color: var(--blue); }
+.type-badge.individual { background: rgba(0,184,148,0.15); color: var(--green); }
+
+/* Status */
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.status-dot.on-track { background: var(--green); }
+.status-dot.at-risk { background: var(--yellow); }
+.status-dot.behind { background: var(--red); }
+.status-dot.not-started { background: var(--text3); }
+
+/* Check-in list */
+.checkin-list { margin-top: 8px; }
+.checkin-item { padding: 8px 12px; background: var(--surface2); border-radius: var(--radius-sm); margin-bottom: 6px; font-size: 13px; }
+.checkin-item .date { color: var(--text3); font-size: 11px; }
+.checkin-item .note { margin-top: 4px; }
+
+/* Alignment view */
+.alignment-tree { padding-left: 0; }
+.alignment-node { margin-bottom: 8px; }
+.alignment-node .node-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
+.alignment-node .node-bar:hover { border-color: var(--accent); }
+.alignment-node .node-title { flex: 1; font-size: 14px; font-weight: 500; }
+.alignment-children { margin-left: 28px; margin-top: 4px; border-left: 2px solid var(--border); padding-left: 16px; }
+.alignment-kr { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 13px; color: var(--text2); }
+.alignment-kr .progress-mini { width: 60px; }
+.alignment-link { color: var(--accent2); font-size: 11px; cursor: pointer; margin-left: 8px; }
+.alignment-link:hover { text-decoration: underline; }
+
+/* Dashboard */
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.stat-card .label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.stat-card .value { font-size: 28px; font-weight: 700; }
+.stat-card .sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+.dash-section { margin-bottom: 24px; }
+.dash-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+/* Chart containers */
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.chart-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+.bar-chart { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: flex; align-items: center; gap: 10px; }
+.bar-label { width: 100px; font-size: 12px; color: var(--text2); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { flex: 1; height: 20px; background: var(--surface3); border-radius: 4px; overflow: hidden; position: relative; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 600; color: #fff; min-width: fit-content; }
+.bar-val { width: 40px; font-size: 12px; font-weight: 600; text-align: right; }
+
+/* Donut */
+.donut-container { display: flex; align-items: center; gap: 20px; }
+.donut-legend { display: flex; flex-direction: column; gap: 6px; }
+.donut-legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.donut-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); width: 560px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.modal-header h3 { font-size: 16px; font-weight: 600; }
+.modal-body { padding: 20px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border); }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; font-weight: 500; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Checkin inline */
+.checkin-inline { display: flex; gap: 8px; margin-top: 8px; }
+.checkin-inline input { flex: 1; }
+
+/* Tags */
+.tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: var(--surface3); color: var(--text2); margin-right: 4px; }
+
+/* Timeline */
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+.timeline-item { position: relative; margin-bottom: 16px; }
+.timeline-item::before { content: ''; position: absolute; left: -20px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
+.timeline-item .t-date { font-size: 11px; color: var(--text3); }
+.timeline-item .t-text { font-size: 13px; margin-top: 2px; }
+.timeline-item .t-value { font-weight: 600; color: var(--accent2); }
+
+/* Keyboard help */
+.kbd-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+.kbd-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; width: 400px; }
+.kbd-card h3 { margin-bottom: 12px; }
+.kbd-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+.kbd-key { background: var(--surface3); padding: 2px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .chart-row { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+  .kr-progress-bar { flex: 0 0 80px; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border); }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// ===================== DATA LAYER =====================
+const STORAGE_KEY = 'okr-forge-data';
+
+const DEFAULT_DATA = {
+  quarters: ['Q1 2026', 'Q2 2026', 'Q3 2026', 'Q4 2026'],
+  currentQuarter: 'Q2 2026',
+  objectives: [],
+  checkins: [], // {id, krId, date, value, note}
+  settings: { teamName: "AJ's Team" }
+};
+
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (d && d.objectives) return d;
+  } catch(e) {}
+  return seedData();
+}
+
+function save(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+// ===================== SEED DATA =====================
+function seedData() {
+  const data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  
+  data.objectives = [
+    {
+      id: uid(), title: 'Achieve Product-Market Fit for UTMStamp',
+      type: 'company', owner: 'AJ', quarter: 'Q2 2026',
+      description: 'Validate UTMStamp has strong PMF signals through user adoption and retention metrics.',
+      keyResults: [
+        { id: uid(), title: 'Reach 500 active users', start: 0, target: 500, current: 187, unit: 'users', confidence: 0.6 },
+        { id: uid(), title: 'Achieve 40% week-1 retention rate', start: 0, target: 40, current: 28, unit: '%', confidence: 0.5 },
+        { id: uid(), title: 'Get 20 paying customers on Pro plan', start: 0, target: 20, current: 6, unit: 'customers', confidence: 0.4 },
+        { id: uid(), title: 'NPS score above 50', start: 0, target: 50, current: 42, unit: 'score', confidence: 0.7 }
+      ]
+    },
+    {
+      id: uid(), title: 'Build Distribution Engine',
+      type: 'company', owner: 'AJ', quarter: 'Q2 2026',
+      description: 'Create sustainable acquisition channels that bring users without manual effort.',
+      keyResults: [
+        { id: uid(), title: 'Publish 20 LinkedIn posts about building UTMStamp', start: 0, target: 20, current: 14, unit: 'posts', confidence: 0.8 },
+        { id: uid(), title: 'Get featured in 3 newsletters or directories', start: 0, target: 3, current: 1, unit: 'features', confidence: 0.5 },
+        { id: uid(), title: 'Launch on Product Hunt with 200+ upvotes', start: 0, target: 200, current: 0, unit: 'upvotes', confidence: 0.3 },
+        { id: uid(), title: 'Organic search traffic: 1000 visits/month', start: 0, target: 1000, current: 280, unit: 'visits', confidence: 0.4 }
+      ]
+    },
+    {
+      id: uid(), title: 'Land Head of Product Role',
+      type: 'individual', owner: 'AJ', quarter: 'Q2 2026',
+      description: 'Secure a Head of Product or Senior PM role at a growth-stage company.',
+      keyResults: [
+        { id: uid(), title: 'Apply to 40 targeted positions', start: 0, target: 40, current: 22, unit: 'applications', confidence: 0.7 },
+        { id: uid(), title: 'Get 10 recruiter/hiring manager conversations', start: 0, target: 10, current: 5, unit: 'conversations', confidence: 0.6 },
+        { id: uid(), title: 'Reach final round at 3+ companies', start: 0, target: 3, current: 1, unit: 'final rounds', confidence: 0.4 },
+        { id: uid(), title: 'Receive at least 1 offer above ₹40L', start: 0, target: 1, current: 0, unit: 'offers', confidence: 0.3 }
+      ]
+    },
+    {
+      id: uid(), title: 'Ship Key UTMStamp Features',
+      type: 'team', owner: 'AJ', quarter: 'Q2 2026',
+      description: 'Deliver the feature set that makes UTMStamp competitive and sticky.',
+      keyResults: [
+        { id: uid(), title: 'Launch Google Workspace integration', start: 0, target: 1, current: 0, unit: 'shipped', confidence: 0.6 },
+        { id: uid(), title: 'Ship team management (5+ seats)', start: 0, target: 1, current: 0, unit: 'shipped', confidence: 0.5 },
+        { id: uid(), title: 'Build analytics dashboard v2 with click heatmap', start: 0, target: 1, current: 0, unit: 'shipped', confidence: 0.5 },
+        { id: uid(), title: 'Zero critical bugs in production for 30 days', start: 0, target: 30, current: 12, unit: 'days', confidence: 0.7 }
+      ]
+    },
+    {
+      id: uid(), title: 'Grow Personal Brand & Network',
+      type: 'individual', owner: 'AJ', quarter: 'Q2 2026',
+      description: 'Build authority as a product leader through content and community engagement.',
+      keyResults: [
+        { id: uid(), title: 'Reach 5000 LinkedIn followers', start: 2800, target: 5000, current: 3400, unit: 'followers', confidence: 0.5 },
+        { id: uid(), title: 'Have 10 meaningful conversations with PMs at target companies', start: 0, target: 10, current: 3, unit: 'conversations', confidence: 0.5 },
+        { id: uid(), title: 'Write 4 long-form case studies', start: 0, target: 4, current: 2, unit: 'case studies', confidence: 0.7 },
+        { id: uid(), title: 'Get 2 speaking/podcast invites', start: 0, target: 2, current: 0, unit: 'invites', confidence: 0.2 }
+      ]
+    }
+  ];
+
+  // Add some check-ins
+  const now = Date.now();
+  const day = 86400000;
+  data.checkins = [];
+  data.objectives.forEach(obj => {
+    obj.keyResults.forEach(kr => {
+      if (kr.current > 0) {
+        const steps = Math.min(3, Math.floor(Math.random() * 5) + 1);
+        for (let i = steps; i >= 1; i--) {
+          const val = Math.round(kr.current * (1 - (i * 0.25)));
+          if (val > 0) {
+            data.checkins.push({
+              id: uid(),
+              krId: kr.id,
+              date: new Date(now - (i * 7 * day)).toISOString().slice(0, 10),
+              value: val,
+              note: ['Steady progress', 'Good momentum this week', 'Slow week but moving forward', 'Big push this sprint', 'Incremental gains'][Math.floor(Math.random() * 5)]
+            });
+          }
+        }
+      }
+    });
+  });
+
+  save(data);
+  return data;
+}
+
+// ===================== APP STATE =====================
+let data = load();
+let view = 'objectives'; // objectives, alignment, dashboard, checkins
+let searchQuery = '';
+let expandedObjs = new Set();
+let showModal = null; // null | {type, ...}
+let showKbd = false;
+
+// ===================== HELPERS =====================
+function getObjProgress(obj) {
+  if (!obj.keyResults.length) return 0;
+  const sum = obj.keyResults.reduce((a, kr) => a + getKRProgress(kr), 0);
+  return Math.round(sum / obj.keyResults.length);
+}
+
+function getKRProgress(kr) {
+  const range = kr.target - kr.start;
+  if (range === 0) return kr.current >= kr.target ? 100 : 0;
+  return Math.min(100, Math.max(0, Math.round(((kr.current - kr.start) / range) * 100)));
+}
+
+function getObjStatus(obj) {
+  const p = getObjProgress(obj);
+  if (p === 0) return 'not-started';
+  if (p >= 70) return 'on-track';
+  if (p >= 40) return 'at-risk';
+  return 'behind';
+}
+
+function getStatusLabel(s) {
+  return { 'on-track': 'On Track', 'at-risk': 'At Risk', 'behind': 'Behind', 'not-started': 'Not Started' }[s] || s;
+}
+
+function getConfidenceLabel(c) {
+  if (c >= 0.7) return 'high';
+  if (c >= 0.4) return 'medium';
+  return 'low';
+}
+
+function getConfidenceText(c) {
+  return Math.round(c * 100) + '%';
+}
+
+function progressColor(p) {
+  if (p >= 70) return 'var(--green)';
+  if (p >= 40) return 'var(--yellow)';
+  if (p > 0) return 'var(--red)';
+  return 'var(--text3)';
+}
+
+function filteredObjs() {
+  let objs = data.objectives.filter(o => o.quarter === data.currentQuarter);
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    objs = objs.filter(o => 
+      o.title.toLowerCase().includes(q) || 
+      o.owner.toLowerCase().includes(q) ||
+      o.keyResults.some(kr => kr.title.toLowerCase().includes(q))
+    );
+  }
+  return objs;
+}
+
+function getKRCheckins(krId) {
+  return data.checkins.filter(c => c.krId === krId).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// ===================== RENDERING =====================
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    ${renderSidebar()}
+    <div class="main">
+      ${renderTopbar()}
+      <div class="content">
+        ${view === 'objectives' ? renderObjectives() : ''}
+        ${view === 'alignment' ? renderAlignment() : ''}
+        ${view === 'dashboard' ? renderDashboard() : ''}
+        ${view === 'checkins' ? renderCheckins() : ''}
+      </div>
+    </div>
+    ${showModal ? renderModal() : ''}
+    ${showKbd ? renderKbdHelp() : ''}
+  `;
+  bindEvents();
+}
+
+function renderSidebar() {
+  const views = [
+    { id: 'objectives', icon: '🎯', label: 'Objectives' },
+    { id: 'alignment', icon: '🔗', label: 'Alignment' },
+    { id: 'dashboard', icon: '📊', label: 'Dashboard' },
+    { id: 'checkins', icon: '✅', label: 'Check-ins' }
+  ];
+  return `
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h1><span>⚒️</span> OKR Forge</h1>
+      </div>
+      <div class="sidebar-nav">
+        <div class="nav-section">Views</div>
+        ${views.map(v => `
+          <div class="nav-item ${view === v.id ? 'active' : ''}" data-view="${v.id}">
+            <span class="icon">${v.icon}</span> ${v.label}
+          </div>
+        `).join('')}
+        <div class="nav-section">Actions</div>
+        <div class="nav-item" data-action="export">
+          <span class="icon">📤</span> Export JSON
+        </div>
+        <div class="nav-item" data-action="import">
+          <span class="icon">📥</span> Import JSON
+        </div>
+        <div class="nav-item" data-action="kbd">
+          <span class="icon">⌨️</span> Shortcuts
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <div class="quarter-select">
+          <label>Quarter:</label>
+          <select id="quarter-sel">
+            ${data.quarters.map(q => `<option value="${q}" ${q === data.currentQuarter ? 'selected' : ''}>${q}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderTopbar() {
+  const titles = {
+    objectives: '🎯 Objectives & Key Results',
+    alignment: '🔗 Alignment View',
+    dashboard: '📊 Dashboard',
+    checkins: '✅ Check-in History'
+  };
+  return `
+    <div class="topbar">
+      <h2>${titles[view]}</h2>
+      <div class="topbar-actions">
+        <div class="search-bar">
+          <input type="text" id="search-input" placeholder="Search..." value="${searchQuery}">
+        </div>
+        <button class="btn btn-primary" data-action="new-obj">+ Objective</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderObjectives() {
+  const objs = filteredObjs();
+  if (!objs.length) {
+    return `<div class="empty"><div class="icon">🎯</div><p>No objectives for ${data.currentQuarter}</p><button class="btn btn-primary" data-action="new-obj">Create First Objective</button></div>`;
+  }
+  return objs.map(obj => {
+    const progress = getObjProgress(obj);
+    const status = getObjStatus(obj);
+    const expanded = expandedObjs.has(obj.id);
+    const avgConf = obj.keyResults.length ? obj.keyResults.reduce((a, kr) => a + kr.confidence, 0) / obj.keyResults.length : 0;
+    
+    return `
+      <div class="obj-card">
+        <div class="obj-header" data-toggle="${obj.id}">
+          <div class="obj-title-area">
+            <div class="obj-title">
+              ${expanded ? '▾' : '▸'} ${obj.title}
+              <span class="type-badge ${obj.type}">${obj.type}</span>
+            </div>
+            <div class="obj-meta">
+              <span><span class="status-dot ${status}"></span> ${getStatusLabel(status)}</span>
+              <span class="owner-badge">👤 ${obj.owner}</span>
+              <span class="confidence ${getConfidenceLabel(avgConf)}">🎲 ${getConfidenceText(avgConf)} conf</span>
+              <span>${obj.keyResults.length} KRs</span>
+            </div>
+          </div>
+          <div class="obj-progress-area">
+            ${renderProgressRing(progress, 48)}
+            <div class="obj-actions">
+              <button class="btn-icon" data-edit-obj="${obj.id}" title="Edit">✏️</button>
+              <button class="btn-icon" data-del-obj="${obj.id}" title="Delete">🗑️</button>
+            </div>
+          </div>
+        </div>
+        ${expanded ? `
+          <div class="kr-list">
+            ${obj.keyResults.map(kr => renderKR(kr, obj.id)).join('')}
+            <div style="padding: 10px 20px;">
+              <button class="btn btn-sm btn-secondary" data-add-kr="${obj.id}">+ Add Key Result</button>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderKR(kr, objId) {
+  const p = getKRProgress(kr);
+  const confLabel = getConfidenceLabel(kr.confidence);
+  return `
+    <div class="kr-item">
+      <div class="kr-icon">${p >= 100 ? '✅' : p > 0 ? '🔵' : '⚪'}</div>
+      <div class="kr-info">
+        <div class="kr-title">${kr.title}</div>
+        <div class="kr-detail">
+          <span>${kr.current} / ${kr.target} ${kr.unit}</span>
+          <span class="confidence ${confLabel}">🎲 ${getConfidenceText(kr.confidence)}</span>
+        </div>
+      </div>
+      <div class="kr-progress-bar">
+        <div class="progress-track">
+          <div class="progress-fill" style="width:${p}%; background:${progressColor(p)}"></div>
+        </div>
+      </div>
+      <div class="kr-pct" style="color:${progressColor(p)}">${p}%</div>
+      <div class="kr-actions">
+        <button class="btn btn-sm btn-secondary" data-checkin-kr="${kr.id}" data-obj-id="${objId}" title="Check in">📝</button>
+        <button class="btn btn-sm btn-secondary" data-edit-kr="${kr.id}" data-obj-id="${objId}" title="Edit">✏️</button>
+        <button class="btn btn-sm" data-del-kr="${kr.id}" data-obj-id="${objId}" title="Delete" style="color:var(--red)">✕</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderProgressRing(pct, size) {
+  const r = (size - 6) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - pct / 100);
+  const color = progressColor(pct);
+  return `
+    <div class="obj-progress-ring" style="width:${size}px;height:${size}px;">
+      <svg width="${size}" height="${size}">
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--surface3)" stroke-width="4"/>
+        <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="4" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
+      </svg>
+      <div class="pct" style="color:${color}">${pct}%</div>
+    </div>
+  `;
+}
+
+function renderAlignment() {
+  const objs = filteredObjs();
+  const company = objs.filter(o => o.type === 'company');
+  const team = objs.filter(o => o.type === 'team');
+  const individual = objs.filter(o => o.type === 'individual');
+
+  function renderLevel(items, label, emoji) {
+    if (!items.length) return '';
+    return `
+      <div class="dash-section">
+        <h3>${emoji} ${label}</h3>
+        ${items.map(obj => {
+          const p = getObjProgress(obj);
+          const status = getObjStatus(obj);
+          return `
+            <div class="alignment-node">
+              <div class="node-bar" data-toggle="${obj.id}">
+                <span class="status-dot ${status}"></span>
+                <span class="node-title">${obj.title}</span>
+                ${renderProgressRing(p, 36)}
+              </div>
+              <div class="alignment-children">
+                ${obj.keyResults.map(kr => {
+                  const kp = getKRProgress(kr);
+                  return `
+                    <div class="alignment-kr">
+                      <span>${kp >= 100 ? '✅' : '○'}</span>
+                      <span style="flex:1">${kr.title}</span>
+                      <div class="progress-mini">
+                        <div class="progress-track" style="height:4px;">
+                          <div class="progress-fill" style="width:${kp}%;background:${progressColor(kp)}"></div>
+                        </div>
+                      </div>
+                      <span style="font-size:12px;color:${progressColor(kp)};width:35px;text-align:right">${kp}%</span>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="alignment-tree">
+      ${renderLevel(company, 'Company Objectives', '🏢')}
+      ${renderLevel(team, 'Team Objectives', '👥')}
+      ${renderLevel(individual, 'Individual Objectives', '👤')}
+      ${!objs.length ? '<div class="empty"><div class="icon">🔗</div><p>No objectives to display</p></div>' : ''}
+    </div>
+  `;
+}
+
+function renderDashboard() {
+  const objs = filteredObjs();
+  const allKRs = objs.flatMap(o => o.keyResults);
+  const totalKRs = allKRs.length;
+  const avgProgress = totalKRs ? Math.round(allKRs.reduce((a, kr) => a + getKRProgress(kr), 0) / totalKRs) : 0;
+  const avgConfidence = totalKRs ? Math.round(allKRs.reduce((a, kr) => a + kr.confidence, 0) / totalKRs * 100) : 0;
+  const completedKRs = allKRs.filter(kr => getKRProgress(kr) >= 100).length;
+  const atRisk = objs.filter(o => getObjStatus(o) === 'at-risk').length;
+  const behind = objs.filter(o => getObjStatus(o) === 'behind').length;
+
+  // Status distribution
+  const statusCounts = { 'on-track': 0, 'at-risk': 0, 'behind': 0, 'not-started': 0 };
+  objs.forEach(o => statusCounts[getObjStatus(o)]++);
+
+  // Type distribution
+  const typeCounts = { company: 0, team: 0, individual: 0 };
+  objs.forEach(o => typeCounts[o.type] = (typeCounts[o.type] || 0) + 1);
+
+  return `
+    <div class="dash-grid">
+      <div class="stat-card">
+        <div class="label">Objectives</div>
+        <div class="value">${objs.length}</div>
+        <div class="sub">${data.currentQuarter}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Key Results</div>
+        <div class="value">${totalKRs}</div>
+        <div class="sub">${completedKRs} completed</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Avg Progress</div>
+        <div class="value" style="color:${progressColor(avgProgress)}">${avgProgress}%</div>
+        <div class="sub">across all KRs</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Avg Confidence</div>
+        <div class="value" style="color:${avgConfidence >= 70 ? 'var(--green)' : avgConfidence >= 40 ? 'var(--yellow)' : 'var(--red)'}">${avgConfidence}%</div>
+        <div class="sub">team belief score</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">At Risk / Behind</div>
+        <div class="value" style="color:var(--yellow)">${atRisk} / <span style="color:var(--red)">${behind}</span></div>
+        <div class="sub">need attention</div>
+      </div>
+    </div>
+
+    <div class="chart-row">
+      <div class="chart-card">
+        <h4>Objective Progress</h4>
+        <div class="bar-chart">
+          ${objs.map(o => {
+            const p = getObjProgress(o);
+            return `
+              <div class="bar-row">
+                <div class="bar-label" title="${o.title}">${o.title.length > 25 ? o.title.slice(0, 25) + '…' : o.title}</div>
+                <div class="bar-track"><div class="bar-fill" style="width:${Math.max(p, 2)}%;background:${progressColor(p)}">${p > 15 ? p + '%' : ''}</div></div>
+                <div class="bar-val" style="color:${progressColor(p)}">${p}%</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+      <div class="chart-card">
+        <h4>Status Distribution</h4>
+        <div class="donut-container">
+          ${renderDonut([
+            { value: statusCounts['on-track'], color: 'var(--green)', label: 'On Track' },
+            { value: statusCounts['at-risk'], color: 'var(--yellow)', label: 'At Risk' },
+            { value: statusCounts['behind'], color: 'var(--red)', label: 'Behind' },
+            { value: statusCounts['not-started'], color: 'var(--text3)', label: 'Not Started' }
+          ], 100)}
+          <div class="donut-legend">
+            ${[
+              { color: 'var(--green)', label: 'On Track', val: statusCounts['on-track'] },
+              { color: 'var(--yellow)', label: 'At Risk', val: statusCounts['at-risk'] },
+              { color: 'var(--red)', label: 'Behind', val: statusCounts['behind'] },
+              { color: 'var(--text3)', label: 'Not Started', val: statusCounts['not-started'] }
+            ].map(i => `
+              <div class="donut-legend-item">
+                <div class="donut-legend-dot" style="background:${i.color}"></div>
+                ${i.label}: ${i.val}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-row">
+      <div class="chart-card">
+        <h4>Confidence by Objective</h4>
+        <div class="bar-chart">
+          ${objs.map(o => {
+            const c = o.keyResults.length ? Math.round(o.keyResults.reduce((a, kr) => a + kr.confidence, 0) / o.keyResults.length * 100) : 0;
+            return `
+              <div class="bar-row">
+                <div class="bar-label" title="${o.title}">${o.title.length > 25 ? o.title.slice(0, 25) + '…' : o.title}</div>
+                <div class="bar-track"><div class="bar-fill" style="width:${Math.max(c, 2)}%;background:${c >= 70 ? 'var(--green)' : c >= 40 ? 'var(--yellow)' : 'var(--red)'}">${c > 15 ? c + '%' : ''}</div></div>
+                <div class="bar-val">${c}%</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+      <div class="chart-card">
+        <h4>Type Breakdown</h4>
+        <div class="bar-chart" style="margin-top: 20px;">
+          ${[
+            { label: '🏢 Company', val: typeCounts.company || 0, color: 'var(--purple)' },
+            { label: '👥 Team', val: typeCounts.team || 0, color: 'var(--blue)' },
+            { label: '👤 Individual', val: typeCounts.individual || 0, color: 'var(--green)' }
+          ].map(t => `
+            <div class="bar-row">
+              <div class="bar-label">${t.label}</div>
+              <div class="bar-track"><div class="bar-fill" style="width:${objs.length ? (t.val/objs.length*100) : 0}%;background:${t.color}">${t.val}</div></div>
+              <div class="bar-val">${t.val}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderDonut(segments, size) {
+  const total = segments.reduce((a, s) => a + s.value, 0);
+  if (total === 0) return `<svg width="${size}" height="${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2 - 8}" fill="none" stroke="var(--surface3)" stroke-width="14"/></svg>`;
+  const r = size / 2 - 8;
+  const circ = 2 * Math.PI * r;
+  let offset = 0;
+  const paths = segments.filter(s => s.value > 0).map(s => {
+    const len = (s.value / total) * circ;
+    const path = `<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${s.color}" stroke-width="14" stroke-dasharray="${len} ${circ - len}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${size/2} ${size/2})"/>`;
+    offset += len;
+    return path;
+  });
+  return `<svg width="${size}" height="${size}">${paths.join('')}</svg>`;
+}
+
+function renderCheckins() {
+  const objs = filteredObjs();
+  const allCheckins = [];
+  objs.forEach(obj => {
+    obj.keyResults.forEach(kr => {
+      getKRCheckins(kr.id).forEach(ci => {
+        allCheckins.push({ ...ci, krTitle: kr.title, objTitle: obj.title, target: kr.target, unit: kr.unit });
+      });
+    });
+  });
+  allCheckins.sort((a, b) => b.date.localeCompare(a.date));
+
+  if (!allCheckins.length) {
+    return `<div class="empty"><div class="icon">✅</div><p>No check-ins recorded yet</p><p style="font-size:13px;color:var(--text3)">Click 📝 on any Key Result to add a check-in</p></div>`;
+  }
+
+  // Group by date
+  const groups = {};
+  allCheckins.forEach(ci => {
+    if (!groups[ci.date]) groups[ci.date] = [];
+    groups[ci.date].push(ci);
+  });
+
+  return `
+    <div class="timeline">
+      ${Object.entries(groups).map(([date, items]) => `
+        <div class="timeline-item">
+          <div class="t-date">${new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</div>
+          ${items.map(ci => `
+            <div class="checkin-item" style="margin-top:6px;">
+              <div style="font-size:12px;color:var(--text3)">${ci.objTitle}</div>
+              <div style="font-size:13px;font-weight:500">${ci.krTitle}</div>
+              <div class="t-value">${ci.value} / ${ci.target} ${ci.unit}</div>
+              ${ci.note ? `<div class="note" style="color:var(--text2);font-size:12px;margin-top:2px">"${ci.note}"</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ===================== MODALS =====================
+function renderModal() {
+  if (!showModal) return '';
+  const m = showModal;
+  let title = '', body = '', footer = '';
+
+  if (m.type === 'obj') {
+    const obj = m.obj || { title: '', type: 'team', owner: 'AJ', quarter: data.currentQuarter, description: '', keyResults: [] };
+    title = m.obj ? 'Edit Objective' : 'New Objective';
+    body = `
+      <div class="form-group">
+        <label>Objective Title</label>
+        <input type="text" id="m-title" value="${esc(obj.title)}" placeholder="e.g. Achieve Product-Market Fit">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type</label>
+          <select id="m-type">
+            <option value="company" ${obj.type === 'company' ? 'selected' : ''}>🏢 Company</option>
+            <option value="team" ${obj.type === 'team' ? 'selected' : ''}>👥 Team</option>
+            <option value="individual" ${obj.type === 'individual' ? 'selected' : ''}>👤 Individual</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Owner</label>
+          <input type="text" id="m-owner" value="${esc(obj.owner)}" placeholder="Name">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Quarter</label>
+        <select id="m-quarter">
+          ${data.quarters.map(q => `<option value="${q}" ${obj.quarter === q ? 'selected' : ''}>${q}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description (optional)</label>
+        <textarea id="m-desc" placeholder="Why does this objective matter?">${esc(obj.description || '')}</textarea>
+      </div>
+    `;
+    footer = `
+      <button class="btn btn-secondary" data-action="close-modal">Cancel</button>
+      <button class="btn btn-primary" data-action="save-obj">💾 Save</button>
+    `;
+  }
+
+  if (m.type === 'kr') {
+    const kr = m.kr || { title: '', start: 0, target: 100, current: 0, unit: '', confidence: 0.5 };
+    title = m.kr ? 'Edit Key Result' : 'New Key Result';
+    body = `
+      <div class="form-group">
+        <label>Key Result</label>
+        <input type="text" id="m-kr-title" value="${esc(kr.title)}" placeholder="e.g. Reach 500 active users">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Start Value</label>
+          <input type="number" id="m-kr-start" value="${kr.start}">
+        </div>
+        <div class="form-group">
+          <label>Target Value</label>
+          <input type="number" id="m-kr-target" value="${kr.target}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Current Value</label>
+          <input type="number" id="m-kr-current" value="${kr.current}">
+        </div>
+        <div class="form-group">
+          <label>Unit</label>
+          <input type="text" id="m-kr-unit" value="${esc(kr.unit)}" placeholder="e.g. users, %, revenue">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Confidence (${Math.round((m.kr ? kr.confidence : 0.5) * 100)}%)</label>
+        <input type="range" id="m-kr-conf" min="0" max="1" step="0.1" value="${kr.confidence}" style="accent-color:var(--accent)">
+      </div>
+    `;
+    footer = `
+      <button class="btn btn-secondary" data-action="close-modal">Cancel</button>
+      <button class="btn btn-primary" data-action="save-kr">💾 Save</button>
+    `;
+  }
+
+  if (m.type === 'checkin') {
+    title = 'Check In — Update Progress';
+    const kr = m.kr;
+    const p = getKRProgress(kr);
+    body = `
+      <div style="background:var(--surface2);padding:12px;border-radius:var(--radius-sm);margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:600">${esc(kr.title)}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">Current: ${kr.current} / ${kr.target} ${kr.unit} (${p}%)</div>
+      </div>
+      <div class="form-group">
+        <label>New Value</label>
+        <input type="number" id="m-ci-value" value="${kr.current}" autofocus>
+      </div>
+      <div class="form-group">
+        <label>Confidence Update</label>
+        <input type="range" id="m-ci-conf" min="0" max="1" step="0.1" value="${kr.confidence}" style="accent-color:var(--accent)">
+        <div style="font-size:12px;color:var(--text2);margin-top:2px" id="ci-conf-label">${Math.round(kr.confidence * 100)}%</div>
+      </div>
+      <div class="form-group">
+        <label>Note (optional)</label>
+        <input type="text" id="m-ci-note" placeholder="What changed? What's blocking?">
+      </div>
+      ${getKRCheckins(kr.id).length ? `
+        <div style="margin-top:12px;">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Recent check-ins:</div>
+          ${getKRCheckins(kr.id).slice(0, 5).map(ci => `
+            <div style="font-size:12px;color:var(--text2);padding:4px 0;display:flex;gap:10px;">
+              <span style="color:var(--text3)">${ci.date}</span>
+              <span style="font-weight:600">${ci.value}</span>
+              ${ci.note ? `<span>— ${ci.note}</span>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    `;
+    footer = `
+      <button class="btn btn-secondary" data-action="close-modal">Cancel</button>
+      <button class="btn btn-primary" data-action="save-checkin">✅ Check In</button>
+    `;
+  }
+
+  return `
+    <div class="modal-overlay" data-action="close-modal">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3>${title}</h3>
+          <button class="btn-icon" data-action="close-modal">✕</button>
+        </div>
+        <div class="modal-body">${body}</div>
+        <div class="modal-footer">${footer}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderKbdHelp() {
+  return `
+    <div class="kbd-overlay" onclick="showKbd=false;render()">
+      <div class="kbd-card" onclick="event.stopPropagation()">
+        <h3>⌨️ Keyboard Shortcuts</h3>
+        ${[
+          ['N', 'New Objective'],
+          ['/', 'Focus Search'],
+          ['1-4', 'Switch Views'],
+          ['E', 'Export JSON'],
+          ['I', 'Import JSON'],
+          ['D', 'Dashboard'],
+          ['?', 'This Help'],
+          ['Esc', 'Close Modal / Clear']
+        ].map(([k, d]) => `
+          <div class="kbd-row"><span>${d}</span><span class="kbd-key">${k}</span></div>
+        `).join('')}
+        <div style="margin-top:12px;text-align:right">
+          <button class="btn btn-secondary" onclick="showKbd=false;render()">Close</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function esc(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+// ===================== EVENT BINDING =====================
+function bindEvents() {
+  // Nav
+  document.querySelectorAll('[data-view]').forEach(el => {
+    el.onclick = () => { view = el.dataset.view; render(); };
+  });
+
+  // Quarter
+  const qsel = document.getElementById('quarter-sel');
+  if (qsel) qsel.onchange = () => { data.currentQuarter = qsel.value; save(data); render(); };
+
+  // Search
+  const si = document.getElementById('search-input');
+  if (si) { si.oninput = () => { searchQuery = si.value; render(); }; }
+
+  // Toggle expand
+  document.querySelectorAll('[data-toggle]').forEach(el => {
+    el.onclick = (e) => {
+      if (e.target.closest('[data-edit-obj]') || e.target.closest('[data-del-obj]')) return;
+      const id = el.dataset.toggle;
+      expandedObjs.has(id) ? expandedObjs.delete(id) : expandedObjs.add(id);
+      render();
+    };
+  });
+
+  // Actions
+  document.querySelectorAll('[data-action]').forEach(el => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      handleAction(el.dataset.action, el);
+    };
+  });
+
+  // Edit/Delete obj
+  document.querySelectorAll('[data-edit-obj]').forEach(el => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      const obj = data.objectives.find(o => o.id === el.dataset.editObj);
+      if (obj) { showModal = { type: 'obj', obj, editing: true }; render(); }
+    };
+  });
+  document.querySelectorAll('[data-del-obj]').forEach(el => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      if (confirm('Delete this objective and all its KRs?')) {
+        data.objectives = data.objectives.filter(o => o.id !== el.dataset.delObj);
+        save(data); render();
+      }
+    };
+  });
+
+  // KR actions
+  document.querySelectorAll('[data-add-kr]').forEach(el => {
+    el.onclick = () => { showModal = { type: 'kr', objId: el.dataset.addKr }; render(); };
+  });
+  document.querySelectorAll('[data-edit-kr]').forEach(el => {
+    el.onclick = () => {
+      const obj = data.objectives.find(o => o.id === el.dataset.objId);
+      const kr = obj?.keyResults.find(k => k.id === el.dataset.editKr);
+      if (kr) { showModal = { type: 'kr', objId: el.dataset.objId, kr, editing: true }; render(); }
+    };
+  });
+  document.querySelectorAll('[data-del-kr]').forEach(el => {
+    el.onclick = () => {
+      const obj = data.objectives.find(o => o.id === el.dataset.objId);
+      if (obj) {
+        obj.keyResults = obj.keyResults.filter(k => k.id !== el.dataset.delKr);
+        save(data); render();
+      }
+    };
+  });
+  document.querySelectorAll('[data-checkin-kr]').forEach(el => {
+    el.onclick = () => {
+      const obj = data.objectives.find(o => o.id === el.dataset.objId);
+      const kr = obj?.keyResults.find(k => k.id === el.dataset.checkinKr);
+      if (kr) { showModal = { type: 'checkin', objId: el.dataset.objId, kr }; render(); }
+    };
+  });
+
+  // Confidence slider label update
+  const ciConf = document.getElementById('m-ci-conf');
+  const ciLabel = document.getElementById('ci-conf-label');
+  if (ciConf && ciLabel) {
+    ciConf.oninput = () => { ciLabel.textContent = Math.round(ciConf.value * 100) + '%'; };
+  }
+  const krConf = document.getElementById('m-kr-conf');
+  if (krConf) {
+    const label = krConf.parentElement.querySelector('label');
+    krConf.oninput = () => { label.textContent = `Confidence (${Math.round(krConf.value * 100)}%)`; };
+  }
+}
+
+function handleAction(action, el) {
+  switch (action) {
+    case 'new-obj':
+      showModal = { type: 'obj' }; render(); break;
+    case 'close-modal':
+      showModal = null; render(); break;
+    case 'save-obj': saveObj(); break;
+    case 'save-kr': saveKR(); break;
+    case 'save-checkin': saveCheckin(); break;
+    case 'export': exportJSON(); break;
+    case 'import': importJSON(); break;
+    case 'kbd': showKbd = true; render(); break;
+  }
+}
+
+function saveObj() {
+  const title = document.getElementById('m-title').value.trim();
+  if (!title) return;
+  const type = document.getElementById('m-type').value;
+  const owner = document.getElementById('m-owner').value.trim() || 'AJ';
+  const quarter = document.getElementById('m-quarter').value;
+  const desc = document.getElementById('m-desc').value.trim();
+
+  if (showModal.editing) {
+    const obj = showModal.obj;
+    obj.title = title; obj.type = type; obj.owner = owner; obj.quarter = quarter; obj.description = desc;
+  } else {
+    data.objectives.push({
+      id: uid(), title, type, owner, quarter, description: desc, keyResults: []
+    });
+  }
+  save(data); showModal = null; render();
+}
+
+function saveKR() {
+  const title = document.getElementById('m-kr-title').value.trim();
+  if (!title) return;
+  const start = parseFloat(document.getElementById('m-kr-start').value) || 0;
+  const target = parseFloat(document.getElementById('m-kr-target').value) || 100;
+  const current = parseFloat(document.getElementById('m-kr-current').value) || 0;
+  const unit = document.getElementById('m-kr-unit').value.trim();
+  const confidence = parseFloat(document.getElementById('m-kr-conf').value) || 0.5;
+
+  const obj = data.objectives.find(o => o.id === showModal.objId);
+  if (!obj) return;
+
+  if (showModal.editing) {
+    const kr = showModal.kr;
+    kr.title = title; kr.start = start; kr.target = target; kr.current = current; kr.unit = unit; kr.confidence = confidence;
+  } else {
+    obj.keyResults.push({ id: uid(), title, start, target, current, unit, confidence });
+  }
+  expandedObjs.add(obj.id);
+  save(data); showModal = null; render();
+}
+
+function saveCheckin() {
+  const value = parseFloat(document.getElementById('m-ci-value').value);
+  if (isNaN(value)) return;
+  const confidence = parseFloat(document.getElementById('m-ci-conf').value);
+  const note = document.getElementById('m-ci-note').value.trim();
+
+  const obj = data.objectives.find(o => o.id === showModal.objId);
+  const kr = obj?.keyResults.find(k => k.id === showModal.kr.id);
+  if (!kr) return;
+
+  kr.current = value;
+  kr.confidence = confidence;
+  data.checkins.push({
+    id: uid(),
+    krId: kr.id,
+    date: new Date().toISOString().slice(0, 10),
+    value,
+    note
+  });
+
+  save(data); showModal = null; render();
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `okr-forge-${data.currentQuarter.replace(/\s/g, '-')}.json`;
+  a.click();
+}
+
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = (e) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const imported = JSON.parse(reader.result);
+        if (imported.objectives) {
+          data = imported;
+          save(data); render();
+        }
+      } catch(err) { alert('Invalid JSON file'); }
+    };
+    reader.readAsText(e.target.files[0]);
+  };
+  input.click();
+}
+
+// ===================== KEYBOARD SHORTCUTS =====================
+document.addEventListener('keydown', (e) => {
+  if (showModal || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') { showModal = null; showKbd = false; render(); }
+    return;
+  }
+  if (showKbd && e.key === 'Escape') { showKbd = false; render(); return; }
+
+  switch (e.key) {
+    case 'n': case 'N': e.preventDefault(); showModal = { type: 'obj' }; render(); break;
+    case '/': e.preventDefault(); document.getElementById('search-input')?.focus(); break;
+    case '1': view = 'objectives'; render(); break;
+    case '2': view = 'alignment'; render(); break;
+    case '3': view = 'dashboard'; render(); break;
+    case '4': view = 'checkins'; render(); break;
+    case 'd': case 'D': view = 'dashboard'; render(); break;
+    case 'e': case 'E': exportJSON(); break;
+    case 'i': case 'I': importJSON(); break;
+    case '?': showKbd = true; render(); break;
+    case 'Escape': searchQuery = ''; showKbd = false; render(); break;
+  }
+});
+
+// ===================== INIT =====================
+render();
+</script>
+</body>
+</html>

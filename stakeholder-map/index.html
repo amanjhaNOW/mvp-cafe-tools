@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stakeholder Map — Manage, Align & Communicate</title>
+<style>
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #242837; --surface3: #2e3347;
+  --border: #353a50; --text: #e4e6f0; --text2: #9ba1b8; --text3: #6b7194;
+  --accent: #6c63ff; --accent2: #8b83ff; --accent-bg: rgba(108,99,255,0.12);
+  --green: #34d399; --green-bg: rgba(52,211,153,0.12);
+  --yellow: #fbbf24; --yellow-bg: rgba(251,191,36,0.12);
+  --red: #f87171; --red-bg: rgba(248,113,113,0.12);
+  --orange: #fb923c; --orange-bg: rgba(251,146,60,0.12);
+  --blue: #60a5fa; --blue-bg: rgba(96,165,250,0.12);
+  --pink: #f472b6; --pink-bg: rgba(244,114,182,0.12);
+  --radius: 10px; --radius-sm: 6px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+  --transition: 0.2s ease;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+button { cursor:pointer; font-family:inherit; border:none; background:none; color:var(--text); }
+input,textarea,select { font-family:inherit; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; font-size:14px; outline:none; transition:border var(--transition); }
+input:focus,textarea:focus,select:focus { border-color:var(--accent); }
+textarea { resize:vertical; }
+
+/* Layout */
+.app { display:flex; height:100vh; }
+.sidebar { width:240px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; }
+.sidebar-header { padding:16px; border-bottom:1px solid var(--border); }
+.sidebar-header h1 { font-size:16px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.sidebar-header h1 span { font-size:20px; }
+.sidebar-nav { padding:8px; flex:1; overflow-y:auto; }
+.nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius-sm); cursor:pointer; transition:all var(--transition); font-size:14px; color:var(--text2); }
+.nav-item:hover { background:var(--surface2); color:var(--text); }
+.nav-item.active { background:var(--accent-bg); color:var(--accent2); font-weight:600; }
+.nav-item .icon { font-size:16px; width:20px; text-align:center; }
+.nav-item .badge { margin-left:auto; background:var(--surface3); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+.sidebar-footer { padding:12px; border-top:1px solid var(--border); display:flex; gap:6px; }
+.sidebar-footer button { flex:1; padding:8px; border-radius:var(--radius-sm); font-size:12px; background:var(--surface2); transition:all var(--transition); }
+.sidebar-footer button:hover { background:var(--surface3); }
+
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.topbar { padding:12px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; }
+.topbar h2 { font-size:18px; font-weight:600; }
+.search-box { margin-left:auto; position:relative; }
+.search-box input { width:220px; padding-left:32px; background:var(--surface); }
+.search-box::before { content:'🔍'; position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:12px; }
+.btn { padding:8px 16px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; transition:all var(--transition); }
+.btn-primary { background:var(--accent); color:white; }
+.btn-primary:hover { background:var(--accent2); }
+.btn-sm { padding:5px 10px; font-size:12px; }
+.btn-ghost { background:var(--surface2); }
+.btn-ghost:hover { background:var(--surface3); }
+
+.content { flex:1; overflow-y:auto; padding:24px; }
+
+/* Stakeholder Cards */
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
+.s-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; cursor:pointer; transition:all var(--transition); }
+.s-card:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:var(--shadow); }
+.s-card-top { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.s-avatar { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; flex-shrink:0; }
+.s-card-info h3 { font-size:15px; font-weight:600; }
+.s-card-info p { font-size:12px; color:var(--text2); }
+.s-card-tags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.tag { padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+.tag-champion { background:var(--green-bg); color:var(--green); }
+.tag-supporter { background:var(--blue-bg); color:var(--blue); }
+.tag-neutral { background:var(--yellow-bg); color:var(--yellow); }
+.tag-critic { background:var(--orange-bg); color:var(--orange); }
+.tag-blocker { background:var(--red-bg); color:var(--red); }
+.s-card-meters { display:flex; gap:16px; }
+.meter { flex:1; }
+.meter-label { font-size:11px; color:var(--text3); margin-bottom:4px; display:flex; justify-content:space-between; }
+.meter-bar { height:6px; background:var(--surface3); border-radius:3px; overflow:hidden; }
+.meter-fill { height:100%; border-radius:3px; transition:width 0.4s ease; }
+.meter-fill.influence { background:var(--accent); }
+.meter-fill.interest { background:var(--green); }
+.s-card-comm { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:12px; color:var(--text3); display:flex; justify-content:space-between; }
+
+/* Matrix View */
+.matrix-container { position:relative; width:100%; max-width:700px; margin:0 auto; }
+.matrix-grid { position:relative; width:100%; aspect-ratio:1; border:2px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.matrix-quadrant { position:absolute; width:50%; height:50%; display:flex; align-items:center; justify-content:center; }
+.matrix-quadrant .q-label { font-size:13px; font-weight:700; color:var(--text3); opacity:0.5; text-align:center; pointer-events:none; }
+.q-tl { top:0; left:0; background:rgba(251,191,36,0.04); }
+.q-tr { top:0; right:0; background:rgba(108,99,255,0.06); }
+.q-bl { bottom:0; left:0; background:rgba(107,113,148,0.04); }
+.q-br { bottom:0; right:0; background:rgba(52,211,153,0.04); }
+.matrix-axis-x { position:absolute; bottom:-28px; left:0; right:0; text-align:center; font-size:13px; font-weight:600; color:var(--text2); }
+.matrix-axis-y { position:absolute; left:-36px; top:0; bottom:0; display:flex; align-items:center; font-size:13px; font-weight:600; color:var(--text2); writing-mode:vertical-rl; transform:rotate(180deg); }
+.matrix-midline-h { position:absolute; top:50%; left:0; right:0; border-top:1px dashed var(--border); }
+.matrix-midline-v { position:absolute; left:50%; top:0; bottom:0; border-left:1px dashed var(--border); }
+.matrix-dot { position:absolute; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.3s ease; transform:translate(-50%,-50%); z-index:2; border:2px solid transparent; }
+.matrix-dot:hover { transform:translate(-50%,-50%) scale(1.2); z-index:10; border-color:white; }
+.matrix-dot .tooltip { position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; white-space:nowrap; font-size:12px; pointer-events:none; opacity:0; transition:opacity 0.2s; box-shadow:var(--shadow); }
+.matrix-dot:hover .tooltip { opacity:1; }
+.matrix-legend { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:40px; }
+.matrix-legend-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text2); }
+.legend-dot { width:12px; height:12px; border-radius:50%; }
+
+/* RACI */
+.raci-table { width:100%; border-collapse:collapse; background:var(--surface); border-radius:var(--radius); overflow:hidden; }
+.raci-table th, .raci-table td { padding:10px 14px; text-align:center; border:1px solid var(--border); font-size:13px; }
+.raci-table th { background:var(--surface2); font-weight:600; font-size:12px; color:var(--text2); position:sticky; top:0; z-index:2; }
+.raci-table th:first-child, .raci-table td:first-child { text-align:left; font-weight:600; min-width:160px; position:sticky; left:0; background:var(--surface); z-index:1; }
+.raci-table th:first-child { z-index:3; background:var(--surface2); }
+.raci-cell { cursor:pointer; user-select:none; transition:all var(--transition); border-radius:4px; }
+.raci-cell:hover { background:var(--surface3); }
+.raci-r { color:var(--accent); font-weight:700; }
+.raci-a { color:var(--red); font-weight:700; }
+.raci-c { color:var(--yellow); font-weight:700; }
+.raci-i { color:var(--green); font-weight:700; }
+
+/* Comms Plan */
+.comms-list { display:flex; flex-direction:column; gap:12px; }
+.comms-row { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; display:grid; grid-template-columns:200px 1fr 120px 120px 100px; gap:16px; align-items:center; }
+.comms-row .name { font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px; }
+.comms-row .msg { font-size:13px; color:var(--text2); }
+.comms-row .freq, .comms-row .channel { font-size:12px; text-align:center; }
+.freq-tag { padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600; background:var(--accent-bg); color:var(--accent2); }
+.channel-tag { padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600; background:var(--surface3); color:var(--text2); }
+
+/* Dashboard */
+.stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:24px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; text-align:center; }
+.stat-card .num { font-size:28px; font-weight:700; }
+.stat-card .label { font-size:12px; color:var(--text2); margin-top:4px; }
+.chart-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+.chart-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+.chart-card h3 { font-size:14px; font-weight:600; margin-bottom:16px; }
+.bar-group { margin-bottom:10px; }
+.bar-label { font-size:12px; color:var(--text2); margin-bottom:4px; display:flex; justify-content:space-between; }
+.bar-track { height:20px; background:var(--surface3); border-radius:4px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:4px; transition:width 0.5s ease; display:flex; align-items:center; padding-left:8px; font-size:11px; font-weight:600; color:white; min-width:fit-content; }
+
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:100; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.2s; }
+.modal-overlay.open { opacity:1; pointer-events:auto; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); width:560px; max-height:85vh; overflow-y:auto; box-shadow:var(--shadow); }
+.modal-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.modal-header h3 { font-size:16px; font-weight:600; }
+.modal-close { font-size:20px; cursor:pointer; color:var(--text3); padding:4px; }
+.modal-close:hover { color:var(--text); }
+.modal-body { padding:20px; }
+.form-group { margin-bottom:14px; }
+.form-group label { display:block; font-size:12px; font-weight:600; color:var(--text2); margin-bottom:5px; }
+.form-group input, .form-group textarea, .form-group select { width:100%; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.modal-footer { padding:12px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+
+/* Initiative Modal */
+.init-form { display:flex; gap:8px; margin-bottom:16px; }
+.init-form input { flex:1; }
+.init-list { display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto; }
+.init-item { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surface2); border-radius:var(--radius-sm); font-size:13px; }
+.init-item button { color:var(--red); font-size:14px; }
+
+/* Detail Panel */
+.detail-panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px; max-width:700px; margin:0 auto; }
+.detail-header { display:flex; align-items:center; gap:16px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid var(--border); }
+.detail-avatar { width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700; }
+.detail-info h2 { font-size:20px; }
+.detail-info p { color:var(--text2); font-size:14px; }
+.detail-section { margin-bottom:20px; }
+.detail-section h4 { font-size:13px; font-weight:600; color:var(--text3); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px; }
+.detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.detail-field { background:var(--surface2); padding:12px; border-radius:var(--radius-sm); }
+.detail-field .label { font-size:11px; color:var(--text3); margin-bottom:2px; }
+.detail-field .value { font-size:14px; font-weight:600; }
+.interaction-log { display:flex; flex-direction:column; gap:8px; }
+.interaction-item { display:flex; gap:12px; padding:10px; background:var(--surface2); border-radius:var(--radius-sm); font-size:13px; }
+.interaction-date { color:var(--text3); white-space:nowrap; flex-shrink:0; }
+.interaction-type { padding:2px 6px; border-radius:3px; font-size:11px; font-weight:600; background:var(--accent-bg); color:var(--accent2); flex-shrink:0; }
+.interaction-note { color:var(--text2); flex:1; }
+.add-interaction { display:flex; gap:8px; margin-top:8px; }
+.add-interaction input, .add-interaction select { font-size:12px; }
+
+.empty-state { text-align:center; padding:60px 20px; color:var(--text3); }
+.empty-state .icon { font-size:48px; margin-bottom:12px; }
+.empty-state h3 { font-size:18px; margin-bottom:8px; color:var(--text2); }
+.empty-state p { font-size:14px; }
+
+/* Keyboard shortcuts */
+.shortcuts-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.2s; }
+.shortcuts-overlay.open { opacity:1; pointer-events:auto; }
+.shortcuts-panel { background:var(--surface); border-radius:var(--radius); padding:24px; max-width:400px; width:100%; }
+.shortcuts-panel h3 { margin-bottom:16px; }
+.shortcut-row { display:flex; justify-content:space-between; padding:6px 0; font-size:13px; }
+.shortcut-key { background:var(--surface2); padding:2px 8px; border-radius:4px; font-size:12px; font-weight:600; font-family:monospace; }
+
+@media (max-width:800px) {
+  .sidebar { display:none; }
+  .comms-row { grid-template-columns:1fr; gap:8px; }
+  .chart-row { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header"><h1><span>🗺️</span> Stakeholder Map</h1></div>
+    <div class="sidebar-nav">
+      <div class="nav-item active" onclick="switchView('people')"><span class="icon">👥</span> People <span class="badge" id="count-badge">0</span></div>
+      <div class="nav-item" onclick="switchView('matrix')"><span class="icon">📊</span> Power Matrix</div>
+      <div class="nav-item" onclick="switchView('raci')"><span class="icon">📋</span> RACI Chart</div>
+      <div class="nav-item" onclick="switchView('comms')"><span class="icon">📬</span> Comms Plan</div>
+      <div class="nav-item" onclick="switchView('dashboard')"><span class="icon">📈</span> Dashboard</div>
+    </div>
+    <div class="sidebar-footer">
+      <button onclick="exportJSON()" title="Export">📤 Export</button>
+      <button onclick="importJSON()" title="Import">📥 Import</button>
+      <button onclick="showShortcuts()" title="Shortcuts">⌨️ ?</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <h2 id="view-title">People</h2>
+      <button class="btn btn-primary" id="add-btn" onclick="openModal()">+ Add Stakeholder</button>
+      <div class="search-box"><input type="text" id="search" placeholder="Search... ( / )" oninput="renderView()"></div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<!-- Stakeholder Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-title">Add Stakeholder</h3><span class="modal-close" onclick="closeModal()">✕</span></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>Name *</label><input id="f-name" placeholder="Jane Smith"></div>
+        <div class="form-group"><label>Role</label><input id="f-role" placeholder="VP Engineering"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Organization</label><input id="f-org" placeholder="Company Inc"></div>
+        <div class="form-group"><label>Email</label><input id="f-email" placeholder="jane@company.com"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Influence (1-5)</label><input type="range" id="f-influence" min="1" max="5" value="3" oninput="this.nextElementSibling.textContent=this.value"><span style="font-size:13px;color:var(--accent);margin-left:8px">3</span></div>
+        <div class="form-group"><label>Interest (1-5)</label><input type="range" id="f-interest" min="1" max="5" value="3" oninput="this.nextElementSibling.textContent=this.value"><span style="font-size:13px;color:var(--green);margin-left:8px">3</span></div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label>Sentiment</label><select id="f-sentiment"><option>Champion</option><option>Supporter</option><option selected>Neutral</option><option>Critic</option><option>Blocker</option></select></div>
+        <div class="form-group"><label>Comm Frequency</label><select id="f-freq"><option>Weekly</option><option>Bi-weekly</option><option selected>Monthly</option><option>Quarterly</option><option>As Needed</option></select></div>
+        <div class="form-group"><label>Preferred Channel</label><select id="f-channel"><option>Email</option><option>Slack</option><option>Meeting</option><option>WhatsApp</option><option>LinkedIn</option><option>Phone</option></select></div>
+      </div>
+      <div class="form-group"><label>Key Messages / Talking Points</label><textarea id="f-messages" rows="2" placeholder="What to communicate to this stakeholder..."></textarea></div>
+      <div class="form-group"><label>Notes</label><textarea id="f-notes" rows="2" placeholder="Additional context..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="delete-btn" onclick="deleteStakeholder()" style="margin-right:auto;color:var(--red);display:none">🗑 Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveStakeholder()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Initiative Modal (for RACI) -->
+<div class="modal-overlay" id="init-modal">
+  <div class="modal" style="width:440px">
+    <div class="modal-header"><h3>Manage Initiatives</h3><span class="modal-close" onclick="closeInitModal()">✕</span></div>
+    <div class="modal-body">
+      <div class="init-form"><input id="init-input" placeholder="New initiative name..." onkeydown="if(event.key==='Enter')addInitiative()"><button class="btn btn-primary btn-sm" onclick="addInitiative()">Add</button></div>
+      <div class="init-list" id="init-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Panel Modal -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal" style="width:640px">
+    <div class="modal-header"><h3>Stakeholder Detail</h3><span class="modal-close" onclick="closeDetailModal()">✕</span></div>
+    <div class="modal-body" id="detail-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="editFromDetail()">✏️ Edit</button>
+      <button class="btn btn-ghost" onclick="closeDetailModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shortcuts -->
+<div class="shortcuts-overlay" id="shortcuts-overlay" onclick="hideShortcuts()">
+  <div class="shortcuts-panel" onclick="event.stopPropagation()">
+    <h3>⌨️ Keyboard Shortcuts</h3>
+    <div class="shortcut-row"><span>Add stakeholder</span><span class="shortcut-key">N</span></div>
+    <div class="shortcut-row"><span>Search</span><span class="shortcut-key">/</span></div>
+    <div class="shortcut-row"><span>People view</span><span class="shortcut-key">1</span></div>
+    <div class="shortcut-row"><span>Matrix view</span><span class="shortcut-key">2</span></div>
+    <div class="shortcut-row"><span>RACI chart</span><span class="shortcut-key">3</span></div>
+    <div class="shortcut-row"><span>Comms plan</span><span class="shortcut-key">4</span></div>
+    <div class="shortcut-row"><span>Dashboard</span><span class="shortcut-key">5</span></div>
+    <div class="shortcut-row"><span>Export JSON</span><span class="shortcut-key">E</span></div>
+    <div class="shortcut-row"><span>Import JSON</span><span class="shortcut-key">I</span></div>
+    <div class="shortcut-row"><span>Show shortcuts</span><span class="shortcut-key">?</span></div>
+    <div class="shortcut-row"><span>Close modal</span><span class="shortcut-key">Esc</span></div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept=".json" style="display:none" onchange="handleImport(event)">
+
+<script>
+// State
+let state = { stakeholders: [], initiatives: [], raci: {} };
+let currentView = 'people';
+let editingId = null;
+let detailId = null;
+
+const COLORS = ['#6c63ff','#34d399','#fb923c','#60a5fa','#f472b6','#fbbf24','#a78bfa','#f87171','#2dd4bf','#e879f9'];
+const SENTIMENTS = ['Champion','Supporter','Neutral','Critic','Blocker'];
+const SENTIMENT_COLORS = { Champion:'var(--green)', Supporter:'var(--blue)', Neutral:'var(--yellow)', Critic:'var(--orange)', Blocker:'var(--red)' };
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function save() { localStorage.setItem('stakeholder-map', JSON.stringify(state)); }
+function load() {
+  const d = localStorage.getItem('stakeholder-map');
+  if (d) { state = JSON.parse(d); } else { seedDemo(); }
+  renderView();
+}
+
+function getColor(id) {
+  const idx = state.stakeholders.findIndex(s => s.id === id);
+  return COLORS[idx % COLORS.length];
+}
+
+function getInitials(name) {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+}
+
+function getQuadrant(influence, interest) {
+  if (influence >= 3 && interest >= 3) return 'Manage Closely';
+  if (influence >= 3 && interest < 3) return 'Keep Satisfied';
+  if (influence < 3 && interest >= 3) return 'Keep Informed';
+  return 'Monitor';
+}
+
+// Views
+function switchView(v) {
+  currentView = v;
+  document.querySelectorAll('.nav-item').forEach((el,i) => {
+    el.classList.toggle('active', ['people','matrix','raci','comms','dashboard'][i] === v);
+  });
+  const titles = { people:'People', matrix:'Power Matrix', raci:'RACI Chart', comms:'Comms Plan', dashboard:'Dashboard' };
+  document.getElementById('view-title').textContent = titles[v];
+  const addBtn = document.getElementById('add-btn');
+  if (v === 'raci') { addBtn.textContent = '⚙️ Manage Initiatives'; addBtn.onclick = openInitModal; }
+  else { addBtn.textContent = '+ Add Stakeholder'; addBtn.onclick = () => openModal(); }
+  renderView();
+}
+
+function renderView() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const filtered = state.stakeholders.filter(s => !q || s.name.toLowerCase().includes(q) || (s.role||'').toLowerCase().includes(q) || (s.org||'').toLowerCase().includes(q));
+  document.getElementById('count-badge').textContent = state.stakeholders.length;
+  const c = document.getElementById('content');
+  switch(currentView) {
+    case 'people': renderPeople(c, filtered); break;
+    case 'matrix': renderMatrix(c, filtered); break;
+    case 'raci': renderRaci(c); break;
+    case 'comms': renderComms(c, filtered); break;
+    case 'dashboard': renderDashboard(c); break;
+  }
+}
+
+function renderPeople(c, list) {
+  if (!list.length) { c.innerHTML = `<div class="empty-state"><div class="icon">👥</div><h3>No stakeholders yet</h3><p>Press N or click "+ Add Stakeholder" to get started</p></div>`; return; }
+  c.innerHTML = `<div class="card-grid">${list.map(s => `
+    <div class="s-card" onclick="openDetail('${s.id}')">
+      <div class="s-card-top">
+        <div class="s-avatar" style="background:${getColor(s.id)}30;color:${getColor(s.id)}">${getInitials(s.name)}</div>
+        <div class="s-card-info"><h3>${esc(s.name)}</h3><p>${esc(s.role||'')}${s.org?' · '+esc(s.org):''}</p></div>
+      </div>
+      <div class="s-card-tags">
+        <span class="tag tag-${s.sentiment.toLowerCase()}">${s.sentiment}</span>
+        <span class="tag" style="background:var(--surface3);color:var(--text2)">${getQuadrant(s.influence, s.interest)}</span>
+      </div>
+      <div class="s-card-meters">
+        <div class="meter"><div class="meter-label"><span>Influence</span><span>${s.influence}/5</span></div><div class="meter-bar"><div class="meter-fill influence" style="width:${s.influence*20}%"></div></div></div>
+        <div class="meter"><div class="meter-label"><span>Interest</span><span>${s.interest}/5</span></div><div class="meter-bar"><div class="meter-fill interest" style="width:${s.interest*20}%"></div></div></div>
+      </div>
+      <div class="s-card-comm"><span>📬 ${s.freq}</span><span>📱 ${s.channel}</span>${s.interactions?.length?`<span>💬 ${s.interactions.length} interactions</span>`:''}</div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function renderMatrix(c, list) {
+  if (!list.length) { c.innerHTML = `<div class="empty-state"><div class="icon">📊</div><h3>No stakeholders to map</h3><p>Add stakeholders first</p></div>`; return; }
+  const dots = list.map(s => {
+    const x = ((s.interest - 1) / 4 * 88 + 6);
+    const y = (100 - ((s.influence - 1) / 4 * 88 + 6));
+    return `<div class="matrix-dot" style="left:${x}%;top:${y}%;background:${getColor(s.id)}" onclick="openDetail('${s.id}')">
+      ${getInitials(s.name)}
+      <div class="tooltip"><strong>${esc(s.name)}</strong><br>${esc(s.role||'No role')} · ${s.sentiment}<br>Influence: ${s.influence} · Interest: ${s.interest}</div>
+    </div>`;
+  }).join('');
+
+  c.innerHTML = `
+    <div style="padding:20px 40px">
+      <div class="matrix-container">
+        <div class="matrix-axis-y">← Influence →</div>
+        <div class="matrix-grid">
+          <div class="matrix-quadrant q-tl"><div class="q-label">Keep<br>Satisfied</div></div>
+          <div class="matrix-quadrant q-tr"><div class="q-label">Manage<br>Closely</div></div>
+          <div class="matrix-quadrant q-bl"><div class="q-label">Monitor</div></div>
+          <div class="matrix-quadrant q-br"><div class="q-label">Keep<br>Informed</div></div>
+          <div class="matrix-midline-h"></div>
+          <div class="matrix-midline-v"></div>
+          ${dots}
+        </div>
+        <div class="matrix-axis-x">← Interest →</div>
+        <div class="matrix-legend">
+          ${SENTIMENTS.map(s => `<div class="matrix-legend-item"><div class="legend-dot" style="background:${SENTIMENT_COLORS[s]}"></div>${s}</div>`).join('')}
+        </div>
+      </div>
+      <div style="margin-top:32px">
+        <h3 style="font-size:15px;margin-bottom:12px">Quadrant Summary</h3>
+        ${['Manage Closely','Keep Satisfied','Keep Informed','Monitor'].map(q => {
+          const members = list.filter(s => getQuadrant(s.influence,s.interest) === q);
+          return `<div style="margin-bottom:8px"><strong style="font-size:13px">${q}</strong> <span style="color:var(--text3);font-size:12px">(${members.length})</span>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">${members.map(s => esc(s.name)).join(', ') || 'None'}</div></div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+function renderRaci(c) {
+  const inits = state.initiatives;
+  const people = state.stakeholders;
+  if (!people.length) { c.innerHTML = `<div class="empty-state"><div class="icon">📋</div><h3>Add stakeholders first</h3><p>RACI chart needs stakeholders and initiatives</p></div>`; return; }
+  if (!inits.length) { c.innerHTML = `<div class="empty-state"><div class="icon">📋</div><h3>No initiatives yet</h3><p>Click "⚙️ Manage Initiatives" to add some</p></div>`; return; }
+
+  const legend = `<div style="display:flex;gap:16px;margin-bottom:16px;font-size:13px">
+    <span><span class="raci-r">R</span> = Responsible</span>
+    <span><span class="raci-a">A</span> = Accountable</span>
+    <span><span class="raci-c">C</span> = Consulted</span>
+    <span><span class="raci-i">I</span> = Informed</span>
+    <span style="color:var(--text3)">Click cell to cycle</span>
+  </div>`;
+
+  const headers = people.map(s => `<th title="${esc(s.name)}">${esc(s.name.split(' ')[0])}</th>`).join('');
+  const rows = inits.map(init => {
+    const cells = people.map(s => {
+      const key = `${init.id}_${s.id}`;
+      const val = state.raci[key] || '';
+      const cls = val ? `raci-${val.toLowerCase()}` : '';
+      return `<td class="raci-cell ${cls}" onclick="cycleRaci('${key}')">${val || '—'}</td>`;
+    }).join('');
+    return `<tr><td>${esc(init.name)}</td>${cells}</tr>`;
+  }).join('');
+
+  c.innerHTML = `<div style="overflow-x:auto">${legend}<table class="raci-table"><thead><tr><th>Initiative</th>${headers}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function cycleRaci(key) {
+  const cycle = ['','R','A','C','I'];
+  const cur = state.raci[key] || '';
+  const idx = cycle.indexOf(cur);
+  state.raci[key] = cycle[(idx + 1) % cycle.length];
+  save(); renderView();
+}
+
+function renderComms(c, list) {
+  if (!list.length) { c.innerHTML = `<div class="empty-state"><div class="icon">📬</div><h3>No stakeholders</h3><p>Add stakeholders to build comms plan</p></div>`; return; }
+
+  // Sort by influence desc
+  const sorted = [...list].sort((a,b) => b.influence - a.influence);
+  c.innerHTML = `
+    <div style="display:grid;grid-template-columns:200px 1fr 100px 100px 80px;gap:16px;padding:0 0 8px;font-size:12px;font-weight:600;color:var(--text3)">
+      <span>Stakeholder</span><span>Key Messages</span><span style="text-align:center">Frequency</span><span style="text-align:center">Channel</span><span style="text-align:center">Quadrant</span>
+    </div>
+    <div class="comms-list">${sorted.map(s => `
+      <div class="comms-row">
+        <div class="name"><div class="s-avatar" style="width:32px;height:32px;font-size:12px;background:${getColor(s.id)}30;color:${getColor(s.id)}">${getInitials(s.name)}</div>${esc(s.name)}</div>
+        <div class="msg">${esc(s.messages || 'No talking points set')}</div>
+        <div class="freq"><span class="freq-tag">${s.freq}</span></div>
+        <div class="channel"><span class="channel-tag">${s.channel}</span></div>
+        <div style="font-size:11px;text-align:center;color:var(--text3)">${getQuadrant(s.influence,s.interest)}</div>
+      </div>
+    `).join('')}</div>`;
+}
+
+function renderDashboard(c) {
+  const all = state.stakeholders;
+  const n = all.length;
+  if (!n) { c.innerHTML = `<div class="empty-state"><div class="icon">📈</div><h3>No data yet</h3><p>Add stakeholders to see insights</p></div>`; return; }
+
+  const sentCounts = {};
+  SENTIMENTS.forEach(s => sentCounts[s] = 0);
+  all.forEach(s => sentCounts[s.sentiment]++);
+  const avgInf = (all.reduce((a,s)=>a+s.influence,0)/n).toFixed(1);
+  const avgInt = (all.reduce((a,s)=>a+s.interest,0)/n).toFixed(1);
+  const quadCounts = {};
+  all.forEach(s => { const q = getQuadrant(s.influence,s.interest); quadCounts[q]=(quadCounts[q]||0)+1; });
+  const totalInteractions = all.reduce((a,s)=>a+(s.interactions?.length||0),0);
+
+  const sentBars = SENTIMENTS.map(s => `
+    <div class="bar-group"><div class="bar-label"><span>${s}</span><span>${sentCounts[s]}</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${n?sentCounts[s]/n*100:0}%;background:${SENTIMENT_COLORS[s]}">${sentCounts[s]?sentCounts[s]:''}</div></div></div>
+  `).join('');
+
+  const quadBars = ['Manage Closely','Keep Satisfied','Keep Informed','Monitor'].map(q => `
+    <div class="bar-group"><div class="bar-label"><span>${q}</span><span>${quadCounts[q]||0}</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${n?(quadCounts[q]||0)/n*100:0}%;background:var(--accent)">${quadCounts[q]||''}</div></div></div>
+  `).join('');
+
+  c.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="num" style="color:var(--accent)">${n}</div><div class="label">Total Stakeholders</div></div>
+      <div class="stat-card"><div class="num" style="color:var(--green)">${sentCounts.Champion+sentCounts.Supporter}</div><div class="label">Champions + Supporters</div></div>
+      <div class="stat-card"><div class="num" style="color:var(--red)">${sentCounts.Critic+sentCounts.Blocker}</div><div class="label">Critics + Blockers</div></div>
+      <div class="stat-card"><div class="num" style="color:var(--yellow)">${avgInf}</div><div class="label">Avg Influence</div></div>
+      <div class="stat-card"><div class="num" style="color:var(--blue)">${avgInt}</div><div class="label">Avg Interest</div></div>
+      <div class="stat-card"><div class="num" style="color:var(--pink)">${totalInteractions}</div><div class="label">Total Interactions</div></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-card"><h3>Sentiment Distribution</h3>${sentBars}</div>
+      <div class="chart-card"><h3>Quadrant Distribution</h3>${quadBars}</div>
+    </div>
+    <div class="chart-card">
+      <h3>Risk Summary</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px">
+        <div>
+          <h4 style="font-size:13px;color:var(--red);margin-bottom:8px">⚠️ Needs Attention</h4>
+          ${all.filter(s => (s.sentiment==='Critic'||s.sentiment==='Blocker') && s.influence>=3).map(s => `
+            <div style="padding:8px;background:var(--red-bg);border-radius:var(--radius-sm);margin-bottom:6px;font-size:13px">
+              <strong>${esc(s.name)}</strong> — ${s.sentiment}, Influence ${s.influence}/5
+            </div>
+          `).join('') || '<div style="font-size:13px;color:var(--text3)">No high-influence critics/blockers 🎉</div>'}
+        </div>
+        <div>
+          <h4 style="font-size:13px;color:var(--green);margin-bottom:8px">💪 Key Allies</h4>
+          ${all.filter(s => (s.sentiment==='Champion'||s.sentiment==='Supporter') && s.influence>=4).map(s => `
+            <div style="padding:8px;background:var(--green-bg);border-radius:var(--radius-sm);margin-bottom:6px;font-size:13px">
+              <strong>${esc(s.name)}</strong> — ${s.sentiment}, Influence ${s.influence}/5
+            </div>
+          `).join('') || '<div style="font-size:13px;color:var(--text3)">No high-influence allies yet</div>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+// Modal
+function openModal(id) {
+  editingId = id || null;
+  document.getElementById('modal-title').textContent = id ? 'Edit Stakeholder' : 'Add Stakeholder';
+  document.getElementById('delete-btn').style.display = id ? 'block' : 'none';
+  if (id) {
+    const s = state.stakeholders.find(x => x.id === id);
+    document.getElementById('f-name').value = s.name;
+    document.getElementById('f-role').value = s.role || '';
+    document.getElementById('f-org').value = s.org || '';
+    document.getElementById('f-email').value = s.email || '';
+    document.getElementById('f-influence').value = s.influence;
+    document.getElementById('f-influence').nextElementSibling.textContent = s.influence;
+    document.getElementById('f-interest').value = s.interest;
+    document.getElementById('f-interest').nextElementSibling.textContent = s.interest;
+    document.getElementById('f-sentiment').value = s.sentiment;
+    document.getElementById('f-freq').value = s.freq;
+    document.getElementById('f-channel').value = s.channel;
+    document.getElementById('f-messages').value = s.messages || '';
+    document.getElementById('f-notes').value = s.notes || '';
+  } else {
+    ['f-name','f-role','f-org','f-email','f-messages','f-notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-influence').value = 3;
+    document.getElementById('f-influence').nextElementSibling.textContent = '3';
+    document.getElementById('f-interest').value = 3;
+    document.getElementById('f-interest').nextElementSibling.textContent = '3';
+    document.getElementById('f-sentiment').value = 'Neutral';
+    document.getElementById('f-freq').value = 'Monthly';
+    document.getElementById('f-channel').value = 'Email';
+  }
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('f-name').focus(), 100);
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); editingId = null; }
+
+function saveStakeholder() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) return;
+  const data = {
+    name, role: document.getElementById('f-role').value.trim(),
+    org: document.getElementById('f-org').value.trim(),
+    email: document.getElementById('f-email').value.trim(),
+    influence: parseInt(document.getElementById('f-influence').value),
+    interest: parseInt(document.getElementById('f-interest').value),
+    sentiment: document.getElementById('f-sentiment').value,
+    freq: document.getElementById('f-freq').value,
+    channel: document.getElementById('f-channel').value,
+    messages: document.getElementById('f-messages').value.trim(),
+    notes: document.getElementById('f-notes').value.trim(),
+  };
+  if (editingId) {
+    const idx = state.stakeholders.findIndex(s => s.id === editingId);
+    if (idx >= 0) state.stakeholders[idx] = { ...state.stakeholders[idx], ...data };
+  } else {
+    state.stakeholders.push({ id: uid(), ...data, interactions: [], created: new Date().toISOString() });
+  }
+  save(); closeModal(); renderView();
+}
+
+function deleteStakeholder() {
+  if (!editingId || !confirm('Delete this stakeholder?')) return;
+  state.stakeholders = state.stakeholders.filter(s => s.id !== editingId);
+  // Clean RACI
+  Object.keys(state.raci).forEach(k => { if (k.includes(editingId)) delete state.raci[k]; });
+  save(); closeModal(); renderView();
+}
+
+// Detail
+function openDetail(id) {
+  detailId = id;
+  const s = state.stakeholders.find(x => x.id === id);
+  if (!s) return;
+  const q = getQuadrant(s.influence, s.interest);
+  const interactions = (s.interactions || []).slice().reverse();
+  document.getElementById('detail-body').innerHTML = `
+    <div class="detail-header">
+      <div class="detail-avatar" style="background:${getColor(id)}30;color:${getColor(id)}">${getInitials(s.name)}</div>
+      <div class="detail-info">
+        <h2>${esc(s.name)}</h2>
+        <p>${esc(s.role||'No role')}${s.org?' · '+esc(s.org):''}</p>
+        ${s.email?`<p style="font-size:12px;margin-top:2px">${esc(s.email)}</p>`:''}
+      </div>
+      <span class="tag tag-${s.sentiment.toLowerCase()}" style="margin-left:auto;font-size:13px;padding:5px 12px">${s.sentiment}</span>
+    </div>
+    <div class="detail-grid" style="margin-bottom:16px">
+      <div class="detail-field"><div class="label">Influence</div><div class="value">${s.influence}/5 ${'█'.repeat(s.influence)}${'░'.repeat(5-s.influence)}</div></div>
+      <div class="detail-field"><div class="label">Interest</div><div class="value">${s.interest}/5 ${'█'.repeat(s.interest)}${'░'.repeat(5-s.interest)}</div></div>
+      <div class="detail-field"><div class="label">Quadrant</div><div class="value">${q}</div></div>
+      <div class="detail-field"><div class="label">Comm Plan</div><div class="value">${s.freq} via ${s.channel}</div></div>
+    </div>
+    ${s.messages?`<div class="detail-section"><h4>Key Messages</h4><div style="font-size:13px;color:var(--text2);padding:10px;background:var(--surface2);border-radius:var(--radius-sm)">${esc(s.messages)}</div></div>`:''}
+    ${s.notes?`<div class="detail-section"><h4>Notes</h4><div style="font-size:13px;color:var(--text2);padding:10px;background:var(--surface2);border-radius:var(--radius-sm)">${esc(s.notes)}</div></div>`:''}
+    <div class="detail-section">
+      <h4>Interaction Log (${interactions.length})</h4>
+      <div class="add-interaction">
+        <select id="int-type" style="width:110px"><option>Email</option><option>Call</option><option>Meeting</option><option>Slack</option><option>LinkedIn</option><option>WhatsApp</option><option>Other</option></select>
+        <input id="int-note" placeholder="What happened..." style="flex:1" onkeydown="if(event.key==='Enter')addInteraction('${id}')">
+        <button class="btn btn-primary btn-sm" onclick="addInteraction('${id}')">+ Log</button>
+      </div>
+      <div class="interaction-log" style="margin-top:12px;max-height:200px;overflow-y:auto">
+        ${interactions.length ? interactions.map(i => `
+          <div class="interaction-item">
+            <span class="interaction-date">${new Date(i.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>
+            <span class="interaction-type">${i.type}</span>
+            <span class="interaction-note">${esc(i.note)}</span>
+          </div>
+        `).join('') : '<div style="font-size:13px;color:var(--text3);padding:12px;text-align:center">No interactions logged yet</div>'}
+      </div>
+    </div>`;
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+function closeDetailModal() { document.getElementById('detail-modal').classList.remove('open'); detailId = null; }
+
+function editFromDetail() { closeDetailModal(); openModal(detailId); }
+
+function addInteraction(id) {
+  const note = document.getElementById('int-note').value.trim();
+  if (!note) return;
+  const type = document.getElementById('int-type').value;
+  const s = state.stakeholders.find(x => x.id === id);
+  if (!s) return;
+  if (!s.interactions) s.interactions = [];
+  s.interactions.push({ date: new Date().toISOString(), type, note });
+  save(); openDetail(id); // re-render detail
+}
+
+// Initiatives
+function openInitModal() {
+  renderInitList();
+  document.getElementById('init-modal').classList.add('open');
+  setTimeout(() => document.getElementById('init-input').focus(), 100);
+}
+function closeInitModal() { document.getElementById('init-modal').classList.remove('open'); renderView(); }
+function addInitiative() {
+  const name = document.getElementById('init-input').value.trim();
+  if (!name) return;
+  state.initiatives.push({ id: uid(), name });
+  document.getElementById('init-input').value = '';
+  save(); renderInitList();
+}
+function removeInitiative(id) {
+  state.initiatives = state.initiatives.filter(i => i.id !== id);
+  Object.keys(state.raci).forEach(k => { if (k.startsWith(id)) delete state.raci[k]; });
+  save(); renderInitList();
+}
+function renderInitList() {
+  document.getElementById('init-list').innerHTML = state.initiatives.map(i => `
+    <div class="init-item"><span>${esc(i.name)}</span><button onclick="removeInitiative('${i.id}')">✕</button></div>
+  `).join('') || '<div style="text-align:center;color:var(--text3);padding:16px;font-size:13px">No initiatives yet</div>';
+}
+
+// Import/Export
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `stakeholder-map-${new Date().toISOString().slice(0,10)}.json`; a.click();
+}
+function importJSON() { document.getElementById('file-input').click(); }
+function handleImport(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => { state = JSON.parse(ev.target.result); save(); renderView(); };
+  reader.readAsText(file); e.target.value = '';
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  const tag = document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+    if (e.key === 'Escape') { document.activeElement.blur(); closeModal(); closeInitModal(); closeDetailModal(); hideShortcuts(); }
+    return;
+  }
+  if (e.key === 'Escape') { closeModal(); closeInitModal(); closeDetailModal(); hideShortcuts(); }
+  else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); if (currentView === 'raci') openInitModal(); else openModal(); }
+  else if (e.key === '/') { e.preventDefault(); document.getElementById('search').focus(); }
+  else if (e.key === '1') switchView('people');
+  else if (e.key === '2') switchView('matrix');
+  else if (e.key === '3') switchView('raci');
+  else if (e.key === '4') switchView('comms');
+  else if (e.key === '5') switchView('dashboard');
+  else if (e.key === 'e' || e.key === 'E') exportJSON();
+  else if (e.key === 'i' || e.key === 'I') importJSON();
+  else if (e.key === '?') showShortcuts();
+});
+
+function showShortcuts() { document.getElementById('shortcuts-overlay').classList.add('open'); }
+function hideShortcuts() { document.getElementById('shortcuts-overlay').classList.remove('open'); }
+
+// Demo Data
+function seedDemo() {
+  state.stakeholders = [
+    { id:'s1', name:'Priya Sharma', role:'CTO', org:'ZYOD', email:'priya@zyod.com', influence:5, interest:5, sentiment:'Champion', freq:'Weekly', channel:'Slack', messages:'Align on tech roadmap, IoT deployment updates, resource planning for Q2', notes:'Strong ally, deeply invested in digital twin vision. Key decision maker for tech investments.', interactions:[
+      { date:'2026-04-15T10:00:00Z', type:'Meeting', note:'Reviewed IoT dashboard v2 specs. Approved budget for sensor upgrades.' },
+      { date:'2026-04-10T14:00:00Z', type:'Slack', note:'Discussed Redis caching strategy for real-time machine data.' },
+      { date:'2026-04-02T09:00:00Z', type:'Meeting', note:'Sprint planning — agreed on WMS QR code enhancement priorities.' }
+    ], created:'2026-03-01T00:00:00Z' },
+    { id:'s2', name:'Rahul Mehta', role:'CEO', org:'ZYOD', email:'rahul@zyod.com', influence:5, interest:3, sentiment:'Supporter', freq:'Bi-weekly', channel:'Meeting', messages:'ROI metrics, revenue impact numbers, strategic alignment with company goals', notes:'Cares most about bottom-line impact. Lead with numbers, not features. Short attention span in meetings.', interactions:[
+      { date:'2026-04-12T11:00:00Z', type:'Meeting', note:'Monthly review — presented $1.4M capital unlock from QR-WMS. Very pleased.' },
+      { date:'2026-03-28T16:00:00Z', type:'Email', note:'Sent Q1 product impact summary deck.' }
+    ], created:'2026-03-01T00:00:00Z' },
+    { id:'s3', name:'Anjali Verma', role:'VP Operations', org:'ZYOD', email:'anjali@zyod.com', influence:4, interest:5, sentiment:'Champion', freq:'Weekly', channel:'WhatsApp', messages:'Fabric cycle time improvements, WMS adoption metrics, factory floor feedback', notes:'Biggest product champion on the ops side. She sees the pain daily and pushes for digital solutions.', interactions:[
+      { date:'2026-04-17T08:00:00Z', type:'WhatsApp', note:'Shared photo of new QR scanner setup at Noida factory. Team loves it.' },
+      { date:'2026-04-14T10:00:00Z', type:'Meeting', note:'Walked through new fabric tracking flow. Identified 3 edge cases.' }
+    ], created:'2026-03-01T00:00:00Z' },
+    { id:'s4', name:'Karan Singh', role:'Head of Finance', org:'ZYOD', email:'karan@zyod.com', influence:4, interest:2, sentiment:'Neutral', freq:'Monthly', channel:'Email', messages:'Cost savings from automation, working capital improvement, budget justification', notes:'Skeptical of tech spend unless ROI is crystal clear. Needs numbers, not demos.', interactions:[
+      { date:'2026-04-05T15:00:00Z', type:'Email', note:'Sent ROI breakdown for IoT deployment. $180K annual savings from 50 lines of code.' }
+    ], created:'2026-03-01T00:00:00Z' },
+    { id:'s5', name:'Deepak Joshi', role:'Factory Manager', org:'ZYOD Noida Plant', email:'deepak@zyod.com', influence:2, interest:5, sentiment:'Supporter', freq:'Weekly', channel:'WhatsApp', messages:'Training schedules, rollout timelines, feedback collection, quick wins', notes:'End user champion. Enthusiastic but needs hand-holding on new tech. Great source of ground-truth feedback.', interactions:[
+      { date:'2026-04-18T07:00:00Z', type:'WhatsApp', note:'Reported 95% QR adoption rate on the floor this week!' },
+      { date:'2026-04-11T09:00:00Z', type:'Meeting', note:'Training session for new IoT dashboard. 15 operators attended.' }
+    ], created:'2026-03-01T00:00:00Z' },
+    { id:'s6', name:'Vikram Rao', role:'Head of Procurement', org:'ZYOD', email:'vikram@zyod.com', influence:3, interest:2, sentiment:'Critic', freq:'Monthly', channel:'Email', messages:'How product changes affect vendor processes, procurement workflow impact, change timeline', notes:'Resistant to change. Worried digital tracking exposes procurement inefficiencies. Handle with care — build trust gradually.', interactions:[
+      { date:'2026-04-08T11:00:00Z', type:'Meeting', note:'Addressed concerns about vendor data visibility. Agreed to phased rollout.' }
+    ], created:'2026-03-01T00:00:00Z' },
+    { id:'s7', name:'Neha Kapoor', role:'Design Lead', org:'ZYOD', email:'neha@zyod.com', influence:2, interest:4, sentiment:'Champion', freq:'Weekly', channel:'Slack', messages:'UX feedback, design sprint schedules, user research insights', notes:'Excellent design partner. Proactively runs user testing. Keep involved in all UX decisions.', interactions:[
+      { date:'2026-04-16T13:00:00Z', type:'Slack', note:'Shared wireframes for new operator dashboard. Clean and intuitive.' },
+      { date:'2026-04-09T10:00:00Z', type:'Meeting', note:'Design review for fabric tracking v2. Simplified 4 screens to 2.' }
+    ], created:'2026-03-01T00:00:00Z' },
+    { id:'s8', name:'Arjun Patel', role:'Board Member', org:'ZYOD', email:'arjun@zyod.com', influence:5, interest:1, sentiment:'Neutral', freq:'Quarterly', channel:'Meeting', messages:'High-level product vision, market differentiation, competitive advantage through tech', notes:'Only cares about strategic positioning and market impact. Skip the details, lead with vision.', interactions:[
+      { date:'2026-04-01T10:00:00Z', type:'Meeting', note:'Board meeting — presented product roadmap. Impressed by IoT + IIT Delhi partnership.' }
+    ], created:'2026-03-01T00:00:00Z' },
+    { id:'s9', name:'Prof. Suresh Kumar', role:'Research Partner', org:'IIT Delhi', email:'suresh@iitd.ac.in', influence:3, interest:4, sentiment:'Supporter', freq:'Bi-weekly', channel:'Email', messages:'Research milestone updates, data sharing, publication opportunities, student intern pipeline', notes:'Academic partner for IoT R&D. Slow but thorough. Potential for joint IP and publications.', interactions:[
+      { date:'2026-04-13T14:00:00Z', type:'Email', note:'Shared sensor calibration data from factory pilot. Next: anomaly detection model.' }
+    ], created:'2026-03-01T00:00:00Z' },
+    { id:'s10', name:'Ravi Kumar', role:'Engineering Lead', org:'ZYOD', email:'ravi@zyod.com', influence:3, interest:4, sentiment:'Supporter', freq:'Weekly', channel:'Slack', messages:'Sprint priorities, tech debt management, architecture decisions, team capacity', notes:'Reliable execution partner. Needs clear specs. Push him on code quality and testing.', interactions:[
+      { date:'2026-04-17T10:00:00Z', type:'Slack', note:'Resolved production issue with WMS barcode scanner. 30 min downtime.' },
+      { date:'2026-04-14T11:00:00Z', type:'Meeting', note:'Sprint retro — agreed to allocate 20% to tech debt next sprint.' }
+    ], created:'2026-03-01T00:00:00Z' }
+  ];
+
+  state.initiatives = [
+    { id:'i1', name:'QR-WMS Phase 2 Rollout' },
+    { id:'i2', name:'IoT Dashboard v2' },
+    { id:'i3', name:'Fabric Tracking Redesign' },
+    { id:'i4', name:'IIT Delhi Research Partnership' },
+    { id:'i5', name:'Operator Mobile App' }
+  ];
+
+  state.raci = {
+    'i1_s1':'A', 'i1_s2':'I', 'i1_s3':'R', 'i1_s4':'C', 'i1_s5':'R', 'i1_s6':'C', 'i1_s7':'C', 'i1_s10':'R',
+    'i2_s1':'A', 'i2_s3':'C', 'i2_s5':'I', 'i2_s7':'R', 'i2_s10':'R',
+    'i3_s1':'C', 'i3_s3':'A', 'i3_s5':'C', 'i3_s7':'R', 'i3_s10':'R',
+    'i4_s1':'A', 'i4_s2':'I', 'i4_s8':'I', 'i4_s9':'R', 'i4_s10':'C',
+    'i5_s1':'A', 'i5_s3':'C', 'i5_s5':'R', 'i5_s7':'R', 'i5_s10':'R'
+  };
+
+  save();
+}
+
+// Init
+load();
+</script>
+</body>
+</html>

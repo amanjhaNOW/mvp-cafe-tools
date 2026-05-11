@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Pulse — Squad Health Check & Mood Tracker</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#242836;--surface3:#2e3348;--border:#363b50;--text:#e4e7f1;--text2:#9ba1b8;--text3:#6b7194;--accent:#6366f1;--accent2:#818cf8;--accent3:#4f46e5;--green:#22c55e;--green2:#16a34a;--yellow:#eab308;--yellow2:#ca8a04;--red:#ef4444;--red2:#dc2626;--orange:#f97316;--blue:#3b82f6;--purple:#a855f7;--pink:#ec4899;--teal:#14b8a6;--radius:10px;--radius-sm:6px;--shadow:0 4px 24px rgba(0,0,0,.3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;overflow:hidden;height:100vh}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:var(--text)}
+input,textarea,select{font-family:inherit;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;outline:none;width:100%}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+
+/* Layout */
+.app{display:flex;height:100vh}
+.sidebar{width:280px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:22px}
+.sidebar-search{padding:8px 16px}
+.sidebar-search input{font-size:13px;padding:6px 10px;background:var(--surface2)}
+.sidebar-list{flex:1;overflow-y:auto;padding:8px}
+.sidebar-item{padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;margin-bottom:2px;display:flex;align-items:center;gap:10px;font-size:14px;transition:background .15s}
+.sidebar-item:hover{background:var(--surface2)}
+.sidebar-item.active{background:var(--accent3);color:#fff}
+.sidebar-item .si-emoji{font-size:18px;width:24px;text-align:center}
+.sidebar-item .si-info{flex:1;min-width:0}
+.sidebar-item .si-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-item .si-meta{font-size:11px;color:var(--text3)}
+.sidebar-item.active .si-meta{color:rgba(255,255,255,.6)}
+.sidebar-actions{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px}
+.sidebar-actions button{flex:1;padding:8px;background:var(--accent);color:#fff;border-radius:var(--radius-sm);font-size:13px;font-weight:600}
+.sidebar-actions button:hover{background:var(--accent2)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:12px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surface);flex-shrink:0}
+.topbar .tabs{display:flex;gap:4px}
+.topbar .tab{padding:6px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;color:var(--text2);transition:all .15s}
+.topbar .tab:hover{background:var(--surface2);color:var(--text)}
+.topbar .tab.active{background:var(--accent);color:#fff}
+.topbar .spacer{flex:1}
+.topbar .tb-btn{padding:6px 12px;border-radius:var(--radius-sm);font-size:13px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.topbar .tb-btn:hover{background:var(--surface2);color:var(--text)}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-header h2{font-size:16px;font-weight:700}
+.card-header h3{font-size:14px;font-weight:600;color:var(--text2)}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-card .sc-label{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.stat-card .sc-value{font-size:28px;font-weight:800}
+.stat-card .sc-sub{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* Health Check Grid */
+.hc-grid{display:grid;gap:12px}
+.hc-dimension{background:var(--surface2);border-radius:var(--radius);padding:16px;display:flex;align-items:center;gap:16px}
+.hc-dim-info{flex:1;min-width:0}
+.hc-dim-name{font-weight:600;font-size:15px;margin-bottom:2px}
+.hc-dim-desc{font-size:12px;color:var(--text3)}
+.hc-votes{display:flex;gap:8px}
+.hc-vote-btn{width:48px;height:48px;border-radius:var(--radius-sm);font-size:24px;display:flex;align-items:center;justify-content:center;border:2px solid transparent;transition:all .2s;background:var(--surface3)}
+.hc-vote-btn:hover{transform:scale(1.1)}
+.hc-vote-btn.selected{border-color:var(--accent);transform:scale(1.15)}
+.hc-vote-btn.v-green{background:rgba(34,197,94,.15)}
+.hc-vote-btn.v-green.selected{border-color:var(--green);background:rgba(34,197,94,.25)}
+.hc-vote-btn.v-yellow{background:rgba(234,179,8,.15)}
+.hc-vote-btn.v-yellow.selected{border-color:var(--yellow);background:rgba(234,179,8,.25)}
+.hc-vote-btn.v-red{background:rgba(239,68,68,.15)}
+.hc-vote-btn.v-red.selected{border-color:var(--red);background:rgba(239,68,68,.25)}
+
+/* Trend arrows */
+.trend-arrow{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px}
+.trend-up{color:var(--green);background:rgba(34,197,94,.1)}
+.trend-down{color:var(--red);background:rgba(239,68,68,.1)}
+.trend-flat{color:var(--yellow);background:rgba(234,179,8,.1)}
+
+/* Results bar */
+.result-bar{display:flex;height:28px;border-radius:14px;overflow:hidden;background:var(--surface3)}
+.result-bar .rb-green{background:var(--green)}
+.result-bar .rb-yellow{background:var(--yellow)}
+.result-bar .rb-red{background:var(--red)}
+.result-legend{display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--text2)}
+.result-legend span{display:flex;align-items:center;gap:4px}
+.result-legend .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* Session list */
+.session-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;cursor:pointer;transition:all .15s}
+.session-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.session-card .sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.session-card .sc-date{font-size:12px;color:var(--text3)}
+.session-card .sc-title{font-weight:700;font-size:15px}
+.session-card .sc-participants{font-size:12px;color:var(--text2);margin-top:4px}
+
+/* Score circle */
+.score-circle{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;flex-shrink:0}
+.score-good{background:rgba(34,197,94,.15);color:var(--green)}
+.score-ok{background:rgba(234,179,8,.15);color:var(--yellow)}
+.score-bad{background:rgba(239,68,68,.15);color:var(--red)}
+
+/* Mood board */
+.mood-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.mood-entry{background:var(--surface2);border-radius:var(--radius);padding:14px;text-align:center}
+.mood-entry .me-emoji{font-size:36px;margin-bottom:8px}
+.mood-entry .me-name{font-weight:600;font-size:14px;margin-bottom:4px}
+.mood-entry .me-note{font-size:12px;color:var(--text3);font-style:italic}
+.mood-entry .me-date{font-size:11px;color:var(--text3);margin-top:6px}
+
+/* Dashboard charts */
+.chart-container{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.chart-card h3{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text2)}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:160px;padding-top:8px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar-col .bar{width:100%;border-radius:4px 4px 0 0;min-height:2px;transition:height .3s}
+.bar-col .bar-label{font-size:10px;color:var(--text3);text-align:center}
+.bar-col .bar-value{font-size:11px;font-weight:600}
+
+/* Radar chart area */
+.radar-wrap{position:relative;width:280px;height:280px;margin:0 auto}
+.radar-svg{width:100%;height:100%}
+
+/* Trend line chart */
+.trend-chart{height:180px;display:flex;align-items:flex-end;gap:3px}
+.trend-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
+.trend-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.trend-line-area{position:relative;height:160px;width:100%}
+
+/* Members */
+.member-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.member-card{background:var(--surface2);border-radius:var(--radius);padding:16px;display:flex;align-items:center;gap:12px}
+.member-avatar{width:40px;height:40px;border-radius:50%;background:var(--accent3);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0}
+.member-info{flex:1}
+.member-info .mi-name{font-weight:600;font-size:14px}
+.member-info .mi-role{font-size:12px;color:var(--text3)}
+.member-actions{display:flex;gap:4px}
+.member-actions button{padding:4px 8px;font-size:12px;border-radius:4px;color:var(--text3)}
+.member-actions button:hover{background:var(--surface3);color:var(--text)}
+
+/* Templates */
+.template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.template-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all .15s}
+.template-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.template-card .tc-emoji{font-size:28px;margin-bottom:8px}
+.template-card .tc-name{font-weight:700;font-size:15px;margin-bottom:4px}
+.template-card .tc-desc{font-size:12px;color:var(--text3);margin-bottom:8px}
+.template-card .tc-dims{font-size:11px;color:var(--text2)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:90%;max-width:560px;max-height:85vh;overflow-y:auto}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:16px}
+.modal label{display:block;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px;margin-top:12px}
+.modal label:first-of-type{margin-top:0}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.modal-actions button{padding:8px 20px;border-radius:var(--radius-sm);font-size:13px;font-weight:600}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{background:var(--surface2);color:var(--text2)}
+.btn-secondary:hover{background:var(--surface3);color:var(--text)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:var(--red2)}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:4px}
+
+/* Dimension editor in modal */
+.dim-list{margin-top:8px}
+.dim-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.dim-row input{flex:1}
+.dim-row input:last-of-type{flex:2}
+.dim-row button{color:var(--red);font-size:16px;padding:4px;flex-shrink:0}
+
+/* Empty state */
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty .e-icon{font-size:48px;margin-bottom:12px}
+.empty .e-title{font-size:18px;font-weight:600;color:var(--text2);margin-bottom:8px}
+.empty .e-desc{font-size:14px;margin-bottom:20px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* Responsive */
+@media(max-width:900px){.sidebar{width:220px}.chart-container{grid-template-columns:1fr}}
+@media(max-width:700px){.sidebar{display:none}.app{flex-direction:column}}
+
+/* Print */
+@media print{.sidebar,.topbar{display:none}.content{padding:20px}}
+
+/* Heatmap */
+.heatmap{display:flex;gap:2px;flex-wrap:wrap;margin-top:8px}
+.heatmap-cell{width:14px;height:14px;border-radius:2px;background:var(--surface3)}
+.heatmap-cell.h1{background:rgba(99,102,241,.2)}
+.heatmap-cell.h2{background:rgba(99,102,241,.4)}
+.heatmap-cell.h3{background:rgba(99,102,241,.6)}
+.heatmap-cell.h4{background:rgba(99,102,241,.9)}
+
+/* Inline tags */
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--surface3);color:var(--text2);margin:2px}
+
+/* Section header */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-header h2{font-size:20px;font-weight:800}
+.section-header .sh-sub{font-size:13px;color:var(--text3)}
+
+/* Comparison table */
+.compare-table{width:100%;border-collapse:collapse;font-size:13px}
+.compare-table th{text-align:left;padding:8px 12px;border-bottom:2px solid var(--border);font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.compare-table td{padding:8px 12px;border-bottom:1px solid var(--border)}
+.compare-table tr:hover td{background:var(--surface2)}
+
+/* Pulse animation */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.pulse{animation:pulse 2s infinite}
+
+/* Help overlay */
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .2s}
+.help-overlay.open{opacity:1;pointer-events:auto}
+.help-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:90%;max-width:480px}
+.help-box h2{font-size:18px;margin-bottom:16px}
+.help-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.help-row:last-child{border:none}
+.help-key{background:var(--surface3);padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-box">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="help-row"><span>New Health Check</span><span class="help-key">N</span></div>
+    <div class="help-row"><span>New Team</span><span class="help-key">T</span></div>
+    <div class="help-row"><span>Search</span><span class="help-key">/</span></div>
+    <div class="help-row"><span>Health Checks</span><span class="help-key">1</span></div>
+    <div class="help-row"><span>Mood Board</span><span class="help-key">2</span></div>
+    <div class="help-row"><span>Trends</span><span class="help-key">3</span></div>
+    <div class="help-row"><span>Dashboard</span><span class="help-key">4</span></div>
+    <div class="help-row"><span>Members</span><span class="help-key">5</span></div>
+    <div class="help-row"><span>Export JSON</span><span class="help-key">E</span></div>
+    <div class="help-row"><span>Import JSON</span><span class="help-key">I</span></div>
+    <div class="help-row"><span>Help</span><span class="help-key">?</span></div>
+    <div class="help-row"><span>Close</span><span class="help-key">Esc</span></div>
+    <div style="margin-top:16px;text-align:center">
+      <button class="btn-secondary" onclick="toggleHelp()" style="padding:8px 24px;border-radius:6px">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const TEMPLATES = [
+  {
+    id:'spotify', emoji:'🎵', name:'Spotify Squad Health Check',
+    desc:'The original Spotify model — 11 dimensions covering team autonomy, alignment, and wellbeing.',
+    dimensions:[
+      {name:'Delivering Value',desc:'We deliver great stuff and feel proud of it'},
+      {name:'Easy to Release',desc:'Releasing is simple, safe, painless'},
+      {name:'Fun',desc:'We love going to work and have great fun together'},
+      {name:'Health of Codebase',desc:'We feel good about our code quality'},
+      {name:'Learning',desc:'We are learning interesting things all the time'},
+      {name:'Mission',desc:'We know why we are here and it excites us'},
+      {name:'Pawns or Players',desc:'We feel in control of our destiny'},
+      {name:'Speed',desc:'We get stuff done really fast without waiting'},
+      {name:'Suitable Process',desc:'Our way of working fits us perfectly'},
+      {name:'Support',desc:'We get great support when we need it'},
+      {name:'Teamwork',desc:'We work great together and feel like a team'}
+    ]
+  },
+  {
+    id:'pm', emoji:'🎯', name:'Product Team Health',
+    desc:'Tailored for product teams — covers strategy, execution, and cross-functional health.',
+    dimensions:[
+      {name:'Product Vision',desc:'We have a clear, inspiring product direction'},
+      {name:'Customer Empathy',desc:'We deeply understand our users and their problems'},
+      {name:'Shipping Speed',desc:'We ship features fast with quality'},
+      {name:'Data-Driven',desc:'We measure what matters and use data for decisions'},
+      {name:'Cross-Functional Collab',desc:'Engineering, design, and product work seamlessly'},
+      {name:'Technical Debt',desc:'We manage tech debt proactively'},
+      {name:'Stakeholder Alignment',desc:'Leadership is aligned on priorities'},
+      {name:'Team Morale',desc:'Energy is high and people are motivated'},
+      {name:'Innovation',desc:'We have space to experiment and try new things'},
+      {name:'Growth Mindset',desc:'We learn from failures and improve continuously'}
+    ]
+  },
+  {
+    id:'startup', emoji:'🚀', name:'Startup Pulse',
+    desc:'For early-stage teams — fast-paced, resource-constrained, high-ambiguity environment.',
+    dimensions:[
+      {name:'Runway Confidence',desc:'We feel secure about our financial runway'},
+      {name:'Market Signal',desc:'We are getting clear signals from the market'},
+      {name:'Shipping Velocity',desc:'We ship fast and often'},
+      {name:'Founder Alignment',desc:'Founders are aligned on direction'},
+      {name:'Hiring Momentum',desc:'We are attracting the right talent'},
+      {name:'Customer Love',desc:'Users love what we build'},
+      {name:'Team Energy',desc:'The team is energized and resilient'},
+      {name:'Process Fit',desc:'Our processes match our stage'}
+    ]
+  },
+  {
+    id:'remote', emoji:'🌍', name:'Remote Team Check',
+    desc:'Focused on remote/hybrid team challenges — communication, belonging, and async work.',
+    dimensions:[
+      {name:'Communication',desc:'Info flows freely, nothing gets lost'},
+      {name:'Belonging',desc:'We feel connected despite the distance'},
+      {name:'Meeting Load',desc:'Meetings are valuable and not excessive'},
+      {name:'Async Workflow',desc:'We work well asynchronously'},
+      {name:'Work-Life Boundaries',desc:'We respect boundaries and avoid burnout'},
+      {name:'Tool Ecosystem',desc:'Our tools help rather than hinder us'},
+      {name:'Documentation',desc:'Important decisions and context are well-documented'},
+      {name:'Social Connection',desc:'We have fun together beyond work'}
+    ]
+  },
+  {
+    id:'eng', emoji:'⚙️', name:'Engineering Excellence',
+    desc:'Deep dive into engineering team health — CI/CD, testing, architecture, and developer experience.',
+    dimensions:[
+      {name:'CI/CD Pipeline',desc:'Our build and deploy process is smooth'},
+      {name:'Test Coverage',desc:'We trust our test suite'},
+      {name:'Code Review Culture',desc:'Reviews are constructive and timely'},
+      {name:'Architecture Quality',desc:'Our system design supports our needs'},
+      {name:'Developer Experience',desc:'Local dev setup and tooling are great'},
+      {name:'Incident Response',desc:'We handle production issues well'},
+      {name:'On-Call Health',desc:'On-call is fair and manageable'},
+      {name:'Documentation',desc:'Our docs are helpful and up to date'},
+      {name:'Knowledge Sharing',desc:'We learn from each other regularly'},
+      {name:'Tech Debt Balance',desc:'We address tech debt sustainably'}
+    ]
+  },
+  {
+    id:'custom', emoji:'✏️', name:'Custom Health Check',
+    desc:'Start from scratch — define your own dimensions for your team.',
+    dimensions:[
+      {name:'Dimension 1',desc:'Description'},
+      {name:'Dimension 2',desc:'Description'},
+      {name:'Dimension 3',desc:'Description'}
+    ]
+  }
+];
+
+const MOODS = ['😫','😟','😐','🙂','😊','🔥'];
+
+let state = {
+  teams: [],
+  sessions: [],
+  moods: [],
+  members: [],
+  activeTeam: null,
+  activeSession: null,
+  view: 'health', // health, mood, trends, dashboard, members
+  search: ''
+};
+
+function load() {
+  try { const s = localStorage.getItem('team-pulse-v1'); if(s) state = {...state, ...JSON.parse(s)}; } catch(e){}
+}
+function save() {
+  localStorage.setItem('team-pulse-v1', JSON.stringify(state));
+}
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+
+// ===== RENDER =====
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = renderSidebar() + renderMain();
+  save();
+}
+
+function renderSidebar() {
+  const teams = state.teams.filter(t => !state.search || t.name.toLowerCase().includes(state.search.toLowerCase()));
+  return `<div class="sidebar">
+    <div class="sidebar-header"><h1><span>💓</span> Team Pulse</h1></div>
+    <div class="sidebar-search"><input type="text" placeholder="Search teams…" value="${esc(state.search)}" oninput="state.search=this.value;render()"></div>
+    <div class="sidebar-list">
+      ${teams.length ? teams.map(t => {
+        const sessions = state.sessions.filter(s => s.teamId === t.id);
+        const active = state.activeTeam === t.id;
+        return `<div class="sidebar-item${active?' active':''}" onclick="state.activeTeam='${t.id}';render()">
+          <div class="si-emoji">${t.emoji||'👥'}</div>
+          <div class="si-info">
+            <div class="si-name">${esc(t.name)}</div>
+            <div class="si-meta">${sessions.length} check${sessions.length!==1?'s':''} · ${state.members.filter(m=>m.teamId===t.id).length} members</div>
+          </div>
+        </div>`;
+      }).join('') : '<div style="padding:12px;color:var(--text3);font-size:13px;text-align:center">No teams yet</div>'}
+    </div>
+    <div class="sidebar-actions">
+      <button onclick="showNewTeam()">+ Team</button>
+      <button onclick="showNewSession()">+ Check</button>
+    </div>
+  </div>`;
+}
+
+function renderMain() {
+  const team = state.teams.find(t => t.id === state.activeTeam);
+  return `<div class="main">
+    <div class="topbar">
+      <div class="tabs">
+        ${['health','mood','trends','dashboard','members'].map((v,i) => {
+          const labels = ['🏥 Health Checks','😊 Mood Board','📈 Trends','📊 Dashboard','👥 Members'];
+          return `<button class="tab${state.view===v?' active':''}" onclick="state.view='${v}';render()">${labels[i]}</button>`;
+        }).join('')}
+      </div>
+      <div class="spacer"></div>
+      <button class="tb-btn" onclick="exportJSON()" title="Export">📤 Export</button>
+      <button class="tb-btn" onclick="importJSON()" title="Import">📥 Import</button>
+      <button class="tb-btn" onclick="toggleHelp()" title="Help">❓</button>
+    </div>
+    <div class="content">
+      ${!team ? renderWelcome() : renderView(team)}
+    </div>
+  </div>`;
+}
+
+function renderWelcome() {
+  return `<div class="empty">
+    <div class="e-icon">💓</div>
+    <div class="e-title">Welcome to Team Pulse</div>
+    <div class="e-desc">Create a team and run your first health check to get started.</div>
+    <button class="btn-primary" style="padding:10px 24px;border-radius:8px;font-size:14px" onclick="showNewTeam()">+ Create Team</button>
+    <div style="margin-top:32px">
+      <h3 style="font-size:14px;color:var(--text2);margin-bottom:16px">Or start from a template:</h3>
+      <div class="template-grid">
+        ${TEMPLATES.filter(t=>t.id!=='custom').map(t => `
+          <div class="template-card" onclick="createFromTemplate('${t.id}')">
+            <div class="tc-emoji">${t.emoji}</div>
+            <div class="tc-name">${t.name}</div>
+            <div class="tc-desc">${t.desc}</div>
+            <div class="tc-dims">${t.dimensions.length} dimensions</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderView(team) {
+  switch(state.view) {
+    case 'health': return renderHealthChecks(team);
+    case 'mood': return renderMoodBoard(team);
+    case 'trends': return renderTrends(team);
+    case 'dashboard': return renderDashboard(team);
+    case 'members': return renderMembers(team);
+  }
+}
+
+// ===== HEALTH CHECKS VIEW =====
+function renderHealthChecks(team) {
+  if (state.activeSession) {
+    const session = state.sessions.find(s => s.id === state.activeSession);
+    if (session) return renderSessionDetail(team, session);
+  }
+  const sessions = state.sessions.filter(s => s.teamId === team.id).sort((a,b) => new Date(b.date)-new Date(a.date));
+  if (!sessions.length) {
+    return `<div class="empty">
+      <div class="e-icon">🏥</div>
+      <div class="e-title">No Health Checks Yet</div>
+      <div class="e-desc">Run your first squad health check for ${esc(team.name)}.</div>
+      <button class="btn-primary" style="padding:10px 24px;border-radius:8px" onclick="showNewSession()">+ New Health Check</button>
+    </div>`;
+  }
+  return `<div class="section-header">
+    <div><h2>${esc(team.name)} — Health Checks</h2><div class="sh-sub">${sessions.length} session${sessions.length!==1?'s':''}</div></div>
+    <button class="btn-primary btn-sm" onclick="showNewSession()">+ New Check</button>
+  </div>
+  ${sessions.map(s => {
+    const score = calcSessionScore(s);
+    const scoreClass = score >= 2.3 ? 'score-good' : score >= 1.7 ? 'score-ok' : 'score-bad';
+    const prev = sessions.find(ps => new Date(ps.date) < new Date(s.date));
+    const prevScore = prev ? calcSessionScore(prev) : null;
+    const trend = prevScore !== null ? (score > prevScore ? 'up' : score < prevScore ? 'down' : 'flat') : null;
+    const participants = s.participants || 0;
+    return `<div class="session-card" onclick="state.activeSession='${s.id}';render()">
+      <div class="sc-top">
+        <div>
+          <div class="sc-title">${esc(s.name)}</div>
+          <div class="sc-participants">${participants} participant${participants!==1?'s':''} · ${s.dimensions.length} dimensions</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          ${trend ? `<span class="trend-arrow trend-${trend}">${trend==='up'?'↑':trend==='down'?'↓':'→'} ${Math.abs(score-prevScore).toFixed(1)}</span>` : ''}
+          <div class="score-circle ${scoreClass}">${score.toFixed(1)}</div>
+        </div>
+      </div>
+      <div class="sc-date">${formatDate(s.date)}</div>
+      ${renderResultBar(s)}
+    </div>`;
+  }).join('')}`;
+}
+
+function renderSessionDetail(team, session) {
+  const score = calcSessionScore(session);
+  const scoreClass = score >= 2.3 ? 'score-good' : score >= 1.7 ? 'score-ok' : 'score-bad';
+  const g = session.results.filter(r=>r.vote==='green').length;
+  const y = session.results.filter(r=>r.vote==='yellow').length;
+  const r = session.results.filter(r=>r.vote==='red').length;
+
+  return `<div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+      <button class="btn-secondary btn-sm" onclick="state.activeSession=null;render()">← Back</button>
+      <h2 style="font-size:20px;font-weight:800;flex:1">${esc(session.name)}</h2>
+      <div class="score-circle ${scoreClass}" style="width:48px;height:48px;font-size:16px">${score.toFixed(1)}</div>
+      <button class="btn-secondary btn-sm" onclick="editSession('${session.id}')">✏️ Edit</button>
+      <button class="btn-danger btn-sm" onclick="deleteSession('${session.id}')">🗑️</button>
+    </div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">${formatDate(session.date)} · ${session.participants||0} participants · ${session.template||'Custom'} template</div>
+    
+    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px">
+      <div class="stat-card"><div class="sc-label">Overall Score</div><div class="sc-value" style="color:${score>=2.3?'var(--green)':score>=1.7?'var(--yellow)':'var(--red)'}">${score.toFixed(2)}</div><div class="sc-sub">out of 3.0</div></div>
+      <div class="stat-card"><div class="sc-label">😊 Green</div><div class="sc-value" style="color:var(--green)">${g}</div><div class="sc-sub">${session.dimensions.length?Math.round(g/session.dimensions.length*100):0}%</div></div>
+      <div class="stat-card"><div class="sc-label">😐 Yellow</div><div class="sc-value" style="color:var(--yellow)">${y}</div><div class="sc-sub">${session.dimensions.length?Math.round(y/session.dimensions.length*100):0}%</div></div>
+      <div class="stat-card"><div class="sc-label">😟 Red</div><div class="sc-value" style="color:var(--red)">${r}</div><div class="sc-sub">${session.dimensions.length?Math.round(r/session.dimensions.length*100):0}%</div></div>
+    </div>
+
+    ${renderResultBar(session)}
+    <div style="margin-top:24px"></div>
+    
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header"><h2>Dimensions</h2></div>
+      <div class="hc-grid">
+        ${session.dimensions.map((dim, i) => {
+          const result = session.results.find(r => r.dim === dim.name);
+          const vote = result ? result.vote : null;
+          return `<div class="hc-dimension">
+            <div class="hc-dim-info">
+              <div class="hc-dim-name">${esc(dim.name)}</div>
+              <div class="hc-dim-desc">${esc(dim.desc||'')}</div>
+            </div>
+            <div class="hc-votes">
+              <button class="hc-vote-btn v-green${vote==='green'?' selected':''}" onclick="vote('${session.id}','${esc(dim.name)}','green')">😊</button>
+              <button class="hc-vote-btn v-yellow${vote==='yellow'?' selected':''}" onclick="vote('${session.id}','${esc(dim.name)}','yellow')">😐</button>
+              <button class="hc-vote-btn v-red${vote==='red'?' selected':''}" onclick="vote('${session.id}','${esc(dim.name)}','red')">😟</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    ${session.notes ? `<div class="card"><div class="card-header"><h2>Session Notes</h2></div><p style="font-size:14px;color:var(--text2);white-space:pre-wrap">${esc(session.notes)}</p></div>` : ''}
+  </div>`;
+}
+
+// ===== MOOD BOARD =====
+function renderMoodBoard(team) {
+  const moods = state.moods.filter(m => m.teamId === team.id).sort((a,b) => new Date(b.date)-new Date(a.date));
+  return `<div class="section-header">
+    <div><h2>Mood Board</h2><div class="sh-sub">Anonymous mood check-ins</div></div>
+    <button class="btn-primary btn-sm" onclick="showAddMood()">+ Add Mood</button>
+  </div>
+  ${moods.length ? `<div class="mood-grid">${moods.map(m => `
+    <div class="mood-entry">
+      <div class="me-emoji">${MOODS[m.level]||'😐'}</div>
+      <div class="me-name">${esc(m.name||'Anonymous')}</div>
+      ${m.note ? `<div class="me-note">"${esc(m.note)}"</div>` : ''}
+      <div class="me-date">${formatDate(m.date)}</div>
+      <button class="btn-secondary btn-sm" style="margin-top:6px" onclick="deleteMood('${m.id}')">✕</button>
+    </div>
+  `).join('')}</div>` : `<div class="empty"><div class="e-icon">😊</div><div class="e-title">No Moods Yet</div><div class="e-desc">Add the first team mood check-in.</div></div>`}`;
+}
+
+// ===== TRENDS =====
+function renderTrends(team) {
+  const sessions = state.sessions.filter(s => s.teamId === team.id).sort((a,b) => new Date(a.date)-new Date(b.date));
+  if (sessions.length < 2) {
+    return `<div class="empty"><div class="e-icon">📈</div><div class="e-title">Need More Data</div><div class="e-desc">Run at least 2 health checks to see trends.</div></div>`;
+  }
+  
+  // Overall score trend
+  const scores = sessions.map(s => ({date: s.date, score: calcSessionScore(s), name: s.name}));
+  const maxScore = 3;
+  
+  // Per-dimension trends
+  const allDims = [...new Set(sessions.flatMap(s => s.dimensions.map(d => d.name)))];
+  
+  return `<div class="section-header"><h2>Trends</h2></div>
+  
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header"><h2>Overall Health Score Over Time</h2></div>
+    <div style="display:flex;align-items:flex-end;gap:16px;height:200px;padding:8px 0">
+      ${scores.map((s,i) => {
+        const h = (s.score/maxScore)*180;
+        const color = s.score>=2.3?'var(--green)':s.score>=1.7?'var(--yellow)':'var(--red)';
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-size:13px;font-weight:700;color:${color}">${s.score.toFixed(1)}</div>
+          <div style="width:100%;height:${h}px;background:${color};border-radius:6px 6px 0 0;min-width:30px;opacity:.8"></div>
+          <div style="font-size:10px;color:var(--text3);text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis">${s.name.slice(0,12)}</div>
+          <div style="font-size:9px;color:var(--text3)">${shortDate(s.date)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+  
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header"><h2>Dimension Comparison</h2></div>
+    <table class="compare-table">
+      <thead><tr>
+        <th>Dimension</th>
+        ${sessions.slice(-5).map(s => `<th>${esc(s.name.slice(0,15))}</th>`).join('')}
+        <th>Trend</th>
+      </tr></thead>
+      <tbody>
+        ${allDims.map(dim => {
+          const vals = sessions.slice(-5).map(s => {
+            const r = s.results.find(r=>r.dim===dim);
+            return r ? r.vote : null;
+          });
+          const numVals = vals.map(v => v==='green'?3:v==='yellow'?2:v==='red'?1:0).filter(v=>v>0);
+          const trend = numVals.length >= 2 ? (numVals[numVals.length-1] > numVals[numVals.length-2] ? 'up' : numVals[numVals.length-1] < numVals[numVals.length-2] ? 'down' : 'flat') : 'flat';
+          return `<tr>
+            <td style="font-weight:600">${esc(dim)}</td>
+            ${vals.map(v => `<td>${v==='green'?'<span style="color:var(--green)">😊</span>':v==='yellow'?'<span style="color:var(--yellow)">😐</span>':v==='red'?'<span style="color:var(--red)">😟</span>':'—'}</td>`).join('')}
+            <td><span class="trend-arrow trend-${trend}">${trend==='up'?'↑ Better':trend==='down'?'↓ Worse':'→ Same'}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Mood Trend</h2></div>
+    ${renderMoodTrend(team)}
+  </div>`;
+}
+
+function renderMoodTrend(team) {
+  const moods = state.moods.filter(m => m.teamId === team.id).sort((a,b) => new Date(a.date)-new Date(b.date));
+  if (moods.length < 2) return '<p style="color:var(--text3);font-size:13px">Need more mood data to show trends.</p>';
+  
+  // Group by week
+  const weeks = {};
+  moods.forEach(m => {
+    const d = new Date(m.date);
+    const weekStart = new Date(d); weekStart.setDate(d.getDate()-d.getDay());
+    const key = weekStart.toISOString().slice(0,10);
+    if (!weeks[key]) weeks[key] = [];
+    weeks[key].push(m.level);
+  });
+  
+  const weekData = Object.entries(weeks).map(([k,v]) => ({week:k, avg: v.reduce((a,b)=>a+b,0)/v.length, count:v.length}));
+  const maxLevel = 5;
+  
+  return `<div style="display:flex;align-items:flex-end;gap:12px;height:160px;padding:8px 0">
+    ${weekData.map(w => {
+      const h = (w.avg/maxLevel)*140;
+      const color = w.avg>=3.5?'var(--green)':w.avg>=2?'var(--yellow)':'var(--red)';
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:18px">${MOODS[Math.round(w.avg)]||'😐'}</div>
+        <div style="width:100%;height:${h}px;background:${color};border-radius:6px 6px 0 0;opacity:.7;min-width:24px"></div>
+        <div style="font-size:9px;color:var(--text3)">${shortDate(w.week)}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ===== DASHBOARD =====
+function renderDashboard(team) {
+  const sessions = state.sessions.filter(s => s.teamId === team.id);
+  const moods = state.moods.filter(m => m.teamId === team.id);
+  const members = state.members.filter(m => m.teamId === team.id);
+  
+  const latestSession = sessions.sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+  const latestScore = latestSession ? calcSessionScore(latestSession) : 0;
+  const allResults = sessions.flatMap(s=>s.results);
+  const greenPct = allResults.length ? Math.round(allResults.filter(r=>r.vote==='green').length/allResults.length*100) : 0;
+  const avgMood = moods.length ? (moods.reduce((a,m)=>a+m.level,0)/moods.length) : 0;
+  
+  // Find weakest dimensions across all sessions
+  const dimScores = {};
+  sessions.forEach(s => {
+    s.results.forEach(r => {
+      if (!dimScores[r.dim]) dimScores[r.dim] = [];
+      dimScores[r.dim].push(r.vote==='green'?3:r.vote==='yellow'?2:1);
+    });
+  });
+  const dimAvgs = Object.entries(dimScores).map(([name, scores]) => ({name, avg: scores.reduce((a,b)=>a+b,0)/scores.length})).sort((a,b)=>a.avg-b.avg);
+  
+  return `<div class="section-header"><h2>Dashboard — ${esc(team.name)}</h2></div>
+  
+  <div class="stats-grid">
+    <div class="stat-card"><div class="sc-label">Latest Score</div><div class="sc-value" style="color:${latestScore>=2.3?'var(--green)':latestScore>=1.7?'var(--yellow)':'var(--red)'}">${latestScore?latestScore.toFixed(1):'—'}</div><div class="sc-sub">out of 3.0</div></div>
+    <div class="stat-card"><div class="sc-label">Health Checks</div><div class="sc-value">${sessions.length}</div><div class="sc-sub">total sessions</div></div>
+    <div class="stat-card"><div class="sc-label">Green Rate</div><div class="sc-value" style="color:var(--green)">${greenPct}%</div><div class="sc-sub">all-time positive</div></div>
+    <div class="stat-card"><div class="sc-label">Team Mood</div><div class="sc-value">${moods.length?MOODS[Math.round(avgMood)]:'—'}</div><div class="sc-sub">${moods.length?avgMood.toFixed(1)+' avg':' no data'}</div></div>
+    <div class="stat-card"><div class="sc-label">Members</div><div class="sc-value">${members.length}</div><div class="sc-sub">team size</div></div>
+    <div class="stat-card"><div class="sc-label">Mood Entries</div><div class="sc-value">${moods.length}</div><div class="sc-sub">check-ins</div></div>
+  </div>
+  
+  <div class="chart-container">
+    <div class="chart-card">
+      <h3>🎯 Weakest Dimensions (Needs Attention)</h3>
+      ${dimAvgs.length ? dimAvgs.slice(0,6).map(d => {
+        const pct = (d.avg/3)*100;
+        const color = d.avg>=2.3?'var(--green)':d.avg>=1.7?'var(--yellow)':'var(--red)';
+        return `<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+            <span>${esc(d.name)}</span><span style="color:${color};font-weight:700">${d.avg.toFixed(1)}</span>
+          </div>
+          <div style="height:8px;background:var(--surface3);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${color};border-radius:4px"></div>
+          </div>
+        </div>`;
+      }).join('') : '<p style="color:var(--text3);font-size:13px">No data yet</p>'}
+    </div>
+    
+    <div class="chart-card">
+      <h3>💪 Strongest Dimensions</h3>
+      ${dimAvgs.length ? [...dimAvgs].reverse().slice(0,6).map(d => {
+        const pct = (d.avg/3)*100;
+        const color = d.avg>=2.3?'var(--green)':d.avg>=1.7?'var(--yellow)':'var(--red)';
+        return `<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+            <span>${esc(d.name)}</span><span style="color:${color};font-weight:700">${d.avg.toFixed(1)}</span>
+          </div>
+          <div style="height:8px;background:var(--surface3);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${color};border-radius:4px"></div>
+          </div>
+        </div>`;
+      }).join('') : '<p style="color:var(--text3);font-size:13px">No data yet</p>'}
+    </div>
+    
+    <div class="chart-card">
+      <h3>📊 Health Check History</h3>
+      ${sessions.length ? `<div style="display:flex;align-items:flex-end;gap:8px;height:140px">
+        ${sessions.sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(-10).map(s => {
+          const sc = calcSessionScore(s);
+          const h = (sc/3)*120;
+          const color = sc>=2.3?'var(--green)':sc>=1.7?'var(--yellow)':'var(--red)';
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+            <div style="font-size:10px;font-weight:600">${sc.toFixed(1)}</div>
+            <div style="width:100%;height:${h}px;background:${color};border-radius:4px 4px 0 0;opacity:.8;min-width:16px"></div>
+            <div style="font-size:9px;color:var(--text3)">${shortDate(s.date)}</div>
+          </div>`;
+        }).join('')}
+      </div>` : '<p style="color:var(--text3);font-size:13px">No data yet</p>'}
+    </div>
+    
+    <div class="chart-card">
+      <h3>🗓️ Activity Heatmap (12 Weeks)</h3>
+      <div class="heatmap">
+        ${(() => {
+          const now = new Date();
+          const cells = [];
+          for(let i=83;i>=0;i--) {
+            const d = new Date(now); d.setDate(d.getDate()-i);
+            const ds = d.toISOString().slice(0,10);
+            const count = sessions.filter(s=>s.date===ds).length + moods.filter(m=>m.date===ds).length;
+            const level = count===0?'':count===1?'h1':count===2?'h2':count<=4?'h3':'h4';
+            cells.push(`<div class="heatmap-cell ${level}" title="${ds}: ${count} activit${count!==1?'ies':'y'}"></div>`);
+          }
+          return cells.join('');
+        })()}
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:8px;font-size:11px;color:var(--text3)">
+        Less <div class="heatmap-cell"></div><div class="heatmap-cell h1"></div><div class="heatmap-cell h2"></div><div class="heatmap-cell h3"></div><div class="heatmap-cell h4"></div> More
+      </div>
+    </div>
+  </div>
+  
+  ${latestSession ? `<div class="card">
+    <div class="card-header"><h2>Latest Check: ${esc(latestSession.name)}</h2><h3>${formatDate(latestSession.date)}</h3></div>
+    ${renderResultBar(latestSession)}
+  </div>` : ''}`;
+}
+
+// ===== MEMBERS =====
+function renderMembers(team) {
+  const members = state.members.filter(m => m.teamId === team.id);
+  return `<div class="section-header">
+    <div><h2>Team Members</h2><div class="sh-sub">${members.length} member${members.length!==1?'s':''}</div></div>
+    <button class="btn-primary btn-sm" onclick="showAddMember()">+ Add Member</button>
+  </div>
+  ${members.length ? `<div class="member-grid">${members.map(m => `
+    <div class="member-card">
+      <div class="member-avatar" style="background:${m.color||'var(--accent3)'}">${(m.name||'?')[0].toUpperCase()}</div>
+      <div class="member-info">
+        <div class="mi-name">${esc(m.name)}</div>
+        <div class="mi-role">${esc(m.role||'Team Member')}</div>
+      </div>
+      <div class="member-actions">
+        <button onclick="editMember('${m.id}')">✏️</button>
+        <button onclick="deleteMember('${m.id}')">✕</button>
+      </div>
+    </div>
+  `).join('')}</div>` : `<div class="empty"><div class="e-icon">👥</div><div class="e-title">No Members</div><div class="e-desc">Add team members to track participation.</div></div>`}`;
+}
+
+// ===== HELPERS =====
+function renderResultBar(session) {
+  const total = session.dimensions.length;
+  if(!total) return '';
+  const g = session.results.filter(r=>r.vote==='green').length;
+  const y = session.results.filter(r=>r.vote==='yellow').length;
+  const r = session.results.filter(r=>r.vote==='red').length;
+  const gp=g/total*100, yp=y/total*100, rp=r/total*100;
+  return `<div class="result-bar">
+    <div class="rb-green" style="width:${gp}%"></div>
+    <div class="rb-yellow" style="width:${yp}%"></div>
+    <div class="rb-red" style="width:${rp}%"></div>
+  </div>
+  <div class="result-legend">
+    <span><div class="dot" style="background:var(--green)"></div> 😊 ${g} (${Math.round(gp)}%)</span>
+    <span><div class="dot" style="background:var(--yellow)"></div> 😐 ${y} (${Math.round(yp)}%)</span>
+    <span><div class="dot" style="background:var(--red)"></div> 😟 ${r} (${Math.round(rp)}%)</span>
+  </div>`;
+}
+
+function calcSessionScore(session) {
+  if(!session.results.length) return 0;
+  const scores = session.results.map(r => r.vote==='green'?3:r.vote==='yellow'?2:r.vote==='red'?1:0).filter(s=>s>0);
+  return scores.length ? scores.reduce((a,b)=>a+b,0)/scores.length : 0;
+}
+
+function formatDate(d) {
+  return new Date(d).toLocaleDateString('en-IN',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+}
+function shortDate(d) {
+  return new Date(d).toLocaleDateString('en-IN',{month:'short',day:'numeric'});
+}
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ===== ACTIONS =====
+function vote(sessionId, dimName, color) {
+  const session = state.sessions.find(s => s.id === sessionId);
+  if(!session) return;
+  const existing = session.results.findIndex(r => r.dim === dimName);
+  if(existing >= 0) {
+    if(session.results[existing].vote === color) {
+      session.results.splice(existing, 1); // toggle off
+    } else {
+      session.results[existing].vote = color;
+    }
+  } else {
+    session.results.push({dim: dimName, vote: color});
+  }
+  render();
+}
+
+// ===== MODALS =====
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function showNewTeam() {
+  openModal(`<h2>Create Team</h2>
+    <label>Team Name</label>
+    <input type="text" id="m-name" placeholder="e.g. Product Squad">
+    <label>Emoji</label>
+    <input type="text" id="m-emoji" value="👥" style="width:60px">
+    <label>Description</label>
+    <textarea id="m-desc" placeholder="Optional description"></textarea>
+    <label>Template</label>
+    <select id="m-template">
+      ${TEMPLATES.map(t => `<option value="${t.id}">${t.emoji} ${t.name}</option>`).join('')}
+    </select>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="createTeam()">Create</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('m-name').focus(),100);
+}
+
+function createTeam() {
+  const name = document.getElementById('m-name').value.trim();
+  if(!name) return;
+  const emoji = document.getElementById('m-emoji').value || '👥';
+  const desc = document.getElementById('m-desc').value;
+  const templateId = document.getElementById('m-template').value;
+  const template = TEMPLATES.find(t=>t.id===templateId);
+  const team = {
+    id: uid(), name, emoji, desc,
+    templateId,
+    dimensions: template ? template.dimensions.map(d=>({...d})) : [],
+    created: new Date().toISOString()
+  };
+  state.teams.push(team);
+  state.activeTeam = team.id;
+  closeModal();
+  render();
+}
+
+function createFromTemplate(templateId) {
+  const template = TEMPLATES.find(t=>t.id===templateId);
+  if(!template) return;
+  const team = {
+    id: uid(), name: template.name.replace(' Health Check','').replace(' Check',''), emoji: template.emoji,
+    desc: template.desc, templateId,
+    dimensions: template.dimensions.map(d=>({...d})),
+    created: new Date().toISOString()
+  };
+  state.teams.push(team);
+  state.activeTeam = team.id;
+  render();
+}
+
+function showNewSession() {
+  if(!state.activeTeam) return;
+  const team = state.teams.find(t=>t.id===state.activeTeam);
+  if(!team) return;
+  const today = new Date().toISOString().slice(0,10);
+  const count = state.sessions.filter(s=>s.teamId===team.id).length+1;
+  
+  openModal(`<h2>New Health Check</h2>
+    <label>Name</label>
+    <input type="text" id="m-sname" value="Check #${count}" placeholder="Sprint 14 Retro Check">
+    <label>Date</label>
+    <input type="date" id="m-sdate" value="${today}">
+    <label>Participants</label>
+    <input type="number" id="m-sparticipants" value="0" min="0" placeholder="Number of participants">
+    <label>Dimensions</label>
+    <div id="m-dims" class="dim-list">
+      ${team.dimensions.map((d,i) => `<div class="dim-row">
+        <input type="text" value="${esc(d.name)}" data-idx="${i}" class="dim-name">
+        <input type="text" value="${esc(d.desc||'')}" data-idx="${i}" class="dim-desc" placeholder="Description">
+        <button onclick="this.parentElement.remove()">✕</button>
+      </div>`).join('')}
+    </div>
+    <button class="btn-secondary btn-sm" style="margin-top:8px" onclick="addDimRow()">+ Add Dimension</button>
+    <label>Notes</label>
+    <textarea id="m-snotes" placeholder="Session notes…"></textarea>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="createSession()">Create</button>
+    </div>`);
+}
+
+function addDimRow() {
+  const list = document.getElementById('m-dims');
+  const div = document.createElement('div');
+  div.className = 'dim-row';
+  div.innerHTML = `<input type="text" class="dim-name" placeholder="Dimension name">
+    <input type="text" class="dim-desc" placeholder="Description">
+    <button onclick="this.parentElement.remove()">✕</button>`;
+  list.appendChild(div);
+}
+
+function createSession() {
+  const name = document.getElementById('m-sname').value.trim() || 'Health Check';
+  const date = document.getElementById('m-sdate').value;
+  const participants = parseInt(document.getElementById('m-sparticipants').value)||0;
+  const notes = document.getElementById('m-snotes').value;
+  const dimRows = document.querySelectorAll('#m-dims .dim-row');
+  const dimensions = [];
+  dimRows.forEach(row => {
+    const n = row.querySelector('.dim-name').value.trim();
+    const d = row.querySelector('.dim-desc').value.trim();
+    if(n) dimensions.push({name:n, desc:d});
+  });
+  
+  const team = state.teams.find(t=>t.id===state.activeTeam);
+  const session = {
+    id: uid(), teamId: state.activeTeam, name, date, participants, notes,
+    template: team?.templateId || 'custom',
+    dimensions, results: [],
+    created: new Date().toISOString()
+  };
+  state.sessions.push(session);
+  state.activeSession = session.id;
+  state.view = 'health';
+  closeModal();
+  render();
+}
+
+function editSession(id) {
+  const session = state.sessions.find(s=>s.id===id);
+  if(!session) return;
+  openModal(`<h2>Edit Health Check</h2>
+    <label>Name</label>
+    <input type="text" id="m-sname" value="${esc(session.name)}">
+    <label>Date</label>
+    <input type="date" id="m-sdate" value="${session.date}">
+    <label>Participants</label>
+    <input type="number" id="m-sparticipants" value="${session.participants||0}" min="0">
+    <label>Notes</label>
+    <textarea id="m-snotes">${esc(session.notes||'')}</textarea>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveSession('${id}')">Save</button>
+    </div>`);
+}
+
+function saveSession(id) {
+  const session = state.sessions.find(s=>s.id===id);
+  if(!session) return;
+  session.name = document.getElementById('m-sname').value.trim() || session.name;
+  session.date = document.getElementById('m-sdate').value;
+  session.participants = parseInt(document.getElementById('m-sparticipants').value)||0;
+  session.notes = document.getElementById('m-snotes').value;
+  closeModal();
+  render();
+}
+
+function deleteSession(id) {
+  if(!confirm('Delete this health check?')) return;
+  state.sessions = state.sessions.filter(s=>s.id!==id);
+  state.activeSession = null;
+  render();
+}
+
+function showAddMood() {
+  if(!state.activeTeam) return;
+  openModal(`<h2>Add Mood Check-in</h2>
+    <label>Name (optional, for anonymous leave blank)</label>
+    <input type="text" id="m-mname" placeholder="Anonymous">
+    <label>How are you feeling?</label>
+    <div style="display:flex;gap:12px;margin-top:8px;justify-content:center" id="m-mood-btns">
+      ${MOODS.map((emoji,i) => `<button class="hc-vote-btn" style="font-size:28px;width:52px;height:52px" onclick="selectMood(${i})" data-level="${i}">${emoji}</button>`).join('')}
+    </div>
+    <input type="hidden" id="m-mlevel" value="3">
+    <label>Note (optional)</label>
+    <textarea id="m-mnote" placeholder="How are things going?"></textarea>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="addMood()">Add</button>
+    </div>`);
+}
+
+function selectMood(level) {
+  document.getElementById('m-mlevel').value = level;
+  document.querySelectorAll('#m-mood-btns .hc-vote-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector(`#m-mood-btns [data-level="${level}"]`).classList.add('selected');
+}
+
+function addMood() {
+  const mood = {
+    id: uid(), teamId: state.activeTeam,
+    name: document.getElementById('m-mname').value.trim() || 'Anonymous',
+    level: parseInt(document.getElementById('m-mlevel').value),
+    note: document.getElementById('m-mnote').value.trim(),
+    date: new Date().toISOString().slice(0,10)
+  };
+  state.moods.push(mood);
+  closeModal();
+  render();
+}
+
+function deleteMood(id) {
+  state.moods = state.moods.filter(m=>m.id!==id);
+  render();
+}
+
+function showAddMember() {
+  if(!state.activeTeam) return;
+  const colors = ['#6366f1','#ec4899','#14b8a6','#f97316','#a855f7','#3b82f6','#22c55e','#eab308'];
+  openModal(`<h2>Add Member</h2>
+    <label>Name</label>
+    <input type="text" id="m-memname" placeholder="Team member name">
+    <label>Role</label>
+    <input type="text" id="m-memrole" placeholder="e.g. Frontend Engineer">
+    <label>Color</label>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      ${colors.map(c => `<div style="width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;border:2px solid transparent" onclick="this.parentElement.querySelectorAll('div').forEach(d=>d.style.borderColor='transparent');this.style.borderColor='#fff';document.getElementById('m-memcolor').value='${c}'"></div>`).join('')}
+    </div>
+    <input type="hidden" id="m-memcolor" value="${colors[0]}">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="addMember()">Add</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('m-memname').focus(),100);
+}
+
+function addMember() {
+  const name = document.getElementById('m-memname').value.trim();
+  if(!name) return;
+  state.members.push({
+    id: uid(), teamId: state.activeTeam, name,
+    role: document.getElementById('m-memrole').value.trim(),
+    color: document.getElementById('m-memcolor').value
+  });
+  closeModal();
+  render();
+}
+
+function editMember(id) {
+  const m = state.members.find(x=>x.id===id);
+  if(!m) return;
+  openModal(`<h2>Edit Member</h2>
+    <label>Name</label>
+    <input type="text" id="m-memname" value="${esc(m.name)}">
+    <label>Role</label>
+    <input type="text" id="m-memrole" value="${esc(m.role||'')}">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveMember('${id}')">Save</button>
+    </div>`);
+}
+
+function saveMember(id) {
+  const m = state.members.find(x=>x.id===id);
+  if(!m) return;
+  m.name = document.getElementById('m-memname').value.trim() || m.name;
+  m.role = document.getElementById('m-memrole').value.trim();
+  closeModal();
+  render();
+}
+
+function deleteMember(id) {
+  state.members = state.members.filter(m=>m.id!==id);
+  render();
+}
+
+// ===== IMPORT/EXPORT =====
+function exportJSON() {
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `team-pulse-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if(data.teams) {
+          state = {...state, ...data};
+          save();
+          render();
+        }
+      } catch(err) { alert('Invalid JSON'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ===== HELP =====
+function toggleHelp() {
+  document.getElementById('helpOverlay').classList.toggle('open');
+}
+
+// ===== KEYBOARD SHORTCUTS =====
+document.addEventListener('keydown', e => {
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') {
+    if(e.key==='Escape') { e.target.blur(); closeModal(); }
+    return;
+  }
+  const modal = document.getElementById('modalOverlay');
+  const help = document.getElementById('helpOverlay');
+  if(help.classList.contains('open')) {
+    if(e.key==='Escape'||e.key==='?') toggleHelp();
+    return;
+  }
+  if(modal.classList.contains('open')) {
+    if(e.key==='Escape') closeModal();
+    if((e.metaKey||e.ctrlKey)&&e.key==='Enter') {
+      const btn = modal.querySelector('.btn-primary');
+      if(btn) btn.click();
+    }
+    return;
+  }
+  switch(e.key) {
+    case 'n': case 'N': e.preventDefault(); showNewSession(); break;
+    case 't': e.preventDefault(); showNewTeam(); break;
+    case '/': e.preventDefault(); document.querySelector('.sidebar-search input')?.focus(); break;
+    case '1': e.preventDefault(); state.view='health'; render(); break;
+    case '2': e.preventDefault(); state.view='mood'; render(); break;
+    case '3': e.preventDefault(); state.view='trends'; render(); break;
+    case '4': e.preventDefault(); state.view='dashboard'; render(); break;
+    case '5': e.preventDefault(); state.view='members'; render(); break;
+    case 'e': e.preventDefault(); exportJSON(); break;
+    case 'i': e.preventDefault(); importJSON(); break;
+    case '?': e.preventDefault(); toggleHelp(); break;
+    case 'Escape': state.activeSession=null; render(); break;
+  }
+});
+
+// Click outside modal to close
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if(e.target.id==='modalOverlay') closeModal();
+});
+document.getElementById('helpOverlay').addEventListener('click', e => {
+  if(e.target.id==='helpOverlay') toggleHelp();
+});
+
+// ===== SEED DATA =====
+function seedData() {
+  if(state.teams.length) return;
+  
+  // Create a product team
+  const teamId = uid();
+  const team = {
+    id: teamId, name:'Product Squad', emoji:'🚀',
+    desc:'UTMStamp core product team',
+    templateId:'pm',
+    dimensions: TEMPLATES.find(t=>t.id==='pm').dimensions.map(d=>({...d})),
+    created: '2026-04-01T10:00:00Z'
+  };
+  state.teams.push(team);
+  state.activeTeam = teamId;
+  
+  // Members
+  const memberData = [
+    {name:'AJ', role:'Head of Product', color:'#6366f1'},
+    {name:'Priya', role:'Frontend Engineer', color:'#ec4899'},
+    {name:'Rahul', role:'Backend Engineer', color:'#14b8a6'},
+    {name:'Neha', role:'Product Designer', color:'#f97316'},
+    {name:'Vikram', role:'Full Stack Engineer', color:'#a855f7'},
+    {name:'Ankit', role:'QA Engineer', color:'#3b82f6'},
+    {name:'Meera', role:'Data Analyst', color:'#22c55e'}
+  ];
+  memberData.forEach(m => state.members.push({id:uid(), teamId, ...m}));
+  
+  // Health check sessions with realistic data
+  const sessions = [
+    {
+      name:'Sprint 12 Check', date:'2026-04-07', participants:7,
+      notes:'Good energy post-launch. Click tracking pipeline concerns.',
+      results:[
+        {dim:'Product Vision',vote:'green'},{dim:'Customer Empathy',vote:'green'},
+        {dim:'Shipping Speed',vote:'green'},{dim:'Data-Driven',vote:'yellow'},
+        {dim:'Cross-Functional Collab',vote:'green'},{dim:'Technical Debt',vote:'red'},
+        {dim:'Stakeholder Alignment',vote:'yellow'},{dim:'Team Morale',vote:'green'},
+        {dim:'Innovation',vote:'yellow'},{dim:'Growth Mindset',vote:'green'}
+      ]
+    },
+    {
+      name:'Sprint 13 Check', date:'2026-04-21', participants:6,
+      notes:'Tech debt causing friction. Need dedicated sprint for cleanup.',
+      results:[
+        {dim:'Product Vision',vote:'green'},{dim:'Customer Empathy',vote:'yellow'},
+        {dim:'Shipping Speed',vote:'yellow'},{dim:'Data-Driven',vote:'yellow'},
+        {dim:'Cross-Functional Collab',vote:'green'},{dim:'Technical Debt',vote:'red'},
+        {dim:'Stakeholder Alignment',vote:'green'},{dim:'Team Morale',vote:'yellow'},
+        {dim:'Innovation',vote:'yellow'},{dim:'Growth Mindset',vote:'green'}
+      ]
+    },
+    {
+      name:'Sprint 14 Check', date:'2026-05-05', participants:7,
+      notes:'Dedicated tech debt sprint helped. Morale recovering. New analytics pipeline is exciting.',
+      results:[
+        {dim:'Product Vision',vote:'green'},{dim:'Customer Empathy',vote:'green'},
+        {dim:'Shipping Speed',vote:'green'},{dim:'Data-Driven',vote:'green'},
+        {dim:'Cross-Functional Collab',vote:'green'},{dim:'Technical Debt',vote:'yellow'},
+        {dim:'Stakeholder Alignment',vote:'green'},{dim:'Team Morale',vote:'green'},
+        {dim:'Innovation',vote:'green'},{dim:'Growth Mindset',vote:'green'}
+      ]
+    }
+  ];
+  
+  sessions.forEach(s => {
+    const dims = TEMPLATES.find(t=>t.id==='pm').dimensions.map(d=>({...d}));
+    state.sessions.push({
+      id: uid(), teamId, name: s.name, date: s.date,
+      participants: s.participants, notes: s.notes,
+      template: 'pm', dimensions: dims, results: s.results,
+      created: new Date(s.date).toISOString()
+    });
+  });
+  
+  // Mood entries
+  const moodData = [
+    {name:'AJ',level:4,note:'Shipping mode activated',date:'2026-05-05'},
+    {name:'Priya',level:5,note:'New design system is 🔥',date:'2026-05-05'},
+    {name:'Rahul',level:3,note:'CI pipeline needs attention',date:'2026-05-05'},
+    {name:'Neha',level:4,note:'User interviews went great',date:'2026-05-05'},
+    {name:'Vikram',level:4,note:'',date:'2026-05-04'},
+    {name:'Anonymous',level:2,note:'Too many meetings this week',date:'2026-05-03'},
+    {name:'Ankit',level:4,note:'Test coverage up to 80%!',date:'2026-05-02'},
+    {name:'AJ',level:5,note:'Product Hunt launch week!',date:'2026-04-28'},
+    {name:'Meera',level:3,note:'Need better data pipeline',date:'2026-04-28'},
+    {name:'Priya',level:4,note:'Component library complete',date:'2026-04-21'},
+    {name:'Rahul',level:2,note:'Tech debt eating my soul',date:'2026-04-21'},
+    {name:'Anonymous',level:1,note:'Burnout vibes. Need a break.',date:'2026-04-14'}
+  ];
+  moodData.forEach(m => state.moods.push({id:uid(), teamId, ...m}));
+  
+  // Second team — Engineering
+  const team2Id = uid();
+  state.teams.push({
+    id: team2Id, name:'Engineering', emoji:'⚙️',
+    desc:'ZYOD engineering team health',
+    templateId:'eng',
+    dimensions: TEMPLATES.find(t=>t.id==='eng').dimensions.map(d=>({...d})),
+    created: '2026-03-15T10:00:00Z'
+  });
+  
+  const engMembers = [
+    {name:'AJ',role:'Head of Product & Tech',color:'#6366f1'},
+    {name:'Saurabh',role:'Senior Backend',color:'#3b82f6'},
+    {name:'Divya',role:'DevOps',color:'#14b8a6'},
+    {name:'Karan',role:'Frontend Lead',color:'#f97316'},
+    {name:'Pooja',role:'Backend Engineer',color:'#a855f7'}
+  ];
+  engMembers.forEach(m => state.members.push({id:uid(), teamId:team2Id, ...m}));
+  
+  const engDims = TEMPLATES.find(t=>t.id==='eng').dimensions.map(d=>({...d}));
+  state.sessions.push({
+    id:uid(), teamId:team2Id, name:'March Eng Health', date:'2026-03-31',
+    participants:5, notes:'IoT deployment causing on-call spikes.',
+    template:'eng', dimensions:engDims,
+    results:[
+      {dim:'CI/CD Pipeline',vote:'green'},{dim:'Test Coverage',vote:'yellow'},
+      {dim:'Code Review Culture',vote:'green'},{dim:'Architecture Quality',vote:'green'},
+      {dim:'Developer Experience',vote:'yellow'},{dim:'Incident Response',vote:'green'},
+      {dim:'On-Call Health',vote:'red'},{dim:'Documentation',vote:'yellow'},
+      {dim:'Knowledge Sharing',vote:'yellow'},{dim:'Tech Debt Balance',vote:'red'}
+    ],
+    created:'2026-03-31T10:00:00Z'
+  });
+  state.sessions.push({
+    id:uid(), teamId:team2Id, name:'April Eng Health', date:'2026-04-30',
+    participants:5, notes:'On-call rotation improved after new runbook. DX getting better.',
+    template:'eng', dimensions:engDims,
+    results:[
+      {dim:'CI/CD Pipeline',vote:'green'},{dim:'Test Coverage',vote:'green'},
+      {dim:'Code Review Culture',vote:'green'},{dim:'Architecture Quality',vote:'green'},
+      {dim:'Developer Experience',vote:'green'},{dim:'Incident Response',vote:'green'},
+      {dim:'On-Call Health',vote:'yellow'},{dim:'Documentation',vote:'green'},
+      {dim:'Knowledge Sharing',vote:'green'},{dim:'Tech Debt Balance',vote:'yellow'}
+    ],
+    created:'2026-04-30T10:00:00Z'
+  });
+}
+
+// ===== INIT =====
+load();
+seedData();
+render();
+</script>
+</body>
+</html>

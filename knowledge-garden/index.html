@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knowledge Garden — Second Brain & Zettelkasten</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0f1117;--bg2:#1a1d27;--bg3:#242736;--bg4:#2e3248;
+--text:#e4e6ef;--text2:#9ca0b8;--text3:#6b6f8a;
+--accent:#7c6aef;--accent2:#6253c7;--accent3:#9d8df7;
+--green:#34d399;--red:#f87171;--yellow:#fbbf24;--blue:#60a5fa;--pink:#f472b6;--orange:#fb923c;--cyan:#22d3ee;
+--border:#2e3248;--radius:10px;--shadow:0 4px 24px rgba(0,0,0,.3);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+::selection{background:var(--accent);color:#fff}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px}
+.logo svg{width:24px;height:24px}
+.nav{display:flex;gap:4px}
+.nav-btn{padding:7px 14px;border-radius:7px;border:none;background:transparent;color:var(--text2);cursor:pointer;font-size:13px;font-weight:500;transition:.15s}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:var(--accent);color:#fff}
+.header-actions{display:flex;gap:8px;align-items:center}
+
+/* Main layout */
+.main{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.sidebar-header{padding:12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.search-box{display:flex;align-items:center;background:var(--bg3);border-radius:7px;padding:0 10px;gap:6px}
+.search-box svg{width:14px;height:14px;color:var(--text3);flex-shrink:0}
+.search-box input{border:none;background:none;color:var(--text);font-size:13px;padding:8px 0;width:100%;outline:none}
+.search-box input::placeholder{color:var(--text3)}
+.sidebar-actions{display:flex;gap:6px}
+.sidebar-actions button{flex:1;padding:6px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-new{background:var(--accent);color:#fff}.btn-new:hover{background:var(--accent2)}
+.btn-daily{background:var(--bg3);color:var(--text2)}.btn-daily:hover{background:var(--bg4);color:var(--text)}
+.note-list{flex:1;overflow-y:auto;padding:8px}
+.note-item{padding:10px 12px;border-radius:8px;cursor:pointer;transition:.15s;margin-bottom:2px}
+.note-item:hover{background:var(--bg3)}
+.note-item.active{background:var(--accent);color:#fff}
+.note-item.active .note-date,.note-item.active .note-links{color:rgba(255,255,255,.7)}
+.note-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note-date{font-size:11px;color:var(--text3);margin-top:2px}
+.note-links{font-size:11px;color:var(--text3);margin-top:1px}
+.note-tags{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap}
+.note-tag-sm{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--bg4);color:var(--text2)}
+.note-item.active .note-tag-sm{background:rgba(255,255,255,.2);color:rgba(255,255,255,.85)}
+.sidebar-stats{padding:10px 12px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);display:flex;justify-content:space-between}
+
+/* Content area */
+.content{flex:1;overflow:hidden;display:flex;flex-direction:column}
+
+/* Editor view */
+.editor-view{display:flex;flex:1;overflow:hidden}
+.editor-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.editor-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.editor-title-input{border:none;background:none;color:var(--text);font-size:22px;font-weight:700;width:100%;outline:none}
+.editor-title-input::placeholder{color:var(--text3)}
+.toolbar-actions{display:flex;gap:6px}
+.toolbar-btn{padding:5px 10px;border-radius:6px;border:none;background:var(--bg3);color:var(--text2);cursor:pointer;font-size:12px;transition:.15s}
+.toolbar-btn:hover{background:var(--bg4);color:var(--text)}
+.toolbar-btn.danger:hover{background:var(--red);color:#fff}
+.editor-body{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.editor-tags{padding:8px 20px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.editor-tags label{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.tag-pill{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--bg4);color:var(--text2);display:flex;align-items:center;gap:4px}
+.tag-pill .remove-tag{cursor:pointer;opacity:.6;font-size:13px}.tag-pill .remove-tag:hover{opacity:1;color:var(--red)}
+.tag-input{border:none;background:none;color:var(--text);font-size:12px;outline:none;width:80px}
+.tag-input::placeholder{color:var(--text3)}
+.editor-textarea{flex:1;padding:20px;border:none;background:transparent;color:var(--text);font-size:14px;line-height:1.8;resize:none;outline:none;font-family:'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace;tab-size:2;overflow-y:auto}
+.editor-textarea::placeholder{color:var(--text3)}
+
+/* Backlinks panel */
+.backlinks-panel{width:280px;border-left:1px solid var(--border);overflow-y:auto;flex-shrink:0;padding:16px;background:var(--bg)}
+.backlinks-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.backlinks-title span{background:var(--bg4);padding:1px 6px;border-radius:4px;font-size:11px;color:var(--text2)}
+.backlink-item{padding:10px;border-radius:8px;background:var(--bg2);margin-bottom:6px;cursor:pointer;transition:.15s}
+.backlink-item:hover{background:var(--bg3)}
+.backlink-name{font-size:13px;font-weight:600;margin-bottom:4px}
+.backlink-excerpt{font-size:11px;color:var(--text3);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.backlink-excerpt mark{background:var(--accent);color:#fff;border-radius:2px;padding:0 2px}
+.no-backlinks{font-size:12px;color:var(--text3);font-style:italic}
+
+/* Preview / rendered view */
+.preview-panel{flex:1;padding:30px 40px;overflow-y:auto}
+.preview-panel h1{font-size:28px;margin-bottom:16px;font-weight:800}
+.preview-panel .meta{font-size:12px;color:var(--text3);margin-bottom:20px;display:flex;gap:12px;align-items:center}
+.preview-panel .content-body{font-size:15px;line-height:1.8;color:var(--text)}
+.content-body p{margin-bottom:12px}
+.content-body h2{font-size:20px;font-weight:700;margin:24px 0 12px}
+.content-body h3{font-size:17px;font-weight:600;margin:20px 0 8px}
+.content-body ul,.content-body ol{margin:8px 0 12px 24px}
+.content-body li{margin-bottom:4px}
+.content-body code{background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:13px;font-family:'SF Mono','Fira Code',monospace}
+.content-body pre{background:var(--bg3);padding:16px;border-radius:8px;margin:12px 0;overflow-x:auto}
+.content-body pre code{background:none;padding:0}
+.content-body blockquote{border-left:3px solid var(--accent);padding:8px 16px;margin:12px 0;color:var(--text2);background:var(--bg2);border-radius:0 8px 8px 0}
+.content-body a,.wiki-link{color:var(--accent3);text-decoration:none;cursor:pointer;border-bottom:1px solid transparent;transition:.15s}
+.content-body a:hover,.wiki-link:hover{border-bottom-color:var(--accent3)}
+.wiki-link.missing{color:var(--text3);border-bottom:1px dashed var(--text3)}
+.content-body hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+.content-body strong{font-weight:700;color:#fff}
+.content-body em{font-style:italic;color:var(--text2)}
+.tag-ref{display:inline-block;font-size:12px;padding:1px 8px;border-radius:4px;background:var(--bg4);color:var(--accent3);cursor:pointer}
+.tag-ref:hover{background:var(--accent);color:#fff}
+
+/* Graph view */
+.graph-view{flex:1;position:relative;overflow:hidden;background:var(--bg)}
+.graph-svg{width:100%;height:100%}
+.graph-controls{position:absolute;bottom:16px;right:16px;display:flex;gap:6px}
+.graph-controls button{width:36px;height:36px;border-radius:8px;border:none;background:var(--bg2);color:var(--text2);cursor:pointer;font-size:16px;transition:.15s;box-shadow:var(--shadow)}
+.graph-controls button:hover{background:var(--bg3);color:var(--text)}
+.graph-legend{position:absolute;top:16px;left:16px;background:var(--bg2);border-radius:8px;padding:12px;font-size:11px;color:var(--text2);box-shadow:var(--shadow)}
+.graph-legend-item{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.graph-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.graph-info{position:absolute;top:16px;right:16px;background:var(--bg2);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--text2);box-shadow:var(--shadow);max-width:200px}
+.graph-info h4{color:var(--text);font-size:14px;margin-bottom:4px}
+
+/* Daily notes view */
+.daily-view{flex:1;overflow-y:auto;padding:30px 40px}
+.daily-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.daily-header h2{font-size:22px;font-weight:700}
+.daily-nav{display:flex;gap:8px;align-items:center}
+.daily-nav button{padding:6px 12px;border-radius:6px;border:none;background:var(--bg3);color:var(--text2);cursor:pointer;font-size:13px;transition:.15s}
+.daily-nav button:hover{background:var(--bg4);color:var(--text)}
+.daily-date{font-size:14px;color:var(--text);font-weight:600;min-width:140px;text-align:center}
+.daily-card{background:var(--bg2);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.daily-card h3{font-size:15px;font-weight:600;margin-bottom:12px;color:var(--accent3)}
+.daily-card textarea{width:100%;min-height:120px;border:none;background:var(--bg3);color:var(--text);border-radius:8px;padding:12px;font-size:14px;line-height:1.7;resize:vertical;outline:none;font-family:'SF Mono','Fira Code',monospace}
+.daily-linked{margin-top:12px}
+.daily-linked h4{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.daily-linked-items{display:flex;flex-wrap:wrap;gap:6px}
+.daily-linked-item{padding:4px 10px;border-radius:6px;background:var(--bg4);color:var(--text2);font-size:12px;cursor:pointer;transition:.15s}
+.daily-linked-item:hover{background:var(--accent);color:#fff}
+
+/* Dashboard view */
+.dashboard-view{flex:1;overflow-y:auto;padding:30px}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--bg2);border-radius:var(--radius);padding:20px;text-align:center}
+.stat-card .stat-num{font-size:32px;font-weight:800;color:var(--accent3)}
+.stat-card .stat-label{font-size:12px;color:var(--text3);margin-top:4px}
+.dash-section{background:var(--bg2);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.dash-section h3{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.recent-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:6px;cursor:pointer;transition:.15s}
+.recent-item:hover{background:var(--bg3)}
+.recent-item .name{font-size:13px;font-weight:600}
+.recent-item .date{font-size:11px;color:var(--text3)}
+.tag-cloud{display:flex;flex-wrap:wrap;gap:6px}
+.tag-cloud-item{padding:4px 12px;border-radius:6px;background:var(--bg3);color:var(--text2);font-size:12px;cursor:pointer;transition:.15s}
+.tag-cloud-item:hover{background:var(--accent);color:#fff}
+.orphan-item{padding:6px 12px;border-radius:6px;background:var(--bg3);margin-bottom:4px;font-size:13px;cursor:pointer;transition:.15s;display:flex;justify-content:space-between;align-items:center}
+.orphan-item:hover{background:var(--bg4)}
+.orphan-badge{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--yellow);color:#000;font-weight:600}
+.connection-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.connection-bar .bar-label{font-size:12px;color:var(--text2);width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.connection-bar .bar-track{flex:1;height:8px;background:var(--bg4);border-radius:4px;overflow:hidden}
+.connection-bar .bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:.3s}
+.connection-bar .bar-count{font-size:11px;color:var(--text3);width:24px;text-align:right}
+
+/* Heatmap */
+.heatmap{display:flex;gap:2px;flex-wrap:wrap;margin-top:8px}
+.heatmap-cell{width:12px;height:12px;border-radius:2px;background:var(--bg4)}
+.heatmap-cell.l1{background:#2d1b69}.heatmap-cell.l2{background:#4c2d9e}.heatmap-cell.l3{background:#6b42d1}.heatmap-cell.l4{background:#8b5cf6}
+
+/* Buttons */
+.btn{padding:7px 14px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal{background:var(--bg2);border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:var(--shadow)}
+.modal h3{font-size:18px;font-weight:700;margin-bottom:16px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+
+/* Keyboard hints */
+.kbd-hint{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--bg2);border-radius:8px;padding:8px 16px;font-size:11px;color:var(--text3);box-shadow:var(--shadow);z-index:50;display:flex;gap:16px}
+.kbd-hint kbd{background:var(--bg4);padding:1px 6px;border-radius:3px;font-size:10px;color:var(--text2);font-family:inherit}
+
+/* Empty state */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--text3);text-align:center}
+.empty-state svg{width:48px;height:48px;margin-bottom:16px;opacity:.4}
+.empty-state p{font-size:14px;margin-bottom:8px}
+.empty-state small{font-size:12px}
+
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4m-7.07-2.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4m-2.93 7.07l-2.83-2.83M6.76 6.76L3.93 3.93"/></svg>
+    Knowledge Garden
+  </div>
+  <div class="nav">
+    <button class="nav-btn active" data-view="editor" title="Editor (1)">📝 Notes</button>
+    <button class="nav-btn" data-view="graph" title="Graph (2)">🕸️ Graph</button>
+    <button class="nav-btn" data-view="daily" title="Daily (3)">📅 Daily</button>
+    <button class="nav-btn" data-view="dashboard" title="Dashboard (4)">📊 Dashboard</button>
+  </div>
+  <div class="header-actions">
+    <button class="toolbar-btn" onclick="showHelp()" title="Help (?)">?</button>
+    <button class="toolbar-btn" onclick="importData()">Import</button>
+    <button class="toolbar-btn" onclick="exportData()">Export</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Search notes... (/)" />
+      </div>
+      <div class="sidebar-actions">
+        <button class="btn-new" onclick="createNote()">+ Note</button>
+        <button class="btn-daily" onclick="openDailyNote()">📅 Today</button>
+      </div>
+    </div>
+    <div class="note-list" id="noteList"></div>
+    <div class="sidebar-stats" id="sidebarStats"></div>
+  </div>
+
+  <div class="content">
+    <!-- Editor View -->
+    <div class="editor-view" id="editorView">
+      <div class="editor-panel">
+        <div class="editor-toolbar">
+          <input type="text" class="editor-title-input" id="editorTitle" placeholder="Note title..." />
+          <div class="toolbar-actions">
+            <button class="toolbar-btn" id="togglePreview" onclick="togglePreview()">Preview</button>
+            <button class="toolbar-btn danger" onclick="deleteCurrentNote()">Delete</button>
+          </div>
+        </div>
+        <div class="editor-tags" id="editorTagsBar">
+          <label>Tags</label>
+          <div id="editorTags"></div>
+          <input type="text" class="tag-input" id="tagInput" placeholder="add tag..." />
+        </div>
+        <div class="editor-body" id="editorBody">
+          <textarea class="editor-textarea" id="editorContent" placeholder="Start writing... Use [[Note Title]] to link to other notes. Use #tag for tags."></textarea>
+        </div>
+        <div class="preview-panel hidden" id="previewPanel"></div>
+      </div>
+      <div class="backlinks-panel" id="backlinksPanel">
+        <div class="backlinks-title">Backlinks <span id="backlinkCount">0</span></div>
+        <div id="backlinksList"></div>
+      </div>
+    </div>
+
+    <!-- Graph View -->
+    <div class="graph-view hidden" id="graphView">
+      <svg class="graph-svg" id="graphSvg"></svg>
+      <div class="graph-legend">
+        <div class="graph-legend-item"><div class="graph-legend-dot" style="background:var(--accent)"></div> Regular note</div>
+        <div class="graph-legend-item"><div class="graph-legend-dot" style="background:var(--green)"></div> Daily note</div>
+        <div class="graph-legend-item"><div class="graph-legend-dot" style="background:var(--yellow)"></div> Hub (5+ links)</div>
+      </div>
+      <div class="graph-info hidden" id="graphInfo">
+        <h4 id="graphInfoTitle"></h4>
+        <div id="graphInfoLinks" style="color:var(--text3);font-size:11px;margin-top:4px"></div>
+      </div>
+      <div class="graph-controls">
+        <button onclick="zoomGraph(1.2)" title="Zoom in">+</button>
+        <button onclick="zoomGraph(0.8)" title="Zoom out">−</button>
+        <button onclick="resetGraphZoom()" title="Reset">⟲</button>
+      </div>
+    </div>
+
+    <!-- Daily View -->
+    <div class="daily-view hidden" id="dailyView"></div>
+
+    <!-- Dashboard View -->
+    <div class="dashboard-view hidden" id="dashboardView"></div>
+  </div>
+</div>
+
+<div class="kbd-hint">
+  <span><kbd>N</kbd> New note</span>
+  <span><kbd>/</kbd> Search</span>
+  <span><kbd>1-4</kbd> Views</span>
+  <span><kbd>D</kbd> Daily</span>
+  <span><kbd>E</kbd> Export</span>
+  <span><kbd>?</kbd> Help</span>
+</div>
+
+<input type="file" id="importInput" accept=".json" style="display:none" />
+
+<script>
+// ============== STATE ==============
+const STORAGE_KEY = 'knowledge-garden-data';
+let state = {
+  notes: {},
+  activeNoteId: null,
+  currentView: 'editor',
+  dailyDate: todayStr(),
+  graphZoom: 1,
+  graphPan: {x:0,y:0}
+};
+let previewMode = false;
+let graphSim = null;
+let graphNodes = [];
+let graphLinks = [];
+let dragNode = null;
+
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+// ============== PERSISTENCE ==============
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+function load(){
+  try{
+    const d = localStorage.getItem(STORAGE_KEY);
+    if(d){
+      const parsed = JSON.parse(d);
+      state = {...state, ...parsed};
+    }
+  }catch(e){}
+}
+
+// ============== NOTE CRUD ==============
+function genId(){ return 'n_'+Date.now()+'_'+Math.random().toString(36).substr(2,6); }
+
+function createNote(title){
+  const id = genId();
+  const now = new Date().toISOString();
+  state.notes[id] = {
+    id, title: title || 'Untitled', content: '', tags: [],
+    created: now, updated: now, isDaily: false
+  };
+  state.activeNoteId = id;
+  save();
+  renderSidebar();
+  renderEditor();
+  if(!title) document.getElementById('editorTitle').focus();
+  switchView('editor');
+  return id;
+}
+
+function createDailyNote(dateStr){
+  dateStr = dateStr || todayStr();
+  // Check if daily note exists
+  const existing = Object.values(state.notes).find(n => n.isDaily && n.title === dateStr);
+  if(existing){
+    state.activeNoteId = existing.id;
+    save();
+    renderSidebar();
+    renderEditor();
+    return existing.id;
+  }
+  const id = genId();
+  const now = new Date().toISOString();
+  const dayName = new Date(dateStr+'T12:00:00').toLocaleDateString('en-US',{weekday:'long'});
+  state.notes[id] = {
+    id, title: dateStr, isDaily: true,
+    content: `# ${dayName}, ${formatDate(dateStr)}\n\n## Morning thoughts\n\n\n## Tasks\n- [ ] \n\n## Notes\n\n\n## Reflections\n\n`,
+    tags: ['daily'], created: now, updated: now
+  };
+  state.activeNoteId = id;
+  save();
+  renderSidebar();
+  renderEditor();
+  return id;
+}
+
+function deleteNote(id){
+  if(!id || !state.notes[id]) return;
+  if(!confirm('Delete "'+state.notes[id].title+'"?')) return;
+  delete state.notes[id];
+  if(state.activeNoteId === id){
+    const ids = Object.keys(state.notes);
+    state.activeNoteId = ids.length ? ids[0] : null;
+  }
+  save();
+  renderSidebar();
+  renderEditor();
+}
+
+function deleteCurrentNote(){
+  deleteNote(state.activeNoteId);
+}
+
+// ============== LINKING ==============
+function extractLinks(content){
+  const re = /\[\[([^\]]+)\]\]/g;
+  const links = [];
+  let m;
+  while((m = re.exec(content)) !== null){
+    links.push(m[1]);
+  }
+  return [...new Set(links)];
+}
+
+function extractTags(content){
+  const re = /(?:^|\s)#([a-zA-Z0-9_-]+)/g;
+  const tags = [];
+  let m;
+  while((m = re.exec(content)) !== null){
+    tags.push(m[1].toLowerCase());
+  }
+  return [...new Set(tags)];
+}
+
+function findNoteByTitle(title){
+  const lower = title.toLowerCase();
+  return Object.values(state.notes).find(n => n.title.toLowerCase() === lower);
+}
+
+function getBacklinks(noteId){
+  const note = state.notes[noteId];
+  if(!note) return [];
+  const title = note.title.toLowerCase();
+  return Object.values(state.notes).filter(n => {
+    if(n.id === noteId) return false;
+    const links = extractLinks(n.content);
+    return links.some(l => l.toLowerCase() === title);
+  });
+}
+
+function getOutlinks(noteId){
+  const note = state.notes[noteId];
+  if(!note) return [];
+  return extractLinks(note.content);
+}
+
+// ============== RENDER SIDEBAR ==============
+function renderSidebar(){
+  const list = document.getElementById('noteList');
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  let notes = Object.values(state.notes);
+
+  if(search){
+    notes = notes.filter(n =>
+      n.title.toLowerCase().includes(search) ||
+      n.content.toLowerCase().includes(search) ||
+      n.tags.some(t => t.toLowerCase().includes(search))
+    );
+  }
+
+  // Sort: daily notes by title desc, others by updated desc
+  notes.sort((a,b) => {
+    if(a.isDaily && !b.isDaily) return 1;
+    if(!a.isDaily && b.isDaily) return -1;
+    if(a.isDaily && b.isDaily) return b.title.localeCompare(a.title);
+    return new Date(b.updated) - new Date(a.updated);
+  });
+
+  list.innerHTML = notes.map(n => {
+    const links = extractLinks(n.content);
+    const backlinks = getBacklinks(n.id);
+    const totalLinks = links.length + backlinks.length;
+    return `<div class="note-item ${n.id===state.activeNoteId?'active':''}" onclick="selectNote('${n.id}')">
+      <div class="note-title">${n.isDaily?'📅 ':''}${esc(n.title)}</div>
+      <div class="note-date">${timeAgo(n.updated)}</div>
+      ${totalLinks ? `<div class="note-links">${links.length} outlinks · ${backlinks.length} backlinks</div>` : ''}
+      ${n.tags.length ? `<div class="note-tags">${n.tags.slice(0,4).map(t=>`<span class="note-tag-sm">#${esc(t)}</span>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Stats
+  const allNotes = Object.values(state.notes);
+  const daily = allNotes.filter(n=>n.isDaily).length;
+  document.getElementById('sidebarStats').innerHTML = `<span>${allNotes.length} notes (${daily} daily)</span><span>${getAllTags().length} tags</span>`;
+}
+
+function selectNote(id){
+  state.activeNoteId = id;
+  previewMode = false;
+  save();
+  renderSidebar();
+  renderEditor();
+  if(state.currentView !== 'editor') switchView('editor');
+}
+
+// ============== RENDER EDITOR ==============
+function renderEditor(){
+  const note = state.notes[state.activeNoteId];
+  const titleEl = document.getElementById('editorTitle');
+  const contentEl = document.getElementById('editorContent');
+  const tagsEl = document.getElementById('editorTags');
+
+  if(!note){
+    titleEl.value = '';
+    contentEl.value = '';
+    tagsEl.innerHTML = '';
+    document.getElementById('backlinksList').innerHTML = '<div class="no-backlinks">Select or create a note</div>';
+    document.getElementById('backlinkCount').textContent = '0';
+    return;
+  }
+
+  titleEl.value = note.title;
+  contentEl.value = note.content;
+
+  // Tags
+  tagsEl.innerHTML = note.tags.map(t =>
+    `<span class="tag-pill">#${esc(t)} <span class="remove-tag" onclick="removeTag('${esc(t)}')">&times;</span></span>`
+  ).join('');
+
+  // Backlinks
+  renderBacklinks();
+
+  // Preview
+  if(previewMode){
+    document.getElementById('editorBody').classList.add('hidden');
+    document.getElementById('previewPanel').classList.remove('hidden');
+    renderPreview();
+  } else {
+    document.getElementById('editorBody').classList.remove('hidden');
+    document.getElementById('previewPanel').classList.add('hidden');
+  }
+}
+
+function renderBacklinks(){
+  const note = state.notes[state.activeNoteId];
+  const container = document.getElementById('backlinksList');
+  if(!note){
+    container.innerHTML = '<div class="no-backlinks">No note selected</div>';
+    document.getElementById('backlinkCount').textContent = '0';
+    return;
+  }
+  const backlinks = getBacklinks(note.id);
+  document.getElementById('backlinkCount').textContent = backlinks.length;
+
+  if(!backlinks.length){
+    container.innerHTML = '<div class="no-backlinks">No notes link to this one yet. Use [['+esc(note.title)+']] in another note.</div>';
+    return;
+  }
+
+  container.innerHTML = backlinks.map(bl => {
+    // Find the line containing the link
+    const lines = bl.content.split('\n');
+    const linkLine = lines.find(l => l.toLowerCase().includes('[['+note.title.toLowerCase()+']]')) || '';
+    const excerpt = linkLine.replace(new RegExp('\\[\\['+escRegex(note.title)+'\\]\\]','gi'), '<mark>[['+esc(note.title)+']]</mark>');
+    return `<div class="backlink-item" onclick="selectNote('${bl.id}')">
+      <div class="backlink-name">${bl.isDaily?'📅 ':''}${esc(bl.title)}</div>
+      <div class="backlink-excerpt">${excerpt || 'Linked from this note'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderPreview(){
+  const note = state.notes[state.activeNoteId];
+  if(!note) return;
+  const panel = document.getElementById('previewPanel');
+  const rendered = renderMarkdown(note.content);
+  panel.innerHTML = `
+    <h1>${esc(note.title)}</h1>
+    <div class="meta">
+      <span>Created ${formatDateTime(note.created)}</span>
+      <span>Updated ${timeAgo(note.updated)}</span>
+      ${note.tags.map(t=>`<span class="tag-ref" onclick="searchByTag('${esc(t)}')">#${esc(t)}</span>`).join(' ')}
+    </div>
+    <div class="content-body">${rendered}</div>
+  `;
+}
+
+function togglePreview(){
+  previewMode = !previewMode;
+  document.getElementById('togglePreview').textContent = previewMode ? 'Edit' : 'Preview';
+  renderEditor();
+}
+
+// ============== MARKDOWN RENDERING ==============
+function renderMarkdown(text){
+  let html = esc(text);
+
+  // Code blocks
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Headers
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:24px">$1</h1>');
+  // Bold + italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Blockquote
+  html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+  // HR
+  html = html.replace(/^---$/gm, '<hr>');
+  // Checkbox
+  html = html.replace(/^- \[x\] (.+)$/gm, '<li style="list-style:none">☑️ <s>$1</s></li>');
+  html = html.replace(/^- \[ \] (.+)$/gm, '<li style="list-style:none">⬜ $1</li>');
+  // Lists
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>');
+  // Wiki links
+  html = html.replace(/\[\[([^\]]+)\]\]/g, (_, title) => {
+    const found = findNoteByTitle(title);
+    if(found){
+      return `<span class="wiki-link" onclick="selectNote('${found.id}')">${esc(title)}</span>`;
+    }
+    return `<span class="wiki-link missing" onclick="createAndLink('${esc(title)}')" title="Create note">${esc(title)}</span>`;
+  });
+  // Tags
+  html = html.replace(/(^|\s)#([a-zA-Z0-9_-]+)/g, '$1<span class="tag-ref" onclick="searchByTag(\'$2\')">#$2</span>');
+  // Links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+  // Paragraphs
+  html = html.split('\n\n').map(p => {
+    if(p.startsWith('<h') || p.startsWith('<pre') || p.startsWith('<blockquote') || p.startsWith('<li') || p.startsWith('<hr')) return p;
+    return '<p>'+p+'</p>';
+  }).join('\n');
+
+  return html;
+}
+
+function createAndLink(title){
+  const id = createNote(title);
+  selectNote(id);
+}
+
+function searchByTag(tag){
+  document.getElementById('searchInput').value = '#'+tag;
+  renderSidebar();
+  switchView('editor');
+}
+
+// ============== TAGS ==============
+function addTag(tag){
+  const note = state.notes[state.activeNoteId];
+  if(!note) return;
+  tag = tag.toLowerCase().replace(/[^a-z0-9_-]/g,'');
+  if(!tag || note.tags.includes(tag)) return;
+  note.tags.push(tag);
+  note.updated = new Date().toISOString();
+  save();
+  renderEditor();
+  renderSidebar();
+}
+
+function removeTag(tag){
+  const note = state.notes[state.activeNoteId];
+  if(!note) return;
+  note.tags = note.tags.filter(t => t !== tag);
+  note.updated = new Date().toISOString();
+  save();
+  renderEditor();
+  renderSidebar();
+}
+
+function getAllTags(){
+  const tags = {};
+  Object.values(state.notes).forEach(n => {
+    n.tags.forEach(t => { tags[t] = (tags[t]||0)+1; });
+    // Also extract inline tags
+    extractTags(n.content).forEach(t => { tags[t] = (tags[t]||0)+1; });
+  });
+  return Object.entries(tags).sort((a,b)=>b[1]-a[1]);
+}
+
+// ============== GRAPH VIEW ==============
+function renderGraph(){
+  const svg = document.getElementById('graphSvg');
+  const rect = svg.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  if(!W || !H) return;
+
+  const notes = Object.values(state.notes);
+  const nodeMap = {};
+  graphNodes = notes.map((n,i) => {
+    const links = extractLinks(n.content);
+    const backlinks = getBacklinks(n.id);
+    const totalConn = links.length + backlinks.length;
+    const node = {
+      id: n.id, title: n.title, isDaily: n.isDaily,
+      connections: totalConn,
+      x: W/2 + (Math.random()-0.5)*W*0.6,
+      y: H/2 + (Math.random()-0.5)*H*0.6,
+      vx: 0, vy: 0,
+      r: Math.min(6 + totalConn * 2, 20)
+    };
+    nodeMap[n.title.toLowerCase()] = node;
+    return node;
+  });
+
+  graphLinks = [];
+  notes.forEach(n => {
+    const links = extractLinks(n.content);
+    links.forEach(linkTitle => {
+      const target = nodeMap[linkTitle.toLowerCase()];
+      if(target){
+        graphLinks.push({
+          source: nodeMap[n.title.toLowerCase()],
+          target: target
+        });
+      }
+    });
+  });
+
+  // Simple force simulation
+  const iterations = 150;
+  for(let iter=0; iter<iterations; iter++){
+    const alpha = 1 - iter/iterations;
+    // Repulsion
+    for(let i=0;i<graphNodes.length;i++){
+      for(let j=i+1;j<graphNodes.length;j++){
+        let dx = graphNodes[j].x - graphNodes[i].x;
+        let dy = graphNodes[j].y - graphNodes[i].y;
+        let d = Math.sqrt(dx*dx+dy*dy) || 1;
+        let force = -500 * alpha / (d*d);
+        let fx = dx/d*force, fy = dy/d*force;
+        graphNodes[i].vx -= fx; graphNodes[i].vy -= fy;
+        graphNodes[j].vx += fx; graphNodes[j].vy += fy;
+      }
+    }
+    // Attraction (links)
+    graphLinks.forEach(l => {
+      let dx = l.target.x - l.source.x;
+      let dy = l.target.y - l.source.y;
+      let d = Math.sqrt(dx*dx+dy*dy) || 1;
+      let force = (d - 100) * 0.01 * alpha;
+      let fx = dx/d*force, fy = dy/d*force;
+      l.source.vx += fx; l.source.vy += fy;
+      l.target.vx -= fx; l.target.vy -= fy;
+    });
+    // Center gravity
+    graphNodes.forEach(n => {
+      n.vx += (W/2 - n.x) * 0.001 * alpha;
+      n.vy += (H/2 - n.y) * 0.001 * alpha;
+      n.x += n.vx * 0.5;
+      n.y += n.vy * 0.5;
+      n.vx *= 0.8;
+      n.vy *= 0.8;
+      // Bounds
+      n.x = Math.max(30, Math.min(W-30, n.x));
+      n.y = Math.max(30, Math.min(H-30, n.y));
+    });
+  }
+
+  // Render SVG
+  let svgContent = `<defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text3)" opacity="0.3"/>
+    </marker>
+  </defs>`;
+
+  // Links
+  graphLinks.forEach(l => {
+    svgContent += `<line x1="${l.source.x}" y1="${l.source.y}" x2="${l.target.x}" y2="${l.target.y}"
+      stroke="var(--text3)" stroke-opacity="0.2" stroke-width="1" marker-end="url(#arrow)"/>`;
+  });
+
+  // Nodes
+  graphNodes.forEach(n => {
+    const color = n.isDaily ? 'var(--green)' : n.connections >= 5 ? 'var(--yellow)' : 'var(--accent)';
+    const isActive = n.id === state.activeNoteId;
+    svgContent += `<g class="graph-node" style="cursor:pointer" onclick="selectNote('${n.id}')"
+      onmouseenter="showGraphInfo('${n.id}')" onmouseleave="hideGraphInfo()">
+      <circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${color}" opacity="${isActive?1:0.7}"
+        stroke="${isActive?'#fff':'none'}" stroke-width="${isActive?2:0}"/>
+      <text x="${n.x}" y="${n.y - n.r - 4}" text-anchor="middle" fill="var(--text2)"
+        font-size="10" font-weight="500">${esc(n.title.length>20 ? n.title.slice(0,18)+'…' : n.title)}</text>
+    </g>`;
+  });
+
+  svg.innerHTML = svgContent;
+}
+
+function showGraphInfo(id){
+  const note = state.notes[id];
+  if(!note) return;
+  const info = document.getElementById('graphInfo');
+  const links = extractLinks(note.content);
+  const backlinks = getBacklinks(id);
+  document.getElementById('graphInfoTitle').textContent = note.title;
+  document.getElementById('graphInfoLinks').innerHTML = `${links.length} outlinks · ${backlinks.length} backlinks<br>${note.tags.map(t=>'#'+t).join(' ')}`;
+  info.classList.remove('hidden');
+}
+function hideGraphInfo(){ document.getElementById('graphInfo').classList.add('hidden'); }
+
+function zoomGraph(factor){
+  state.graphZoom *= factor;
+  const svg = document.getElementById('graphSvg');
+  svg.style.transform = `scale(${state.graphZoom})`;
+  svg.style.transformOrigin = 'center center';
+}
+function resetGraphZoom(){
+  state.graphZoom = 1;
+  const svg = document.getElementById('graphSvg');
+  svg.style.transform = 'none';
+  renderGraph();
+}
+
+// ============== DAILY VIEW ==============
+function renderDaily(){
+  const container = document.getElementById('dailyView');
+  const dateStr = state.dailyDate;
+  const dayName = new Date(dateStr+'T12:00:00').toLocaleDateString('en-US',{weekday:'long'});
+  const dailyNote = Object.values(state.notes).find(n => n.isDaily && n.title === dateStr);
+
+  // Notes created/updated on this day
+  const dayNotes = Object.values(state.notes).filter(n => !n.isDaily && n.updated.startsWith(dateStr));
+
+  container.innerHTML = `
+    <div class="daily-header">
+      <h2>📅 ${dayName}, ${formatDate(dateStr)}</h2>
+      <div class="daily-nav">
+        <button onclick="navDaily(-1)">← Prev</button>
+        <span class="daily-date">${dateStr}</span>
+        <button onclick="navDaily(1)">Next →</button>
+        <button onclick="goToday()" class="btn btn-primary" style="margin-left:8px">Today</button>
+      </div>
+    </div>
+
+    <div class="daily-card">
+      <h3>Daily Note</h3>
+      ${dailyNote ? `
+        <textarea id="dailyTextarea" oninput="saveDailyContent()" style="min-height:200px">${esc(dailyNote.content)}</textarea>
+      ` : `
+        <div style="text-align:center;padding:20px;color:var(--text3)">
+          <p>No daily note for this day</p>
+          <button class="btn btn-primary" onclick="createDailyNote('${dateStr}')" style="margin-top:8px">Create Daily Note</button>
+        </div>
+      `}
+    </div>
+
+    ${dayNotes.length ? `
+      <div class="daily-card">
+        <h3>Notes Active Today</h3>
+        <div class="daily-linked">
+          <div class="daily-linked-items">
+            ${dayNotes.map(n => `<div class="daily-linked-item" onclick="selectNote('${n.id}')">${esc(n.title)}</div>`).join('')}
+          </div>
+        </div>
+      </div>
+    ` : ''}
+  `;
+}
+
+function saveDailyContent(){
+  const textarea = document.getElementById('dailyTextarea');
+  if(!textarea) return;
+  const dailyNote = Object.values(state.notes).find(n => n.isDaily && n.title === state.dailyDate);
+  if(dailyNote){
+    dailyNote.content = textarea.value;
+    dailyNote.updated = new Date().toISOString();
+    // Sync inline tags
+    dailyNote.tags = [...new Set(['daily', ...extractTags(textarea.value)])];
+    save();
+  }
+}
+
+function navDaily(dir){
+  const d = new Date(state.dailyDate+'T12:00:00');
+  d.setDate(d.getDate()+dir);
+  state.dailyDate = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  renderDaily();
+}
+function goToday(){
+  state.dailyDate = todayStr();
+  renderDaily();
+}
+
+// ============== DASHBOARD ==============
+function renderDashboard(){
+  const container = document.getElementById('dashboardView');
+  const notes = Object.values(state.notes);
+  const regularNotes = notes.filter(n=>!n.isDaily);
+  const dailyNotes = notes.filter(n=>n.isDaily);
+  const allTags = getAllTags();
+
+  // Connections
+  let totalLinks = 0;
+  const connectionCounts = {};
+  notes.forEach(n => {
+    const links = extractLinks(n.content);
+    totalLinks += links.length;
+    connectionCounts[n.id] = links.length + getBacklinks(n.id).length;
+  });
+
+  // Orphans (no links in or out)
+  const orphans = notes.filter(n => !n.isDaily && connectionCounts[n.id] === 0);
+
+  // Most connected
+  const mostConnected = [...notes]
+    .filter(n=>!n.isDaily)
+    .sort((a,b)=>(connectionCounts[b.id]||0)-(connectionCounts[a.id]||0))
+    .slice(0,8);
+
+  // Recently updated
+  const recent = [...notes].sort((a,b)=>new Date(b.updated)-new Date(a.updated)).slice(0,8);
+
+  // Heatmap (last 90 days)
+  const heatmapData = {};
+  notes.forEach(n => {
+    const day = n.updated.slice(0,10);
+    heatmapData[day] = (heatmapData[day]||0)+1;
+  });
+  let heatmapHtml = '';
+  for(let i=89;i>=0;i--){
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const count = heatmapData[ds]||0;
+    const level = count===0?'':count<=1?'l1':count<=2?'l2':count<=4?'l3':'l4';
+    heatmapHtml += `<div class="heatmap-cell ${level}" title="${ds}: ${count} notes"></div>`;
+  }
+
+  container.innerHTML = `
+    <div class="dash-grid">
+      <div class="stat-card"><div class="stat-num">${notes.length}</div><div class="stat-label">Total Notes</div></div>
+      <div class="stat-card"><div class="stat-num">${regularNotes.length}</div><div class="stat-label">Knowledge Notes</div></div>
+      <div class="stat-card"><div class="stat-num">${dailyNotes.length}</div><div class="stat-label">Daily Notes</div></div>
+      <div class="stat-card"><div class="stat-num">${totalLinks}</div><div class="stat-label">Total Links</div></div>
+      <div class="stat-card"><div class="stat-num">${allTags.length}</div><div class="stat-label">Unique Tags</div></div>
+      <div class="stat-card"><div class="stat-num">${orphans.length}</div><div class="stat-label">Orphan Notes</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="dash-section">
+        <h3>🔗 Most Connected</h3>
+        ${mostConnected.map(n => `
+          <div class="connection-bar">
+            <div class="bar-label" onclick="selectNote('${n.id}')" style="cursor:pointer">${esc(n.title)}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100,(connectionCounts[n.id]||0)*10)}%"></div></div>
+            <div class="bar-count">${connectionCounts[n.id]||0}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="dash-section">
+        <h3>🕐 Recently Updated</h3>
+        ${recent.map(n => `
+          <div class="recent-item" onclick="selectNote('${n.id}')">
+            <span class="name">${n.isDaily?'📅 ':''}${esc(n.title)}</span>
+            <span class="date">${timeAgo(n.updated)}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="dash-section">
+        <h3>🏷️ Tag Cloud</h3>
+        <div class="tag-cloud">
+          ${allTags.slice(0,30).map(([tag,count]) =>
+            `<div class="tag-cloud-item" onclick="searchByTag('${tag}')">#${tag} <small style="opacity:.5">${count}</small></div>`
+          ).join('')}
+          ${allTags.length===0?'<div class="no-backlinks">No tags yet. Use #tag in your notes.</div>':''}
+        </div>
+      </div>
+
+      <div class="dash-section">
+        <h3>🏝️ Orphan Notes <small style="font-weight:400;color:var(--text3)">(no connections)</small></h3>
+        ${orphans.length ? orphans.slice(0,10).map(n => `
+          <div class="orphan-item" onclick="selectNote('${n.id}')">
+            <span>${esc(n.title)}</span>
+            <span class="orphan-badge">orphan</span>
+          </div>
+        `).join('') : '<div class="no-backlinks">No orphans — all notes are connected! 🎉</div>'}
+      </div>
+    </div>
+
+    <div class="dash-section">
+      <h3>📊 Activity (Last 90 Days)</h3>
+      <div class="heatmap">${heatmapHtml}</div>
+    </div>
+  `;
+}
+
+// ============== VIEW SWITCHING ==============
+function switchView(view){
+  state.currentView = view;
+  ['editorView','graphView','dailyView','dashboardView'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+  });
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.nav-btn[data-view="${view}"]`).classList.add('active');
+
+  if(view==='editor'){
+    document.getElementById('editorView').classList.remove('hidden');
+    renderEditor();
+  } else if(view==='graph'){
+    document.getElementById('graphView').classList.remove('hidden');
+    setTimeout(renderGraph, 50);
+  } else if(view==='daily'){
+    document.getElementById('dailyView').classList.remove('hidden');
+    renderDaily();
+  } else if(view==='dashboard'){
+    document.getElementById('dashboardView').classList.remove('hidden');
+    renderDashboard();
+  }
+  save();
+}
+
+// ============== IMPORT/EXPORT ==============
+function exportData(){
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'knowledge-garden-'+todayStr()+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importData(){
+  document.getElementById('importInput').click();
+}
+
+document.getElementById('importInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      if(data.notes){
+        // Merge
+        Object.assign(state.notes, data.notes);
+        if(data.activeNoteId && state.notes[data.activeNoteId]) state.activeNoteId = data.activeNoteId;
+        save();
+        renderSidebar();
+        renderEditor();
+        alert('Imported '+Object.keys(data.notes).length+' notes!');
+      }
+    }catch(err){
+      alert('Invalid JSON file');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// ============== HELP MODAL ==============
+function showHelp(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="modal">
+    <h3>⌨️ Keyboard Shortcuts</h3>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:13px;margin:16px 0">
+      <kbd style="background:var(--bg4);padding:2px 8px;border-radius:4px">N</kbd><span>New note</span>
+      <kbd style="background:var(--bg4);padding:2px 8px;border-radius:4px">D</kbd><span>Today's daily note</span>
+      <kbd style="background:var(--bg4);padding:2px 8px;border-radius:4px">/</kbd><span>Focus search</span>
+      <kbd style="background:var(--bg4);padding:2px 8px;border-radius:4px">1</kbd><span>Notes view</span>
+      <kbd style="background:var(--bg4);padding:2px 8px;border-radius:4px">2</kbd><span>Graph view</span>
+      <kbd style="background:var(--bg4);padding:2px 8px;border-radius:4px">3</kbd><span>Daily view</span>
+      <kbd style="background:var(--bg4);padding:2px 8px;border-radius:4px">4</kbd><span>Dashboard</span>
+      <kbd style="background:var(--bg4);padding:2px 8px;border-radius:4px">P</kbd><span>Toggle preview</span>
+      <kbd style="background:var(--bg4);padding:2px 8px;border-radius:4px">E</kbd><span>Export JSON</span>
+      <kbd style="background:var(--bg4);padding:2px 8px;border-radius:4px">I</kbd><span>Import JSON</span>
+      <kbd style="background:var(--bg4);padding:2px 8px;border-radius:4px">?</kbd><span>This help</span>
+      <kbd style="background:var(--bg4);padding:2px 8px;border-radius:4px">Esc</kbd><span>Close modal / blur</span>
+    </div>
+    <h3 style="margin-top:16px">📝 Syntax</h3>
+    <div style="font-size:13px;line-height:1.8;margin:12px 0;color:var(--text2)">
+      <code>[[Note Title]]</code> — Link to another note (creates bidirectional link)<br>
+      <code>#tag</code> — Add inline tag<br>
+      <code>**bold**</code> <code>*italic*</code> <code>\`code\`</code><br>
+      <code>## Heading</code> <code>- List item</code> <code>> Quote</code><br>
+      <code>- [ ] Task</code> <code>- [x] Done task</code><br>
+      <code>---</code> — Horizontal rule
+    </div>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">Got it</button></div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+// ============== OPEN DAILY NOTE ==============
+function openDailyNote(){
+  createDailyNote(todayStr());
+  switchView('daily');
+}
+
+// ============== UTILS ==============
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+
+function formatDate(ds){
+  const d = new Date(ds+'T12:00:00');
+  return d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+}
+function formatDateTime(iso){
+  return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+}
+function timeAgo(iso){
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff/60000);
+  if(min<1) return 'just now';
+  if(min<60) return min+'m ago';
+  const hr = Math.floor(min/60);
+  if(hr<24) return hr+'h ago';
+  const days = Math.floor(hr/24);
+  if(days<30) return days+'d ago';
+  return Math.floor(days/30)+'mo ago';
+}
+
+// ============== EVENT HANDLERS ==============
+// Title change
+document.getElementById('editorTitle').addEventListener('input', e => {
+  const note = state.notes[state.activeNoteId];
+  if(!note) return;
+  note.title = e.target.value || 'Untitled';
+  note.updated = new Date().toISOString();
+  save();
+  renderSidebar();
+});
+
+// Content change
+let contentSaveTimer;
+document.getElementById('editorContent').addEventListener('input', e => {
+  const note = state.notes[state.activeNoteId];
+  if(!note) return;
+  note.content = e.target.value;
+  note.updated = new Date().toISOString();
+  // Auto-extract inline tags
+  const inlineTags = extractTags(e.target.value);
+  const manualTags = note.tags.filter(t => !extractTags(note.content).includes(t));
+  // Don't remove manually added tags, just add new inline ones
+  inlineTags.forEach(t => { if(!note.tags.includes(t)) note.tags.push(t); });
+  clearTimeout(contentSaveTimer);
+  contentSaveTimer = setTimeout(() => {
+    save();
+    renderBacklinks();
+    renderSidebar();
+  }, 500);
+});
+
+// Tag input
+document.getElementById('tagInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    addTag(e.target.value);
+    e.target.value = '';
+  }
+});
+
+// Search
+document.getElementById('searchInput').addEventListener('input', () => renderSidebar());
+
+// Nav buttons
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchView(btn.dataset.view));
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  // Skip if typing in input/textarea
+  const tag = e.target.tagName;
+  const isInput = tag === 'INPUT' || tag === 'TEXTAREA';
+
+  if(e.key === 'Escape'){
+    // Close modals
+    const modal = document.querySelector('.modal-overlay');
+    if(modal){ modal.remove(); return; }
+    if(isInput){ e.target.blur(); return; }
+  }
+
+  if(isInput) return;
+
+  if(e.key === 'n' || e.key === 'N'){ e.preventDefault(); createNote(); }
+  if(e.key === 'd'){ e.preventDefault(); openDailyNote(); }
+  if(e.key === '/'){ e.preventDefault(); document.getElementById('searchInput').focus(); }
+  if(e.key === '1'){ e.preventDefault(); switchView('editor'); }
+  if(e.key === '2'){ e.preventDefault(); switchView('graph'); }
+  if(e.key === '3'){ e.preventDefault(); switchView('daily'); }
+  if(e.key === '4'){ e.preventDefault(); switchView('dashboard'); }
+  if(e.key === 'p'){ e.preventDefault(); togglePreview(); }
+  if(e.key === 'e'){ e.preventDefault(); exportData(); }
+  if(e.key === 'i'){ e.preventDefault(); importData(); }
+  if(e.key === '?'){ e.preventDefault(); showHelp(); }
+});
+
+// Tab key in editor
+document.getElementById('editorContent').addEventListener('keydown', e => {
+  if(e.key === 'Tab'){
+    e.preventDefault();
+    const ta = e.target;
+    const start = ta.selectionStart;
+    ta.value = ta.value.substring(0,start) + '  ' + ta.value.substring(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = start + 2;
+    ta.dispatchEvent(new Event('input'));
+  }
+});
+
+// ============== SEED DATA ==============
+function seedData(){
+  if(Object.keys(state.notes).length > 0) return;
+
+  const now = new Date().toISOString();
+  const seeds = [
+    {
+      title: 'Welcome to Knowledge Garden',
+      content: `# Your Second Brain 🌱
+
+Welcome to **Knowledge Garden** — a Zettelkasten-style personal knowledge management tool.
+
+## How it works
+
+- Create notes and link them with [[Wiki Links]]
+- Every link is bidirectional — see who links back in the Backlinks panel
+- Use #tags for quick categorization
+- Daily notes for journaling and daily captures
+- Graph view to visualize your knowledge network
+
+## Core concepts
+
+### Zettelkasten Method
+The Zettelkasten ("slip box") method was popularized by sociologist Niklas Luhmann, who used it to write 70+ books. The key principle: **atomic notes connected by links**.
+
+See [[Atomic Notes]] and [[Linking Your Thinking]] for more.
+
+### Why this works
+1. Ideas compound when connected
+2. Writing clarifies thinking
+3. Links surface unexpected connections
+4. Your garden grows more valuable over time
+
+## Getting started
+
+1. Create notes with the **+ Note** button (or press \`N\`)
+2. Link to other notes using \`[[Note Title]]\`
+3. Check the **Graph** view to see your network
+4. Use **Daily Notes** for daily capture
+5. Review **Dashboard** for insights
+
+> "The best note-taking system is the one you actually use." #productivity #zettelkasten`,
+      tags: ['welcome', 'productivity', 'zettelkasten']
+    },
+    {
+      title: 'Atomic Notes',
+      content: `# Atomic Notes
+
+An atomic note captures **one idea, one concept, one thought**. No more, no less.
+
+## Why atomic?
+
+- Easier to link — one idea connects cleanly to another
+- Easier to find — search for a concept, not a document
+- Easier to reuse — combine atoms into molecules of thought
+- Forces clarity — if you can't express it in one note, you don't understand it
+
+## How to write atomic notes
+
+1. **One idea per note** — if you find yourself writing "also..." break it apart
+2. **Your own words** — don't just copy, translate it into your understanding
+3. **Link generously** — connect to [[Linking Your Thinking]] and related concepts
+4. **Title as concept** — the title should tell you what the note is about
+
+## Examples
+
+Bad: "Meeting notes from Monday" (multiple ideas, no concept)
+Good: "Users churn when onboarding exceeds 3 steps" (one clear insight)
+
+See also: [[Building in Public]] for how AJ applies this to content
+
+#writing #zettelkasten #thinking`,
+      tags: ['writing', 'zettelkasten', 'thinking']
+    },
+    {
+      title: 'Linking Your Thinking',
+      content: `# Linking Your Thinking
+
+The magic of a knowledge garden isn't in the notes — it's in the **connections**.
+
+## Types of links
+
+### Direct links
+"This concept relates to that concept"
+- [[Atomic Notes]] ← direct conceptual connection
+
+### Context links
+"I learned this while working on that"
+- [[UTMStamp Learnings]] ← learned during a specific project
+
+### Bridge links
+Connecting two seemingly unrelated ideas
+- [[Product Strategy]] + [[Content Marketing]] = build in public strategy
+
+## The compound effect
+
+Each new note makes **every existing note** slightly more valuable by creating potential new connections. This is why [[Building in Public]] compounds — each post links to previous ideas.
+
+## Practical tips
+
+1. When writing, ask: "What does this remind me of?"
+2. Review old notes weekly — add new links as your thinking evolves
+3. Don't force connections — genuine insights emerge naturally
+4. Use the **Graph view** to spot clusters and gaps
+
+> "An idea that is not dangerous is unworthy of being called an idea at all." — Oscar Wilde
+
+#thinking #knowledge-management #zettelkasten`,
+      tags: ['thinking', 'knowledge-management', 'zettelkasten']
+    },
+    {
+      title: 'Product Strategy',
+      content: `# Product Strategy
+
+AJ's philosophy: **"Lead product teams to solve business problems. Not ship features."**
+
+## Core principles
+
+### 1. Prototype to Validate
+Test fast, scale what works. Don't build the full thing until you've proven the core assumption.
+
+Example from [[UTMStamp Learnings]]: Shipped core UTM tracking in 13 days. Validated demand before building team features.
+
+### 2. Resourceful by Design  
+Constraints breed creativity. See [[ZYOD Lessons]] — "50 lines of code saved us $180K per year."
+
+### 3. Speed as Strategy
+Ship fast, learn faster, iterate always. Speed is a competitive advantage for startups.
+
+## Strategy frameworks I use
+
+- **RICE** — Reach × Impact × Confidence ÷ Effort
+- **Jobs to Be Done** — What job is the user hiring this product for?
+- **North Star Metric** — One metric that captures the core value you deliver
+- **ICE** — Quick scoring for growth experiments
+
+## Anti-patterns
+
+- Building features nobody asked for
+- Optimizing before finding PMF
+- Over-planning instead of shipping
+- Confusing activity with progress
+
+See also: [[Building in Public]], [[Growth Loops]]
+
+#product #strategy #frameworks`,
+      tags: ['product', 'strategy', 'frameworks']
+    },
+    {
+      title: 'UTMStamp Learnings',
+      content: `# UTMStamp Learnings
+
+Key insights from building [[UTMStamp]] — email signature manager with UTM tracking.
+
+## What worked
+
+### Speed of execution
+- Shipped MVP in 13 days
+- Proved "I ship fast" as a personal brand
+- Validated demand before polishing
+
+### Product-Led Growth
+- Free forever plan as the wedge
+- Signatures are inherently viral — every email sends your branding
+- See [[Growth Loops]] for the viral signature loop
+
+### Building in Public
+- Live-tweeting the build process drove initial traffic
+- LinkedIn posts about the journey got engagement
+- See [[Building in Public]] for the strategy
+
+## What I'd do differently
+
+1. Start with team features earlier — that's where the money is
+2. More user interviews before building analytics
+3. Set up [[Product Strategy]] framework from day 1
+
+## Key metrics to track
+- Signatures created
+- Click-through rate on UTM links  
+- Team deployment rate
+- Free → Paid conversion
+
+#utmstamp #saas #learnings #building`,
+      tags: ['utmstamp', 'saas', 'learnings', 'building']
+    },
+    {
+      title: 'Building in Public',
+      content: `# Building in Public
+
+Sharing the journey openly — wins, losses, numbers, decisions.
+
+## Why it works
+
+1. **Accountability** — public commitments are harder to break
+2. **Audience building** — people follow the journey, not just the product
+3. **Content engine** — every decision is a potential post. See [[Atomic Notes]]
+4. **Trust** — transparency builds trust faster than polished marketing
+5. **Compounding** — each post links to previous ones. See [[Linking Your Thinking]]
+
+## AJ's approach
+
+- Ship something every day → document it
+- Share real numbers (MRR, users, failures)
+- LinkedIn as primary channel (professional audience)
+- Twitter for real-time updates
+- [[UTMStamp Learnings]] as the live case study
+
+## Content types that work
+
+1. **Shipping updates** — "Just shipped X. Here's why."
+2. **Lessons learned** — "I made this mistake. Here's what I learned."
+3. **Behind the scenes** — "Here's how I decided between A and B."
+4. **Number posts** — "Month 1: X users, Y revenue, Z lessons."
+5. **Hot takes** — "Unpopular opinion: [contrarian take]."
+
+## The build-in-public flywheel
+
+Ship → Document → Share → Attract → Feedback → Ship better → Repeat
+
+This connects to [[Growth Loops]] and [[Product Strategy]].
+
+#content #building-in-public #marketing #growth`,
+      tags: ['content', 'building-in-public', 'marketing', 'growth']
+    },
+    {
+      title: 'Growth Loops',
+      content: `# Growth Loops
+
+Sustainable growth comes from **loops**, not funnels.
+
+## UTMStamp's viral loop
+
+1. User creates branded email signature
+2. Every email sent displays the signature
+3. Recipients see the professional branding + "Powered by UTMStamp"
+4. Some recipients create their own signatures
+5. Loop repeats
+
+This is powerful because **usage = distribution**. See [[UTMStamp Learnings]].
+
+## Types of growth loops
+
+### Viral loops
+- Product usage naturally exposes new users (like email signatures)
+- Key metric: viral coefficient (K-factor)
+
+### Content loops
+- Use the product → generate content about it → attract new users
+- AJ's [[Building in Public]] strategy is this
+
+### Paid loops
+- Revenue → reinvest in ads → acquire users → revenue
+- Only works after PMF. Don't do this early.
+
+### Data loops
+- More users → more data → better product → more users
+- Relevant for UTMStamp's analytics features
+
+## Measuring loops
+
+- **Cycle time** — how long does one loop iteration take?
+- **Conversion rate** — what % complete each step?
+- **Compounding factor** — does each cycle produce >1x the input?
+
+See also: [[Product Strategy]], [[UTMStamp Learnings]]
+
+#growth #loops #marketing #product`,
+      tags: ['growth', 'loops', 'marketing', 'product']
+    },
+    {
+      title: 'ZYOD Lessons',
+      content: `# ZYOD Lessons
+
+3 years building Manufacturing OS and factory digital twin. Key takeaways.
+
+## The wins
+
+### QR-WMS: $1.4M capital unlock
+- Simple QR-code warehouse management system
+- Unlocked ₹11-12 Cr in blocked working capital
+- Proof that small solutions can have massive business impact
+
+### 50 lines of code = $180K/year saved
+- Found a process inefficiency, wrote a tiny automation
+- [[Product Strategy]] principle: solve business problems, not ship features
+
+### IoT deployment across 700+ sewing machines
+- Real-time production monitoring
+- IIT Delhi partnership for R&D
+
+## The lessons
+
+1. **Manufacturing moves slow** — patience is a feature
+2. **Domain expertise matters** — spent months on the factory floor
+3. **Start with the constraint** — find the bottleneck, solve that first
+4. **Data wins arguments** — show numbers, not opinions
+5. **Simple > Complex** — QR codes beat fancy RFID every time
+
+## What I'd carry forward
+
+- Deep domain immersion before solutioning
+- Prototype on the floor, not in Figma
+- Always ask "what's the business impact in dollars?"
+- See [[Product Strategy]] for the full framework
+
+#zyod #manufacturing #iot #lessons`,
+      tags: ['zyod', 'manufacturing', 'iot', 'lessons']
+    },
+    {
+      title: 'Second Brain Design Principles',
+      content: `# Second Brain Design Principles
+
+How to build a personal knowledge system that actually works.
+
+## Principles
+
+### 1. Capture everything
+Don't filter at the point of capture. Write it down, sort it later. [[Atomic Notes]] helps keep captures clean.
+
+### 2. Organize for retrieval
+Tags + links > folders. You'll never remember which folder you put something in. But you'll remember it's connected to [[Product Strategy]].
+
+### 3. Review regularly
+A garden needs tending. Weekly review of recent notes. Monthly review of orphans (check Dashboard). See [[Linking Your Thinking]].
+
+### 4. Write in your own words
+Understanding = ability to explain. If you can't write the note without looking at the source, you don't understand it yet.
+
+### 5. Connect aggressively
+Every note should link to at least one other note. Orphan notes are wasted knowledge. Use the **Graph view** to find gaps.
+
+## The PARA method (modified)
+
+- **Projects** — active work (UTMStamp, job hunt)
+- **Areas** — ongoing responsibilities (product thinking, content)
+- **Resources** — reference material (frameworks, tools)
+- **Archive** — inactive but might be useful
+
+In Knowledge Garden, use #tags for this instead of folders.
+
+## Weekly review checklist
+
+- [ ] Process inbox / daily notes
+- [ ] Create [[Atomic Notes]] from raw captures
+- [ ] Add links to new notes
+- [ ] Review orphan notes in Dashboard
+- [ ] Update any stale notes
+
+#knowledge-management #productivity #systems`,
+      tags: ['knowledge-management', 'productivity', 'systems']
+    },
+    {
+      title: 'Job Hunt Strategy',
+      content: `# Job Hunt Strategy
+
+Head of Product / Senior PM roles. Here's the plan.
+
+## Target companies
+
+- Series B-D startups (sweet spot for impact)
+- Companies where product actually matters (not feature factories)
+- Manufacturing, logistics, or SaaS verticals (domain expertise from [[ZYOD Lessons]])
+
+## Positioning
+
+### The story
+"10 years building product. 4 products 0→1. $15M revenue impact. The track record to prove it."
+
+### Unique angles
+1. **Shipped in 13 days** — [[UTMStamp Learnings]] proves execution speed
+2. **$1.4M capital unlock** — [[ZYOD Lessons]] proves business impact
+3. **IoT + Manufacturing** — rare product person with deep domain expertise
+4. **Build in Public** — [[Building in Public]] shows thinking process transparently
+
+## Channels
+
+1. LinkedIn — direct outreach + content
+2. Referral network — warm intros
+3. AngelList / Wellfound
+4. Recruiter relationships
+5. Twitter DMs for startup founders
+
+## Interview prep
+
+- STAR stories for each key achievement
+- [[Product Strategy]] frameworks ready to discuss
+- Case studies from ZYOD, GoMechanic, UTMStamp
+- Portfolio site at helloaman.com
+
+## The meta play
+
+The job hunt itself is content. Documenting the process = [[Building in Public]] = more visibility = better opportunities.
+
+#career #job-hunt #strategy`,
+      tags: ['career', 'job-hunt', 'strategy']
+    }
+  ];
+
+  seeds.forEach((seed, i) => {
+    const id = genId();
+    const created = new Date(Date.now() - (seeds.length - i) * 3600000).toISOString();
+    state.notes[id] = {
+      id, title: seed.title, content: seed.content,
+      tags: seed.tags, created, updated: created, isDaily: false
+    };
+  });
+
+  // Create today's daily note
+  createDailyNote(todayStr());
+
+  save();
+}
+
+// ============== INIT ==============
+load();
+seedData();
+renderSidebar();
+if(state.activeNoteId && state.notes[state.activeNoteId]){
+  renderEditor();
+} else {
+  const ids = Object.keys(state.notes);
+  if(ids.length){ state.activeNoteId = ids[0]; save(); renderEditor(); }
+}
+if(state.currentView) switchView(state.currentView);
+</script>
+</body>
+</html>

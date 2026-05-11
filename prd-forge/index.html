@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD Forge — Product Requirements Document Builder</title>
+<style>
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #242736; --surface3: #2e3142;
+  --border: #363a4e; --text: #e4e6f0; --text2: #9ba1b8; --text3: #6b7194;
+  --accent: #6c5ce7; --accent2: #a29bfe; --accent-bg: rgba(108,92,231,0.12);
+  --green: #00b894; --green-bg: rgba(0,184,148,0.12);
+  --yellow: #fdcb6e; --yellow-bg: rgba(253,203,110,0.12);
+  --red: #e17055; --red-bg: rgba(225,112,85,0.12);
+  --blue: #74b9ff; --blue-bg: rgba(116,185,255,0.12);
+  --orange: #e17055; --pink: #fd79a8;
+  --radius: 10px; --radius-sm: 6px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Sidebar */
+.sidebar { width: 280px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); }
+.sidebar-header h1 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sidebar-header h1 span { font-size: 20px; }
+.sidebar-header p { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.sidebar-search { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.sidebar-search input { width: 100%; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; outline: none; }
+.sidebar-search input:focus { border-color: var(--accent); }
+.sidebar-search input::placeholder { color: var(--text3); }
+.prd-list { flex: 1; overflow-y: auto; padding: 8px; }
+.prd-item { padding: 12px; border-radius: var(--radius-sm); cursor: pointer; margin-bottom: 4px; transition: all 0.15s; }
+.prd-item:hover { background: var(--surface2); }
+.prd-item.active { background: var(--accent-bg); border-left: 3px solid var(--accent); }
+.prd-item-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prd-item-meta { font-size: 11px; color: var(--text3); margin-top: 4px; display: flex; gap: 8px; align-items: center; }
+.prd-item-status { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
+.status-draft { background: var(--yellow-bg); color: var(--yellow); }
+.status-review { background: var(--blue-bg); color: var(--blue); }
+.status-approved { background: var(--green-bg); color: var(--green); }
+.status-archived { background: rgba(107,113,148,0.15); color: var(--text3); }
+.sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.sidebar-footer button { flex: 1; }
+
+/* Buttons */
+button { font-family: var(--font); cursor: pointer; border: none; outline: none; }
+.btn { padding: 8px 14px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-secondary { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--surface3); color: var(--text); }
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+.btn-icon { background: none; color: var(--text3); padding: 6px; border-radius: var(--radius-sm); }
+.btn-icon:hover { background: var(--surface2); color: var(--text); }
+
+/* Main */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.toolbar { padding: 12px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: var(--surface); }
+.toolbar .tabs { display: flex; gap: 4px; }
+.toolbar .tab { padding: 6px 14px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; color: var(--text3); background: none; cursor: pointer; transition: all 0.15s; border: none; }
+.toolbar .tab:hover { color: var(--text2); background: var(--surface2); }
+.toolbar .tab.active { color: var(--accent2); background: var(--accent-bg); }
+.toolbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+.content { flex: 1; overflow-y: auto; padding: 32px; }
+
+/* Empty state */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text3); }
+.empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+.empty-state h2 { font-size: 18px; color: var(--text2); margin-bottom: 8px; }
+.empty-state p { font-size: 13px; max-width: 360px; text-align: center; line-height: 1.6; }
+
+/* Editor */
+.editor-container { max-width: 860px; margin: 0 auto; }
+.prd-title-input { width: 100%; background: none; border: none; font-size: 28px; font-weight: 800; color: var(--text); outline: none; margin-bottom: 8px; }
+.prd-title-input::placeholder { color: var(--text3); }
+.meta-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.meta-field { display: flex; flex-direction: column; gap: 4px; }
+.meta-field label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text3); letter-spacing: 0.5px; }
+.meta-field select, .meta-field input { padding: 6px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 12px; outline: none; font-family: var(--font); }
+.meta-field select:focus, .meta-field input:focus { border-color: var(--accent); }
+
+/* Section editor */
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
+.section-header { padding: 14px 18px; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+.section-header:hover { background: var(--surface2); }
+.section-chevron { color: var(--text3); font-size: 12px; transition: transform 0.2s; }
+.section-chevron.open { transform: rotate(90deg); }
+.section-title { font-size: 14px; font-weight: 700; color: var(--accent2); }
+.section-badge { font-size: 10px; color: var(--text3); margin-left: auto; }
+.section-body { padding: 0 18px 18px; display: none; }
+.section-body.open { display: block; }
+.section-body textarea { width: 100%; min-height: 100px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; color: var(--text); font-family: var(--font); font-size: 13px; line-height: 1.6; resize: vertical; outline: none; }
+.section-body textarea:focus { border-color: var(--accent); }
+.section-body textarea::placeholder { color: var(--text3); }
+
+/* Items list (user stories, requirements, etc.) */
+.items-list { display: flex; flex-direction: column; gap: 8px; }
+.item-row { display: flex; gap: 8px; align-items: flex-start; }
+.item-row input, .item-row textarea { flex: 1; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: var(--font); outline: none; }
+.item-row textarea { min-height: 36px; resize: vertical; line-height: 1.5; }
+.item-row input:focus, .item-row textarea:focus { border-color: var(--accent); }
+.item-row .priority-tag { font-size: 10px; padding: 4px 8px; border-radius: 3px; font-weight: 700; cursor: pointer; flex-shrink: 0; margin-top: 6px; }
+.priority-must { background: var(--red-bg); color: var(--red); }
+.priority-should { background: var(--yellow-bg); color: var(--yellow); }
+.priority-could { background: var(--blue-bg); color: var(--blue); }
+.priority-wont { background: rgba(107,113,148,0.15); color: var(--text3); }
+.add-item-btn { background: none; border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 8px; color: var(--text3); font-size: 12px; cursor: pointer; width: 100%; text-align: center; margin-top: 8px; }
+.add-item-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+/* Metric cards */
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.metric-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; }
+.metric-card label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text3); display: block; margin-bottom: 4px; }
+.metric-card input { width: 100%; background: none; border: none; color: var(--text); font-size: 14px; font-weight: 600; outline: none; }
+
+/* Preview view */
+.preview-container { max-width: 860px; margin: 0 auto; }
+.preview-header { margin-bottom: 32px; }
+.preview-header h1 { font-size: 32px; font-weight: 800; margin-bottom: 12px; }
+.preview-meta { display: flex; gap: 20px; flex-wrap: wrap; }
+.preview-meta-item { font-size: 12px; color: var(--text2); }
+.preview-meta-item strong { color: var(--text); }
+.preview-section { margin-bottom: 28px; }
+.preview-section h2 { font-size: 18px; font-weight: 700; color: var(--accent2); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.preview-section p, .preview-section li { font-size: 14px; line-height: 1.7; color: var(--text2); }
+.preview-section ul, .preview-section ol { padding-left: 20px; }
+.preview-section li { margin-bottom: 6px; }
+.preview-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 12px; }
+.preview-metric { background: var(--accent-bg); border-radius: var(--radius-sm); padding: 16px; text-align: center; }
+.preview-metric .label { font-size: 11px; color: var(--text3); text-transform: uppercase; font-weight: 600; }
+.preview-metric .value { font-size: 20px; font-weight: 800; color: var(--accent2); margin-top: 4px; }
+.preview-req { padding: 10px 14px; background: var(--surface2); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+.preview-req .text { flex: 1; font-size: 13px; color: var(--text2); }
+
+/* Templates view */
+.templates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; max-width: 960px; margin: 0 auto; }
+.template-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; cursor: pointer; transition: all 0.2s; }
+.template-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+.template-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.template-card p { font-size: 12px; color: var(--text3); line-height: 1.5; margin-bottom: 12px; }
+.template-card .sections { display: flex; flex-wrap: wrap; gap: 4px; }
+.template-card .section-tag { font-size: 10px; padding: 3px 8px; background: var(--surface2); border-radius: 3px; color: var(--text3); }
+
+/* Dashboard */
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.dash-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.dash-card .label { font-size: 11px; color: var(--text3); text-transform: uppercase; font-weight: 600; }
+.dash-card .value { font-size: 28px; font-weight: 800; margin-top: 4px; }
+.dash-card .sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); width: 480px; max-height: 80vh; overflow-y: auto; }
+.modal-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+.modal-header h2 { font-size: 16px; font-weight: 700; }
+.modal-header .close { margin-left: auto; font-size: 18px; cursor: pointer; color: var(--text3); background: none; border: none; }
+.modal-header .close:hover { color: var(--text); }
+.modal-body { padding: 20px; }
+.modal-body .field { margin-bottom: 16px; }
+.modal-body .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+.modal-body .field input, .modal-body .field select, .modal-body .field textarea { width: 100%; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: var(--font); outline: none; }
+.modal-body .field textarea { min-height: 80px; resize: vertical; }
+.modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+/* Keyboard help */
+.kbd { display: inline-block; padding: 2px 6px; background: var(--surface3); border: 1px solid var(--border); border-radius: 3px; font-size: 11px; font-family: var(--mono); color: var(--text2); }
+
+/* Print styles */
+@media print {
+  .sidebar, .toolbar { display: none !important; }
+  .main { margin: 0; }
+  .content { padding: 20px; }
+  body { background: white; color: #1a1a1a; }
+  .preview-section h2 { color: #6c5ce7; }
+  .preview-metric { background: #f0ecff; }
+  .preview-metric .value { color: #6c5ce7; }
+  .preview-req { background: #f5f5f5; }
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span>📋</span> PRD Forge</h1>
+    <p>Product Requirements Documents</p>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" id="searchInput" placeholder="Search PRDs... ( / )" />
+  </div>
+  <div class="prd-list" id="prdList"></div>
+  <div class="sidebar-footer">
+    <button class="btn btn-primary" onclick="newPRD()">+ New PRD</button>
+    <button class="btn btn-secondary" onclick="showTemplates()">📄 Templates</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="toolbar" id="toolbar" style="display:none;">
+    <div class="tabs">
+      <button class="tab active" data-view="edit" onclick="switchView('edit')">✏️ Edit</button>
+      <button class="tab" data-view="preview" onclick="switchView('preview')">👁 Preview</button>
+      <button class="tab" data-view="dashboard" onclick="switchView('dashboard')">📊 Dashboard</button>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn btn-secondary btn-sm" onclick="duplicatePRD()">📑 Duplicate</button>
+      <button class="btn btn-secondary btn-sm" onclick="exportMarkdown()">📝 Markdown</button>
+      <button class="btn btn-secondary btn-sm" onclick="exportAll()">💾 Export</button>
+      <button class="btn btn-secondary btn-sm" onclick="importAll()">📂 Import</button>
+      <button class="btn btn-secondary btn-sm" onclick="deletePRD()" style="color:var(--red)">🗑</button>
+    </div>
+  </div>
+
+  <div class="content" id="contentArea">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">📋</div>
+      <h2>No PRD Selected</h2>
+      <p>Create a new PRD or pick a template to get started. Ship specs, not slides.</p>
+      <div style="margin-top:16px; display:flex; gap:8px;">
+        <button class="btn btn-primary" onclick="newPRD()">+ New PRD</button>
+        <button class="btn btn-secondary" onclick="showTemplates()">📄 Templates</button>
+      </div>
+      <div style="margin-top:24px; font-size:11px; color:var(--text3);">
+        <span class="kbd">N</span> New &nbsp; <span class="kbd">/</span> Search &nbsp;
+        <span class="kbd">1-3</span> Views &nbsp; <span class="kbd">E</span> Export &nbsp;
+        <span class="kbd">Esc</span> Close
+      </div>
+    </div>
+    <div id="editView" style="display:none;"></div>
+    <div id="previewView" style="display:none;"></div>
+    <div id="dashboardView" style="display:none;"></div>
+    <div id="templatesView" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- Export modal -->
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <div class="modal-header"><h2>📝 Markdown Export</h2><button class="close" onclick="closeModal('exportModal')">&times;</button></div>
+    <div class="modal-body">
+      <textarea id="markdownOutput" style="width:100%;min-height:400px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;color:var(--text);font-family:var(--mono);font-size:12px;line-height:1.6;resize:vertical;" readonly></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="copyMarkdown()">📋 Copy</button>
+      <button class="btn btn-secondary" onclick="downloadMarkdown()">💾 Download</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)" />
+
+<script>
+// Data
+const PRIORITIES = ['Must', 'Should', 'Could', "Won't"];
+const PRIORITY_CLASSES = { Must: 'priority-must', Should: 'priority-should', Could: 'priority-could', "Won't": 'priority-wont' };
+const STATUSES = ['Draft', 'Review', 'Approved', 'Archived'];
+const STATUS_CLASSES = { Draft: 'status-draft', Review: 'status-review', Approved: 'status-approved', Archived: 'status-archived' };
+
+const DEFAULT_SECTIONS = [
+  { id: 'overview', title: 'Overview', type: 'text', placeholder: 'Brief summary of the product/feature. What is it and why does it matter?' },
+  { id: 'problem', title: 'Problem Statement', type: 'text', placeholder: 'What problem are we solving? Who has this problem? How painful is it?' },
+  { id: 'goals', title: 'Goals & Success Metrics', type: 'metrics', placeholder: '' },
+  { id: 'users', title: 'Target Users', type: 'text', placeholder: 'Who are the primary users? Describe their characteristics, needs, and context.' },
+  { id: 'user_stories', title: 'User Stories', type: 'stories', placeholder: '' },
+  { id: 'requirements', title: 'Requirements', type: 'requirements', placeholder: '' },
+  { id: 'out_of_scope', title: 'Out of Scope', type: 'text', placeholder: 'What are we explicitly NOT building? Helps prevent scope creep.' },
+  { id: 'design', title: 'Design & UX Notes', type: 'text', placeholder: 'Key UX decisions, wireframe links, interaction patterns, design principles.' },
+  { id: 'technical', title: 'Technical Considerations', type: 'text', placeholder: 'Architecture decisions, API contracts, data models, dependencies, constraints.' },
+  { id: 'risks', title: 'Risks & Mitigations', type: 'risks', placeholder: '' },
+  { id: 'timeline', title: 'Timeline & Milestones', type: 'milestones', placeholder: '' },
+  { id: 'references', title: 'References & Links', type: 'text', placeholder: 'Related docs, research, competitor analysis, design files, etc.' },
+];
+
+let prds = JSON.parse(localStorage.getItem('prdforge_prds') || '[]');
+let currentPrdId = null;
+let currentView = 'edit';
+let searchText = '';
+
+function save() { localStorage.setItem('prdforge_prds', JSON.stringify(prds)); }
+function getPrd(id) { return prds.find(p => p.id === id); }
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+function createPRD(template) {
+  const prd = {
+    id: genId(),
+    title: template?.title || 'Untitled PRD',
+    status: 'Draft',
+    owner: template?.owner || '',
+    team: template?.team || '',
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+    sections: {},
+    openSections: { overview: true }
+  };
+  // Init sections from template or defaults
+  const secs = template?.sections || DEFAULT_SECTIONS;
+  secs.forEach(s => {
+    if (s.type === 'text') prd.sections[s.id] = { content: template?.data?.[s.id] || '' };
+    else if (s.type === 'metrics') prd.sections[s.id] = { items: template?.data?.[s.id] || [{ name: '', target: '', current: '' }] };
+    else if (s.type === 'stories') prd.sections[s.id] = { items: template?.data?.[s.id] || [{ as: '', want: '', so: '' }] };
+    else if (s.type === 'requirements') prd.sections[s.id] = { items: template?.data?.[s.id] || [{ text: '', priority: 'Must' }] };
+    else if (s.type === 'risks') prd.sections[s.id] = { items: template?.data?.[s.id] || [{ risk: '', impact: 'High', mitigation: '' }] };
+    else if (s.type === 'milestones') prd.sections[s.id] = { items: template?.data?.[s.id] || [{ date: '', milestone: '', status: 'Planned' }] };
+  });
+  return prd;
+}
+
+function newPRD(template) {
+  const prd = createPRD(template);
+  prds.unshift(prd);
+  save();
+  selectPRD(prd.id);
+  renderSidebar();
+}
+
+function selectPRD(id) {
+  currentPrdId = id;
+  currentView = 'edit';
+  document.getElementById('toolbar').style.display = 'flex';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('templatesView').style.display = 'none';
+  renderSidebar();
+  renderEditor();
+  updateTabs();
+}
+
+function renderSidebar() {
+  const list = document.getElementById('prdList');
+  const filtered = prds.filter(p => !searchText || p.title.toLowerCase().includes(searchText.toLowerCase()));
+  list.innerHTML = filtered.map(p => `
+    <div class="prd-item ${p.id === currentPrdId ? 'active' : ''}" onclick="selectPRD('${p.id}')">
+      <div class="prd-item-title">${esc(p.title)}</div>
+      <div class="prd-item-meta">
+        <span class="prd-item-status ${STATUS_CLASSES[p.status]}">${p.status}</span>
+        <span>${timeAgo(p.updated)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderEditor() {
+  const prd = getPrd(currentPrdId);
+  if (!prd) return;
+  const el = document.getElementById('editView');
+  el.style.display = 'block';
+  document.getElementById('previewView').style.display = 'none';
+  document.getElementById('dashboardView').style.display = 'none';
+
+  el.innerHTML = `
+    <div class="editor-container">
+      <input class="prd-title-input" value="${esc(prd.title)}" placeholder="PRD Title..." 
+        oninput="updateField('title', this.value)" />
+      <div class="meta-row">
+        <div class="meta-field">
+          <label>Status</label>
+          <select onchange="updateField('status', this.value)">
+            ${STATUSES.map(s => `<option ${s === prd.status ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="meta-field">
+          <label>Owner</label>
+          <input value="${esc(prd.owner)}" placeholder="Who owns this?" oninput="updateField('owner', this.value)" />
+        </div>
+        <div class="meta-field">
+          <label>Team</label>
+          <input value="${esc(prd.team)}" placeholder="Product, Engineering..." oninput="updateField('team', this.value)" />
+        </div>
+        <div class="meta-field">
+          <label>Created</label>
+          <input value="${new Date(prd.created).toLocaleDateString()}" disabled style="opacity:0.5;" />
+        </div>
+      </div>
+      ${DEFAULT_SECTIONS.map(s => renderSection(s, prd)).join('')}
+    </div>
+  `;
+}
+
+function renderSection(sec, prd) {
+  const isOpen = prd.openSections?.[sec.id];
+  const data = prd.sections[sec.id] || {};
+  let body = '';
+
+  if (sec.type === 'text') {
+    body = `<textarea placeholder="${esc(sec.placeholder)}" oninput="updateSection('${sec.id}', 'content', this.value)">${esc(data.content || '')}</textarea>`;
+  } else if (sec.type === 'metrics') {
+    const items = data.items || [];
+    body = `<div class="metrics-grid">${items.map((m, i) => `
+      <div class="metric-card">
+        <label>Metric Name</label>
+        <input value="${esc(m.name)}" placeholder="e.g. DAU" oninput="updateListItem('${sec.id}', ${i}, 'name', this.value)" />
+        <label style="margin-top:8px;">Target</label>
+        <input value="${esc(m.target)}" placeholder="e.g. 10,000" oninput="updateListItem('${sec.id}', ${i}, 'target', this.value)" />
+        <label style="margin-top:8px;">Current</label>
+        <input value="${esc(m.current)}" placeholder="e.g. 2,500" oninput="updateListItem('${sec.id}', ${i}, 'current', this.value)" />
+        <button class="btn-icon" style="margin-top:6px;font-size:11px;color:var(--red);" onclick="removeListItem('${sec.id}', ${i})">✕ Remove</button>
+      </div>
+    `).join('')}</div>
+    <button class="add-item-btn" onclick="addMetric('${sec.id}')">+ Add Metric</button>`;
+  } else if (sec.type === 'stories') {
+    const items = data.items || [];
+    body = `<div class="items-list">${items.map((s, i) => `
+      <div class="item-row" style="flex-direction:column;gap:4px;">
+        <div style="display:flex;gap:8px;align-items:center;width:100%;">
+          <span style="font-size:11px;color:var(--text3);white-space:nowrap;">As a</span>
+          <input value="${esc(s.as)}" placeholder="user type" oninput="updateListItem('${sec.id}', ${i}, 'as', this.value)" />
+          <span style="font-size:11px;color:var(--text3);white-space:nowrap;">I want</span>
+          <input value="${esc(s.want)}" placeholder="action/feature" oninput="updateListItem('${sec.id}', ${i}, 'want', this.value)" />
+          <button class="btn-icon" style="font-size:11px;color:var(--red);" onclick="removeListItem('${sec.id}', ${i})">✕</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;width:100%;padding-left:0;">
+          <span style="font-size:11px;color:var(--text3);white-space:nowrap;">So that</span>
+          <input value="${esc(s.so)}" placeholder="benefit/value" oninput="updateListItem('${sec.id}', ${i}, 'so', this.value)" style="flex:1;" />
+        </div>
+      </div>
+    `).join('')}</div>
+    <button class="add-item-btn" onclick="addStory('${sec.id}')">+ Add User Story</button>`;
+  } else if (sec.type === 'requirements') {
+    const items = data.items || [];
+    body = `<div class="items-list">${items.map((r, i) => `
+      <div class="item-row">
+        <textarea rows="1" style="min-height:36px;" oninput="updateListItem('${sec.id}', ${i}, 'text', this.value)" placeholder="Requirement...">${esc(r.text)}</textarea>
+        <span class="priority-tag ${PRIORITY_CLASSES[r.priority]}" onclick="cyclePriority('${sec.id}', ${i})">${r.priority}</span>
+        <button class="btn-icon" style="font-size:11px;color:var(--red);margin-top:6px;" onclick="removeListItem('${sec.id}', ${i})">✕</button>
+      </div>
+    `).join('')}</div>
+    <button class="add-item-btn" onclick="addRequirement('${sec.id}')">+ Add Requirement</button>`;
+  } else if (sec.type === 'risks') {
+    const items = data.items || [];
+    body = `<div class="items-list">${items.map((r, i) => `
+      <div class="item-row" style="flex-direction:column;gap:4px;">
+        <div style="display:flex;gap:8px;width:100%;">
+          <input value="${esc(r.risk)}" placeholder="Risk description" oninput="updateListItem('${sec.id}', ${i}, 'risk', this.value)" style="flex:1;" />
+          <select style="padding:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;" onchange="updateListItem('${sec.id}', ${i}, 'impact', this.value)">
+            ${['High','Medium','Low'].map(l => `<option ${r.impact===l?'selected':''}>${l}</option>`).join('')}
+          </select>
+          <button class="btn-icon" style="font-size:11px;color:var(--red);" onclick="removeListItem('${sec.id}', ${i})">✕</button>
+        </div>
+        <input value="${esc(r.mitigation)}" placeholder="Mitigation strategy" oninput="updateListItem('${sec.id}', ${i}, 'mitigation', this.value)" style="width:100%;" />
+      </div>
+    `).join('')}</div>
+    <button class="add-item-btn" onclick="addRisk('${sec.id}')">+ Add Risk</button>`;
+  } else if (sec.type === 'milestones') {
+    const items = data.items || [];
+    body = `<div class="items-list">${items.map((m, i) => `
+      <div class="item-row">
+        <input type="date" value="${m.date}" oninput="updateListItem('${sec.id}', ${i}, 'date', this.value)" style="width:140px;" />
+        <input value="${esc(m.milestone)}" placeholder="Milestone" oninput="updateListItem('${sec.id}', ${i}, 'milestone', this.value)" style="flex:1;" />
+        <select style="padding:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;width:100px;" onchange="updateListItem('${sec.id}', ${i}, 'status', this.value)">
+          ${['Planned','In Progress','Done'].map(s => `<option ${m.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <button class="btn-icon" style="font-size:11px;color:var(--red);" onclick="removeListItem('${sec.id}', ${i})">✕</button>
+      </div>
+    `).join('')}</div>
+    <button class="add-item-btn" onclick="addMilestone('${sec.id}')">+ Add Milestone</button>`;
+  }
+
+  const itemCount = data.items?.length || (data.content ? '✓' : '');
+  return `
+    <div class="section">
+      <div class="section-header" onclick="toggleSection('${sec.id}')">
+        <span class="section-chevron ${isOpen ? 'open' : ''}">▶</span>
+        <span class="section-title">${sec.title}</span>
+        <span class="section-badge">${itemCount}</span>
+      </div>
+      <div class="section-body ${isOpen ? 'open' : ''}">${body}</div>
+    </div>
+  `;
+}
+
+// Section interactions
+function toggleSection(id) {
+  const prd = getPrd(currentPrdId);
+  if (!prd.openSections) prd.openSections = {};
+  prd.openSections[id] = !prd.openSections[id];
+  save();
+  renderEditor();
+}
+
+function updateField(field, value) {
+  const prd = getPrd(currentPrdId);
+  prd[field] = value;
+  prd.updated = new Date().toISOString();
+  save();
+  renderSidebar();
+}
+
+function updateSection(secId, field, value) {
+  const prd = getPrd(currentPrdId);
+  if (!prd.sections[secId]) prd.sections[secId] = {};
+  prd.sections[secId][field] = value;
+  prd.updated = new Date().toISOString();
+  save();
+}
+
+function updateListItem(secId, idx, field, value) {
+  const prd = getPrd(currentPrdId);
+  prd.sections[secId].items[idx][field] = value;
+  prd.updated = new Date().toISOString();
+  save();
+}
+
+function removeListItem(secId, idx) {
+  const prd = getPrd(currentPrdId);
+  prd.sections[secId].items.splice(idx, 1);
+  prd.updated = new Date().toISOString();
+  save();
+  renderEditor();
+}
+
+function addMetric(secId) {
+  const prd = getPrd(currentPrdId);
+  prd.sections[secId].items.push({ name: '', target: '', current: '' });
+  save();
+  renderEditor();
+}
+
+function addStory(secId) {
+  const prd = getPrd(currentPrdId);
+  prd.sections[secId].items.push({ as: '', want: '', so: '' });
+  save();
+  renderEditor();
+}
+
+function addRequirement(secId) {
+  const prd = getPrd(currentPrdId);
+  prd.sections[secId].items.push({ text: '', priority: 'Must' });
+  save();
+  renderEditor();
+}
+
+function addRisk(secId) {
+  const prd = getPrd(currentPrdId);
+  prd.sections[secId].items.push({ risk: '', impact: 'High', mitigation: '' });
+  save();
+  renderEditor();
+}
+
+function addMilestone(secId) {
+  const prd = getPrd(currentPrdId);
+  prd.sections[secId].items.push({ date: '', milestone: '', status: 'Planned' });
+  save();
+  renderEditor();
+}
+
+function cyclePriority(secId, idx) {
+  const prd = getPrd(currentPrdId);
+  const item = prd.sections[secId].items[idx];
+  const ci = PRIORITIES.indexOf(item.priority);
+  item.priority = PRIORITIES[(ci + 1) % PRIORITIES.length];
+  prd.updated = new Date().toISOString();
+  save();
+  renderEditor();
+}
+
+// Views
+function switchView(view) {
+  currentView = view;
+  updateTabs();
+  document.getElementById('editView').style.display = view === 'edit' ? 'block' : 'none';
+  document.getElementById('previewView').style.display = view === 'preview' ? 'block' : 'none';
+  document.getElementById('dashboardView').style.display = view === 'dashboard' ? 'block' : 'none';
+  document.getElementById('templatesView').style.display = 'none';
+  if (view === 'edit') renderEditor();
+  if (view === 'preview') renderPreview();
+  if (view === 'dashboard') renderDashboard();
+}
+
+function updateTabs() {
+  document.querySelectorAll('.toolbar .tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.view === currentView);
+  });
+}
+
+function renderPreview() {
+  const prd = getPrd(currentPrdId);
+  if (!prd) return;
+  const el = document.getElementById('previewView');
+  const sec = prd.sections;
+
+  let html = `<div class="preview-container">
+    <div class="preview-header">
+      <h1>${esc(prd.title)}</h1>
+      <div class="preview-meta">
+        <span class="preview-meta-item"><strong>Status:</strong> <span class="prd-item-status ${STATUS_CLASSES[prd.status]}" style="display:inline;">${prd.status}</span></span>
+        ${prd.owner ? `<span class="preview-meta-item"><strong>Owner:</strong> ${esc(prd.owner)}</span>` : ''}
+        ${prd.team ? `<span class="preview-meta-item"><strong>Team:</strong> ${esc(prd.team)}</span>` : ''}
+        <span class="preview-meta-item"><strong>Updated:</strong> ${new Date(prd.updated).toLocaleDateString()}</span>
+      </div>
+    </div>`;
+
+  DEFAULT_SECTIONS.forEach(s => {
+    const data = sec[s.id] || {};
+    if (s.type === 'text' && data.content) {
+      html += `<div class="preview-section"><h2>${s.title}</h2>${renderMarkdownish(data.content)}</div>`;
+    } else if (s.type === 'metrics' && data.items?.some(m => m.name)) {
+      html += `<div class="preview-section"><h2>${s.title}</h2><div class="preview-metrics">
+        ${data.items.filter(m => m.name).map(m => `
+          <div class="preview-metric">
+            <div class="label">${esc(m.name)}</div>
+            <div class="value">${esc(m.target || '—')}</div>
+            ${m.current ? `<div class="label" style="margin-top:4px;">Current: ${esc(m.current)}</div>` : ''}
+          </div>
+        `).join('')}
+      </div></div>`;
+    } else if (s.type === 'stories' && data.items?.some(i => i.want)) {
+      html += `<div class="preview-section"><h2>${s.title}</h2><ul>
+        ${data.items.filter(i => i.want).map(i => `<li><strong>As a</strong> ${esc(i.as || '...')}, <strong>I want</strong> ${esc(i.want)} <strong>so that</strong> ${esc(i.so || '...')}</li>`).join('')}
+      </ul></div>`;
+    } else if (s.type === 'requirements' && data.items?.some(r => r.text)) {
+      html += `<div class="preview-section"><h2>${s.title}</h2>
+        ${data.items.filter(r => r.text).map(r => `
+          <div class="preview-req">
+            <span class="priority-tag ${PRIORITY_CLASSES[r.priority]}">${r.priority}</span>
+            <span class="text">${esc(r.text)}</span>
+          </div>
+        `).join('')}
+      </div>`;
+    } else if (s.type === 'risks' && data.items?.some(r => r.risk)) {
+      html += `<div class="preview-section"><h2>${s.title}</h2>
+        ${data.items.filter(r => r.risk).map(r => `
+          <div class="preview-req">
+            <span class="priority-tag ${r.impact === 'High' ? 'priority-must' : r.impact === 'Medium' ? 'priority-should' : 'priority-could'}">${r.impact}</span>
+            <div style="flex:1;"><span class="text">${esc(r.risk)}</span>
+            ${r.mitigation ? `<div style="font-size:11px;color:var(--green);margin-top:4px;">↳ ${esc(r.mitigation)}</div>` : ''}</div>
+          </div>
+        `).join('')}
+      </div>`;
+    } else if (s.type === 'milestones' && data.items?.some(m => m.milestone)) {
+      html += `<div class="preview-section"><h2>${s.title}</h2>
+        ${data.items.filter(m => m.milestone).map(m => `
+          <div class="preview-req">
+            <span style="font-size:12px;color:var(--text3);width:90px;">${m.date || '—'}</span>
+            <span class="text">${esc(m.milestone)}</span>
+            <span class="priority-tag ${m.status === 'Done' ? 'priority-could' : m.status === 'In Progress' ? 'priority-should' : 'priority-wont'}">${m.status}</span>
+          </div>
+        `).join('')}
+      </div>`;
+    }
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderDashboard() {
+  const el = document.getElementById('dashboardView');
+  const total = prds.length;
+  const byStatus = {};
+  STATUSES.forEach(s => byStatus[s] = 0);
+  prds.forEach(p => byStatus[p.status]++);
+
+  let totalReqs = 0, totalStories = 0, totalMetrics = 0, totalRisks = 0;
+  const priorityCounts = { Must: 0, Should: 0, Could: 0, "Won't": 0 };
+  prds.forEach(p => {
+    const sec = p.sections || {};
+    if (sec.requirements?.items) { totalReqs += sec.requirements.items.filter(r => r.text).length; sec.requirements.items.forEach(r => { if (r.text && priorityCounts[r.priority] !== undefined) priorityCounts[r.priority]++; }); }
+    if (sec.user_stories?.items) totalStories += sec.user_stories.items.filter(s => s.want).length;
+    if (sec.goals?.items) totalMetrics += sec.goals.items.filter(m => m.name).length;
+    if (sec.risks?.items) totalRisks += sec.risks.items.filter(r => r.risk).length;
+  });
+
+  const maxP = Math.max(...Object.values(priorityCounts), 1);
+  const maxS = Math.max(...Object.values(byStatus), 1);
+
+  el.innerHTML = `
+    <div style="max-width:860px;margin:0 auto;">
+      <h2 style="font-size:22px;font-weight:800;margin-bottom:24px;">📊 PRD Dashboard</h2>
+      <div class="dash-grid">
+        <div class="dash-card"><div class="label">Total PRDs</div><div class="value">${total}</div></div>
+        <div class="dash-card"><div class="label">Requirements</div><div class="value">${totalReqs}</div><div class="sub">across all PRDs</div></div>
+        <div class="dash-card"><div class="label">User Stories</div><div class="value">${totalStories}</div></div>
+        <div class="dash-card"><div class="label">Success Metrics</div><div class="value">${totalMetrics}</div></div>
+        <div class="dash-card"><div class="label">Risks Tracked</div><div class="value" style="color:var(--red);">${totalRisks}</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div class="dash-card">
+          <div class="label" style="margin-bottom:16px;">Status Distribution</div>
+          ${STATUSES.map(s => `
+            <div style="margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+                <span class="prd-item-status ${STATUS_CLASSES[s]}">${s}</span>
+                <span style="color:var(--text3);">${byStatus[s]}</span>
+              </div>
+              <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${(byStatus[s]/maxS)*100}%;background:var(--accent);border-radius:3px;transition:width 0.3s;"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="dash-card">
+          <div class="label" style="margin-bottom:16px;">Requirements by Priority</div>
+          ${PRIORITIES.map(p => `
+            <div style="margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+                <span class="priority-tag ${PRIORITY_CLASSES[p]}">${p}</span>
+                <span style="color:var(--text3);">${priorityCounts[p]}</span>
+              </div>
+              <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${(priorityCounts[p]/maxP)*100}%;background:${p==='Must'?'var(--red)':p==='Should'?'var(--yellow)':p==='Could'?'var(--blue)':'var(--text3)'};border-radius:3px;transition:width 0.3s;"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="dash-card">
+        <div class="label" style="margin-bottom:12px;">Recent Activity</div>
+        ${prds.slice().sort((a,b) => new Date(b.updated) - new Date(a.updated)).slice(0, 8).map(p => `
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span class="prd-item-status ${STATUS_CLASSES[p.status]}">${p.status}</span>
+            <span style="font-size:13px;font-weight:600;flex:1;cursor:pointer;" onclick="selectPRD('${p.id}')">${esc(p.title)}</span>
+            <span style="font-size:11px;color:var(--text3);">${timeAgo(p.updated)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// Templates
+const TEMPLATES = [
+  {
+    name: 'New Feature', icon: '🚀', desc: 'Standard PRD for a new product feature with user stories and MoSCoW requirements.',
+    sections: DEFAULT_SECTIONS,
+    presets: { title: 'Feature: [Name]' }
+  },
+  {
+    name: '0→1 Product', icon: '🌱', desc: 'Full PRD template for building a product from scratch. Includes market context and MVP scope.',
+    sections: DEFAULT_SECTIONS,
+    presets: {
+      title: '[Product Name] — 0→1 PRD',
+      data: {
+        overview: 'Product vision and what we\'re building from scratch.\n\n**Vision:** \n**Target Launch:** \n**MVP Scope:**',
+        problem: '**Market Gap:**\n\n**Current Alternatives:**\n\n**Why Now:**\n\n**TAM/SAM/SOM:**',
+        out_of_scope: 'V1 explicitly excludes:\n- \n- \n\nThese may be addressed in V2 based on user feedback.'
+      }
+    }
+  },
+  {
+    name: 'API/Integration', icon: '🔌', desc: 'Technical PRD for APIs, integrations, or platform features. Heavy on technical specs.',
+    sections: DEFAULT_SECTIONS,
+    presets: {
+      title: 'API: [Name]',
+      data: {
+        technical: 'Architecture:\n- Endpoint: \n- Auth: \n- Rate limits: \n\nData model:\n```\n{\n  \n}\n```\n\nDependencies:\n- \n\nPerformance:\n- P95 latency target: \n- Throughput target: '
+      }
+    }
+  },
+  {
+    name: 'Growth Experiment', icon: '📈', desc: 'Lightweight PRD for growth experiments and quick iterations. Focus on hypothesis and metrics.',
+    sections: DEFAULT_SECTIONS,
+    presets: {
+      title: 'Growth: [Experiment Name]',
+      data: {
+        overview: '**Hypothesis:** If we [change], then [metric] will [improve by X%] because [reason].\n\n**Experiment Type:** A/B Test / Feature Flag / Landing Page\n**Duration:** X weeks\n**Traffic Split:** 50/50',
+        problem: '**Current state:**\n\n**Opportunity:**\n\n**Expected impact:**'
+      }
+    }
+  },
+  {
+    name: 'Bug Fix / Tech Debt', icon: '🔧', desc: 'Structured approach to significant bugs or tech debt. Includes root cause analysis.',
+    sections: DEFAULT_SECTIONS,
+    presets: {
+      title: 'Fix: [Issue Name]',
+      data: {
+        overview: '**Severity:** P0 / P1 / P2 / P3\n**Affected Users:** \n**First Reported:**',
+        problem: '**Bug/Issue:**\n\n**Root Cause:**\n\n**Current Impact:**\n- Users affected: \n- Revenue impact: \n- Brand/trust impact: ',
+        technical: '**Root Cause Analysis:**\n\n**Proposed Fix:**\n\n**Alternative Approaches Considered:**\n\n**Regression Risk:**'
+      }
+    }
+  },
+  {
+    name: 'UTMStamp Feature', icon: '📧', desc: 'Pre-filled template for UTMStamp features with relevant context and metrics.',
+    sections: DEFAULT_SECTIONS,
+    presets: {
+      title: 'UTMStamp: [Feature Name]',
+      owner: 'AJ',
+      team: 'Product',
+      data: {
+        overview: 'Feature for UTMStamp — email signature manager with UTM tracking.\n\n**Product context:** UTMStamp helps marketing teams create beautiful email signatures with built-in click tracking and UTM parameters.',
+        users: 'Primary users:\n1. **Marketing Managers** — Need team-wide signature deployment with tracking\n2. **Founders/Solopreneurs** — Want professional signatures that track engagement\n3. **Sales Teams** — Need branded signatures with campaign-specific links',
+        goals: [
+          { name: 'Activation Rate', target: '40%', current: '' },
+          { name: 'Weekly Active Users', target: '', current: '' },
+          { name: 'Signature Installs', target: '', current: '' }
+        ]
+      }
+    }
+  }
+];
+
+function showTemplates() {
+  currentPrdId = null;
+  document.getElementById('toolbar').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('editView').style.display = 'none';
+  document.getElementById('previewView').style.display = 'none';
+  document.getElementById('dashboardView').style.display = 'none';
+  const el = document.getElementById('templatesView');
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="max-width:960px;margin:0 auto;">
+      <h2 style="font-size:22px;font-weight:800;margin-bottom:8px;">📄 PRD Templates</h2>
+      <p style="font-size:13px;color:var(--text3);margin-bottom:24px;">Pick a template to start with. You can customize everything after.</p>
+      <div class="templates-grid">
+        ${TEMPLATES.map((t, i) => `
+          <div class="template-card" onclick="useTemplate(${i})">
+            <h3>${t.icon} ${t.name}</h3>
+            <p>${t.desc}</p>
+            <div class="sections">
+              ${DEFAULT_SECTIONS.slice(0, 6).map(s => `<span class="section-tag">${s.title}</span>`).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  renderSidebar();
+}
+
+function useTemplate(idx) {
+  const t = TEMPLATES[idx];
+  newPRD({
+    title: t.presets?.title || 'Untitled PRD',
+    owner: t.presets?.owner || '',
+    team: t.presets?.team || '',
+    sections: t.sections,
+    data: t.presets?.data || {}
+  });
+}
+
+// Export
+function exportMarkdown() {
+  const prd = getPrd(currentPrdId);
+  if (!prd) return;
+  let md = `# ${prd.title}\n\n`;
+  md += `**Status:** ${prd.status}`;
+  if (prd.owner) md += ` | **Owner:** ${prd.owner}`;
+  if (prd.team) md += ` | **Team:** ${prd.team}`;
+  md += `\n**Last Updated:** ${new Date(prd.updated).toLocaleDateString()}\n\n---\n\n`;
+
+  DEFAULT_SECTIONS.forEach(s => {
+    const data = prd.sections[s.id] || {};
+    if (s.type === 'text' && data.content) {
+      md += `## ${s.title}\n\n${data.content}\n\n`;
+    } else if (s.type === 'metrics' && data.items?.some(m => m.name)) {
+      md += `## ${s.title}\n\n| Metric | Target | Current |\n|--------|--------|--------|\n`;
+      data.items.filter(m => m.name).forEach(m => { md += `| ${m.name} | ${m.target || '—'} | ${m.current || '—'} |\n`; });
+      md += '\n';
+    } else if (s.type === 'stories' && data.items?.some(i => i.want)) {
+      md += `## ${s.title}\n\n`;
+      data.items.filter(i => i.want).forEach(i => { md += `- **As a** ${i.as || '...'}, **I want** ${i.want} **so that** ${i.so || '...'}\n`; });
+      md += '\n';
+    } else if (s.type === 'requirements' && data.items?.some(r => r.text)) {
+      md += `## ${s.title}\n\n`;
+      data.items.filter(r => r.text).forEach(r => { md += `- [${r.priority}] ${r.text}\n`; });
+      md += '\n';
+    } else if (s.type === 'risks' && data.items?.some(r => r.risk)) {
+      md += `## ${s.title}\n\n| Risk | Impact | Mitigation |\n|------|--------|------------|\n`;
+      data.items.filter(r => r.risk).forEach(r => { md += `| ${r.risk} | ${r.impact} | ${r.mitigation || '—'} |\n`; });
+      md += '\n';
+    } else if (s.type === 'milestones' && data.items?.some(m => m.milestone)) {
+      md += `## ${s.title}\n\n| Date | Milestone | Status |\n|------|-----------|--------|\n`;
+      data.items.filter(m => m.milestone).forEach(m => { md += `| ${m.date || '—'} | ${m.milestone} | ${m.status} |\n`; });
+      md += '\n';
+    }
+  });
+
+  document.getElementById('markdownOutput').value = md;
+  document.getElementById('exportModal').classList.add('show');
+}
+
+function copyMarkdown() {
+  const ta = document.getElementById('markdownOutput');
+  ta.select();
+  document.execCommand('copy');
+  const btn = event.target;
+  btn.textContent = '✅ Copied!';
+  setTimeout(() => btn.textContent = '📋 Copy', 1500);
+}
+
+function downloadMarkdown() {
+  const prd = getPrd(currentPrdId);
+  const md = document.getElementById('markdownOutput').value;
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${prd.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`;
+  a.click();
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function exportAll() {
+  const blob = new Blob([JSON.stringify(prds, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'prd-forge-export.json';
+  a.click();
+}
+
+function importAll() { document.getElementById('importFile').click(); }
+function handleImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) {
+        prds = data;
+        save();
+        renderSidebar();
+        currentPrdId = null;
+        document.getElementById('toolbar').style.display = 'none';
+        document.getElementById('emptyState').style.display = '';
+        document.getElementById('editView').style.display = 'none';
+      }
+    } catch (err) { alert('Invalid JSON file'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function duplicatePRD() {
+  const prd = getPrd(currentPrdId);
+  if (!prd) return;
+  const dup = JSON.parse(JSON.stringify(prd));
+  dup.id = genId();
+  dup.title = prd.title + ' (Copy)';
+  dup.created = new Date().toISOString();
+  dup.updated = new Date().toISOString();
+  prds.unshift(dup);
+  save();
+  selectPRD(dup.id);
+  renderSidebar();
+}
+
+function deletePRD() {
+  if (!confirm('Delete this PRD?')) return;
+  prds = prds.filter(p => p.id !== currentPrdId);
+  save();
+  currentPrdId = null;
+  document.getElementById('toolbar').style.display = 'none';
+  document.getElementById('editView').style.display = 'none';
+  document.getElementById('previewView').style.display = 'none';
+  document.getElementById('dashboardView').style.display = 'none';
+  document.getElementById('emptyState').style.display = '';
+  renderSidebar();
+}
+
+// Helpers
+function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function renderMarkdownish(text) {
+  return '<p>' + esc(text)
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code style="background:var(--surface2);padding:2px 5px;border-radius:3px;font-family:var(--mono);font-size:12px;">$1</code>')
+    .replace(/^- (.+)/gm, '<li>$1</li>')
+    + '</p>';
+}
+
+function timeAgo(date) {
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  return days + 'd ago';
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') e.target.blur();
+    return;
+  }
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); newPRD(); }
+  if (e.key === '/') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+  if (e.key === '1') { e.preventDefault(); if (currentPrdId) switchView('edit'); }
+  if (e.key === '2') { e.preventDefault(); if (currentPrdId) switchView('preview'); }
+  if (e.key === '3') { e.preventDefault(); if (currentPrdId) switchView('dashboard'); }
+  if (e.key === 'e' || e.key === 'E') { e.preventDefault(); exportAll(); }
+  if (e.key === 'm' || e.key === 'M') { e.preventDefault(); if (currentPrdId) exportMarkdown(); }
+  if (e.key === 'Escape') {
+    if (document.getElementById('exportModal').classList.contains('show')) { closeModal('exportModal'); return; }
+  }
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchText = e.target.value;
+  renderSidebar();
+});
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.target.value = ''; searchText = ''; renderSidebar(); e.target.blur(); }
+});
+
+// Click outside modal
+document.getElementById('exportModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('exportModal')) closeModal('exportModal');
+});
+
+// Seed demo data
+function seedDemoData() {
+  if (prds.length > 0) return;
+
+  const demo1 = createPRD({ title: 'UTMStamp: Google Workspace Auto-Push', sections: DEFAULT_SECTIONS });
+  demo1.owner = 'AJ';
+  demo1.team = 'Product';
+  demo1.status = 'Review';
+  demo1.sections.overview = { content: 'Enable one-click signature deployment across entire Google Workspace organizations. Currently, users must manually copy-paste signatures into Gmail settings. This feature would use Google Workspace Admin SDK to push signatures directly to all team members.\n\n**Impact:** This is the #1 requested feature and the key differentiator for team/enterprise plans. Without it, UTMStamp is a solo tool. With it, we unlock B2B revenue.' };
+  demo1.sections.problem = { content: '**The Pain:**\n- Marketing managers create beautiful signatures but have NO way to deploy them at scale\n- Current process: Create signature → Export HTML → Email to 50+ employees → Each person manually pastes into Gmail settings → Half do it wrong → Signatures look inconsistent\n- This process takes 2-3 hours and needs repeating every campaign change\n\n**Competitive landscape:**\n- Exclaimer charges $2-4/user/month for this feature\n- Opensense charges $3-5/user/month\n- UTMStamp can offer it at $1/user/month and still be profitable' };
+  demo1.sections.goals = { items: [
+    { name: 'Team Plan Conversion', target: '15%', current: '0%' },
+    { name: 'Signatures Deployed', target: '10,000/month', current: '0' },
+    { name: 'Avg Team Size', target: '25 users', current: '1' },
+    { name: 'MRR from Teams', target: '$5,000', current: '$0' }
+  ]};
+  demo1.sections.user_stories = { items: [
+    { as: 'Marketing Manager', want: 'to push a new signature to my entire team in one click', so: 'I don\'t waste hours on manual deployment' },
+    { as: 'IT Admin', want: 'to set signature policies for the whole org', so: 'we maintain brand consistency without chasing individuals' },
+    { as: 'Sales Leader', want: 'to change campaign banners in signatures weekly', so: 'our 30-person team always promotes the latest offer' }
+  ]};
+  demo1.sections.requirements = { items: [
+    { text: 'Google Workspace OAuth integration with Admin SDK scope', priority: 'Must' },
+    { text: 'Bulk push signatures to selected users or entire org', priority: 'Must' },
+    { text: 'Preview before push — show what each user will see', priority: 'Must' },
+    { text: 'Rollback capability — revert to previous signatures', priority: 'Should' },
+    { text: 'Scheduling — push signatures at a future date/time', priority: 'Could' },
+    { text: 'Per-department customization (different banners per team)', priority: 'Should' },
+    { text: 'Audit log of all pushes with timestamp and user count', priority: 'Must' },
+    { text: 'Microsoft 365 support (Exchange Online)', priority: "Won't" }
+  ]};
+  demo1.sections.risks = { items: [
+    { risk: 'Google Workspace Admin SDK approval process could take 4-6 weeks', impact: 'High', mitigation: 'Start OAuth verification process immediately, use service account for testing' },
+    { risk: 'Rate limiting on Google API could slow large deployments', impact: 'Medium', mitigation: 'Implement batching with exponential backoff, max 10 users/second' },
+    { risk: 'Users might not grant Admin SDK permissions (scary scope)', impact: 'Medium', mitigation: 'Clear explainer page, minimal scopes, SOC2 badge (when ready)' }
+  ]};
+  demo1.sections.timeline = { items: [
+    { date: '2026-05-01', milestone: 'OAuth + Admin SDK integration complete', status: 'Planned' },
+    { date: '2026-05-15', milestone: 'Push to single user working end-to-end', status: 'Planned' },
+    { date: '2026-06-01', milestone: 'Bulk push + preview + rollback', status: 'Planned' },
+    { date: '2026-06-15', milestone: 'Beta with 5 pilot teams', status: 'Planned' },
+    { date: '2026-07-01', milestone: 'GA launch with team pricing', status: 'Planned' }
+  ]};
+  demo1.sections.technical = { content: '**Architecture:**\n- Google Workspace Admin SDK (Directory API + Gmail Settings API)\n- Service account with domain-wide delegation\n- Async job queue for bulk operations (Bull + Redis)\n- Webhook for completion notifications\n\n**API Flow:**\n1. User authorizes Workspace Admin access\n2. We fetch org user list via Directory API\n3. User selects recipients + signature template\n4. Backend queues individual Gmail Settings API calls\n5. Progress bar updates via SSE/WebSocket\n6. Audit log entry created on completion\n\n**Rate Limits:**\n- Gmail Settings API: 250 requests/user/day\n- Batch requests: 1000 calls per batch\n- We need: ~1 call per user per push' };
+  demo1.sections.out_of_scope = { content: 'V1 explicitly excludes:\n- Microsoft 365 / Outlook support (V2)\n- Custom HTML signature editor (use existing template system)\n- Signature analytics per-user in Workspace (too complex for V1)\n- Mobile signature management (Gmail mobile ignores custom signatures)\n- Multi-org support (single Workspace per account for V1)' };
+  demo1.sections.design = { content: '**Key UX Decisions:**\n- Push flow should be max 3 clicks: Select template → Select recipients → Push\n- Show real-time progress bar during bulk push\n- "Preview as..." dropdown to see signature as any team member\n- Dashboard should show deployment status (deployed/pending/failed) per user\n- Color-code: Green = deployed, Yellow = pending, Red = failed' };
+  demo1.openSections = { overview: true, problem: true };
+
+  const demo2 = createPRD({ title: 'Video Signatures — Embedded GIF/Video in Email Signatures', sections: DEFAULT_SECTIONS });
+  demo2.owner = 'AJ';
+  demo2.team = 'Product';
+  demo2.status = 'Draft';
+  demo2.sections.overview = { content: 'Allow users to embed short video clips or animated GIFs in their email signatures. Think: a 3-second looping video of you waving, or an animated product demo thumbnail that links to a full video.\n\n**Why:** Email is boring. A moving signature stands out in every inbox. Early mover advantage — no competitor does this well.' };
+  demo2.sections.problem = { content: '**Static signatures are invisible.** Recipients glaze over them.\n\nPeople want to stand out:\n- Sales teams want memorable first impressions\n- Founders want to showcase their product\n- Creators want to show personality\n\nBut video in email is technically hard — most clients strip video tags. GIFs work but are huge. We need a smart solution.' };
+  demo2.sections.goals = { items: [
+    { name: 'Video Signatures Created', target: '500/month', current: '0' },
+    { name: 'Click-through Rate', target: '3x vs static', current: 'Baseline TBD' },
+    { name: 'Premium Plan Conversion', target: '10%', current: '0%' }
+  ]};
+  demo2.sections.requirements = { items: [
+    { text: 'Upload short video (max 10s) and auto-convert to optimized GIF', priority: 'Must' },
+    { text: 'GIF must be under 1MB for email client compatibility', priority: 'Must' },
+    { text: 'Fallback to static thumbnail for clients that block GIFs (Outlook)', priority: 'Must' },
+    { text: 'Click-to-play: GIF links to full video on hosted page', priority: 'Should' },
+    { text: 'Record directly from webcam in the app', priority: 'Could' },
+    { text: 'AI-powered background removal for professional look', priority: 'Could' }
+  ]};
+  demo2.openSections = { overview: true };
+
+  const demo3 = createPRD({ title: 'ZYOD: QR-Code WMS — Warehouse Management System', sections: DEFAULT_SECTIONS });
+  demo3.owner = 'AJ';
+  demo3.team = 'Product, Engineering';
+  demo3.status = 'Approved';
+  demo3.sections.overview = { content: 'QR-code based warehouse management system for ZYOD\'s manufacturing facilities. Track fabric rolls, cut pieces, and finished garments through the entire production pipeline using simple QR scans.\n\n**Impact:** Unlocked ₹11-12 Cr (~$1.4M) in blocked working capital by giving real-time visibility into inventory.' };
+  demo3.sections.problem = { content: '**Before WMS:**\n- Zero visibility into fabric inventory across 3 warehouses\n- ₹11-12 Cr worth of fabric sitting untracked\n- Duplicate orders because nobody knew what was in stock\n- Manual Excel tracking with 2-3 day lag\n- Fabric wastage from forgotten/expired stock\n\n**Business impact:** Cash was locked in invisible inventory. Production delays because "we don\'t have fabric" when it was actually in Warehouse B.' };
+  demo3.sections.goals = { items: [
+    { name: 'Working Capital Unlocked', target: '₹11-12 Cr', current: '₹11.5 Cr' },
+    { name: 'Fabric Cycle Time', target: '<7 days', current: '6.8 days' },
+    { name: 'Inventory Accuracy', target: '98%', current: '97.2%' },
+    { name: 'Scan Adoption', target: '95% of movements', current: '93%' }
+  ]};
+  demo3.sections.requirements = { items: [
+    { text: 'QR code generation for every fabric roll at inward', priority: 'Must' },
+    { text: 'Mobile scanner app for warehouse staff (Android)', priority: 'Must' },
+    { text: 'Real-time inventory dashboard with location mapping', priority: 'Must' },
+    { text: 'Automatic reorder alerts when stock hits threshold', priority: 'Should' },
+    { text: 'Integration with ERP for purchase orders', priority: 'Should' },
+    { text: 'Batch tracking from fabric to finished garment', priority: 'Must' }
+  ]};
+  demo3.status = 'Approved';
+  demo3.openSections = { overview: true };
+
+  prds = [demo1, demo2, demo3];
+  save();
+}
+
+// Init
+seedDemoData();
+renderSidebar();
+</script>
+</body>
+</html>

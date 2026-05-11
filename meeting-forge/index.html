@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meeting Forge — Structured Meeting Notes & Action Tracker</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#161822;--bg3:#1e2030;--bg4:#262840;
+  --text:#e0e0e8;--text2:#a0a0b8;--text3:#6c6c80;
+  --border:#2a2c40;--border2:#363850;
+  --accent:#6c8cff;--accent2:#5070e0;--accent-bg:rgba(108,140,255,0.1);
+  --red:#ff6b6b;--red-bg:rgba(255,107,107,0.12);
+  --orange:#ffb347;--orange-bg:rgba(255,179,71,0.12);
+  --green:#69db7c;--green-bg:rgba(105,219,124,0.12);
+  --yellow:#ffd43b;--yellow-bg:rgba(255,212,59,0.12);
+  --purple:#b197fc;--purple-bg:rgba(177,151,252,0.12);
+  --cyan:#66d9e8;--cyan-bg:rgba(102,217,232,0.12);
+  --pink:#f06595;--pink-bg:rgba(240,101,149,0.12);
+  --teal:#38d9a9;--teal-bg:rgba(56,217,169,0.12);
+  --radius:8px;--radius-lg:12px;
+  --shadow:0 2px 8px rgba(0,0,0,0.3);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.4);
+  --transition:0.2s ease;
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+input,textarea,select,button{font-family:inherit;font-size:inherit;color:inherit}
+input,textarea,select{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);outline:none;transition:border var(--transition)}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:100px}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23a0a0b8' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+button{cursor:pointer;border:none;background:none;color:var(--text);transition:all var(--transition)}
+.btn{padding:8px 16px;border-radius:var(--radius);font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{background:var(--bg3);border:1px solid var(--border)}.btn-secondary:hover{background:var(--bg4)}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{opacity:0.85}
+.btn-ghost{color:var(--text2)}.btn-ghost:hover{color:var(--text);background:var(--bg3)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius)}
+.btn-icon:hover{background:var(--bg3)}
+
+/* Layout */
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:280px;min-width:280px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:transform var(--transition);z-index:100}
+#sidebar.collapsed{transform:translateX(-280px);min-width:0;width:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 .forge-icon{font-size:22px}
+.sidebar-search{padding:12px 16px;border-bottom:1px solid var(--border)}
+.sidebar-search input{width:100%;padding:8px 12px 8px 32px;background:var(--bg3);border:1px solid transparent;font-size:13px}
+.sidebar-search{position:relative}
+.sidebar-search .search-icon{position:absolute;left:28px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
+.sidebar-nav{padding:8px}
+.sidebar-nav button{width:100%;padding:10px 14px;text-align:left;border-radius:var(--radius);font-size:13px;font-weight:500;display:flex;align-items:center;gap:10px;color:var(--text2);margin-bottom:2px}
+.sidebar-nav button:hover{background:var(--bg3);color:var(--text)}
+.sidebar-nav button.active{background:var(--accent-bg);color:var(--accent)}
+.sidebar-nav button .nav-badge{margin-left:auto;font-size:11px;background:var(--bg4);padding:2px 7px;border-radius:10px;color:var(--text3)}
+.sidebar-divider{height:1px;background:var(--border);margin:8px 16px}
+.meetings-list{flex:1;overflow-y:auto;padding:8px}
+.meetings-list::-webkit-scrollbar{width:4px}
+.meetings-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.meeting-item{padding:10px 14px;border-radius:var(--radius);cursor:pointer;margin-bottom:2px;transition:background var(--transition)}
+.meeting-item:hover{background:var(--bg3)}
+.meeting-item.active{background:var(--accent-bg);border-left:3px solid var(--accent)}
+.meeting-item .mi-type{font-size:16px;margin-right:6px}
+.meeting-item .mi-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meeting-item .mi-meta{font-size:11px;color:var(--text3);margin-top:2px;display:flex;align-items:center;gap:8px}
+.meeting-item .mi-status{font-size:10px;padding:1px 6px;border-radius:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px}
+.status-upcoming{background:var(--accent-bg);color:var(--accent)}
+.status-inprogress{background:var(--green-bg);color:var(--green)}
+.status-completed{background:var(--bg4);color:var(--text3)}
+.status-cancelled{background:var(--red-bg);color:var(--red)}
+
+/* Main Content */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--bg2);min-height:52px}
+.topbar .toggle-sidebar{font-size:18px}
+.topbar-title{font-size:15px;font-weight:600;flex:1}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+#content{flex:1;overflow-y:auto;padding:24px}
+#content::-webkit-scrollbar{width:6px}
+#content::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* Meeting View */
+.meeting-header{margin-bottom:24px}
+.meeting-header .mh-type-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:12px}
+.meeting-header h2{font-size:24px;font-weight:700;margin-bottom:8px}
+.meeting-header .mh-meta{display:flex;flex-wrap:wrap;gap:16px;color:var(--text2);font-size:13px}
+.meeting-header .mh-meta span{display:flex;align-items:center;gap:4px}
+.meeting-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
+.meeting-tabs button{padding:10px 18px;font-size:13px;font-weight:500;color:var(--text3);border-bottom:2px solid transparent;border-radius:0;margin-bottom:-1px;position:relative}
+.meeting-tabs button:hover{color:var(--text)}
+.meeting-tabs button.active{color:var(--accent);border-bottom-color:var(--accent)}
+.meeting-tabs button .tab-count{font-size:11px;background:var(--bg4);padding:1px 6px;border-radius:8px;margin-left:6px}
+
+/* Agenda */
+.agenda-time-bar{margin-bottom:16px;padding:12px 16px;background:var(--bg3);border-radius:var(--radius)}
+.agenda-time-bar .atb-label{font-size:12px;color:var(--text2);margin-bottom:6px;display:flex;justify-content:space-between}
+.atb-track{height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.atb-fill{height:100%;border-radius:4px;transition:width 0.3s ease}
+.atb-fill.under{background:var(--green)}
+.atb-fill.over{background:var(--red)}
+.atb-fill.exact{background:var(--accent)}
+.agenda-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;transition:all var(--transition)}
+.agenda-item:hover{border-color:var(--border2)}
+.agenda-item .ai-handle{cursor:grab;color:var(--text3);padding:4px;font-size:16px;user-select:none}
+.agenda-item .ai-handle:hover{color:var(--text)}
+.agenda-item .ai-num{width:24px;height:24px;background:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text2);flex-shrink:0}
+.agenda-item .ai-content{flex:1;min-width:0}
+.agenda-item .ai-title{font-weight:600;font-size:14px;margin-bottom:2px}
+.agenda-item .ai-desc{font-size:12px;color:var(--text2);margin-top:4px}
+.agenda-item .ai-meta{display:flex;gap:12px;font-size:11px;color:var(--text3);margin-top:6px}
+.agenda-item .ai-actions{display:flex;gap:4px;flex-shrink:0}
+.add-item-btn{width:100%;padding:12px;border:2px dashed var(--border);border-radius:var(--radius);color:var(--text3);font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px}
+.add-item-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+
+/* Notes */
+.notes-toolbar{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.notes-area{width:100%;min-height:400px;font-family:'SF Mono',Consolas,monospace;font-size:13px;line-height:1.7;padding:16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius)}
+.notes-preview{padding:16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);min-height:400px;line-height:1.7}
+.notes-preview h1{font-size:22px;margin:16px 0 8px;font-weight:700}
+.notes-preview h2{font-size:18px;margin:14px 0 6px;font-weight:600}
+.notes-preview h3{font-size:15px;margin:12px 0 4px;font-weight:600}
+.notes-preview p{margin:8px 0}
+.notes-preview ul,.notes-preview ol{margin:8px 0;padding-left:24px}
+.notes-preview li{margin:4px 0}
+.notes-preview code{background:var(--bg);padding:2px 6px;border-radius:3px;font-family:'SF Mono',Consolas,monospace;font-size:12px}
+.notes-preview pre{background:var(--bg);padding:12px;border-radius:var(--radius);overflow-x:auto;margin:8px 0}
+.notes-preview pre code{background:none;padding:0}
+.notes-preview blockquote{border-left:3px solid var(--accent);padding-left:12px;color:var(--text2);margin:8px 0}
+.notes-preview strong{font-weight:700;color:var(--text)}
+.notes-preview em{font-style:italic;color:var(--text2)}
+
+/* Action Items */
+.action-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.action-item:hover{border-color:var(--border2)}
+.action-item .act-check{width:22px;height:22px;border:2px solid var(--border2);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--transition)}
+.action-item .act-check:hover{border-color:var(--accent)}
+.action-item .act-check.done{background:var(--green);border-color:var(--green);color:#fff}
+.action-item .act-check.inprogress{background:var(--accent);border-color:var(--accent);color:#fff}
+.action-item .act-content{flex:1;min-width:0}
+.action-item .act-title{font-weight:500;font-size:13px}
+.action-item .act-title.completed{text-decoration:line-through;color:var(--text3)}
+.action-item .act-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--text3);margin-top:4px}
+.priority-high{background:var(--red-bg);color:var(--red);padding:1px 8px;border-radius:8px;font-weight:600;font-size:11px}
+.priority-medium{background:var(--orange-bg);color:var(--orange);padding:1px 8px;border-radius:8px;font-weight:600;font-size:11px}
+.priority-low{background:var(--green-bg);color:var(--green);padding:1px 8px;border-radius:8px;font-weight:600;font-size:11px}
+.status-badge{padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600}
+.status-todo{background:var(--bg4);color:var(--text2)}
+.status-inprog{background:var(--accent-bg);color:var(--accent)}
+.status-done{background:var(--green-bg);color:var(--green)}
+
+/* Decisions */
+.decision-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px}
+.decision-item:hover{border-color:var(--border2)}
+.decision-item .dec-header{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.decision-item .dec-title{font-weight:600;font-size:14px;flex:1}
+.decision-item .dec-desc{font-size:13px;color:var(--text2);margin-bottom:8px}
+.decision-item .dec-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text3)}
+.dec-status{padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600}
+.dec-proposed{background:var(--yellow-bg);color:var(--yellow)}
+.dec-approved{background:var(--green-bg);color:var(--green)}
+.dec-deferred{background:var(--purple-bg);color:var(--purple)}
+.dec-rejected{background:var(--red-bg);color:var(--red)}
+
+/* Cards Grid */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.meeting-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:all var(--transition)}
+.meeting-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+.meeting-card .mc-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.meeting-card .mc-type-badge{padding:4px 10px;border-radius:16px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px}
+.meeting-card .mc-status{margin-left:auto}
+.meeting-card h3{font-size:16px;font-weight:600;margin-bottom:8px}
+.meeting-card .mc-meta{font-size:12px;color:var(--text2);display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.meeting-card .mc-footer{display:flex;gap:12px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:10px}
+.meeting-card .mc-footer span{display:flex;align-items:center;gap:4px}
+
+/* Action Tracker View */
+.tracker-filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:var(--radius)}
+.tracker-filters select,.tracker-filters input{font-size:12px;padding:6px 10px}
+.tracker-table{width:100%;border-collapse:collapse}
+.tracker-table th{text-align:left;padding:10px 14px;font-size:12px;font-weight:600;color:var(--text2);border-bottom:2px solid var(--border);cursor:pointer;user-select:none}
+.tracker-table th:hover{color:var(--text)}
+.tracker-table th .sort-arrow{font-size:10px;margin-left:4px}
+.tracker-table td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.tracker-table tr:hover td{background:var(--bg3)}
+.tracker-table .meeting-ref{font-size:11px;color:var(--text3)}
+
+/* Dashboard */
+.dash-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-card .stat-value{font-size:28px;font-weight:700;margin-bottom:4px}
+.stat-card .stat-label{font-size:12px;color:var(--text2)}
+.dash-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+.dash-panel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px}
+.dash-panel h3{font-size:15px;font-weight:600;margin-bottom:16px}
+.dash-panel .upcoming-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.dash-panel .upcoming-item:last-child{border-bottom:none}
+.participant-row{display:flex;align-items:center;gap:10px;padding:6px 0}
+.participant-row .p-name{flex:1;font-size:13px}
+.participant-row .p-count{font-size:12px;color:var(--text3)}
+.participant-row .p-bar{height:6px;border-radius:3px;background:var(--accent);transition:width 0.3s}
+
+/* Participants Panel */
+.participants-panel{margin-top:20px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.participants-panel h4{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text2)}
+.participant-tag{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;margin:3px;border-radius:16px;font-size:12px;background:var(--bg4);border:1px solid var(--border);cursor:pointer}
+.participant-tag.attended{background:var(--green-bg);border-color:rgba(105,219,124,0.3)}
+.participant-tag .p-remove{font-size:14px;color:var(--text3);cursor:pointer}
+.participant-tag .p-remove:hover{color:var(--red)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);width:90%;max-width:560px;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:scale(0.95);transition:transform 0.2s}
+.modal-overlay.show .modal{transform:scale(1)}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-header h3{font-size:17px;font-weight:600}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* Keyboard Shortcuts Help */
+.shortcuts-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.shortcut-item{display:flex;align-items:center;gap:10px;padding:6px 0}
+.shortcut-key{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-family:'SF Mono',Consolas,monospace;font-size:12px;min-width:28px;text-align:center}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 20px;box-shadow:var(--shadow-lg);z-index:2000;transform:translateY(100px);opacity:0;transition:all 0.3s}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-color:var(--green)}
+.toast.error{border-color:var(--red)}
+
+/* Empty State */
+.empty-state{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-state .es-icon{font-size:48px;margin-bottom:16px}
+.empty-state h3{font-size:18px;color:var(--text2);margin-bottom:8px}
+.empty-state p{font-size:13px;margin-bottom:20px}
+
+/* SVG Charts */
+.chart-container{position:relative}
+.bar-chart{display:flex;align-items:flex-end;gap:12px;height:140px;padding-top:10px}
+.bar-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.bar-col .bar{width:100%;border-radius:4px 4px 0 0;min-height:2px;transition:height 0.5s ease}
+.bar-col .bar-label{font-size:10px;color:var(--text3);white-space:nowrap}
+.bar-col .bar-value{font-size:11px;font-weight:600}
+.donut-chart{display:flex;align-items:center;gap:20px}
+.donut-legend{display:flex;flex-direction:column;gap:6px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+
+/* Type Colors */
+.type-oneonone{background:var(--purple-bg);color:var(--purple);border-color:var(--purple)}
+.type-standup{background:var(--green-bg);color:var(--green);border-color:var(--green)}
+.type-planning{background:var(--cyan-bg);color:var(--cyan);border-color:var(--cyan)}
+.type-review{background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow)}
+.type-strategy{background:var(--orange-bg);color:var(--orange);border-color:var(--orange)}
+.type-allhands{background:var(--pink-bg);color:var(--pink);border-color:var(--pink)}
+.type-external{background:var(--teal-bg);color:var(--teal);border-color:var(--teal)}
+
+/* Responsive */
+@media(max-width:768px){
+  #sidebar{position:fixed;left:0;top:0;height:100%;z-index:200}
+  #sidebar.collapsed{transform:translateX(-280px)}
+  .dash-row{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+  .cards-grid{grid-template-columns:1fr}
+  .shortcuts-grid{grid-template-columns:1fr}
+}
+
+/* Drag ghost */
+.dragging{opacity:0.5}
+.drag-over{border-top:2px solid var(--accent) !important}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+
+/* File input hidden */
+.hidden-input{display:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <h1><span class="forge-icon">🔨</span> Meeting Forge</h1>
+    </div>
+    <div class="sidebar-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search meetings... ( / )" />
+    </div>
+    <div class="sidebar-nav">
+      <button onclick="switchView('dashboard')" data-view="dashboard" class="active">📊 Dashboard<span class="nav-badge" id="navBadgeDash"></span></button>
+      <button onclick="switchView('allMeetings')" data-view="allMeetings">📅 All Meetings</button>
+      <button onclick="switchView('actionTracker')" data-view="actionTracker">✅ Action Tracker<span class="nav-badge" id="navBadgeActions"></span></button>
+      <button onclick="switchView('decisionsLog')" data-view="decisionsLog">⚖️ Decisions Log</button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="meetings-list" id="meetingsList"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border)">
+      <button class="btn btn-primary" style="width:100%" onclick="openNewMeetingModal()">+ New Meeting</button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="main">
+    <div class="topbar">
+      <button class="btn-icon toggle-sidebar" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost btn-sm" onclick="exportJSON()" title="Export JSON (E)">📦 Export</button>
+        <button class="btn btn-ghost btn-sm" onclick="triggerImport()" title="Import JSON (I)">📥 Import</button>
+        <button class="btn btn-ghost btn-sm" onclick="showShortcuts()" title="Shortcuts (?)">⌨️</button>
+      </div>
+    </div>
+    <div id="content"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalCheck(event)">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Hidden file input -->
+<input type="file" accept=".json" class="hidden-input" id="importInput" onchange="importJSON(event)" />
+
+<script>
+// ===== DATA & STATE =====
+const MEETING_TYPES = {
+  'oneonone': { emoji: '👥', label: '1:1', color: 'purple' },
+  'standup': { emoji: '🏃', label: 'Team Standup', color: 'green' },
+  'planning': { emoji: '📋', label: 'Sprint Planning', color: 'cyan' },
+  'review': { emoji: '🔍', label: 'Sprint Review', color: 'yellow' },
+  'strategy': { emoji: '🎯', label: 'Strategy', color: 'orange' },
+  'allhands': { emoji: '📢', label: 'All-Hands', color: 'pink' },
+  'external': { emoji: '🤝', label: 'External', color: 'teal' }
+};
+
+const TEMPLATES = {
+  'oneonone': [
+    { title: 'Check-in', description: 'How are you doing? Energy levels, mood check.', timeMinutes: 5 },
+    { title: 'Updates', description: 'Key progress since last 1:1, wins and blockers.', timeMinutes: 10 },
+    { title: 'Blockers', description: 'Anything holding you back? Need help unblocking?', timeMinutes: 10 },
+    { title: 'Career Growth', description: 'Skills development, goals, learning opportunities.', timeMinutes: 10 },
+    { title: 'Action Items Review', description: 'Review previous action items, set new ones.', timeMinutes: 10 }
+  ],
+  'standup': [
+    { title: 'Yesterday', description: 'What did you accomplish yesterday?', timeMinutes: 5 },
+    { title: 'Today', description: 'What are you working on today?', timeMinutes: 5 },
+    { title: 'Blockers', description: 'Any blockers or dependencies?', timeMinutes: 5 }
+  ],
+  'planning': [
+    { title: 'Sprint Review', description: 'Quick review of last sprint outcomes and carryovers.', timeMinutes: 10 },
+    { title: 'Velocity Check', description: 'Review team velocity and capacity for upcoming sprint.', timeMinutes: 10 },
+    { title: 'Story Grooming', description: 'Walk through prioritized backlog items, estimate and clarify.', timeMinutes: 30 },
+    { title: 'Sprint Goal', description: 'Define the sprint goal and key deliverables.', timeMinutes: 10 },
+    { title: 'Commitment', description: 'Team commitment to sprint scope. Final confirmation.', timeMinutes: 10 }
+  ],
+  'review': [
+    { title: 'Demo', description: 'Demonstrate completed work to stakeholders.', timeMinutes: 20 },
+    { title: 'Metrics Review', description: 'Review sprint metrics: velocity, bug count, test coverage.', timeMinutes: 10 },
+    { title: 'Stakeholder Feedback', description: 'Gather feedback from stakeholders on demos.', timeMinutes: 15 },
+    { title: 'Next Sprint Preview', description: 'Brief look at what\'s coming next sprint.', timeMinutes: 10 }
+  ],
+  'strategy': [
+    { title: 'Context Setting', description: 'Set the stage — why are we here, what\'s the decision to make?', timeMinutes: 10 },
+    { title: 'Data Review', description: 'Review relevant data, metrics, user research, market intel.', timeMinutes: 15 },
+    { title: 'Options Discussion', description: 'Discuss possible approaches, trade-offs, risks.', timeMinutes: 20 },
+    { title: 'Decision', description: 'Make the decision. Document rationale.', timeMinutes: 10 },
+    { title: 'Next Steps', description: 'Define action items, owners, and timelines.', timeMinutes: 10 }
+  ],
+  'allhands': [
+    { title: 'Company Update', description: 'CEO/leadership update on company direction, metrics, wins.', timeMinutes: 15 },
+    { title: 'Team Highlights', description: 'Each team shares their top win or update.', timeMinutes: 20 },
+    { title: 'Q&A', description: 'Open floor for questions from the team.', timeMinutes: 15 },
+    { title: 'Announcements', description: 'New hires, events, policy updates, celebrations.', timeMinutes: 10 }
+  ]
+};
+
+let state = {
+  meetings: [],
+  currentView: 'dashboard',
+  currentMeetingId: null,
+  currentTab: 'agenda',
+  sidebarCollapsed: false,
+  searchQuery: ''
+};
+
+// ===== STORAGE =====
+function save() {
+  localStorage.setItem('meetingforge_data', JSON.stringify(state.meetings));
+}
+function load() {
+  const d = localStorage.getItem('meetingforge_data');
+  if (d) {
+    try { state.meetings = JSON.parse(d); } catch(e) { state.meetings = []; }
+  }
+  if (!state.meetings.length) seedDemoData();
+}
+
+function genId() { return 'mf_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
+
+// ===== DEMO DATA =====
+function seedDemoData() {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const yesterday = new Date(now - 86400000).toISOString().split('T')[0];
+  const twoDaysAgo = new Date(now - 172800000).toISOString().split('T')[0];
+  const threeDaysAgo = new Date(now - 259200000).toISOString().split('T')[0];
+  const tomorrow = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
+  const nextWeek = new Date(now.getTime() + 604800000).toISOString().split('T')[0];
+
+  state.meetings = [
+    {
+      id: genId(), title: 'UTMStamp Weekly Sync', type: 'standup',
+      date: yesterday, time: '10:00', duration: 30, location: 'Google Meet',
+      status: 'completed',
+      participants: [
+        { name: 'AJ', invited: true, attended: true },
+        { name: 'Ankit (Frontend)', invited: true, attended: true },
+        { name: 'Priya (Design)', invited: true, attended: true },
+        { name: 'Meera (QA)', invited: true, attended: false }
+      ],
+      agenda: [
+        { id: genId(), title: 'Sprint Progress', description: 'Review sprint board status and blockers.', timeMinutes: 10, presenter: 'AJ' },
+        { id: genId(), title: 'Design Review', description: 'New email template builder UI review.', timeMinutes: 10, presenter: 'Priya (Design)' },
+        { id: genId(), title: 'QA Status & Release', description: 'Bug triage and release candidate review.', timeMinutes: 10, presenter: 'Meera (QA)' }
+      ],
+      notes: '## UTMStamp Weekly Sync\n\n### Key Updates\n- Template builder UI is 80% complete — Priya showed updated mockups\n- Ankit landed the analytics dashboard refactor, performance improved 40%\n- Found 2 critical bugs in email rendering on Outlook\n\n### Blockers\n- Outlook rendering issue needs dedicated investigation\n- API rate limiting on click tracking — need to implement queuing\n\n### Decisions\n- Pushing release to next Wednesday to fix Outlook bugs\n- Will prioritize Google Workspace integration next sprint',
+      actions: [
+        { id: genId(), title: 'Fix Outlook email rendering bugs', assignee: 'Ankit (Frontend)', dueDate: tomorrow, priority: 'high', status: 'inprogress' },
+        { id: genId(), title: 'Implement click tracking queue system', assignee: 'AJ', dueDate: nextWeek, priority: 'high', status: 'todo' },
+        { id: genId(), title: 'Update template builder based on feedback', assignee: 'Priya (Design)', dueDate: tomorrow, priority: 'medium', status: 'todo' }
+      ],
+      decisions: [
+        { id: genId(), title: 'Delay release to next Wednesday', description: 'Push release by 3 days to fix critical Outlook rendering bugs before shipping.', madeBy: 'AJ', date: yesterday, status: 'approved', agendaItemId: null },
+        { id: genId(), title: 'Prioritize Google Workspace integration', description: 'Next sprint focus on Google Workspace auto-push for signatures — top requested feature.', madeBy: 'AJ', date: yesterday, status: 'approved', agendaItemId: null }
+      ]
+    },
+    {
+      id: genId(), title: '1:1 with Engineering Lead', type: 'oneonone',
+      date: twoDaysAgo, time: '14:00', duration: 45, location: 'Zoom',
+      status: 'completed',
+      participants: [
+        { name: 'AJ', invited: true, attended: true },
+        { name: 'Rahul (Eng Lead)', invited: true, attended: true }
+      ],
+      agenda: [
+        { id: genId(), title: 'Check-in', description: 'How are things going? Energy levels?', timeMinutes: 5, presenter: '' },
+        { id: genId(), title: 'Team Health', description: 'Engineering team morale, any concerns.', timeMinutes: 10, presenter: 'Rahul (Eng Lead)' },
+        { id: genId(), title: 'Architecture Discussion', description: 'Discuss event-driven architecture migration.', timeMinutes: 15, presenter: 'Rahul (Eng Lead)' },
+        { id: genId(), title: 'Career Growth', description: 'Rahul\'s growth goals and tech lead path.', timeMinutes: 10, presenter: 'AJ' },
+        { id: genId(), title: 'Action Items', description: 'Review and set action items.', timeMinutes: 5, presenter: '' }
+      ],
+      notes: '## 1:1 with Rahul\n\n### Check-in\n- Rahul is doing well, energized by the arch migration project\n- Team morale is good, but some concerns about scope creep on Sprint 14\n\n### Architecture Discussion\n- Event-driven migration is 60% planned\n- Key risk: existing sync endpoints have hidden dependencies\n- Rahul recommends strangler fig pattern over big-bang rewrite\n- **Agreed:** Start with notification service as pilot\n\n### Career Growth\n- Rahul wants to move toward Staff Engineer track\n- Suggested: lead the arch migration as staff-level project\n- Will set up mentoring sessions with Vikram',
+      actions: [
+        { id: genId(), title: 'Draft event-driven architecture RFC', assignee: 'Rahul (Eng Lead)', dueDate: nextWeek, priority: 'high', status: 'inprogress' },
+        { id: genId(), title: 'Schedule mentoring sessions with Vikram for Rahul', assignee: 'AJ', dueDate: tomorrow, priority: 'medium', status: 'todo' }
+      ],
+      decisions: [
+        { id: genId(), title: 'Start migration with notification service', description: 'Use notification service as the pilot for event-driven architecture migration using strangler fig pattern.', madeBy: 'AJ', date: twoDaysAgo, status: 'approved', agendaItemId: null }
+      ]
+    },
+    {
+      id: genId(), title: 'Sprint Planning — Sprint 14', type: 'planning',
+      date: threeDaysAgo, time: '10:00', duration: 90, location: 'Meeting Room Alpha',
+      status: 'completed',
+      participants: [
+        { name: 'AJ', invited: true, attended: true },
+        { name: 'Rahul (Eng Lead)', invited: true, attended: true },
+        { name: 'Ankit (Frontend)', invited: true, attended: true },
+        { name: 'Priya (Design)', invited: true, attended: true },
+        { name: 'Meera (QA)', invited: true, attended: true }
+      ],
+      agenda: [
+        { id: genId(), title: 'Sprint 13 Retro Highlights', description: 'Quick review of Sprint 13 outcomes. What carried over?', timeMinutes: 10, presenter: 'AJ' },
+        { id: genId(), title: 'Velocity & Capacity', description: 'Review velocity trend and team capacity for Sprint 14.', timeMinutes: 10, presenter: 'Rahul (Eng Lead)' },
+        { id: genId(), title: 'Backlog Grooming', description: 'Walk through prioritized stories, estimate, clarify acceptance criteria.', timeMinutes: 40, presenter: 'AJ' },
+        { id: genId(), title: 'Sprint Goal & Commitment', description: 'Define sprint goal and get team commitment on scope.', timeMinutes: 15, presenter: 'AJ' },
+        { id: genId(), title: 'Risks & Dependencies', description: 'Identify cross-team dependencies and risks.', timeMinutes: 15, presenter: 'Rahul (Eng Lead)' }
+      ],
+      notes: '## Sprint 14 Planning\n\n### Sprint 13 Outcomes\n- Completed 34 of 38 story points (89%)\n- 2 stories carried over: analytics dashboard refactor, notification preferences\n- Bug count reduced 20% from Sprint 12\n\n### Velocity\n- 3-sprint average: 36 points\n- Capacity: Full team available, no PTO\n- Committing to 38 points\n\n### Committed Stories\n1. **UTM-142** Email template builder v2 (8 pts) — Ankit\n2. **UTM-156** Google Workspace integration (13 pts) — Rahul + Ankit\n3. **UTM-160** Click analytics dashboard (5 pts) — Ankit\n4. **UTM-163** Team management improvements (5 pts) — Rahul\n5. **UTM-168** Outlook rendering fixes (3 pts) — Ankit\n6. **UTM-170** QA automation for signatures (4 pts) — Meera\n\n### Sprint Goal\n**"Ship Google Workspace integration and fix all email rendering issues"**',
+      actions: [
+        { id: genId(), title: 'Write acceptance criteria for Google Workspace integration', assignee: 'AJ', dueDate: yesterday, priority: 'high', status: 'done' },
+        { id: genId(), title: 'Set up Google Workspace sandbox environment', assignee: 'Rahul (Eng Lead)', dueDate: yesterday, priority: 'high', status: 'done' },
+        { id: genId(), title: 'Create QA automation test plan for Sprint 14', assignee: 'Meera (QA)', dueDate: twoDaysAgo, priority: 'medium', status: 'inprogress' },
+        { id: genId(), title: 'Design review for template builder v2', assignee: 'Priya (Design)', dueDate: yesterday, priority: 'medium', status: 'done' }
+      ],
+      decisions: [
+        { id: genId(), title: 'Commit to 38 story points for Sprint 14', description: 'Full team available, velocity supports this. Sprint goal focused on Google Workspace integration.', madeBy: 'AJ', date: threeDaysAgo, status: 'approved', agendaItemId: null },
+        { id: genId(), title: 'Defer notification preferences to Sprint 15', description: 'Not critical path. Carried over from Sprint 13 but bumped for Google Workspace priority.', madeBy: 'AJ', date: threeDaysAgo, status: 'deferred', agendaItemId: null }
+      ]
+    },
+    {
+      id: genId(), title: 'Product Strategy Review', type: 'strategy',
+      date: twoDaysAgo, time: '16:00', duration: 60, location: 'Google Meet',
+      status: 'completed',
+      participants: [
+        { name: 'AJ', invited: true, attended: true },
+        { name: 'Vikram (CTO)', invited: true, attended: true },
+        { name: 'Neha (Marketing)', invited: true, attended: true }
+      ],
+      agenda: [
+        { id: genId(), title: 'Context Setting', description: 'UTMStamp growth metrics and where we are vs plan.', timeMinutes: 10, presenter: 'AJ' },
+        { id: genId(), title: 'Pricing Model Review', description: 'Review current free plan usage, conversion data, and competitor pricing.', timeMinutes: 15, presenter: 'Neha (Marketing)' },
+        { id: genId(), title: 'Growth Options', description: 'Discuss PLG strategy, pricing tiers, and enterprise play.', timeMinutes: 20, presenter: 'AJ' },
+        { id: genId(), title: 'Decision & Next Steps', description: 'Decide on pricing model changes and go-to-market strategy.', timeMinutes: 15, presenter: 'Vikram (CTO)' }
+      ],
+      notes: '## Product Strategy Review — Pricing Model\n\n### Current State\n- 2,400 free users, 180 paid ($9/mo), 12 enterprise ($49/mo)\n- MRR: $2,208 — growing 15% MoM\n- Free-to-paid conversion: 7.5% (industry avg: 3-5%)\n- Churn: 4.2% monthly\n\n### Competitor Analysis (Neha)\n- Mailchimp signatures: $13/mo per user\n- Wisestamp: $5.80/mo but limited analytics\n- CodeTwo: Enterprise only, $3/user/mo minimum 50 seats\n- **Our positioning: Best analytics + simplest setup**\n\n### Options Discussed\n1. **Keep current** — $0/free, $9/pro, $49/enterprise\n2. **Usage-based** — Free up to 5 signatures, $0.50 per additional\n3. **Seat-based** — $4/user/mo with team features as differentiator\n\n### Decision\n- **Go with Option 3 (seat-based)** for enterprise\n- Keep individual pro at $9/mo\n- Add team tier at $4/user/mo (min 5 seats)\n- Enterprise: custom pricing above 100 seats',
+      actions: [
+        { id: genId(), title: 'Build pricing page mockup for seat-based model', assignee: 'Priya (Design)', dueDate: nextWeek, priority: 'high', status: 'todo' },
+        { id: genId(), title: 'Draft enterprise pricing deck', assignee: 'Neha (Marketing)', dueDate: nextWeek, priority: 'medium', status: 'todo' },
+        { id: genId(), title: 'Implement team billing infrastructure', assignee: 'Rahul (Eng Lead)', dueDate: nextWeek, priority: 'high', status: 'todo' }
+      ],
+      decisions: [
+        { id: genId(), title: 'Move to seat-based pricing for teams', description: 'Team tier at $4/user/mo (min 5 seats). Individual pro stays at $9/mo. Enterprise custom above 100 seats.', madeBy: 'Vikram (CTO)', date: twoDaysAgo, status: 'approved', agendaItemId: null },
+        { id: genId(), title: 'Defer usage-based pricing', description: 'Usage-based model too complex to implement and communicate. Revisit in Q3 if seat-based doesn\'t convert.', madeBy: 'AJ', date: twoDaysAgo, status: 'rejected', agendaItemId: null }
+      ]
+    },
+    {
+      id: genId(), title: 'UTMStamp × Partner Integration Call', type: 'external',
+      date: tomorrow, time: '11:00', duration: 45, location: 'Zoom — https://zoom.us/j/123456789',
+      status: 'upcoming',
+      participants: [
+        { name: 'AJ', invited: true, attended: false },
+        { name: 'Vikram (CTO)', invited: true, attended: false },
+        { name: 'Neha (Marketing)', invited: true, attended: false }
+      ],
+      agenda: [
+        { id: genId(), title: 'Introductions', description: 'Quick intros — who we are, what UTMStamp does.', timeMinutes: 5, presenter: 'AJ' },
+        { id: genId(), title: 'Integration Overview', description: 'Technical overview of our API and potential integration points.', timeMinutes: 15, presenter: 'Vikram (CTO)' },
+        { id: genId(), title: 'Partnership Model', description: 'Revenue share, co-marketing, and referral structure discussion.', timeMinutes: 15, presenter: 'Neha (Marketing)' },
+        { id: genId(), title: 'Next Steps & Timeline', description: 'Agree on POC scope, timeline, and follow-up.', timeMinutes: 10, presenter: 'AJ' }
+      ],
+      notes: '',
+      actions: [],
+      decisions: []
+    },
+    {
+      id: genId(), title: 'All-Hands — April Update', type: 'allhands',
+      date: nextWeek, time: '15:00', duration: 60, location: 'Google Meet — All Company',
+      status: 'upcoming',
+      participants: [
+        { name: 'AJ', invited: true, attended: false },
+        { name: 'Vikram (CTO)', invited: true, attended: false },
+        { name: 'Rahul (Eng Lead)', invited: true, attended: false },
+        { name: 'Priya (Design)', invited: true, attended: false },
+        { name: 'Ankit (Frontend)', invited: true, attended: false },
+        { name: 'Neha (Marketing)', invited: true, attended: false },
+        { name: 'Meera (QA)', invited: true, attended: false }
+      ],
+      agenda: [
+        { id: genId(), title: 'Company Update', description: 'Product metrics, MRR growth, user growth highlights.', timeMinutes: 15, presenter: 'AJ' },
+        { id: genId(), title: 'Engineering Highlights', description: 'Tech achievements, architecture updates, performance wins.', timeMinutes: 10, presenter: 'Rahul (Eng Lead)' },
+        { id: genId(), title: 'Design & Marketing', description: 'Brand refresh progress, content performance, upcoming campaigns.', timeMinutes: 10, presenter: 'Priya (Design)' },
+        { id: genId(), title: 'Q&A', description: 'Open floor for questions.', timeMinutes: 15, presenter: '' },
+        { id: genId(), title: 'Announcements', description: 'New hires, upcoming events, shoutouts.', timeMinutes: 10, presenter: 'AJ' }
+      ],
+      notes: '',
+      actions: [],
+      decisions: []
+    }
+  ];
+  save();
+}
+
+// ===== INIT =====
+load();
+renderSidebar();
+switchView('dashboard');
+updateNavBadges();
+
+// ===== SIDEBAR =====
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  state.sidebarCollapsed = !state.sidebarCollapsed;
+  sb.classList.toggle('collapsed', state.sidebarCollapsed);
+}
+
+function renderSidebar() {
+  const list = document.getElementById('meetingsList');
+  const q = state.searchQuery.toLowerCase();
+  const filtered = state.meetings.filter(m =>
+    m.title.toLowerCase().includes(q) ||
+    MEETING_TYPES[m.type]?.label.toLowerCase().includes(q)
+  );
+
+  // Sort: upcoming first, then by date desc
+  const statusOrder = { upcoming: 0, inprogress: 1, completed: 2, cancelled: 3 };
+  filtered.sort((a, b) => {
+    const sa = statusOrder[a.status] ?? 2;
+    const sb2 = statusOrder[b.status] ?? 2;
+    if (sa !== sb2) return sa - sb2;
+    return new Date(b.date + 'T' + (b.time || '00:00')) - new Date(a.date + 'T' + (a.time || '00:00'));
+  });
+
+  list.innerHTML = filtered.map(m => {
+    const t = MEETING_TYPES[m.type] || { emoji: '📅', label: 'Meeting' };
+    const isActive = state.currentMeetingId === m.id && state.currentView === 'meeting';
+    return `<div class="meeting-item ${isActive ? 'active' : ''}" onclick="openMeeting('${m.id}')">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="mi-type">${t.emoji}</span>
+        <span class="mi-title">${esc(m.title)}</span>
+      </div>
+      <div class="mi-meta">
+        <span>${formatDateShort(m.date)}</span>
+        <span class="mi-status status-${m.status}">${m.status === 'inprogress' ? 'In Progress' : capitalize(m.status)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateNavBadges() {
+  const openActions = getAllActions().filter(a => a.status !== 'done').length;
+  document.getElementById('navBadgeActions').textContent = openActions || '';
+  const thisWeek = getThisWeekMeetings().length;
+  document.getElementById('navBadgeDash').textContent = thisWeek ? `${thisWeek} this week` : '';
+}
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  state.searchQuery = e.target.value;
+  renderSidebar();
+});
+
+// ===== VIEWS =====
+function switchView(view) {
+  state.currentView = view;
+  document.querySelectorAll('.sidebar-nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+  renderSidebar();
+
+  const titles = { dashboard: '📊 Dashboard', allMeetings: '📅 All Meetings', actionTracker: '✅ Action Tracker', decisionsLog: '⚖️ Decisions Log' };
+  document.getElementById('topbarTitle').textContent = titles[view] || '';
+
+  switch(view) {
+    case 'dashboard': renderDashboard(); break;
+    case 'allMeetings': renderAllMeetings(); break;
+    case 'actionTracker': renderActionTracker(); break;
+    case 'decisionsLog': renderDecisionsLog(); break;
+    case 'meeting': renderMeetingView(); break;
+  }
+}
+
+function openMeeting(id) {
+  state.currentMeetingId = id;
+  state.currentView = 'meeting';
+  state.currentTab = 'agenda';
+  const m = getMeeting(id);
+  if (m) {
+    const t = MEETING_TYPES[m.type] || { emoji: '📅', label: 'Meeting' };
+    document.getElementById('topbarTitle').textContent = `${t.emoji} ${m.title}`;
+    document.querySelectorAll('.sidebar-nav button').forEach(b => b.classList.remove('active'));
+  }
+  renderSidebar();
+  renderMeetingView();
+}
+
+function getMeeting(id) { return state.meetings.find(m => m.id === id); }
+
+// ===== DASHBOARD =====
+function renderDashboard() {
+  const c = document.getElementById('content');
+  const total = state.meetings.length;
+  const thisWeek = getThisWeekMeetings();
+  const allActions = getAllActions();
+  const openActions = allActions.filter(a => a.status !== 'done').length;
+  const doneActions = allActions.filter(a => a.status === 'done').length;
+  const allDecisions = getAllDecisions();
+  const upcoming = state.meetings.filter(m => m.status === 'upcoming' || m.status === 'inprogress').sort((a,b) => new Date(a.date+'T'+(a.time||'00:00')) - new Date(b.date+'T'+(b.time||'00:00')));
+
+  // Type counts
+  const typeCounts = {};
+  Object.keys(MEETING_TYPES).forEach(t => typeCounts[t] = 0);
+  state.meetings.forEach(m => { if(typeCounts[m.type] !== undefined) typeCounts[m.type]++; });
+  const maxTypeCount = Math.max(...Object.values(typeCounts), 1);
+
+  // Action status for donut
+  const todoCount = allActions.filter(a=>a.status==='todo').length;
+  const ipCount = allActions.filter(a=>a.status==='inprogress').length;
+
+  // Participant rankings
+  const pCounts = {};
+  state.meetings.forEach(m => {
+    (m.participants||[]).forEach(p => {
+      if (p.attended) pCounts[p.name] = (pCounts[p.name]||0) + 1;
+    });
+  });
+  const pRanking = Object.entries(pCounts).sort((a,b) => b[1]-a[1]).slice(0,7);
+  const maxP = pRanking.length ? pRanking[0][1] : 1;
+
+  c.innerHTML = `
+    <div class="dash-stats">
+      <div class="stat-card"><div class="stat-value" style="color:var(--accent)">${total}</div><div class="stat-label">Total Meetings</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--cyan)">${thisWeek.length}</div><div class="stat-label">This Week</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--orange)">${openActions}</div><div class="stat-label">Open Actions</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--green)">${doneActions}</div><div class="stat-label">Done Actions</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--purple)">${allDecisions.length}</div><div class="stat-label">Decisions Made</div></div>
+    </div>
+    <div class="dash-row">
+      <div class="dash-panel">
+        <h3>Meetings by Type</h3>
+        <div class="bar-chart">
+          ${Object.entries(typeCounts).map(([t,count]) => {
+            const mt = MEETING_TYPES[t];
+            const h = Math.round((count / maxTypeCount) * 100);
+            return `<div class="bar-col">
+              <div class="bar-value">${count}</div>
+              <div class="bar" style="height:${h}%;background:var(--${mt.color})"></div>
+              <div class="bar-label">${mt.emoji}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="dash-panel">
+        <h3>Action Items Status</h3>
+        <div class="donut-chart">
+          ${renderDonutSVG(todoCount, ipCount, doneActions)}
+          <div class="donut-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--text3)"></div>To Do (${todoCount})</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>In Progress (${ipCount})</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Done (${doneActions})</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="dash-row">
+      <div class="dash-panel">
+        <h3>Upcoming Meetings</h3>
+        ${upcoming.length ? upcoming.slice(0,5).map(m => {
+          const t = MEETING_TYPES[m.type]||{emoji:'📅'};
+          return `<div class="upcoming-item" style="cursor:pointer" onclick="openMeeting('${m.id}')">
+            <span style="font-size:20px">${t.emoji}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500">${esc(m.title)}</div>
+              <div style="font-size:11px;color:var(--text3)">${formatDate(m.date)} at ${m.time || 'TBD'} · ${m.duration}min</div>
+            </div>
+            <span class="mi-status status-${m.status}">${capitalize(m.status)}</span>
+          </div>`;
+        }).join('') : '<div class="empty-state" style="padding:20px"><p>No upcoming meetings</p></div>'}
+      </div>
+      <div class="dash-panel">
+        <h3>Most Active Participants</h3>
+        ${pRanking.map(([name,count]) => `
+          <div class="participant-row">
+            <div class="p-name">${esc(name)}</div>
+            <div class="p-count">${count} meetings</div>
+            <div style="width:80px;height:6px;background:var(--bg);border-radius:3px;overflow:hidden">
+              <div class="p-bar" style="width:${Math.round((count/maxP)*100)}%"></div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderDonutSVG(todo, ip, done) {
+  const total = todo + ip + done;
+  if (total === 0) return '<svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--bg)" stroke-width="16"/><text x="60" y="65" text-anchor="middle" fill="var(--text3)" font-size="14">No data</text></svg>';
+  const r = 50, cx = 60, cy = 60, sw = 16;
+  const circ = 2 * Math.PI * r;
+  const s1 = (todo/total) * circ;
+  const s2 = (ip/total) * circ;
+  const s3 = (done/total) * circ;
+  const o1 = 0;
+  const o2 = s1;
+  const o3 = s1 + s2;
+  return `<svg width="120" height="120" viewBox="0 0 120 120" style="transform:rotate(-90deg)">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bg)" stroke-width="${sw}"/>
+    ${todo > 0 ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--text3)" stroke-width="${sw}" stroke-dasharray="${s1} ${circ - s1}" stroke-dashoffset="${-o1}"/>` : ''}
+    ${ip > 0 ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--accent)" stroke-width="${sw}" stroke-dasharray="${s2} ${circ - s2}" stroke-dashoffset="${-o2}"/>` : ''}
+    ${done > 0 ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--green)" stroke-width="${sw}" stroke-dasharray="${s3} ${circ - s3}" stroke-dashoffset="${-o3}"/>` : ''}
+    <text x="${cx}" y="${cy + 5}" text-anchor="middle" fill="var(--text)" font-size="18" font-weight="700" style="transform:rotate(90deg);transform-origin:${cx}px ${cy}px">${total}</text>
+  </svg>`;
+}
+
+// ===== ALL MEETINGS =====
+function renderAllMeetings() {
+  const c = document.getElementById('content');
+  const sorted = [...state.meetings].sort((a,b) => new Date(b.date+'T'+(b.time||'00:00')) - new Date(a.date+'T'+(a.time||'00:00')));
+  c.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="font-size:20px;font-weight:700">All Meetings</h2>
+      <button class="btn btn-primary" onclick="openNewMeetingModal()">+ New Meeting</button>
+    </div>
+    <div class="cards-grid">
+      ${sorted.map(m => {
+        const t = MEETING_TYPES[m.type] || { emoji: '📅', label: 'Meeting', color: 'accent' };
+        const actionCount = (m.actions||[]).length;
+        const openActions = (m.actions||[]).filter(a=>a.status!=='done').length;
+        return `<div class="meeting-card" onclick="openMeeting('${m.id}')">
+          <div class="mc-header">
+            <span class="mc-type-badge type-${m.type}">${t.emoji} ${t.label}</span>
+            <span class="mc-status mi-status status-${m.status}">${m.status === 'inprogress' ? 'In Progress' : capitalize(m.status)}</span>
+          </div>
+          <h3>${esc(m.title)}</h3>
+          <div class="mc-meta">
+            <span>📅 ${formatDate(m.date)}</span>
+            <span>🕐 ${m.time || 'TBD'}</span>
+            <span>⏱ ${m.duration}min</span>
+          </div>
+          <div class="mc-footer">
+            <span>👤 ${(m.participants||[]).length} participants</span>
+            <span>📋 ${(m.agenda||[]).length} agenda items</span>
+            <span>✅ ${openActions}/${actionCount} actions open</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+// ===== ACTION TRACKER =====
+function renderActionTracker() {
+  const c = document.getElementById('content');
+  const allActions = getAllActions();
+
+  // Get unique assignees, meetings
+  const assignees = [...new Set(allActions.map(a => a.action.assignee).filter(Boolean))].sort();
+  const meetings = state.meetings.map(m => ({ id: m.id, title: m.title }));
+
+  c.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="font-size:20px;font-weight:700">Action Tracker</h2>
+      <span style="font-size:13px;color:var(--text2)">${allActions.length} total actions</span>
+    </div>
+    <div class="tracker-filters">
+      <select id="filterAssignee" onchange="renderActionTrackerTable()">
+        <option value="">All Assignees</option>
+        ${assignees.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('')}
+      </select>
+      <select id="filterStatus" onchange="renderActionTrackerTable()">
+        <option value="">All Statuses</option>
+        <option value="todo">To Do</option>
+        <option value="inprogress">In Progress</option>
+        <option value="done">Done</option>
+      </select>
+      <select id="filterPriority" onchange="renderActionTrackerTable()">
+        <option value="">All Priorities</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <select id="filterMeeting" onchange="renderActionTrackerTable()">
+        <option value="">All Meetings</option>
+        ${meetings.map(m => `<option value="${m.id}">${esc(m.title)}</option>`).join('')}
+      </select>
+    </div>
+    <div id="actionTrackerTable"></div>
+  `;
+  renderActionTrackerTable();
+}
+
+function renderActionTrackerTable() {
+  let allActions = getAllActions();
+  const fa = document.getElementById('filterAssignee')?.value || '';
+  const fs = document.getElementById('filterStatus')?.value || '';
+  const fp = document.getElementById('filterPriority')?.value || '';
+  const fm = document.getElementById('filterMeeting')?.value || '';
+
+  if (fa) allActions = allActions.filter(a => a.action.assignee === fa);
+  if (fs) allActions = allActions.filter(a => a.action.status === fs);
+  if (fp) allActions = allActions.filter(a => a.action.priority === fp);
+  if (fm) allActions = allActions.filter(a => a.meetingId === fm);
+
+  // Sort by priority then due date
+  const pOrder = { high: 0, medium: 1, low: 2 };
+  allActions.sort((a,b) => {
+    const pa = pOrder[a.action.priority] ?? 1;
+    const pb = pOrder[b.action.priority] ?? 1;
+    if (pa !== pb) return pa - pb;
+    return new Date(a.action.dueDate || '9999') - new Date(b.action.dueDate || '9999');
+  });
+
+  const el = document.getElementById('actionTrackerTable');
+  if (!allActions.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:40px"><div class="es-icon">✅</div><h3>No actions found</h3><p>Adjust filters or create action items in meetings</p></div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <table class="tracker-table">
+      <thead>
+        <tr>
+          <th style="width:30px"></th>
+          <th>Action</th>
+          <th>Assignee</th>
+          <th>Due Date</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Meeting</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${allActions.map(({action: a, meetingId, meetingTitle}) => {
+          const isOverdue = a.dueDate && a.status !== 'done' && new Date(a.dueDate) < new Date(new Date().toISOString().split('T')[0]);
+          return `<tr>
+            <td><div class="act-check ${a.status === 'done' ? 'done' : a.status === 'inprogress' ? 'inprogress' : ''}" onclick="cycleActionStatus('${meetingId}','${a.id}')" style="width:18px;height:18px;font-size:10px">${a.status==='done'?'✓':a.status==='inprogress'?'◐':''}</div></td>
+            <td><span class="${a.status==='done'?'act-title completed':'act-title'}">${esc(a.title)}</span></td>
+            <td style="font-size:12px">${esc(a.assignee||'—')}</td>
+            <td style="font-size:12px;${isOverdue?'color:var(--red)':''}">${a.dueDate ? formatDateShort(a.dueDate) : '—'}${isOverdue?' ⚠️':''}</td>
+            <td><span class="priority-${a.priority}">${capitalize(a.priority)}</span></td>
+            <td><span class="status-badge status-${a.status==='todo'?'todo':a.status==='inprogress'?'inprog':'done'}">${a.status==='todo'?'To Do':a.status==='inprogress'?'In Progress':'Done'}</span></td>
+            <td><span class="meeting-ref" style="cursor:pointer" onclick="event.stopPropagation();openMeeting('${meetingId}')">${esc(meetingTitle)}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ===== DECISIONS LOG VIEW =====
+function renderDecisionsLog() {
+  const c = document.getElementById('content');
+  const allDecs = getAllDecisions();
+
+  c.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="font-size:20px;font-weight:700">Decisions Log</h2>
+      <span style="font-size:13px;color:var(--text2)">${allDecs.length} decisions</span>
+    </div>
+    ${allDecs.length ? allDecs.map(({decision: d, meetingTitle, meetingId}) => `
+      <div class="decision-item">
+        <div class="dec-header">
+          <span class="dec-status dec-${d.status}">${capitalize(d.status)}</span>
+          <span class="dec-title">${esc(d.title)}</span>
+        </div>
+        ${d.description ? `<div class="dec-desc">${esc(d.description)}</div>` : ''}
+        <div class="dec-meta">
+          <span>👤 ${esc(d.madeBy||'—')}</span>
+          <span>📅 ${d.date ? formatDateShort(d.date) : '—'}</span>
+          <span style="cursor:pointer" onclick="openMeeting('${meetingId}')">📋 ${esc(meetingTitle)}</span>
+        </div>
+      </div>
+    `).join('') : '<div class="empty-state"><div class="es-icon">⚖️</div><h3>No decisions yet</h3><p>Decisions made in meetings will appear here</p></div>'}
+  `;
+}
+
+// ===== MEETING VIEW =====
+function renderMeetingView() {
+  const m = getMeeting(state.currentMeetingId);
+  if (!m) { switchView('dashboard'); return; }
+  const t = MEETING_TYPES[m.type] || { emoji: '📅', label: 'Meeting', color: 'accent' };
+  const c = document.getElementById('content');
+
+  c.innerHTML = `
+    <div class="meeting-header">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <span class="mh-type-badge type-${m.type}">${t.emoji} ${t.label}</span>
+        <span class="mi-status status-${m.status}" style="font-size:11px">${m.status === 'inprogress' ? 'In Progress' : capitalize(m.status)}</span>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="exportMeetingMarkdown('${m.id}')" title="Export Markdown (M)">📝 Export MD</button>
+          <button class="btn btn-ghost btn-sm" onclick="editMeetingModal('${m.id}')">✏️ Edit</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteMeeting('${m.id}')">🗑️</button>
+        </div>
+      </div>
+      <h2>${esc(m.title)}</h2>
+      <div class="mh-meta">
+        <span>📅 ${formatDate(m.date)}</span>
+        <span>🕐 ${m.time || 'TBD'}</span>
+        <span>⏱ ${m.duration} minutes</span>
+        <span>📍 ${esc(m.location || 'No location')}</span>
+      </div>
+    </div>
+
+    <!-- Participants -->
+    <div class="participants-panel" style="margin-bottom:20px">
+      <h4>Participants (${(m.participants||[]).length})</h4>
+      <div id="participantTags">
+        ${(m.participants||[]).map((p,i) => `
+          <span class="participant-tag ${p.attended ? 'attended' : ''}" onclick="toggleAttendance('${m.id}',${i})" title="Click to toggle attendance">
+            ${p.attended ? '✓' : '○'} ${esc(p.name)}
+            <span class="p-remove" onclick="event.stopPropagation();removeParticipant('${m.id}',${i})">×</span>
+          </span>
+        `).join('')}
+        <span class="participant-tag" style="cursor:pointer;border-style:dashed" onclick="addParticipantPrompt('${m.id}')">+ Add</span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="meeting-tabs">
+      <button class="${state.currentTab==='agenda'?'active':''}" onclick="switchTab('agenda')">📋 Agenda<span class="tab-count">${(m.agenda||[]).length}</span></button>
+      <button class="${state.currentTab==='notes'?'active':''}" onclick="switchTab('notes')">📝 Notes</button>
+      <button class="${state.currentTab==='actions'?'active':''}" onclick="switchTab('actions')">✅ Actions<span class="tab-count">${(m.actions||[]).length}</span></button>
+      <button class="${state.currentTab==='decisions'?'active':''}" onclick="switchTab('decisions')">⚖️ Decisions<span class="tab-count">${(m.decisions||[]).length}</span></button>
+    </div>
+
+    <div id="tabContent"></div>
+  `;
+
+  renderTab();
+}
+
+function switchTab(tab) {
+  state.currentTab = tab;
+  document.querySelectorAll('.meeting-tabs button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.meeting-tabs button').forEach(b => {
+    if (b.textContent.toLowerCase().includes(tab)) b.classList.add('active');
+  });
+  renderTab();
+}
+
+function renderTab() {
+  const m = getMeeting(state.currentMeetingId);
+  if (!m) return;
+  const el = document.getElementById('tabContent');
+
+  switch(state.currentTab) {
+    case 'agenda': renderAgendaTab(el, m); break;
+    case 'notes': renderNotesTab(el, m); break;
+    case 'actions': renderActionsTab(el, m); break;
+    case 'decisions': renderDecisionsTab(el, m); break;
+  }
+}
+
+// ===== AGENDA TAB =====
+function renderAgendaTab(el, m) {
+  const totalTime = (m.agenda||[]).reduce((s,a) => s + (a.timeMinutes||0), 0);
+  const pct = m.duration ? Math.min((totalTime/m.duration)*100, 100) : 0;
+  const over = totalTime > m.duration;
+  const exact = totalTime === m.duration;
+
+  el.innerHTML = `
+    <div class="agenda-time-bar">
+      <div class="atb-label">
+        <span>Time Budget</span>
+        <span>${totalTime}/${m.duration} min ${over ? '⚠️ Over budget!' : exact ? '✓ Exactly right' : `(${m.duration-totalTime} min free)`}</span>
+      </div>
+      <div class="atb-track">
+        <div class="atb-fill ${over ? 'over' : exact ? 'exact' : 'under'}" style="width:${pct}%"></div>
+      </div>
+    </div>
+    <div id="agendaItems">
+      ${(m.agenda||[]).map((item, i) => `
+        <div class="agenda-item" draggable="true" data-idx="${i}" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="drop(event,${i})" ondragend="dragEnd(event)">
+          <span class="ai-handle" title="Drag to reorder">⠿</span>
+          <span class="ai-num">${i+1}</span>
+          <div class="ai-content">
+            <div class="ai-title">${esc(item.title)}</div>
+            ${item.description ? `<div class="ai-desc">${esc(item.description)}</div>` : ''}
+            <div class="ai-meta">
+              ${item.timeMinutes ? `<span>⏱ ${item.timeMinutes} min</span>` : ''}
+              ${item.presenter ? `<span>👤 ${esc(item.presenter)}</span>` : ''}
+            </div>
+          </div>
+          <div class="ai-actions">
+            <button class="btn-icon btn-sm" onclick="moveAgendaItem('${m.id}',${i},-1)" title="Move up" ${i===0?'disabled style="opacity:0.3"':''}>↑</button>
+            <button class="btn-icon btn-sm" onclick="moveAgendaItem('${m.id}',${i},1)" title="Move down" ${i===(m.agenda||[]).length-1?'disabled style="opacity:0.3"':''}>↓</button>
+            <button class="btn-icon btn-sm" onclick="editAgendaItem('${m.id}','${item.id}')" title="Edit">✏️</button>
+            <button class="btn-icon btn-sm" onclick="deleteAgendaItem('${m.id}','${item.id}')" title="Delete" style="color:var(--red)">×</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <button class="add-item-btn" onclick="addAgendaItem('${m.id}')">+ Add Agenda Item</button>
+    ${!(m.agenda||[]).length ? `<div style="margin-top:12px;text-align:center">
+      <p style="color:var(--text3);font-size:13px;margin-bottom:12px">Or start from a template:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+        ${Object.entries(TEMPLATES).map(([key,items]) => {
+          const t = MEETING_TYPES[key];
+          return `<button class="btn btn-secondary btn-sm" onclick="applyTemplate('${m.id}','${key}')">${t.emoji} ${t.label}</button>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
+  `;
+}
+
+// Drag and drop
+let dragIdx = null;
+function dragStart(e) {
+  dragIdx = parseInt(e.currentTarget.dataset.idx);
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function dragOver(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+function dragEnd(e) {
+  document.querySelectorAll('.agenda-item').forEach(el => {
+    el.classList.remove('dragging','drag-over');
+  });
+}
+function drop(e, targetIdx) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (dragIdx === null || dragIdx === targetIdx) return;
+  const m = getMeeting(state.currentMeetingId);
+  if (!m) return;
+  const item = m.agenda.splice(dragIdx, 1)[0];
+  m.agenda.splice(targetIdx, 0, item);
+  save();
+  renderTab();
+}
+
+function moveAgendaItem(meetingId, idx, dir) {
+  const m = getMeeting(meetingId);
+  if (!m || !m.agenda) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= m.agenda.length) return;
+  [m.agenda[idx], m.agenda[newIdx]] = [m.agenda[newIdx], m.agenda[idx]];
+  save();
+  renderTab();
+}
+
+function addAgendaItem(meetingId) {
+  showModal('Add Agenda Item', `
+    <div class="form-group"><label>Title</label><input type="text" id="agTitle" placeholder="Agenda item title" /></div>
+    <div class="form-group"><label>Description</label><textarea id="agDesc" placeholder="Brief description..." rows="2"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Time (minutes)</label><input type="number" id="agTime" value="10" min="1" /></div>
+      <div class="form-group"><label>Presenter</label><input type="text" id="agPresenter" placeholder="Who's presenting?" /></div>
+    </div>
+  `, () => {
+    const title = document.getElementById('agTitle').value.trim();
+    if (!title) return toast('Title required', 'error');
+    const m = getMeeting(meetingId);
+    if (!m) return;
+    if (!m.agenda) m.agenda = [];
+    m.agenda.push({
+      id: genId(), title,
+      description: document.getElementById('agDesc').value.trim(),
+      timeMinutes: parseInt(document.getElementById('agTime').value) || 10,
+      presenter: document.getElementById('agPresenter').value.trim()
+    });
+    save(); closeModal(); renderMeetingView();
+  });
+}
+
+function editAgendaItem(meetingId, itemId) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  const item = (m.agenda||[]).find(a => a.id === itemId);
+  if (!item) return;
+  showModal('Edit Agenda Item', `
+    <div class="form-group"><label>Title</label><input type="text" id="agTitle" value="${escAttr(item.title)}" /></div>
+    <div class="form-group"><label>Description</label><textarea id="agDesc" rows="2">${esc(item.description||'')}</textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Time (minutes)</label><input type="number" id="agTime" value="${item.timeMinutes||10}" min="1" /></div>
+      <div class="form-group"><label>Presenter</label><input type="text" id="agPresenter" value="${escAttr(item.presenter||'')}" /></div>
+    </div>
+  `, () => {
+    const title = document.getElementById('agTitle').value.trim();
+    if (!title) return toast('Title required', 'error');
+    item.title = title;
+    item.description = document.getElementById('agDesc').value.trim();
+    item.timeMinutes = parseInt(document.getElementById('agTime').value) || 10;
+    item.presenter = document.getElementById('agPresenter').value.trim();
+    save(); closeModal(); renderTab();
+  });
+}
+
+function deleteAgendaItem(meetingId, itemId) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  m.agenda = (m.agenda||[]).filter(a => a.id !== itemId);
+  save(); renderTab();
+}
+
+function applyTemplate(meetingId, templateKey) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  const tpl = TEMPLATES[templateKey];
+  if (!tpl) return;
+  m.agenda = tpl.map(item => ({ ...item, id: genId(), presenter: item.presenter || '' }));
+  save(); renderTab();
+  toast('Template applied!', 'success');
+}
+
+// ===== NOTES TAB =====
+let notesPreview = false;
+function renderNotesTab(el, m) {
+  el.innerHTML = `
+    <div class="notes-toolbar">
+      <button class="btn btn-sm ${notesPreview ? 'btn-secondary' : 'btn-primary'}" onclick="notesPreview=false;renderTab()">✏️ Edit</button>
+      <button class="btn btn-sm ${notesPreview ? 'btn-primary' : 'btn-secondary'}" onclick="notesPreview=true;renderTab()">👁️ Preview</button>
+      <span style="flex:1"></span>
+      <span style="font-size:11px;color:var(--text3)">Supports Markdown</span>
+    </div>
+    ${notesPreview
+      ? `<div class="notes-preview">${renderMarkdown(m.notes || '')}</div>`
+      : `<textarea class="notes-area" id="notesArea" placeholder="Start writing meeting notes...\n\nSupports **Markdown** formatting:\n# Heading\n- List items\n> Blockquotes\n\`code\`" oninput="saveMeetingNotes('${m.id}')">${esc(m.notes || '')}</textarea>`
+    }
+  `;
+}
+
+function saveMeetingNotes(meetingId) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  m.notes = document.getElementById('notesArea')?.value || '';
+  save();
+}
+
+// Simple Markdown renderer
+function renderMarkdown(text) {
+  if (!text) return '<p style="color:var(--text3)">No notes yet.</p>';
+  let html = esc(text);
+  // Code blocks
+  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Headers
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  // Bold
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  // Blockquotes
+  html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+  // Unordered lists
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+  // Ordered lists
+  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  // Paragraphs
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  html = '<p>' + html + '</p>';
+  // Clean up
+  html = html.replace(/<p><h([123])>/g, '<h$1>');
+  html = html.replace(/<\/h([123])><\/p>/g, '</h$1>');
+  html = html.replace(/<p><ul>/g, '<ul>');
+  html = html.replace(/<\/ul><\/p>/g, '</ul>');
+  html = html.replace(/<p><pre>/g, '<pre>');
+  html = html.replace(/<\/pre><\/p>/g, '</pre>');
+  html = html.replace(/<p><blockquote>/g, '<blockquote>');
+  html = html.replace(/<\/blockquote><\/p>/g, '</blockquote>');
+  return html;
+}
+
+// ===== ACTIONS TAB =====
+function renderActionsTab(el, m) {
+  el.innerHTML = `
+    ${(m.actions||[]).map(a => {
+      const isOverdue = a.dueDate && a.status !== 'done' && new Date(a.dueDate) < new Date(new Date().toISOString().split('T')[0]);
+      return `<div class="action-item">
+        <div class="act-check ${a.status==='done'?'done':a.status==='inprogress'?'inprogress':''}" onclick="cycleActionStatus('${m.id}','${a.id}')" title="Click to cycle status">
+          ${a.status==='done'?'✓':a.status==='inprogress'?'◐':''}
+        </div>
+        <div class="act-content">
+          <div class="act-title ${a.status==='done'?'completed':''}">${esc(a.title)}</div>
+          <div class="act-meta">
+            ${a.assignee ? `<span>👤 ${esc(a.assignee)}</span>` : ''}
+            ${a.dueDate ? `<span style="${isOverdue?'color:var(--red)':''}">📅 ${formatDateShort(a.dueDate)}${isOverdue?' ⚠️ Overdue':''}</span>` : ''}
+            <span class="priority-${a.priority}">${capitalize(a.priority)}</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px">
+          <button class="btn-icon btn-sm" onclick="editActionItem('${m.id}','${a.id}')" title="Edit">✏️</button>
+          <button class="btn-icon btn-sm" onclick="deleteActionItem('${m.id}','${a.id}')" title="Delete" style="color:var(--red)">×</button>
+        </div>
+      </div>`;
+    }).join('')}
+    <button class="add-item-btn" onclick="addActionItem('${m.id}')">+ Add Action Item</button>
+  `;
+}
+
+function cycleActionStatus(meetingId, actionId) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  const a = (m.actions||[]).find(x => x.id === actionId);
+  if (!a) return;
+  const cycle = { todo: 'inprogress', inprogress: 'done', done: 'todo' };
+  a.status = cycle[a.status] || 'todo';
+  save();
+  if (state.currentView === 'meeting') renderTab();
+  else if (state.currentView === 'actionTracker') renderActionTrackerTable();
+  updateNavBadges();
+}
+
+function addActionItem(meetingId) {
+  const m = getMeeting(meetingId);
+  const participants = (m?.participants||[]).map(p => p.name);
+  showModal('Add Action Item', `
+    <div class="form-group"><label>Title</label><input type="text" id="actTitle" placeholder="Action item..." /></div>
+    <div class="form-row">
+      <div class="form-group"><label>Assignee</label>
+        <input type="text" id="actAssignee" list="assigneeList" placeholder="Who's responsible?" />
+        <datalist id="assigneeList">${participants.map(p => `<option value="${escAttr(p)}">`).join('')}</datalist>
+      </div>
+      <div class="form-group"><label>Due Date</label><input type="date" id="actDue" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Priority</label>
+        <select id="actPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select id="actStatus"><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select>
+      </div>
+    </div>
+  `, () => {
+    const title = document.getElementById('actTitle').value.trim();
+    if (!title) return toast('Title required', 'error');
+    if (!m.actions) m.actions = [];
+    m.actions.push({
+      id: genId(), title,
+      assignee: document.getElementById('actAssignee').value.trim(),
+      dueDate: document.getElementById('actDue').value,
+      priority: document.getElementById('actPriority').value,
+      status: document.getElementById('actStatus').value
+    });
+    save(); closeModal(); renderMeetingView(); updateNavBadges();
+  });
+}
+
+function editActionItem(meetingId, actionId) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  const a = (m.actions||[]).find(x => x.id === actionId);
+  if (!a) return;
+  const participants = (m.participants||[]).map(p => p.name);
+  showModal('Edit Action Item', `
+    <div class="form-group"><label>Title</label><input type="text" id="actTitle" value="${escAttr(a.title)}" /></div>
+    <div class="form-row">
+      <div class="form-group"><label>Assignee</label>
+        <input type="text" id="actAssignee" list="assigneeList2" value="${escAttr(a.assignee||'')}" />
+        <datalist id="assigneeList2">${participants.map(p => `<option value="${escAttr(p)}">`).join('')}</datalist>
+      </div>
+      <div class="form-group"><label>Due Date</label><input type="date" id="actDue" value="${a.dueDate||''}" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Priority</label>
+        <select id="actPriority"><option value="high" ${a.priority==='high'?'selected':''}>High</option><option value="medium" ${a.priority==='medium'?'selected':''}>Medium</option><option value="low" ${a.priority==='low'?'selected':''}>Low</option></select>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select id="actStatus"><option value="todo" ${a.status==='todo'?'selected':''}>To Do</option><option value="inprogress" ${a.status==='inprogress'?'selected':''}>In Progress</option><option value="done" ${a.status==='done'?'selected':''}>Done</option></select>
+      </div>
+    </div>
+  `, () => {
+    a.title = document.getElementById('actTitle').value.trim();
+    if (!a.title) return toast('Title required', 'error');
+    a.assignee = document.getElementById('actAssignee').value.trim();
+    a.dueDate = document.getElementById('actDue').value;
+    a.priority = document.getElementById('actPriority').value;
+    a.status = document.getElementById('actStatus').value;
+    save(); closeModal(); renderMeetingView(); updateNavBadges();
+  });
+}
+
+function deleteActionItem(meetingId, actionId) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  m.actions = (m.actions||[]).filter(a => a.id !== actionId);
+  save(); renderTab(); updateNavBadges();
+}
+
+// ===== DECISIONS TAB =====
+function renderDecisionsTab(el, m) {
+  el.innerHTML = `
+    ${(m.decisions||[]).map(d => `
+      <div class="decision-item">
+        <div class="dec-header">
+          <span class="dec-status dec-${d.status}">${capitalize(d.status)}</span>
+          <span class="dec-title">${esc(d.title)}</span>
+          <div style="display:flex;gap:4px;margin-left:auto">
+            <button class="btn-icon btn-sm" onclick="editDecision('${m.id}','${d.id}')" title="Edit">✏️</button>
+            <button class="btn-icon btn-sm" onclick="deleteDecision('${m.id}','${d.id}')" title="Delete" style="color:var(--red)">×</button>
+          </div>
+        </div>
+        ${d.description ? `<div class="dec-desc">${esc(d.description)}</div>` : ''}
+        <div class="dec-meta">
+          <span>👤 ${esc(d.madeBy||'—')}</span>
+          <span>📅 ${d.date ? formatDateShort(d.date) : '—'}</span>
+        </div>
+      </div>
+    `).join('')}
+    <button class="add-item-btn" onclick="addDecision('${m.id}')">+ Add Decision</button>
+  `;
+}
+
+function addDecision(meetingId) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  const participants = (m.participants||[]).map(p => p.name);
+  const agendaItems = (m.agenda||[]).map(a => ({ id: a.id, title: a.title }));
+  showModal('Add Decision', `
+    <div class="form-group"><label>Decision</label><input type="text" id="decTitle" placeholder="What was decided?" /></div>
+    <div class="form-group"><label>Description</label><textarea id="decDesc" rows="2" placeholder="Context and rationale..."></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Made By</label>
+        <input type="text" id="decBy" list="decByList" placeholder="Who made this decision?" />
+        <datalist id="decByList">${participants.map(p => `<option value="${escAttr(p)}">`).join('')}</datalist>
+      </div>
+      <div class="form-group"><label>Date</label><input type="date" id="decDate" value="${new Date().toISOString().split('T')[0]}" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Status</label>
+        <select id="decStatus"><option value="proposed">Proposed</option><option value="approved" selected>Approved</option><option value="deferred">Deferred</option><option value="rejected">Rejected</option></select>
+      </div>
+      <div class="form-group"><label>Related Agenda Item</label>
+        <select id="decAgenda"><option value="">None</option>${agendaItems.map(a => `<option value="${a.id}">${esc(a.title)}</option>`).join('')}</select>
+      </div>
+    </div>
+  `, () => {
+    const title = document.getElementById('decTitle').value.trim();
+    if (!title) return toast('Decision title required', 'error');
+    if (!m.decisions) m.decisions = [];
+    m.decisions.push({
+      id: genId(), title,
+      description: document.getElementById('decDesc').value.trim(),
+      madeBy: document.getElementById('decBy').value.trim(),
+      date: document.getElementById('decDate').value,
+      status: document.getElementById('decStatus').value,
+      agendaItemId: document.getElementById('decAgenda').value || null
+    });
+    save(); closeModal(); renderMeetingView();
+  });
+}
+
+function editDecision(meetingId, decisionId) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  const d = (m.decisions||[]).find(x => x.id === decisionId);
+  if (!d) return;
+  const participants = (m.participants||[]).map(p => p.name);
+  const agendaItems = (m.agenda||[]).map(a => ({ id: a.id, title: a.title }));
+  showModal('Edit Decision', `
+    <div class="form-group"><label>Decision</label><input type="text" id="decTitle" value="${escAttr(d.title)}" /></div>
+    <div class="form-group"><label>Description</label><textarea id="decDesc" rows="2">${esc(d.description||'')}</textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Made By</label>
+        <input type="text" id="decBy" list="decByList2" value="${escAttr(d.madeBy||'')}" />
+        <datalist id="decByList2">${participants.map(p => `<option value="${escAttr(p)}">`).join('')}</datalist>
+      </div>
+      <div class="form-group"><label>Date</label><input type="date" id="decDate" value="${d.date||''}" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Status</label>
+        <select id="decStatus"><option value="proposed" ${d.status==='proposed'?'selected':''}>Proposed</option><option value="approved" ${d.status==='approved'?'selected':''}>Approved</option><option value="deferred" ${d.status==='deferred'?'selected':''}>Deferred</option><option value="rejected" ${d.status==='rejected'?'selected':''}>Rejected</option></select>
+      </div>
+      <div class="form-group"><label>Related Agenda Item</label>
+        <select id="decAgenda"><option value="">None</option>${agendaItems.map(a => `<option value="${a.id}" ${d.agendaItemId===a.id?'selected':''}>${esc(a.title)}</option>`).join('')}</select>
+      </div>
+    </div>
+  `, () => {
+    d.title = document.getElementById('decTitle').value.trim();
+    if (!d.title) return toast('Title required', 'error');
+    d.description = document.getElementById('decDesc').value.trim();
+    d.madeBy = document.getElementById('decBy').value.trim();
+    d.date = document.getElementById('decDate').value;
+    d.status = document.getElementById('decStatus').value;
+    d.agendaItemId = document.getElementById('decAgenda').value || null;
+    save(); closeModal(); renderTab();
+  });
+}
+
+function deleteDecision(meetingId, decisionId) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  m.decisions = (m.decisions||[]).filter(d => d.id !== decisionId);
+  save(); renderTab();
+}
+
+// ===== PARTICIPANTS =====
+function toggleAttendance(meetingId, idx) {
+  const m = getMeeting(meetingId);
+  if (!m || !m.participants[idx]) return;
+  m.participants[idx].attended = !m.participants[idx].attended;
+  save(); renderMeetingView();
+}
+
+function removeParticipant(meetingId, idx) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  m.participants.splice(idx, 1);
+  save(); renderMeetingView();
+}
+
+function addParticipantPrompt(meetingId) {
+  showModal('Add Participant', `
+    <div class="form-group"><label>Name</label><input type="text" id="pName" placeholder="Participant name" /></div>
+  `, () => {
+    const name = document.getElementById('pName').value.trim();
+    if (!name) return toast('Name required', 'error');
+    const m = getMeeting(meetingId);
+    if (!m) return;
+    if (!m.participants) m.participants = [];
+    m.participants.push({ name, invited: true, attended: false });
+    save(); closeModal(); renderMeetingView();
+  });
+}
+
+// ===== MEETING CRUD =====
+function openNewMeetingModal() {
+  const today = new Date().toISOString().split('T')[0];
+  showModal('New Meeting', `
+    <div class="form-group"><label>Title</label><input type="text" id="mtTitle" placeholder="Meeting title..." /></div>
+    <div class="form-row">
+      <div class="form-group"><label>Type</label>
+        <select id="mtType">
+          ${Object.entries(MEETING_TYPES).map(([k,v]) => `<option value="${k}">${v.emoji} ${v.label}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select id="mtStatus"><option value="upcoming">Upcoming</option><option value="inprogress">In Progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Date</label><input type="date" id="mtDate" value="${today}" /></div>
+      <div class="form-group"><label>Time</label><input type="time" id="mtTime" value="10:00" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Duration (min)</label><input type="number" id="mtDuration" value="30" min="5" step="5" /></div>
+      <div class="form-group"><label>Location / Link</label><input type="text" id="mtLocation" placeholder="Room or meeting URL" /></div>
+    </div>
+    <div class="form-group"><label>Participants (comma-separated)</label><input type="text" id="mtParticipants" placeholder="AJ, Priya, Rahul..." /></div>
+    <div class="form-group">
+      <label>Start from template?</label>
+      <select id="mtTemplate">
+        <option value="">No template — blank agenda</option>
+        ${Object.entries(TEMPLATES).map(([k,items]) => {
+          const t = MEETING_TYPES[k];
+          return `<option value="${k}">${t.emoji} ${t.label} (${items.length} items)</option>`;
+        }).join('')}
+      </select>
+    </div>
+  `, () => {
+    const title = document.getElementById('mtTitle').value.trim();
+    if (!title) return toast('Title required', 'error');
+    const type = document.getElementById('mtType').value;
+    const template = document.getElementById('mtTemplate').value;
+    const agenda = template && TEMPLATES[template]
+      ? TEMPLATES[template].map(item => ({ ...item, id: genId(), presenter: item.presenter || '' }))
+      : [];
+    const participants = document.getElementById('mtParticipants').value.split(',').map(s => s.trim()).filter(Boolean).map(name => ({ name, invited: true, attended: false }));
+    const meeting = {
+      id: genId(), title, type,
+      date: document.getElementById('mtDate').value,
+      time: document.getElementById('mtTime').value,
+      duration: parseInt(document.getElementById('mtDuration').value) || 30,
+      location: document.getElementById('mtLocation').value.trim(),
+      status: document.getElementById('mtStatus').value,
+      participants, agenda,
+      notes: '', actions: [], decisions: []
+    };
+    state.meetings.push(meeting);
+    save(); closeModal(); openMeeting(meeting.id); updateNavBadges();
+    toast('Meeting created!', 'success');
+  });
+}
+
+function editMeetingModal(meetingId) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  showModal('Edit Meeting', `
+    <div class="form-group"><label>Title</label><input type="text" id="mtTitle" value="${escAttr(m.title)}" /></div>
+    <div class="form-row">
+      <div class="form-group"><label>Type</label>
+        <select id="mtType">
+          ${Object.entries(MEETING_TYPES).map(([k,v]) => `<option value="${k}" ${m.type===k?'selected':''}>${v.emoji} ${v.label}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select id="mtStatus">
+          <option value="upcoming" ${m.status==='upcoming'?'selected':''}>Upcoming</option>
+          <option value="inprogress" ${m.status==='inprogress'?'selected':''}>In Progress</option>
+          <option value="completed" ${m.status==='completed'?'selected':''}>Completed</option>
+          <option value="cancelled" ${m.status==='cancelled'?'selected':''}>Cancelled</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Date</label><input type="date" id="mtDate" value="${m.date}" /></div>
+      <div class="form-group"><label>Time</label><input type="time" id="mtTime" value="${m.time||''}" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Duration (min)</label><input type="number" id="mtDuration" value="${m.duration}" min="5" step="5" /></div>
+      <div class="form-group"><label>Location / Link</label><input type="text" id="mtLocation" value="${escAttr(m.location||'')}" /></div>
+    </div>
+  `, () => {
+    m.title = document.getElementById('mtTitle').value.trim();
+    if (!m.title) return toast('Title required', 'error');
+    m.type = document.getElementById('mtType').value;
+    m.status = document.getElementById('mtStatus').value;
+    m.date = document.getElementById('mtDate').value;
+    m.time = document.getElementById('mtTime').value;
+    m.duration = parseInt(document.getElementById('mtDuration').value) || 30;
+    m.location = document.getElementById('mtLocation').value.trim();
+    save(); closeModal(); renderMeetingView(); renderSidebar(); updateNavBadges();
+    const t = MEETING_TYPES[m.type] || { emoji: '📅' };
+    document.getElementById('topbarTitle').textContent = `${t.emoji} ${m.title}`;
+    toast('Meeting updated!', 'success');
+  });
+}
+
+function deleteMeeting(meetingId) {
+  if (!confirm('Delete this meeting? This cannot be undone.')) return;
+  state.meetings = state.meetings.filter(m => m.id !== meetingId);
+  save(); switchView('allMeetings'); renderSidebar(); updateNavBadges();
+  toast('Meeting deleted', 'success');
+}
+
+// ===== EXPORT / IMPORT =====
+function exportMeetingMarkdown(meetingId) {
+  const m = getMeeting(meetingId);
+  if (!m) return;
+  const t = MEETING_TYPES[m.type] || { emoji: '📅', label: 'Meeting' };
+  let md = `# ${t.emoji} ${m.title}\n\n`;
+  md += `**Type:** ${t.label} | **Date:** ${formatDate(m.date)} | **Time:** ${m.time||'TBD'} | **Duration:** ${m.duration}min\n`;
+  md += `**Location:** ${m.location || 'N/A'} | **Status:** ${capitalize(m.status)}\n\n`;
+
+  // Participants
+  md += `## Participants\n`;
+  (m.participants||[]).forEach(p => {
+    md += `- ${p.attended ? '✅' : '⬜'} ${p.name}${p.attended ? ' (attended)' : ' (invited)'}\n`;
+  });
+  md += '\n';
+
+  // Agenda
+  if ((m.agenda||[]).length) {
+    md += `## Agenda\n`;
+    (m.agenda||[]).forEach((item, i) => {
+      md += `${i+1}. **${item.title}** (${item.timeMinutes||0}min)${item.presenter ? ' — ' + item.presenter : ''}\n`;
+      if (item.description) md += `   ${item.description}\n`;
+    });
+    md += '\n';
+  }
+
+  // Notes
+  if (m.notes) {
+    md += `## Notes\n${m.notes}\n\n`;
+  }
+
+  // Actions
+  if ((m.actions||[]).length) {
+    md += `## Action Items\n`;
+    m.actions.forEach(a => {
+      const check = a.status === 'done' ? '✅' : a.status === 'inprogress' ? '🔄' : '⬜';
+      md += `- ${check} **${a.title}** — ${a.assignee||'Unassigned'} (Due: ${a.dueDate || 'TBD'}) [${capitalize(a.priority)}]\n`;
+    });
+    md += '\n';
+  }
+
+  // Decisions
+  if ((m.decisions||[]).length) {
+    md += `## Decisions\n`;
+    m.decisions.forEach(d => {
+      const icon = { approved: '✅', rejected: '❌', deferred: '⏳', proposed: '💡' }[d.status] || '📌';
+      md += `- ${icon} **${d.title}** [${capitalize(d.status)}] — ${d.madeBy||'Team'} (${d.date||''})\n`;
+      if (d.description) md += `  ${d.description}\n`;
+    });
+  }
+
+  navigator.clipboard.writeText(md).then(() => {
+    toast('Markdown copied to clipboard!', 'success');
+  }).catch(() => {
+    // Fallback: download
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${m.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`;
+    a.click();
+    toast('Markdown downloaded!', 'success');
+  });
+}
+
+function exportJSON() {
+  const data = JSON.stringify(state.meetings, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `meeting-forge-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  toast('JSON exported!', 'success');
+}
+
+function triggerImport() {
+  document.getElementById('importInput').click();
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw new Error('Invalid format');
+      if (confirm(`Import ${data.length} meetings? This will REPLACE all existing data.`)) {
+        state.meetings = data;
+        save();
+        switchView('dashboard');
+        renderSidebar();
+        updateNavBadges();
+        toast(`Imported ${data.length} meetings!`, 'success');
+      }
+    } catch(err) {
+      toast('Invalid JSON file: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ===== MODAL =====
+function showModal(title, bodyHtml, onSave) {
+  const overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-header">
+      <h3>${title}</h3>
+      <button class="btn-icon" onclick="closeModal()" style="font-size:18px">✕</button>
+    </div>
+    <div class="modal-body">${bodyHtml}</div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modalSaveBtn">Save</button>
+    </div>
+  `;
+  overlay.classList.add('show');
+  document.getElementById('modalSaveBtn').onclick = onSave;
+  // Focus first input
+  setTimeout(() => {
+    const first = document.querySelector('.modal-body input, .modal-body textarea');
+    if (first) first.focus();
+  }, 100);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+function closeModalCheck(e) {
+  if (e.target === e.currentTarget) closeModal();
+}
+
+// ===== TOAST =====
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ===== KEYBOARD SHORTCUTS =====
+function showShortcuts() {
+  showModal('Keyboard Shortcuts', `
+    <div class="shortcuts-grid">
+      <div class="shortcut-item"><span class="shortcut-key">N</span> New Meeting</div>
+      <div class="shortcut-item"><span class="shortcut-key">/</span> Search</div>
+      <div class="shortcut-item"><span class="shortcut-key">1</span> Dashboard</div>
+      <div class="shortcut-item"><span class="shortcut-key">2</span> All Meetings</div>
+      <div class="shortcut-item"><span class="shortcut-key">3</span> Action Tracker</div>
+      <div class="shortcut-item"><span class="shortcut-key">4</span> Decisions Log</div>
+      <div class="shortcut-item"><span class="shortcut-key">M</span> Export Markdown</div>
+      <div class="shortcut-item"><span class="shortcut-key">E</span> Export JSON</div>
+      <div class="shortcut-item"><span class="shortcut-key">I</span> Import JSON</div>
+      <div class="shortcut-item"><span class="shortcut-key">?</span> This help</div>
+      <div class="shortcut-item"><span class="shortcut-key">Esc</span> Close modal</div>
+    </div>
+  `, () => closeModal());
+  // Hide save button for help modal
+  const saveBtn = document.getElementById('modalSaveBtn');
+  if (saveBtn) saveBtn.style.display = 'none';
+}
+
+document.addEventListener('keydown', e => {
+  // Don't trigger when typing in inputs
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') {
+      e.target.blur();
+      closeModal();
+    }
+    return;
+  }
+  if (document.getElementById('modalOverlay').classList.contains('show')) {
+    if (e.key === 'Escape') closeModal();
+    return;
+  }
+  switch(e.key.toLowerCase()) {
+    case 'n': openNewMeetingModal(); break;
+    case '/': e.preventDefault(); document.getElementById('searchInput').focus(); break;
+    case '1': switchView('dashboard'); break;
+    case '2': switchView('allMeetings'); break;
+    case '3': switchView('actionTracker'); break;
+    case '4': switchView('decisionsLog'); break;
+    case 'm':
+      if (state.currentView === 'meeting' && state.currentMeetingId) {
+        exportMeetingMarkdown(state.currentMeetingId);
+      }
+      break;
+    case 'e': exportJSON(); break;
+    case 'i': triggerImport(); break;
+    case '?': showShortcuts(); break;
+    case 'escape': closeModal(); break;
+  }
+});
+
+// ===== HELPERS =====
+function getAllActions() {
+  const all = [];
+  state.meetings.forEach(m => {
+    (m.actions||[]).forEach(a => {
+      all.push({ action: a, meetingId: m.id, meetingTitle: m.title });
+    });
+  });
+  return all;
+}
+
+function getAllDecisions() {
+  const all = [];
+  state.meetings.forEach(m => {
+    (m.decisions||[]).forEach(d => {
+      all.push({ decision: d, meetingId: m.id, meetingTitle: m.title });
+    });
+  });
+  // Sort by date desc
+  all.sort((a,b) => new Date(b.decision.date||0) - new Date(a.decision.date||0));
+  return all;
+}
+
+function getThisWeekMeetings() {
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  startOfWeek.setHours(0,0,0,0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 7);
+  return state.meetings.filter(m => {
+    const d = new Date(m.date);
+    return d >= startOfWeek && d < endOfWeek;
+  });
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return 'No date';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatDateShort(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const tomorrow = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
+  const yesterday = new Date(now.getTime() - 86400000).toISOString().split('T')[0];
+  if (dateStr === today) return 'Today';
+  if (dateStr === tomorrow) return 'Tomorrow';
+  if (dateStr === yesterday) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+function esc(s) { if (!s) return ''; const el = document.createElement('span'); el.textContent = s; return el.innerHTML; }
+function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
+
+</script>
+</body>
+</html>

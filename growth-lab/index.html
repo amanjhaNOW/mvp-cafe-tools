@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Growth Lab — Growth Experiment & Loop Tracker</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-primary:#0f1117;--bg-secondary:#1a1d27;--bg-tertiary:#242836;--bg-card:#1e2230;
+  --text-primary:#e8eaed;--text-secondary:#9aa0b0;--text-muted:#6b7280;
+  --accent:#6c5ce7;--accent-glow:rgba(108,92,231,0.3);--accent-light:#a29bfe;
+  --green:#00b894;--green-bg:rgba(0,184,148,0.15);--green-border:rgba(0,184,148,0.4);
+  --amber:#fdcb6e;--amber-bg:rgba(253,203,110,0.15);--amber-border:rgba(253,203,110,0.4);
+  --red:#e17055;--red-bg:rgba(225,112,85,0.15);--red-border:rgba(225,112,85,0.4);
+  --blue:#74b9ff;--blue-bg:rgba(116,185,255,0.15);
+  --purple:#a29bfe;--purple-bg:rgba(162,155,254,0.15);
+  --pink:#fd79a8;--pink-bg:rgba(253,121,168,0.15);
+  --cyan:#81ecec;--cyan-bg:rgba(129,236,236,0.15);
+  --border:#2d3348;--border-light:#3d4460;
+  --radius:12px;--radius-sm:8px;--radius-lg:16px;
+  --shadow:0 4px 24px rgba(0,0,0,0.3);--shadow-lg:0 8px 40px rgba(0,0,0,0.5);
+  --transition:0.2s ease;
+  --funnel-acq:#6c5ce7;--funnel-act:#00b894;--funnel-ret:#fdcb6e;--funnel-rev:#e17055;--funnel-ref:#fd79a8;
+}
+[data-theme="light"]{
+  --bg-primary:#f5f6fa;--bg-secondary:#ffffff;--bg-tertiary:#eef0f5;--bg-card:#ffffff;
+  --text-primary:#2d3436;--text-secondary:#636e72;--text-muted:#b2bec3;
+  --border:#dfe6e9;--border-light:#b2bec3;
+  --shadow:0 4px 24px rgba(0,0,0,0.08);--shadow-lg:0 8px 40px rgba(0,0,0,0.12);
+}
+html{font-size:15px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden}
+a{color:var(--accent-light);text-decoration:none}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;font-size:0.9rem;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.55rem 0.75rem;outline:none;transition:border var(--transition)}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:80px}
+select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa0b0' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 0.7rem center;padding-right:2rem}
+::placeholder{color:var(--text-muted)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-light)}
+
+/* Layout */
+.app{display:flex;flex-direction:column;min-height:100vh}
+header{background:var(--bg-secondary);border-bottom:1px solid var(--border);padding:0.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.logo{display:flex;align-items:center;gap:0.6rem}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--pink));border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.logo h1{font-size:1.1rem;font-weight:700;background:linear-gradient(135deg,var(--accent-light),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo span{font-size:0.75rem;color:var(--text-muted);margin-left:0.3rem}
+.header-actions{display:flex;align-items:center;gap:0.5rem}
+.icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;transition:all var(--transition);color:var(--text-secondary)}
+.icon-btn:hover{background:var(--bg-tertiary);color:var(--text-primary)}
+.icon-btn svg{width:18px;height:18px}
+
+/* Tabs */
+nav{background:var(--bg-secondary);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab{padding:0.75rem 1.1rem;font-size:0.85rem;font-weight:500;color:var(--text-secondary);border-bottom:2px solid transparent;transition:all var(--transition);white-space:nowrap;display:flex;align-items:center;gap:0.4rem}
+.tab:hover{color:var(--text-primary);background:var(--bg-tertiary)}
+.tab.active{color:var(--accent-light);border-bottom-color:var(--accent)}
+.tab .badge{background:var(--accent);color:#fff;font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:10px;font-weight:600}
+.tab svg{width:16px;height:16px}
+
+/* Main content */
+main{flex:1;padding:1.5rem;max-width:1400px;width:100%;margin:0 auto}
+.view{display:none;animation:fadeIn 0.3s ease}
+.view.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;flex-wrap:wrap}
+.search-box{position:relative;flex:1;min-width:200px;max-width:400px}
+.search-box input{width:100%;padding-left:2.2rem}
+.search-box svg{position:absolute;left:0.7rem;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted)}
+.filter-group{display:flex;gap:0.5rem;align-items:center}
+.filter-group select{min-width:140px}
+.btn{padding:0.55rem 1rem;border-radius:var(--radius-sm);font-size:0.85rem;font-weight:600;transition:all var(--transition);display:inline-flex;align-items:center;gap:0.4rem}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#5a4bd6;box-shadow:0 4px 16px var(--accent-glow)}
+.btn-secondary{background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent-light)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:#d35e47}
+.btn-sm{padding:0.35rem 0.7rem;font-size:0.78rem}
+.btn svg{width:16px;height:16px}
+
+/* Cards */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1rem}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem;transition:all var(--transition);position:relative;cursor:pointer}
+.card:hover{border-color:var(--accent);box-shadow:0 4px 20px rgba(108,92,231,0.15);transform:translateY(-2px)}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.6rem}
+.card-title{font-size:0.95rem;font-weight:600;line-height:1.3}
+.card-meta{display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.5rem}
+.stage-badge{font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:20px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em}
+.stage-acquisition{background:rgba(108,92,231,0.2);color:var(--funnel-acq);border:1px solid rgba(108,92,231,0.3)}
+.stage-activation{background:rgba(0,184,148,0.2);color:var(--funnel-act);border:1px solid rgba(0,184,148,0.3)}
+.stage-retention{background:rgba(253,203,110,0.2);color:var(--funnel-ret);border:1px solid rgba(253,203,110,0.3)}
+.stage-revenue{background:rgba(225,112,85,0.2);color:var(--funnel-rev);border:1px solid rgba(225,112,85,0.3)}
+.stage-referral{background:rgba(253,121,168,0.2);color:var(--funnel-ref);border:1px solid rgba(253,121,168,0.3)}
+.status-badge{font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:20px;font-weight:600}
+.status-idea{background:var(--blue-bg);color:var(--blue);border:1px solid rgba(116,185,255,0.3)}
+.status-designing{background:var(--purple-bg);color:var(--purple);border:1px solid rgba(162,155,254,0.3)}
+.status-running{background:var(--cyan-bg);color:var(--cyan);border:1px solid rgba(129,236,236,0.3)}
+.status-analyzing{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.status-won{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.status-lost{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.status-inconclusive{background:rgba(99,110,114,0.2);color:#b2bec3;border:1px solid rgba(99,110,114,0.4)}
+.ice-score{display:inline-flex;align-items:center;gap:0.3rem;font-size:0.8rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:var(--radius-sm)}
+.ice-high{color:var(--green);background:var(--green-bg)}
+.ice-mid{color:var(--amber);background:var(--amber-bg)}
+.ice-low{color:var(--red);background:var(--red-bg)}
+.card-hypothesis{font-size:0.8rem;color:var(--text-secondary);font-style:italic;margin:0.4rem 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:0.6rem;padding-top:0.6rem;border-top:1px solid var(--border)}
+.card-footer .dates{font-size:0.75rem;color:var(--text-muted)}
+.card-tags{display:flex;gap:0.3rem;flex-wrap:wrap}
+.tag{font-size:0.65rem;padding:0.1rem 0.4rem;background:var(--bg-tertiary);border-radius:4px;color:var(--text-secondary)}
+
+/* Kanban */
+.kanban{display:flex;gap:1rem;overflow-x:auto;padding-bottom:1rem;min-height:70vh}
+.kanban-col{flex:0 0 280px;background:var(--bg-secondary);border-radius:var(--radius);border:1px solid var(--border);display:flex;flex-direction:column;max-height:calc(100vh - 200px)}
+.kanban-col-header{padding:0.75rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:0.85rem}
+.kanban-col-header .count{font-size:0.7rem;background:var(--bg-tertiary);padding:0.15rem 0.5rem;border-radius:10px;color:var(--text-secondary)}
+.kanban-items{flex:1;padding:0.5rem;overflow-y:auto;min-height:100px}
+.kanban-items.drag-over{background:rgba(108,92,231,0.08);border-radius:var(--radius-sm)}
+.kanban-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem;margin-bottom:0.5rem;cursor:grab;transition:all var(--transition)}
+.kanban-card:hover{border-color:var(--accent)}
+.kanban-card.dragging{opacity:0.5;transform:rotate(2deg)}
+.kanban-card .card-title{font-size:0.85rem;margin-bottom:0.4rem}
+.kanban-card .card-meta{margin-bottom:0}
+
+/* Funnel */
+.funnel-container{max-width:800px;margin:0 auto}
+.funnel-stage{position:relative;margin-bottom:0.5rem;cursor:pointer;transition:all var(--transition)}
+.funnel-stage:hover{transform:scale(1.02)}
+.funnel-bar{height:80px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;position:relative;overflow:hidden}
+.funnel-bar::before{content:'';position:absolute;inset:0;opacity:0.15}
+.funnel-stage-name{font-weight:700;font-size:1rem;z-index:1}
+.funnel-stats{display:flex;gap:1.5rem;align-items:center;z-index:1}
+.funnel-stat{text-align:center}
+.funnel-stat-value{font-size:1.2rem;font-weight:700}
+.funnel-stat-label{font-size:0.7rem;color:var(--text-secondary)}
+.funnel-experiments{margin-top:0.5rem;padding:0 0.5rem;display:none}
+.funnel-experiments.open{display:block;animation:fadeIn 0.3s ease}
+
+/* Playbook */
+.playbook-stage{margin-bottom:2rem}
+.playbook-stage-header{display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid var(--border)}
+.playbook-stage-header h3{font-size:1.1rem}
+.playbook-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem}
+.playbook-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem}
+.playbook-card .result-badge{display:inline-block;font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:20px;font-weight:600;margin-bottom:0.5rem}
+.playbook-card .learning{font-size:0.9rem;line-height:1.5;color:var(--text-secondary);margin-top:0.5rem}
+.worked{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.didnt-work{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.unclear{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.playbook-section-title{font-size:0.9rem;font-weight:600;margin:1.5rem 0 0.75rem;display:flex;align-items:center;gap:0.5rem}
+.playbook-section-title svg{width:18px;height:18px}
+
+/* Loops */
+.loops-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:1.5rem}
+.loop-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;transition:all var(--transition)}
+.loop-card:hover{border-color:var(--accent);box-shadow:var(--shadow)}
+.loop-card h3{font-size:1rem;margin-bottom:0.3rem}
+.loop-card p{font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem}
+.loop-svg-container{background:var(--bg-tertiary);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;display:flex;justify-content:center}
+.loop-experiments{font-size:0.8rem;color:var(--text-muted)}
+
+/* Dashboard */
+.dash-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;text-align:center}
+.stat-card .stat-value{font-size:2rem;font-weight:800;background:linear-gradient(135deg,var(--accent-light),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-card .stat-label{font-size:0.78rem;color:var(--text-secondary);margin-top:0.2rem}
+.dash-charts{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.chart-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem}
+.chart-card h3{font-size:0.95rem;font-weight:600;margin-bottom:1rem}
+.chart-card.full-width{grid-column:1/-1}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;visibility:hidden;transition:all 0.3s ease}
+.modal-overlay.open{opacity:1;visibility:visible}
+.modal{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:640px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:translateY(20px);transition:transform 0.3s ease}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border)}
+.modal-header h2{font-size:1.1rem}
+.modal-body{padding:1.5rem}
+.modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:0.75rem}
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;font-size:0.8rem;font-weight:600;color:var(--text-secondary);margin-bottom:0.3rem}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+.ice-display{display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--bg-tertiary);border-radius:var(--radius-sm);margin-top:0.5rem}
+.ice-display .ice-label{font-size:0.8rem;color:var(--text-secondary)}
+.hypothesis-helper{font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;font-style:italic}
+
+/* Toast */
+.toast-container{position:fixed;bottom:1.5rem;right:1.5rem;z-index:300;display:flex;flex-direction:column;gap:0.5rem}
+.toast{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 1rem;font-size:0.85rem;box-shadow:var(--shadow);animation:slideInRight 0.3s ease;display:flex;align-items:center;gap:0.5rem}
+.toast.success{border-left:3px solid var(--green)}
+.toast.error{border-left:3px solid var(--red)}
+@keyframes slideInRight{from{opacity:0;transform:translateX(50px)}to{opacity:1;transform:translateX(0)}}
+
+/* Keyboard shortcut hint */
+.kbd{display:inline-block;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:4px;padding:0.1rem 0.35rem;font-size:0.7rem;font-family:monospace;color:var(--text-secondary);line-height:1.4}
+
+/* Empty state */
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text-muted)}
+.empty-state svg{width:48px;height:48px;margin-bottom:1rem;opacity:0.5}
+.empty-state p{font-size:0.9rem}
+
+/* Responsive */
+@media(max-width:768px){
+  main{padding:1rem}
+  .card-grid{grid-template-columns:1fr}
+  .dash-charts{grid-template-columns:1fr}
+  .dash-stats{grid-template-columns:repeat(2,1fr)}
+  .form-row,.form-row-3{grid-template-columns:1fr}
+  .kanban-col{flex:0 0 260px}
+  .toolbar{flex-direction:column;align-items:stretch}
+  .search-box{max-width:100%}
+  .loops-grid{grid-template-columns:1fr}
+  header{padding:0.75rem 1rem}
+  nav{padding:0 0.5rem}
+}
+@media(max-width:480px){
+  .dash-stats{grid-template-columns:1fr 1fr}
+  .funnel-bar{height:65px;padding:0 1rem}
+  .funnel-stat-value{font-size:1rem}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🧪</div>
+      <div><h1>Growth Lab</h1></div>
+      <span>Day 28</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="showImportExport('import')" title="Import (I)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="icon-btn" onclick="showImportExport('export')" title="Export (E)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </button>
+      <button class="icon-btn" onclick="toggleDarkMode()" title="Toggle theme (D)">
+        <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="btn btn-primary btn-sm" onclick="openNewExperiment()" title="New Experiment (N)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New
+      </button>
+    </div>
+  </header>
+
+  <nav id="tabs">
+    <button class="tab active" data-view="experiments" onclick="switchView('experiments')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Experiments <span class="badge" id="exp-count">0</span>
+    </button>
+    <button class="tab" data-view="pipeline" onclick="switchView('pipeline')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Pipeline
+    </button>
+    <button class="tab" data-view="funnel" onclick="switchView('funnel')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      AARRR Funnel
+    </button>
+    <button class="tab" data-view="playbook" onclick="switchView('playbook')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Playbook
+    </button>
+    <button class="tab" data-view="loops" onclick="switchView('loops')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Loops
+    </button>
+    <button class="tab" data-view="dashboard" onclick="switchView('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+      Dashboard
+    </button>
+  </nav>
+
+  <main>
+    <!-- EXPERIMENTS VIEW -->
+    <div class="view active" id="view-experiments">
+      <div class="toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="exp-search" placeholder="Search experiments... (/)" oninput="renderExperiments()">
+        </div>
+        <div class="filter-group">
+          <select id="filter-stage" onchange="renderExperiments()">
+            <option value="">All Stages</option>
+            <option value="Acquisition">Acquisition</option>
+            <option value="Activation">Activation</option>
+            <option value="Retention">Retention</option>
+            <option value="Revenue">Revenue</option>
+            <option value="Referral">Referral</option>
+          </select>
+          <select id="filter-status" onchange="renderExperiments()">
+            <option value="">All Statuses</option>
+            <option value="Idea">Idea</option>
+            <option value="Designing">Designing</option>
+            <option value="Running">Running</option>
+            <option value="Analyzing">Analyzing</option>
+            <option value="Won">Won</option>
+            <option value="Lost">Lost</option>
+            <option value="Inconclusive">Inconclusive</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-grid" id="experiments-grid"></div>
+    </div>
+
+    <!-- PIPELINE VIEW -->
+    <div class="view" id="view-pipeline">
+      <div class="toolbar">
+        <h2 style="font-size:1.1rem;font-weight:600">Experiment Pipeline</h2>
+      </div>
+      <div class="kanban" id="kanban-board"></div>
+    </div>
+
+    <!-- FUNNEL VIEW -->
+    <div class="view" id="view-funnel">
+      <div class="toolbar">
+        <h2 style="font-size:1.1rem;font-weight:600">AARRR Pirate Metrics Funnel</h2>
+      </div>
+      <div class="funnel-container" id="funnel-container"></div>
+    </div>
+
+    <!-- PLAYBOOK VIEW -->
+    <div class="view" id="view-playbook">
+      <div class="toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="playbook-search" placeholder="Search learnings..." oninput="renderPlaybook()">
+        </div>
+      </div>
+      <div id="playbook-content"></div>
+    </div>
+
+    <!-- LOOPS VIEW -->
+    <div class="view" id="view-loops">
+      <div class="toolbar">
+        <h2 style="font-size:1.1rem;font-weight:600">Growth Loops</h2>
+        <div style="margin-left:auto">
+          <button class="btn btn-primary btn-sm" onclick="openNewLoop()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Loop
+          </button>
+        </div>
+      </div>
+      <div class="loops-grid" id="loops-grid"></div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div class="view" id="view-dashboard">
+      <div class="toolbar">
+        <h2 style="font-size:1.1rem;font-weight:600">Growth Dashboard</h2>
+      </div>
+      <div class="dash-stats" id="dash-stats"></div>
+      <div class="dash-charts" id="dash-charts"></div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal"></div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+/* ===== STATE ===== */
+const STORAGE_KEY = 'growth-lab-data';
+const STAGES = ['Acquisition','Activation','Retention','Revenue','Referral'];
+const STATUSES = ['Idea','Designing','Running','Analyzing','Won','Lost','Inconclusive'];
+const PIPELINE_COLS = ['Idea','Designing','Running','Analyzing','Complete'];
+const STAGE_COLORS = {Acquisition:'#6c5ce7',Activation:'#00b894',Retention:'#fdcb6e',Revenue:'#e17055',Referral:'#fd79a8'};
+
+let state = loadState();
+
+function defaultState(){
+  return {experiments:getSeedExperiments(),loops:getSeedLoops(),darkMode:true};
+}
+
+function loadState(){
+  try{
+    const d=localStorage.getItem(STORAGE_KEY);
+    if(d){const p=JSON.parse(d);if(p.experiments&&p.experiments.length>0)return p;}
+  }catch(e){}
+  return defaultState();
+}
+
+function saveState(){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+}
+
+function genId(){return 'id_'+Date.now()+'_'+Math.random().toString(36).substr(2,6)}
+
+/* ===== SEED DATA ===== */
+function getSeedExperiments(){
+  return [
+    {id:genId(),title:'LinkedIn CTA in Signature',hypothesis:'We believe that adding a clear CTA to LinkedIn profile signatures will increase website visits because professionals checking profiles will have a direct path to our product.',stage:'Acquisition',status:'Won',impact:8,confidence:7,ease:9,startDate:'2026-02-01',endDate:'2026-02-28',baseline:'120 visits/week from LinkedIn',target:'200 visits/week',actual:'310 visits/week',learning:'Direct CTA in signatures outperformed expectations. Key was making the value prop specific ("Track your signature clicks") rather than generic. LinkedIn profile visitors have high intent.',tags:['linkedin','organic','signature'],notes:'Rolled out to all team members. Will create template variations next.'},
+    {id:genId(),title:'Product Hunt Launch',hypothesis:'We believe that launching on Product Hunt will drive a spike of early adopters because the PH audience actively seeks new productivity tools.',stage:'Acquisition',status:'Running',impact:9,confidence:6,ease:4,startDate:'2026-04-15',endDate:'',baseline:'50 signups/day',target:'500 signups on launch day',actual:'',learning:'',tags:['product-hunt','launch','PR'],notes:'Launch scheduled for April 22. Hunter confirmed. All assets prepared.'},
+    {id:genId(),title:'SEO Landing Pages',hypothesis:'We believe that creating dedicated landing pages for each use case will increase organic traffic because long-tail keywords in email signature tracking have low competition.',stage:'Acquisition',status:'Idea',impact:7,confidence:5,ease:6,startDate:'',endDate:'',baseline:'2,000 organic visits/month',target:'5,000 organic visits/month',actual:'',learning:'',tags:['SEO','content','organic'],notes:'Need to research keywords first. Top candidates: "email signature analytics", "UTM tracking signatures", "team email signatures".'},
+    {id:genId(),title:'Onboarding Checklist',hypothesis:'We believe that a step-by-step onboarding checklist will increase activation rate because new users need guidance on core features to see value quickly.',stage:'Activation',status:'Won',impact:8,confidence:8,ease:7,startDate:'2026-01-15',endDate:'2026-02-10',baseline:'34% complete setup',target:'55% complete setup',actual:'62% complete setup',learning:'Checklist with 5 steps was the sweet spot. More steps caused drop-off. Key insight: showing progress bar increased completion by 18%. Users who completed checklist had 3x higher 30-day retention.',tags:['onboarding','activation','UX'],notes:'Now A/B testing checklist positioning (sidebar vs modal).'},
+    {id:genId(),title:'Template Gallery First Screen',hypothesis:'We believe that showing the template gallery as the first screen after signup will increase time-to-value because users can start with a professional design immediately.',stage:'Activation',status:'Designing',impact:7,confidence:6,ease:8,startDate:'2026-04-01',endDate:'',baseline:'4.2 min to first signature',target:'1.5 min to first signature',actual:'',learning:'',tags:['templates','onboarding','design'],notes:'Wireframes in Figma. Need to decide on 6 vs 12 templates shown.'},
+    {id:genId(),title:'Weekly Analytics Email',hypothesis:'We believe that sending weekly click analytics summaries will increase retention because users will be reminded of the value they\'re getting and discover patterns.',stage:'Retention',status:'Running',impact:7,confidence:7,ease:8,startDate:'2026-03-15',endDate:'',baseline:'45% monthly active rate',target:'60% monthly active rate',actual:'',learning:'',tags:['email','analytics','retention'],notes:'Sending every Monday 9 AM. Open rate so far: 52%. Click-through: 28%.'},
+    {id:genId(),title:'Team Activity Digest',hypothesis:'We believe that a team activity digest showing colleague signature performance will increase retention because social proof and friendly competition drive engagement.',stage:'Retention',status:'Idea',impact:6,confidence:5,ease:5,startDate:'',endDate:'',baseline:'',target:'',actual:'',learning:'',tags:['team','social','digest'],notes:'Only relevant for team plans. Need minimum 3 team members for meaningful digest.'},
+    {id:genId(),title:'Annual Plan Discount',hypothesis:'We believe that offering 30% off annual plans during trial will increase revenue because users anchor on monthly price and see annual as a deal.',stage:'Revenue',status:'Analyzing',impact:8,confidence:7,ease:9,startDate:'2026-03-01',endDate:'2026-04-01',baseline:'12% annual plan selection',target:'25% annual plan selection',actual:'22% annual plan selection',learning:'',tags:['pricing','annual','discount'],notes:'Close to target. Might need to adjust discount to 35% or add bonus month.'},
+    {id:genId(),title:'Usage-Based Upsell Prompt',hypothesis:'We believe that showing upgrade prompts when users hit free tier limits will increase conversion because the pain of hitting a limit is a natural trigger for purchasing.',stage:'Revenue',status:'Idea',impact:8,confidence:8,ease:6,startDate:'',endDate:'',baseline:'3% free-to-paid conversion',target:'7% free-to-paid conversion',actual:'',learning:'',tags:['upsell','freemium','conversion'],notes:'Key limits: 2 signatures (free), 5 team members (free). Show prompt at 80% of limit.'},
+    {id:genId(),title:'Share Analytics Report',hypothesis:'We believe that making it easy to share analytics reports with stakeholders will drive referrals because recipients see UTMStamp branding and want it for their team.',stage:'Referral',status:'Won',impact:7,confidence:6,ease:8,startDate:'2026-02-15',endDate:'2026-03-20',baseline:'0.1 referrals/user',target:'0.3 referrals/user',actual:'0.4 referrals/user',learning:'Public report links with UTMStamp branding were the key. 15% of report viewers signed up. Most effective when reports showed high click numbers (social proof). Added "Powered by UTMStamp" watermark.',tags:['referral','analytics','sharing'],notes:'Will add team-specific report templates next.'},
+    {id:genId(),title:'Team Invite Incentive',hypothesis:'We believe that offering extra features for team invites will drive expansion because existing users become champions who sell internally.',stage:'Referral',status:'Designing',impact:8,confidence:5,ease:6,startDate:'2026-04-10',endDate:'',baseline:'1.2 team members/account',target:'3.0 team members/account',actual:'',learning:'',tags:['referral','team','incentive'],notes:'Designing reward tiers: invite 3 → unlock analytics, invite 5 → unlock custom domain.'},
+    {id:genId(),title:'Powered by UTMStamp Badge',hypothesis:'We believe that a "Powered by UTMStamp" badge in free signatures will drive organic signups because every email sent becomes a micro-advertisement.',stage:'Referral',status:'Running',impact:9,confidence:7,ease:9,startDate:'2026-03-01',endDate:'',baseline:'5 organic signups/day',target:'25 organic signups/day',actual:'',learning:'',tags:['viral','badge','organic'],notes:'Badge links to landing page with "Create your own tracked signature" CTA. A/B testing badge designs.'}
+  ];
+}
+
+function getSeedLoops(){
+  return [
+    {id:genId(),name:'Viral Signature Loop',description:'Every email sent is a growth opportunity. Free signatures include UTMStamp branding that drives new signups.',nodes:['User creates signature','Adds to emails','Recipient sees UTMStamp branding','Clicks badge link','Signs up for UTMStamp','Creates their own signature'],experiments:[]},
+    {id:genId(),name:'Team Expansion Loop',description:'Individual value leads to team adoption which creates more data and more value, triggering upgrades.',nodes:['User tracks clicks','Shares analytics with team','Team adopts UTMStamp','More signatures deployed','More click data collected','More value demonstrated','Team upgrades plan'],experiments:[]}
+  ];
+}
+
+/* ===== ICE ===== */
+function iceAvg(e){return e.impact&&e.confidence&&e.ease?((e.impact+e.confidence+e.ease)/3).toFixed(1):'-';}
+function iceClass(score){if(score==='-')return '';const n=parseFloat(score);if(n>7)return 'ice-high';if(n>=4)return 'ice-mid';return 'ice-low';}
+
+/* ===== VIEW SWITCHING ===== */
+let currentView = 'experiments';
+function switchView(view){
+  currentView=view;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector(`.tab[data-view="${view}"]`).classList.add('active');
+  renderCurrentView();
+}
+
+function renderCurrentView(){
+  switch(currentView){
+    case 'experiments':renderExperiments();break;
+    case 'pipeline':renderPipeline();break;
+    case 'funnel':renderFunnel();break;
+    case 'playbook':renderPlaybook();break;
+    case 'loops':renderLoops();break;
+    case 'dashboard':renderDashboard();break;
+  }
+  document.getElementById('exp-count').textContent=state.experiments.length;
+}
+
+/* ===== EXPERIMENTS VIEW ===== */
+function renderExperiments(){
+  const search=document.getElementById('exp-search').value.toLowerCase();
+  const stageF=document.getElementById('filter-stage').value;
+  const statusF=document.getElementById('filter-status').value;
+  let exps=state.experiments.filter(e=>{
+    if(search&&!e.title.toLowerCase().includes(search)&&!e.hypothesis.toLowerCase().includes(search)&&!(e.tags||[]).some(t=>t.toLowerCase().includes(search)))return false;
+    if(stageF&&e.stage!==stageF)return false;
+    if(statusF&&e.status!==statusF)return false;
+    return true;
+  });
+  exps.sort((a,b)=>{const as=parseFloat(iceAvg(a))||0,bs=parseFloat(iceAvg(b))||0;return bs-as;});
+  const grid=document.getElementById('experiments-grid');
+  if(exps.length===0){
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg><p>No experiments found. Create one to get started!</p></div>`;
+    return;
+  }
+  grid.innerHTML=exps.map(e=>{
+    const ice=iceAvg(e);
+    return `<div class="card" onclick="openExperiment('${e.id}')">
+      <div class="card-header">
+        <div class="card-title">${esc(e.title)}</div>
+        <div class="ice-score ${iceClass(ice)}">${ice==='−'?'':('ICE '+ice)}</div>
+      </div>
+      <div class="card-meta">
+        <span class="stage-badge stage-${e.stage.toLowerCase()}">${e.stage}</span>
+        <span class="status-badge status-${e.status.toLowerCase()}">${e.status}</span>
+      </div>
+      ${e.hypothesis?`<div class="card-hypothesis">"${esc(e.hypothesis)}"</div>`:''}
+      <div class="card-footer">
+        <div class="dates">${e.startDate?formatDate(e.startDate):'Not started'}${e.endDate?' → '+formatDate(e.endDate):''}</div>
+        <div class="card-tags">${(e.tags||[]).slice(0,3).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('exp-count').textContent=state.experiments.length;
+}
+
+/* ===== PIPELINE VIEW ===== */
+function renderPipeline(){
+  const board=document.getElementById('kanban-board');
+  board.innerHTML=PIPELINE_COLS.map(col=>{
+    const colStatus=col==='Complete'?['Won','Lost','Inconclusive']:[col];
+    const items=state.experiments.filter(e=>colStatus.includes(e.status));
+    return `<div class="kanban-col">
+      <div class="kanban-col-header">
+        <span>${col}</span>
+        <span class="count">${items.length}</span>
+      </div>
+      <div class="kanban-items" data-col="${col}" ondragover="onDragOver(event)" ondrop="onDrop(event,this)" ondragleave="onDragLeave(event)">
+        ${items.map(e=>`<div class="kanban-card" draggable="true" data-id="${e.id}" ondragstart="onDragStart(event)" ondragend="onDragEnd(event)" onclick="openExperiment('${e.id}')">
+          <div class="card-title">${esc(e.title)}</div>
+          <div class="card-meta">
+            <span class="stage-badge stage-${e.stage.toLowerCase()}">${e.stage}</span>
+            ${col==='Complete'?`<span class="status-badge status-${e.status.toLowerCase()}">${e.status}</span>`:''}
+            <span class="ice-score ${iceClass(iceAvg(e))}" style="font-size:0.7rem">${iceAvg(e)!=='-'?'ICE '+iceAvg(e):''}</span>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let dragId=null;
+function onDragStart(ev){dragId=ev.target.dataset.id;ev.target.classList.add('dragging');ev.dataTransfer.effectAllowed='move';}
+function onDragEnd(ev){ev.target.classList.remove('dragging');dragId=null;document.querySelectorAll('.kanban-items').forEach(el=>el.classList.remove('drag-over'));}
+function onDragOver(ev){ev.preventDefault();ev.currentTarget.classList.add('drag-over');}
+function onDragLeave(ev){ev.currentTarget.classList.remove('drag-over');}
+function onDrop(ev,el){
+  ev.preventDefault();el.classList.remove('drag-over');
+  if(!dragId)return;
+  const col=el.dataset.col;
+  const exp=state.experiments.find(e=>e.id===dragId);
+  if(!exp)return;
+  if(col==='Complete'){
+    exp.status='Won';
+    if(!exp.endDate)exp.endDate=new Date().toISOString().split('T')[0];
+  }else{
+    exp.status=col;
+    if(col==='Running'&&!exp.startDate)exp.startDate=new Date().toISOString().split('T')[0];
+  }
+  saveState();renderPipeline();toast('Moved "'+exp.title+'" to '+col,'success');
+}
+
+/* ===== FUNNEL VIEW ===== */
+function renderFunnel(){
+  const container=document.getElementById('funnel-container');
+  const widths=[100,85,70,55,42];
+  container.innerHTML=STAGES.map((stage,i)=>{
+    const exps=state.experiments.filter(e=>e.stage===stage);
+    const won=exps.filter(e=>e.status==='Won').length;
+    const running=exps.filter(e=>e.status==='Running').length;
+    const color=STAGE_COLORS[stage];
+    return `<div class="funnel-stage" onclick="toggleFunnelExps('funnel-exps-${i}')">
+      <div class="funnel-bar" style="width:${widths[i]}%;margin:0 auto;background:${color}22;border:1px solid ${color}55;border-left:4px solid ${color}">
+        <div class="funnel-stage-name" style="color:${color}">${stage}</div>
+        <div class="funnel-stats">
+          <div class="funnel-stat"><div class="funnel-stat-value">${exps.length}</div><div class="funnel-stat-label">Experiments</div></div>
+          <div class="funnel-stat"><div class="funnel-stat-value" style="color:var(--green)">${won}</div><div class="funnel-stat-label">Won</div></div>
+          <div class="funnel-stat"><div class="funnel-stat-value" style="color:var(--cyan)">${running}</div><div class="funnel-stat-label">Running</div></div>
+        </div>
+      </div>
+      <div class="funnel-experiments" id="funnel-exps-${i}">
+        <div style="padding:0.5rem 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.5rem">
+          ${exps.map(e=>`<div class="card" style="margin:0" onclick="event.stopPropagation();openExperiment('${e.id}')">
+            <div class="card-title" style="font-size:0.85rem">${esc(e.title)}</div>
+            <div class="card-meta"><span class="status-badge status-${e.status.toLowerCase()}">${e.status}</span></div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleFunnelExps(id){
+  const el=document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+/* ===== PLAYBOOK VIEW ===== */
+function renderPlaybook(){
+  const search=document.getElementById('playbook-search').value.toLowerCase();
+  const completed=state.experiments.filter(e=>['Won','Lost','Inconclusive'].includes(e.status)&&e.learning);
+  const filtered=completed.filter(e=>{
+    if(!search)return true;
+    return e.title.toLowerCase().includes(search)||e.learning.toLowerCase().includes(search)||(e.tags||[]).some(t=>t.toLowerCase().includes(search));
+  });
+  const content=document.getElementById('playbook-content');
+  if(filtered.length===0){
+    content.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><p>No learnings yet. Complete experiments and add learnings to build your playbook!</p></div>`;
+    return;
+  }
+  // Group: what worked, what didn't, unclear
+  const worked=filtered.filter(e=>e.status==='Won');
+  const didnt=filtered.filter(e=>e.status==='Lost');
+  const unclear=filtered.filter(e=>e.status==='Inconclusive');
+
+  let html='';
+  if(worked.length){
+    html+=`<div class="playbook-section-title" style="color:var(--green)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> What Worked (${worked.length})</div>`;
+    html+=renderPlaybookCards(worked,'worked');
+  }
+  if(didnt.length){
+    html+=`<div class="playbook-section-title" style="color:var(--red)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> What Didn't Work (${didnt.length})</div>`;
+    html+=renderPlaybookCards(didnt,'didnt-work');
+  }
+  if(unclear.length){
+    html+=`<div class="playbook-section-title" style="color:var(--amber)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Inconclusive (${unclear.length})</div>`;
+    html+=renderPlaybookCards(unclear,'unclear');
+  }
+
+  // Also group by stage
+  html+=`<h2 style="font-size:1rem;margin:2rem 0 1rem;padding-top:1.5rem;border-top:1px solid var(--border)">By Funnel Stage</h2>`;
+  STAGES.forEach(stage=>{
+    const stageExps=filtered.filter(e=>e.stage===stage);
+    if(!stageExps.length)return;
+    html+=`<div class="playbook-stage">
+      <div class="playbook-stage-header">
+        <span class="stage-badge stage-${stage.toLowerCase()}">${stage}</span>
+        <h3>${stageExps.length} learning${stageExps.length>1?'s':''}</h3>
+      </div>
+      <div class="playbook-cards">${stageExps.map(e=>`<div class="playbook-card">
+        <span class="result-badge ${e.status==='Won'?'worked':e.status==='Lost'?'didnt-work':'unclear'}">${e.status}</span>
+        <div class="card-title" style="font-size:0.9rem;margin-bottom:0.3rem">${esc(e.title)}</div>
+        <div class="learning">${esc(e.learning)}</div>
+        ${e.actual?`<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--text-muted)">Result: ${esc(e.actual)}</div>`:''}
+      </div>`).join('')}</div>
+    </div>`;
+  });
+
+  content.innerHTML=html;
+}
+
+function renderPlaybookCards(exps,cls){
+  return `<div class="playbook-cards">${exps.map(e=>`<div class="playbook-card">
+    <span class="result-badge ${cls}">${e.status}</span>
+    <span class="stage-badge stage-${e.stage.toLowerCase()}" style="margin-left:0.5rem">${e.stage}</span>
+    <div class="card-title" style="font-size:0.9rem;margin:0.5rem 0 0.3rem">${esc(e.title)}</div>
+    <div class="learning">${esc(e.learning)}</div>
+    ${e.actual?`<div style="margin-top:0.5rem;font-size:0.8rem"><strong>Result:</strong> ${esc(e.actual)}</div>`:''}
+    <div class="card-tags" style="margin-top:0.5rem">${(e.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
+  </div>`).join('')}</div>`;
+}
+
+/* ===== LOOPS VIEW ===== */
+function renderLoops(){
+  const grid=document.getElementById('loops-grid');
+  if(state.loops.length===0){
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><p>No growth loops yet. Create one to visualize your growth engines!</p></div>`;
+    return;
+  }
+  grid.innerHTML=state.loops.map(loop=>{
+    return `<div class="loop-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><h3>${esc(loop.name)}</h3><p>${esc(loop.description)}</p></div>
+        <div style="display:flex;gap:0.3rem">
+          <button class="icon-btn" onclick="editLoop('${loop.id}')" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="icon-btn" onclick="deleteLoop('${loop.id}')" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        </div>
+      </div>
+      <div class="loop-svg-container">${renderLoopSVG(loop.nodes)}</div>
+      <div class="loop-experiments">${loop.nodes.length} steps in loop</div>
+    </div>`;
+  }).join('');
+}
+
+function renderLoopSVG(nodes){
+  if(!nodes||nodes.length===0)return '<p style="color:var(--text-muted);font-size:0.8rem">No steps defined</p>';
+  const n=nodes.length;
+  const W=320,H=280;
+  const cx=W/2,cy=H/2;
+  const rx=130,ry=110;
+  const pts=nodes.map((_,i)=>{
+    const angle=(2*Math.PI*i/n)-Math.PI/2;
+    return {x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)};
+  });
+  const colors=['#6c5ce7','#00b894','#fdcb6e','#e17055','#fd79a8','#74b9ff','#a29bfe','#81ecec'];
+  let svg=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+  svg+=`<defs><marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="var(--text-secondary)"/></marker></defs>`;
+  // Draw arrows
+  for(let i=0;i<n;i++){
+    const from=pts[i],to=pts[(i+1)%n];
+    const dx=to.x-from.x,dy=to.y-from.y;
+    const len=Math.sqrt(dx*dx+dy*dy);
+    const nx=dx/len,ny=dy/len;
+    const r=28;
+    svg+=`<line x1="${from.x+nx*r}" y1="${from.y+ny*r}" x2="${to.x-nx*r}" y2="${to.y-ny*r}" stroke="var(--border-light)" stroke-width="2" marker-end="url(#arrow)" opacity="0.7"/>`;
+  }
+  // Draw nodes
+  pts.forEach((p,i)=>{
+    const col=colors[i%colors.length];
+    svg+=`<circle cx="${p.x}" cy="${p.y}" r="24" fill="${col}22" stroke="${col}" stroke-width="2"/>`;
+    svg+=`<text x="${p.x}" y="${p.y-1}" text-anchor="middle" font-size="11" font-weight="700" fill="${col}">${i+1}</text>`;
+    // Label
+    const label=nodes[i];
+    const words=label.split(' ');
+    let lines=[];let cur='';
+    words.forEach(w=>{if((cur+' '+w).length>18){lines.push(cur);cur=w}else{cur=cur?cur+' '+w:w}});
+    if(cur)lines.push(cur);
+    const labelY=p.y>cy?p.y+32:p.y-32;
+    lines.forEach((l,li)=>{
+      svg+=`<text x="${p.x}" y="${labelY+li*13}" text-anchor="middle" font-size="9.5" fill="var(--text-secondary)">${esc(l)}</text>`;
+    });
+  });
+  svg+=`</svg>`;
+  return svg;
+}
+
+/* ===== DASHBOARD VIEW ===== */
+function renderDashboard(){
+  const exps=state.experiments;
+  const total=exps.length;
+  const completed=exps.filter(e=>['Won','Lost','Inconclusive'].includes(e.status));
+  const won=exps.filter(e=>e.status==='Won').length;
+  const winRate=completed.length?Math.round(won/completed.length*100):0;
+  const running=exps.filter(e=>e.status==='Running').length;
+  // Avg cycle time (days for completed with both dates)
+  const withDates=completed.filter(e=>e.startDate&&e.endDate);
+  let avgCycle=0;
+  if(withDates.length){
+    const totalDays=withDates.reduce((sum,e)=>{
+      return sum+Math.ceil((new Date(e.endDate)-new Date(e.startDate))/(1000*60*60*24));
+    },0);
+    avgCycle=Math.round(totalDays/withDates.length);
+  }
+  const avgIce=exps.filter(e=>iceAvg(e)!=='-').reduce((s,e)=>s+parseFloat(iceAvg(e)),0)/(exps.filter(e=>iceAvg(e)!=='-').length||1);
+
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total Experiments</div></div>
+    <div class="stat-card"><div class="stat-value">${winRate}%</div><div class="stat-label">Win Rate</div></div>
+    <div class="stat-card"><div class="stat-value">${running}</div><div class="stat-label">Currently Running</div></div>
+    <div class="stat-card"><div class="stat-value">${avgCycle}d</div><div class="stat-label">Avg Cycle Time</div></div>
+    <div class="stat-card"><div class="stat-value">${avgIce.toFixed(1)}</div><div class="stat-label">Avg ICE Score</div></div>
+    <div class="stat-card"><div class="stat-value">${state.loops.length}</div><div class="stat-label">Growth Loops</div></div>
+  `;
+
+  // Charts
+  let chartsHtml='';
+  // Experiments by stage bar chart
+  chartsHtml+=`<div class="chart-card"><h3>Experiments by Funnel Stage</h3>${renderBarChart(STAGES.map(s=>({label:s,value:exps.filter(e=>e.stage===s).length,color:STAGE_COLORS[s]})))}</div>`;
+  // Status distribution
+  const statusColors={Idea:'#74b9ff',Designing:'#a29bfe',Running:'#81ecec',Analyzing:'#fdcb6e',Won:'#00b894',Lost:'#e17055',Inconclusive:'#b2bec3'};
+  chartsHtml+=`<div class="chart-card"><h3>Status Distribution</h3>${renderBarChart(STATUSES.map(s=>({label:s,value:exps.filter(e=>e.status===s).length,color:statusColors[s]})))}</div>`;
+  // ICE distribution
+  chartsHtml+=`<div class="chart-card"><h3>ICE Score Distribution</h3>${renderIceDistribution(exps)}</div>`;
+  // Top learnings
+  const topLearnings=exps.filter(e=>e.learning).slice(0,5);
+  chartsHtml+=`<div class="chart-card"><h3>Top Learnings</h3>
+    ${topLearnings.length?topLearnings.map(e=>`<div style="padding:0.5rem 0;border-bottom:1px solid var(--border)">
+      <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.2rem">${esc(e.title)} <span class="status-badge status-${e.status.toLowerCase()}" style="font-size:0.65rem">${e.status}</span></div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.4">${esc(e.learning.substring(0,150))}${e.learning.length>150?'...':''}</div>
+    </div>`).join(''):'<div class="empty-state" style="padding:1rem"><p>No learnings recorded yet</p></div>'}</div>`;
+  // Experiments timeline
+  chartsHtml+=`<div class="chart-card full-width"><h3>Experiment Timeline</h3>${renderTimeline(exps)}</div>`;
+
+  document.getElementById('dash-charts').innerHTML=chartsHtml;
+}
+
+function renderBarChart(data){
+  const max=Math.max(...data.map(d=>d.value),1);
+  return `<div style="display:flex;flex-direction:column;gap:0.6rem;margin-top:0.5rem">${data.map(d=>`
+    <div style="display:flex;align-items:center;gap:0.75rem">
+      <div style="width:85px;font-size:0.78rem;color:var(--text-secondary);text-align:right;flex-shrink:0">${d.label}</div>
+      <div style="flex:1;height:24px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;position:relative">
+        <div style="height:100%;width:${(d.value/max)*100}%;background:${d.color};border-radius:4px;transition:width 0.5s ease;min-width:${d.value?'2px':'0'}"></div>
+      </div>
+      <div style="width:24px;font-size:0.8rem;font-weight:600;text-align:right">${d.value}</div>
+    </div>`).join('')}</div>`;
+}
+
+function renderIceDistribution(exps){
+  const buckets={'1-3':0,'4-5':0,'6-7':0,'8-9':0,'10':0};
+  exps.forEach(e=>{
+    const s=parseFloat(iceAvg(e));
+    if(isNaN(s))return;
+    if(s<=3)buckets['1-3']++;
+    else if(s<=5)buckets['4-5']++;
+    else if(s<=7)buckets['6-7']++;
+    else if(s<=9)buckets['8-9']++;
+    else buckets['10']++;
+  });
+  const colors={'1-3':'#e17055','4-5':'#fdcb6e','6-7':'#fdcb6e','8-9':'#00b894','10':'#00b894'};
+  return renderBarChart(Object.entries(buckets).map(([k,v])=>({label:'ICE '+k,value:v,color:colors[k]})));
+}
+
+function renderTimeline(exps){
+  const withStart=exps.filter(e=>e.startDate).sort((a,b)=>new Date(a.startDate)-new Date(b.startDate));
+  if(!withStart.length)return '<div class="empty-state" style="padding:1rem"><p>No experiments with start dates</p></div>';
+  const months={};
+  withStart.forEach(e=>{
+    const m=e.startDate.substring(0,7);
+    months[m]=(months[m]||0)+1;
+  });
+  const entries=Object.entries(months);
+  const max=Math.max(...entries.map(e=>e[1]),1);
+  const W=Math.max(entries.length*60,300);
+  const H=150;
+  const pad={l:40,r:20,t:20,b:30};
+  const plotW=W-pad.l-pad.r;
+  const plotH=H-pad.t-pad.b;
+  let svg=`<svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+  // Grid lines
+  for(let i=0;i<=4;i++){
+    const y=pad.t+plotH*(1-i/4);
+    svg+=`<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="var(--border)" stroke-width="0.5"/>`;
+    svg+=`<text x="${pad.l-8}" y="${y+3}" text-anchor="end" font-size="9" fill="var(--text-muted)">${Math.round(max*i/4)}</text>`;
+  }
+  // Line + dots
+  const points=entries.map(([m,v],i)=>{
+    const x=pad.l+i*(plotW/(entries.length-1||1));
+    const y=pad.t+plotH*(1-v/max);
+    return {x,y,m,v};
+  });
+  if(points.length>1){
+    const pathD=points.map((p,i)=>i===0?`M${p.x},${p.y}`:`L${p.x},${p.y}`).join(' ');
+    svg+=`<path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
+    // Area
+    svg+=`<path d="${pathD} L${points[points.length-1].x},${pad.t+plotH} L${points[0].x},${pad.t+plotH} Z" fill="var(--accent)" opacity="0.08"/>`;
+  }
+  points.forEach(p=>{
+    svg+=`<circle cx="${p.x}" cy="${p.y}" r="4" fill="var(--accent)" stroke="var(--bg-card)" stroke-width="2"/>`;
+    svg+=`<text x="${p.x}" y="${H-8}" text-anchor="middle" font-size="9" fill="var(--text-muted)">${p.m.substring(5)}</text>`;
+    svg+=`<text x="${p.x}" y="${p.y-10}" text-anchor="middle" font-size="9" font-weight="600" fill="var(--text-primary)">${p.v}</text>`;
+  });
+  svg+=`</svg>`;
+  return svg;
+}
+
+/* ===== MODALS ===== */
+function openModal(html){
+  document.getElementById('modal').innerHTML=html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function openNewExperiment(){
+  openExperimentModal(null);
+}
+
+function openExperiment(id){
+  const exp=state.experiments.find(e=>e.id===id);
+  if(exp)openExperimentModal(exp);
+}
+
+function openExperimentModal(exp){
+  const isNew=!exp;
+  const e=exp||{id:'',title:'',hypothesis:'',stage:'Acquisition',status:'Idea',impact:5,confidence:5,ease:5,startDate:'',endDate:'',baseline:'',target:'',actual:'',learning:'',tags:[],notes:''};
+  const ice=iceAvg(e);
+
+  openModal(`
+    <div class="modal-header">
+      <h2>${isNew?'New Experiment':'Edit Experiment'}</h2>
+      <button class="icon-btn" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="m-title" value="${esc(e.title)}" placeholder="e.g., LinkedIn CTA in Signature">
+      </div>
+      <div class="form-group">
+        <label>Hypothesis</label>
+        <textarea id="m-hypothesis" placeholder="We believe that [change] will [impact] because [reason]">${esc(e.hypothesis)}</textarea>
+        <div class="hypothesis-helper">Template: "We believe that ___ will ___ because ___"</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Funnel Stage</label>
+          <select id="m-stage">${STAGES.map(s=>`<option value="${s}"${e.stage===s?' selected':''}>${s}</option>`).join('')}</select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="m-status">${STATUSES.map(s=>`<option value="${s}"${e.status===s?' selected':''}>${s}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>Impact (1-10)</label>
+          <input type="number" id="m-impact" min="1" max="10" value="${e.impact}" oninput="updateIcePreview()">
+        </div>
+        <div class="form-group">
+          <label>Confidence (1-10)</label>
+          <input type="number" id="m-confidence" min="1" max="10" value="${e.confidence}" oninput="updateIcePreview()">
+        </div>
+        <div class="form-group">
+          <label>Ease (1-10)</label>
+          <input type="number" id="m-ease" min="1" max="10" value="${e.ease}" oninput="updateIcePreview()">
+        </div>
+      </div>
+      <div class="ice-display">
+        <span class="ice-label">ICE Score:</span>
+        <span class="ice-score" id="m-ice-preview">${ice}</span>
+      </div>
+      <div class="form-row" style="margin-top:1rem">
+        <div class="form-group">
+          <label>Start Date</label>
+          <input type="date" id="m-start" value="${e.startDate}">
+        </div>
+        <div class="form-group">
+          <label>End Date</label>
+          <input type="date" id="m-end" value="${e.endDate}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Baseline Metric</label>
+        <input type="text" id="m-baseline" value="${esc(e.baseline)}" placeholder="e.g., 120 visits/week from LinkedIn">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Target Metric</label>
+          <input type="text" id="m-target" value="${esc(e.target)}" placeholder="e.g., 200 visits/week">
+        </div>
+        <div class="form-group">
+          <label>Actual Result</label>
+          <input type="text" id="m-actual" value="${esc(e.actual)}" placeholder="e.g., 310 visits/week">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Key Learning</label>
+        <textarea id="m-learning" placeholder="What did you learn from this experiment?">${esc(e.learning)}</textarea>
+      </div>
+      <div class="form-group">
+        <label>Tags (comma-separated)</label>
+        <input type="text" id="m-tags" value="${(e.tags||[]).join(', ')}" placeholder="e.g., linkedin, organic, signature">
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="m-notes" placeholder="Additional notes...">${esc(e.notes)}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      ${!isNew?`<button class="btn btn-danger btn-sm" onclick="deleteExperiment('${e.id}')" style="margin-right:auto">Delete</button>`:''}
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExperiment('${e.id||''}')">Save</button>
+    </div>
+  `);
+  updateIcePreview();
+}
+
+function updateIcePreview(){
+  const i=parseInt(document.getElementById('m-impact').value)||0;
+  const c=parseInt(document.getElementById('m-confidence').value)||0;
+  const e=parseInt(document.getElementById('m-ease').value)||0;
+  const avg=i&&c&&e?((i+c+e)/3).toFixed(1):'-';
+  const el=document.getElementById('m-ice-preview');
+  el.textContent=avg!=='-'?'ICE '+avg:'-';
+  el.className='ice-score '+iceClass(avg);
+}
+
+function saveExperiment(id){
+  const data={
+    title:document.getElementById('m-title').value.trim(),
+    hypothesis:document.getElementById('m-hypothesis').value.trim(),
+    stage:document.getElementById('m-stage').value,
+    status:document.getElementById('m-status').value,
+    impact:parseInt(document.getElementById('m-impact').value)||5,
+    confidence:parseInt(document.getElementById('m-confidence').value)||5,
+    ease:parseInt(document.getElementById('m-ease').value)||5,
+    startDate:document.getElementById('m-start').value,
+    endDate:document.getElementById('m-end').value,
+    baseline:document.getElementById('m-baseline').value.trim(),
+    target:document.getElementById('m-target').value.trim(),
+    actual:document.getElementById('m-actual').value.trim(),
+    learning:document.getElementById('m-learning').value.trim(),
+    tags:document.getElementById('m-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    notes:document.getElementById('m-notes').value.trim()
+  };
+  if(!data.title){toast('Title is required','error');return;}
+  if(id){
+    const idx=state.experiments.findIndex(e=>e.id===id);
+    if(idx>=0)state.experiments[idx]={...state.experiments[idx],...data};
+  }else{
+    state.experiments.push({id:genId(),...data});
+  }
+  saveState();closeModal();renderCurrentView();
+  toast(id?'Experiment updated':'Experiment created','success');
+}
+
+function deleteExperiment(id){
+  if(!confirm('Delete this experiment?'))return;
+  state.experiments=state.experiments.filter(e=>e.id!==id);
+  saveState();closeModal();renderCurrentView();
+  toast('Experiment deleted','success');
+}
+
+/* ===== LOOP MODALS ===== */
+function openNewLoop(){openLoopModal(null);}
+
+function editLoop(id){
+  const loop=state.loops.find(l=>l.id===id);
+  if(loop)openLoopModal(loop);
+}
+
+function openLoopModal(loop){
+  const isNew=!loop;
+  const l=loop||{id:'',name:'',description:'',nodes:['','',''],experiments:[]};
+
+  openModal(`
+    <div class="modal-header">
+      <h2>${isNew?'New Growth Loop':'Edit Growth Loop'}</h2>
+      <button class="icon-btn" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Loop Name</label>
+        <input type="text" id="ml-name" value="${esc(l.name)}" placeholder="e.g., Viral Signature Loop">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="ml-desc" placeholder="Describe how this growth loop works...">${esc(l.description)}</textarea>
+      </div>
+      <div class="form-group">
+        <label>Steps (one per line — these form the circular loop)</label>
+        <textarea id="ml-nodes" rows="6" placeholder="User creates signature\nAdds to emails\nRecipient sees branding\n...">${(l.nodes||[]).join('\n')}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      ${!isNew?`<button class="btn btn-danger btn-sm" onclick="deleteLoop('${l.id}')" style="margin-right:auto">Delete</button>`:''}
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveLoop('${l.id||''}')">Save</button>
+    </div>
+  `);
+}
+
+function saveLoop(id){
+  const data={
+    name:document.getElementById('ml-name').value.trim(),
+    description:document.getElementById('ml-desc').value.trim(),
+    nodes:document.getElementById('ml-nodes').value.split('\n').map(n=>n.trim()).filter(Boolean),
+    experiments:[]
+  };
+  if(!data.name){toast('Loop name is required','error');return;}
+  if(data.nodes.length<2){toast('At least 2 steps are required','error');return;}
+  if(id){
+    const idx=state.loops.findIndex(l=>l.id===id);
+    if(idx>=0)state.loops[idx]={...state.loops[idx],...data};
+  }else{
+    state.loops.push({id:genId(),...data});
+  }
+  saveState();closeModal();renderCurrentView();
+  toast(id?'Loop updated':'Loop created','success');
+}
+
+function deleteLoop(id){
+  if(!confirm('Delete this growth loop?'))return;
+  state.loops=state.loops.filter(l=>l.id!==id);
+  saveState();closeModal();renderCurrentView();
+  toast('Loop deleted','success');
+}
+
+/* ===== IMPORT / EXPORT ===== */
+function showImportExport(mode){
+  if(mode==='export'){
+    const json=JSON.stringify(state,null,2);
+    openModal(`
+      <div class="modal-header">
+        <h2>Export Data</h2>
+        <button class="icon-btn" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem">${state.experiments.length} experiments, ${state.loops.length} loops</p>
+        <textarea id="export-data" rows="12" style="width:100%;font-family:monospace;font-size:0.78rem" readonly>${esc(json)}</textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+        <button class="btn btn-primary" onclick="copyExport()">Copy to Clipboard</button>
+        <button class="btn btn-primary" onclick="downloadExport()">Download JSON</button>
+      </div>
+    `);
+  }else{
+    openModal(`
+      <div class="modal-header">
+        <h2>Import Data</h2>
+        <button class="icon-btn" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem">Paste JSON data below or choose a file. This will replace all existing data.</p>
+        <textarea id="import-data" rows="10" style="width:100%;font-family:monospace;font-size:0.78rem" placeholder="Paste JSON here..."></textarea>
+        <div style="margin-top:0.75rem"><input type="file" id="import-file" accept=".json" onchange="handleFileImport(event)"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="doImport()">Import</button>
+      </div>
+    `);
+  }
+}
+
+function copyExport(){
+  const ta=document.getElementById('export-data');
+  ta.select();document.execCommand('copy');
+  toast('Copied to clipboard','success');
+}
+
+function downloadExport(){
+  const json=JSON.stringify(state,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='growth-lab-export.json';a.click();
+  URL.revokeObjectURL(url);
+  toast('Downloaded','success');
+}
+
+function handleFileImport(ev){
+  const file=ev.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{document.getElementById('import-data').value=e.target.result;};
+  reader.readAsText(file);
+}
+
+function doImport(){
+  try{
+    const raw=document.getElementById('import-data').value.trim();
+    if(!raw){toast('No data to import','error');return;}
+    const data=JSON.parse(raw);
+    if(!data.experiments||!Array.isArray(data.experiments)){toast('Invalid format: missing experiments array','error');return;}
+    state=data;
+    if(!state.loops)state.loops=[];
+    if(state.darkMode===undefined)state.darkMode=true;
+    saveState();closeModal();renderCurrentView();applyTheme();
+    toast(`Imported ${state.experiments.length} experiments, ${state.loops.length} loops`,'success');
+  }catch(e){toast('Invalid JSON: '+e.message,'error');}
+}
+
+/* ===== DARK MODE ===== */
+function toggleDarkMode(){
+  state.darkMode=!state.darkMode;
+  applyTheme();saveState();
+}
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme',state.darkMode?'dark':'light');
+  document.getElementById('theme-icon').innerHTML=state.darkMode
+    ?'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
+    :'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+}
+
+/* ===== KEYBOARD SHORTCUTS ===== */
+document.addEventListener('keydown',ev=>{
+  // Don't trigger in input fields
+  const t=ev.target.tagName;
+  if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT'){
+    if(ev.key==='Escape'){ev.target.blur();closeModal();}
+    return;
+  }
+  switch(ev.key){
+    case 'n':case 'N':ev.preventDefault();openNewExperiment();break;
+    case '/':ev.preventDefault();focusSearch();break;
+    case '1':switchView('experiments');break;
+    case '2':switchView('pipeline');break;
+    case '3':switchView('funnel');break;
+    case '4':switchView('playbook');break;
+    case '5':switchView('loops');break;
+    case '6':switchView('dashboard');break;
+    case 'd':case 'D':toggleDarkMode();break;
+    case 'e':case 'E':showImportExport('export');break;
+    case 'i':case 'I':showImportExport('import');break;
+    case 'Escape':closeModal();break;
+  }
+});
+
+function focusSearch(){
+  const el=document.getElementById('exp-search')||document.getElementById('playbook-search');
+  if(el)el.focus();
+}
+
+/* ===== TOAST ===== */
+function toast(msg,type='success'){
+  const container=document.getElementById('toast-container');
+  const el=document.createElement('div');
+  el.className='toast '+type;
+  el.innerHTML=`${type==='success'?'✓':'✗'} ${esc(msg)}`;
+  container.appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(50px)';setTimeout(()=>el.remove(),300);},3000);
+}
+
+/* ===== UTILS ===== */
+function esc(s){if(!s)return '';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function formatDate(d){if(!d)return '';const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+
+/* ===== INIT ===== */
+applyTheme();
+renderCurrentView();
+</script>
+</body>
+</html>

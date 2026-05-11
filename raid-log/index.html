@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAID Log — Risks, Assumptions, Issues & Dependencies</title>
+<style>
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #232733; --surface3: #2a2e3b;
+  --border: #2f3342; --text: #e4e6ed; --text2: #9ca0b0; --text3: #6b7084;
+  --accent: #6c5ce7; --accent2: #a29bfe; --accent-bg: rgba(108,92,231,0.12);
+  --red: #ff6b6b; --red-bg: rgba(255,107,107,0.12); --red2: #ee5a24;
+  --orange: #ffa502; --orange-bg: rgba(255,165,2,0.12);
+  --yellow: #ffd43b; --yellow-bg: rgba(255,212,59,0.12);
+  --green: #51cf66; --green-bg: rgba(81,207,102,0.12);
+  --blue: #339af0; --blue-bg: rgba(51,154,240,0.12);
+  --pink: #f06595; --pink-bg: rgba(240,101,149,0.12);
+  --cyan: #22b8cf; --cyan-bg: rgba(34,184,207,0.12);
+  --radius: 10px; --radius-sm: 6px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+button { cursor:pointer; font-family:inherit; border:none; background:none; color:inherit; }
+input,textarea,select { font-family:inherit; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; font-size:14px; outline:none; width:100%; }
+input:focus,textarea:focus,select:focus { border-color:var(--accent); }
+textarea { resize:vertical; min-height:60px; }
+select { cursor:pointer; }
+
+/* Layout */
+.app { display:flex; height:100vh; }
+.sidebar { width:260px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; }
+.sidebar-header { padding:20px 16px 12px; border-bottom:1px solid var(--border); }
+.sidebar-header h1 { font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.sidebar-header h1 span { font-size:20px; }
+.sidebar-search { padding:8px 12px; }
+.sidebar-search input { background:var(--surface2); font-size:13px; padding:7px 10px; border-radius:var(--radius-sm); }
+.sidebar-nav { padding:8px; flex:1; overflow-y:auto; }
+.nav-item { padding:10px 12px; border-radius:var(--radius-sm); cursor:pointer; font-size:14px; display:flex; align-items:center; gap:10px; color:var(--text2); transition:all .15s; }
+.nav-item:hover { background:var(--surface2); color:var(--text); }
+.nav-item.active { background:var(--accent-bg); color:var(--accent2); font-weight:600; }
+.nav-item .badge { margin-left:auto; background:var(--surface3); color:var(--text3); font-size:11px; padding:2px 7px; border-radius:10px; font-weight:600; }
+.nav-item.active .badge { background:rgba(108,92,231,0.2); color:var(--accent2); }
+.nav-divider { height:1px; background:var(--border); margin:8px 12px; }
+.sidebar-footer { padding:12px; border-top:1px solid var(--border); }
+.sidebar-footer button { width:100%; padding:9px; border-radius:var(--radius-sm); background:var(--accent); color:#fff; font-weight:600; font-size:13px; transition:opacity .15s; }
+.sidebar-footer button:hover { opacity:.85; }
+
+/* Main */
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.topbar { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; }
+.topbar h2 { font-size:20px; font-weight:700; }
+.topbar .project-select { width:auto; min-width:180px; background:var(--surface2); }
+.topbar-actions { margin-left:auto; display:flex; gap:8px; }
+.btn { padding:8px 16px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; transition:all .15s; display:inline-flex; align-items:center; gap:6px; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { opacity:.85; }
+.btn-secondary { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.btn-secondary:hover { background:var(--surface3); color:var(--text); }
+.btn-sm { padding:5px 10px; font-size:12px; }
+.btn-danger { background:var(--red-bg); color:var(--red); }
+.btn-danger:hover { background:rgba(255,107,107,0.2); }
+.content { flex:1; overflow-y:auto; padding:24px; }
+
+/* Cards */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
+.card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.card-header h3 { font-size:15px; font-weight:600; }
+
+/* Tags */
+.tag { display:inline-flex; align-items:center; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.3px; }
+.tag-risk { background:var(--red-bg); color:var(--red); }
+.tag-assumption { background:var(--blue-bg); color:var(--blue); }
+.tag-issue { background:var(--orange-bg); color:var(--orange); }
+.tag-dependency { background:var(--pink-bg); color:var(--pink); }
+.tag-open { background:var(--yellow-bg); color:var(--yellow); }
+.tag-mitigated,.tag-resolved,.tag-met,.tag-validated,.tag-closed { background:var(--green-bg); color:var(--green); }
+.tag-occurred,.tag-invalid,.tag-blocked,.tag-overdue { background:var(--red-bg); color:var(--red); }
+.tag-monitoring,.tag-testing,.tag-in-progress,.tag-at-risk { background:var(--orange-bg); color:var(--orange); }
+.tag-accepted,.tag-pending,.tag-on-track { background:var(--blue-bg); color:var(--blue); }
+.tag-critical { background:var(--red-bg); color:var(--red); }
+.tag-high { background:var(--orange-bg); color:var(--orange); }
+.tag-medium { background:var(--yellow-bg); color:var(--yellow); }
+.tag-low { background:var(--green-bg); color:var(--green); }
+
+/* Stat Cards */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:24px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; text-align:center; }
+.stat-card .stat-value { font-size:28px; font-weight:800; margin-bottom:4px; }
+.stat-card .stat-label { font-size:12px; color:var(--text2); text-transform:uppercase; letter-spacing:.5px; }
+
+/* RAID Items Grid */
+.raid-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:14px; }
+.raid-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; cursor:pointer; transition:all .15s; position:relative; }
+.raid-card:hover { border-color:var(--accent); transform:translateY(-1px); }
+.raid-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px; }
+.raid-card-title { font-size:14px; font-weight:600; line-height:1.4; }
+.raid-card-desc { font-size:13px; color:var(--text2); line-height:1.5; margin-bottom:12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.raid-card-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.raid-card-meta .tag { font-size:10px; }
+.raid-card .owner { font-size:12px; color:var(--text3); margin-left:auto; }
+.raid-card .score-badge { position:absolute; top:12px; right:12px; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; }
+
+/* Risk Matrix */
+.matrix-container { display:flex; gap:24px; flex-wrap:wrap; }
+.matrix-wrap { flex:1; min-width:500px; }
+.matrix { display:grid; grid-template-columns:40px repeat(5,1fr); grid-template-rows:repeat(5,60px) 30px; gap:2px; }
+.matrix-cell { border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; position:relative; cursor:default; }
+.matrix-label-y { writing-mode:vertical-lr; transform:rotate(180deg); font-size:11px; color:var(--text3); display:flex; align-items:center; justify-content:center; }
+.matrix-label-x { font-size:11px; color:var(--text3); display:flex; align-items:center; justify-content:center; }
+.matrix-green { background:rgba(81,207,102,0.15); }
+.matrix-yellow { background:rgba(255,212,59,0.15); }
+.matrix-orange { background:rgba(255,165,2,0.15); }
+.matrix-red { background:rgba(255,107,107,0.15); }
+.matrix-dot { width:24px; height:24px; border-radius:50%; background:var(--accent); color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; position:absolute; cursor:pointer; transition:transform .15s; z-index:2; }
+.matrix-dot:hover { transform:scale(1.3); }
+.matrix-legend { flex:0 0 260px; }
+.matrix-legend-item { display:flex; align-items:center; gap:10px; padding:6px 0; font-size:13px; }
+.matrix-legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.matrix-axes { display:flex; justify-content:space-between; margin-top:8px; }
+.matrix-axes span { font-size:12px; color:var(--text3); font-weight:600; }
+.matrix-y-label { position:absolute; left:-50px; top:50%; transform:rotate(-90deg) translateX(50%); font-size:12px; color:var(--text3); font-weight:600; white-space:nowrap; }
+.matrix-wrapper { position:relative; padding-left:50px; }
+
+/* Table */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th { text-align:left; padding:10px 12px; background:var(--surface2); color:var(--text2); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.3px; border-bottom:1px solid var(--border); white-space:nowrap; }
+td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:top; }
+tr:hover td { background:var(--surface2); }
+tr { cursor:pointer; }
+th.sortable { cursor:pointer; user-select:none; }
+th.sortable:hover { color:var(--text); }
+th.sorted-asc::after { content:' ↑'; }
+th.sorted-desc::after { content:' ↓'; }
+
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); width:100%; max-width:640px; max-height:90vh; overflow-y:auto; }
+.modal-header { padding:20px 24px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.modal-header h3 { font-size:18px; font-weight:700; }
+.modal-close { width:32px; height:32px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--text3); }
+.modal-close:hover { background:var(--surface2); color:var(--text); }
+.modal-body { padding:20px 24px; }
+.modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+.form-group { margin-bottom:16px; }
+.form-group label { display:block; font-size:12px; font-weight:600; color:var(--text2); margin-bottom:6px; text-transform:uppercase; letter-spacing:.3px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+/* Slider */
+.slider-group { display:flex; align-items:center; gap:12px; }
+.slider-group input[type=range] { -webkit-appearance:none; flex:1; height:6px; border-radius:3px; background:var(--surface3); border:none; padding:0; }
+.slider-group input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--accent); cursor:pointer; }
+.slider-value { font-size:14px; font-weight:700; min-width:24px; text-align:center; }
+
+/* Dashboard Charts */
+.chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+.chart-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+.chart-card h4 { font-size:14px; font-weight:600; margin-bottom:16px; color:var(--text2); }
+.bar-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.bar-label { font-size:12px; color:var(--text2); min-width:90px; text-align:right; }
+.bar-track { flex:1; height:20px; background:var(--surface3); border-radius:4px; overflow:hidden; position:relative; }
+.bar-fill { height:100%; border-radius:4px; transition:width .3s; display:flex; align-items:center; padding-left:8px; font-size:11px; font-weight:600; color:#fff; min-width:fit-content; }
+.donut-container { display:flex; align-items:center; justify-content:center; gap:24px; }
+.donut-legend { display:flex; flex-direction:column; gap:6px; }
+.donut-legend-item { display:flex; align-items:center; gap:8px; font-size:13px; }
+.donut-legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+/* Detail View */
+.detail-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; }
+.detail-title { font-size:22px; font-weight:700; margin-bottom:8px; }
+.detail-tags { display:flex; gap:8px; flex-wrap:wrap; }
+.detail-section { margin-bottom:20px; }
+.detail-section h4 { font-size:13px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
+.detail-section p { font-size:14px; line-height:1.6; color:var(--text); }
+.detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.detail-field { background:var(--surface2); border-radius:var(--radius-sm); padding:12px; }
+.detail-field .label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+.detail-field .value { font-size:15px; font-weight:600; }
+
+/* Project Tabs */
+.project-tabs { display:flex; gap:4px; padding:4px; background:var(--surface2); border-radius:var(--radius-sm); }
+.project-tab { padding:6px 14px; border-radius:4px; font-size:13px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; }
+.project-tab:hover { color:var(--text); }
+.project-tab.active { background:var(--accent); color:#fff; font-weight:600; }
+
+/* Empty State */
+.empty { text-align:center; padding:60px 20px; color:var(--text3); }
+.empty .icon { font-size:48px; margin-bottom:16px; }
+.empty h3 { font-size:18px; color:var(--text2); margin-bottom:8px; }
+.empty p { font-size:14px; }
+
+/* Help */
+.help-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; }
+.help-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px; max-width:480px; width:100%; }
+.help-box h3 { font-size:18px; margin-bottom:16px; }
+.help-row { display:flex; justify-content:space-between; padding:6px 0; font-size:13px; }
+.help-row kbd { background:var(--surface3); padding:2px 8px; border-radius:4px; font-family:monospace; font-size:12px; }
+
+/* Responsive */
+@media(max-width:900px) {
+  .sidebar { display:none; }
+  .chart-grid { grid-template-columns:1fr; }
+  .matrix-container { flex-direction:column; }
+  .matrix-wrap { min-width:auto; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--surface3); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--border); }
+
+/* Tooltip */
+.tooltip { position:absolute; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; font-size:12px; z-index:50; pointer-events:none; max-width:200px; box-shadow:0 4px 12px rgba(0,0,0,.3); }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// ── Data ──
+const TYPES = ['Risk','Assumption','Issue','Dependency'];
+const TYPE_COLORS = { Risk:'red', Assumption:'blue', Issue:'orange', Dependency:'pink' };
+const RISK_STATUSES = ['Open','Mitigated','Occurred','Monitoring','Accepted','Closed'];
+const ASSUMPTION_STATUSES = ['Open','Validated','Invalid','Testing','Monitoring'];
+const ISSUE_STATUSES = ['Open','In Progress','Resolved','Blocked','Closed'];
+const DEP_STATUSES = ['On Track','At Risk','Blocked','Met','Pending'];
+const CATEGORIES = ['Technical','Business','Operational','Legal','Resource','External','Security','Financial'];
+const PRIORITIES = ['Critical','High','Medium','Low'];
+
+function getStatuses(type) {
+  switch(type) {
+    case 'Risk': return RISK_STATUSES;
+    case 'Assumption': return ASSUMPTION_STATUSES;
+    case 'Issue': return ISSUE_STATUSES;
+    case 'Dependency': return DEP_STATUSES;
+    default: return ['Open','Closed'];
+  }
+}
+
+function riskScore(p, i) { return p * i; }
+function riskLevel(score) {
+  if (score >= 20) return 'Critical';
+  if (score >= 12) return 'High';
+  if (score >= 6) return 'Medium';
+  return 'Low';
+}
+function riskColor(score) {
+  if (score >= 20) return 'var(--red)';
+  if (score >= 12) return 'var(--orange)';
+  if (score >= 6) return 'var(--yellow)';
+  return 'var(--green)';
+}
+
+// ── State ──
+let state = {
+  view: 'all', // all, matrix, table, dashboard, detail
+  filter: null, // null = all, or 'Risk','Assumption','Issue','Dependency'
+  search: '',
+  sort: { field: 'created', dir: 'desc' },
+  selectedId: null,
+  modal: null, // null, 'add', 'edit'
+  editItem: null,
+  projects: [],
+  activeProject: null,
+  helpOpen: false
+};
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+function save() {
+  localStorage.setItem('raid-log-data', JSON.stringify({ projects: state.projects, activeProject: state.activeProject }));
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem('raid-log-data'));
+    if (d && d.projects) { state.projects = d.projects; state.activeProject = d.activeProject; }
+  } catch(e) {}
+}
+
+function getProject() { return state.projects.find(p => p.id === state.activeProject); }
+function getItems() { return getProject()?.items || []; }
+function getFiltered() {
+  let items = getItems();
+  if (state.filter) items = items.filter(i => i.type === state.filter);
+  if (state.search) {
+    const s = state.search.toLowerCase();
+    items = items.filter(i => i.title.toLowerCase().includes(s) || i.description.toLowerCase().includes(s) || (i.owner||'').toLowerCase().includes(s));
+  }
+  const { field, dir } = state.sort;
+  items.sort((a,b) => {
+    let va = a[field], vb = b[field];
+    if (field === 'score') { va = riskScore(a.probability||1,a.impact||1); vb = riskScore(b.probability||1,b.impact||1); }
+    if (field === 'priority') { va = PRIORITIES.indexOf(a.priority); vb = PRIORITIES.indexOf(b.priority); }
+    if (typeof va === 'string') return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    return dir === 'asc' ? (va||0)-(vb||0) : (vb||0)-(va||0);
+  });
+  return items;
+}
+
+// ── Seed Data ──
+function seedData() {
+  const proj = {
+    id: uid(), name: 'UTMStamp Launch',
+    items: [
+      { id:uid(), type:'Risk', title:'Chrome Extension Store Rejection', description:'Google may reject the Chrome extension due to strict new Manifest V3 policies or content security violations.', category:'Technical', priority:'High', status:'Monitoring', probability:3, impact:5, owner:'AJ', mitigation:'Pre-submit review against MV3 checklist. Have backup distribution via direct download.', contingency:'Appeal process + direct enterprise distribution as fallback.', created:'2026-04-10', updated:'2026-04-20', tags:['launch','chrome'] },
+      { id:uid(), type:'Risk', title:'Competitor Price Undercut at Launch', description:'Exclaimer or WiseStamp could announce aggressive pricing or free tier expansion right before our launch.', category:'Business', priority:'Medium', status:'Open', probability:2, impact:4, owner:'AJ', mitigation:'Differentiate on UTM tracking (unique feature). Monitor competitor pricing weekly.', contingency:'Lean into PLG — generous free tier that competitors cant match on analytics.', created:'2026-04-12', updated:'2026-04-12', tags:['pricing','competition'] },
+      { id:uid(), type:'Risk', title:'Email Client Rendering Inconsistency', description:'Signatures may render differently across Outlook, Gmail, Apple Mail, Thunderbird. Broken layouts kill credibility.', category:'Technical', priority:'Critical', status:'Mitigated', probability:4, impact:4, owner:'AJ', mitigation:'Built cross-client test suite. Templates use table-based layout (not CSS grid). Tested on top 8 clients.', contingency:'Fallback to simpler templates that work universally.', created:'2026-04-08', updated:'2026-04-22', tags:['rendering','email'] },
+      { id:uid(), type:'Risk', title:'Data Privacy Compliance Gap', description:'UTM click tracking may trigger GDPR/CCPA concerns if not properly disclosed. Risk of legal action or app store removal.', category:'Legal', priority:'High', status:'Monitoring', probability:2, impact:5, owner:'AJ', mitigation:'Privacy policy drafted. Tracking is aggregate-only, no PII. Cookie-free analytics approach.', contingency:'Can disable tracking by default, make it opt-in per user.', created:'2026-04-15', updated:'2026-04-18', tags:['privacy','gdpr'] },
+      { id:uid(), type:'Assumption', title:'Teams want centralized signature management', description:'Assumption that marketing/brand teams want to control email signatures across the org, not leave it to individual employees.', category:'Business', priority:'High', status:'Validated', owner:'AJ', mitigation:'Validated through 12 user interviews. 10/12 confirmed centralized control is must-have.', created:'2026-04-05', updated:'2026-04-20', tags:['pmf','users'] },
+      { id:uid(), type:'Assumption', title:'Free tier drives paid conversion at 5%+', description:'PLG assumption that generous free tier will convert 5%+ of users to paid within 60 days.', category:'Business', priority:'High', status:'Testing', owner:'AJ', mitigation:'Monitoring activation→conversion funnel. Will A/B test paywall placement.', created:'2026-04-08', updated:'2026-04-15', tags:['plg','conversion'] },
+      { id:uid(), type:'Assumption', title:'Google Workspace auto-push is technically feasible', description:'Assumption that we can auto-deploy signatures to Google Workspace users via Admin SDK without manual setup per user.', category:'Technical', priority:'Critical', status:'Open', owner:'AJ', mitigation:'POC built with Admin SDK Directory API. Works for domain-wide delegation. Need to test at scale.', created:'2026-04-10', updated:'2026-04-10', tags:['google','integration'] },
+      { id:uid(), type:'Issue', title:'Safari WebKit signature paste bug', description:'Copying signature from preview and pasting into Safari-based email clients strips some CSS styles. Tables partially break.', category:'Technical', priority:'High', status:'In Progress', owner:'AJ', mitigation:'Investigating clipboard API workarounds. May need Safari-specific copy format.', created:'2026-04-18', updated:'2026-04-24', tags:['bug','safari'] },
+      { id:uid(), type:'Issue', title:'Onboarding drop-off at step 3', description:'Analytics show 40% of users drop off at the "Connect your email" step during onboarding. Friction too high.', category:'Business', priority:'Critical', status:'Open', owner:'AJ', mitigation:'Redesigning step 3 to allow skip + manual copy-paste as alternative to OAuth connect.', created:'2026-04-20', updated:'2026-04-20', tags:['onboarding','ux'] },
+      { id:uid(), type:'Issue', title:'Click tracking latency on first load', description:'First click on a tracked signature link takes 800ms+ due to cold start on edge function. Should be <200ms.', category:'Technical', priority:'Medium', status:'In Progress', owner:'AJ', mitigation:'Investigating keep-alive pings and switching to Cloudflare Workers for faster cold starts.', created:'2026-04-22', updated:'2026-04-24', tags:['performance','tracking'] },
+      { id:uid(), type:'Dependency', title:'Supabase Auth for team features', description:'Team management (invites, roles, shared signatures) depends on Supabase Auth being stable and supporting org-level permissions.', category:'Technical', priority:'High', status:'On Track', owner:'AJ', mitigation:'Supabase Auth is GA. Using RLS for team isolation. Tested with 3 team sizes.', created:'2026-04-06', updated:'2026-04-20', tags:['supabase','auth'] },
+      { id:uid(), type:'Dependency', title:'Vercel Edge Functions for tracking', description:'Click tracking redirector runs on Vercel Edge Functions. Latency and uptime depend on Vercel infrastructure.', category:'Technical', priority:'Medium', status:'On Track', owner:'AJ', mitigation:'Monitoring via Vercel dashboard. Have Cloudflare Workers as backup deployment target.', created:'2026-04-08', updated:'2026-04-15', tags:['vercel','infra'] },
+      { id:uid(), type:'Dependency', title:'Product Hunt launch slot', description:'Targeting top-5 finish on Product Hunt for initial traction. Need to secure launch day and build hunter network.', category:'External', priority:'High', status:'At Risk', owner:'AJ', mitigation:'Connected with 2 top hunters. Building pre-launch email list (target: 500). Need to finalize launch date.', created:'2026-04-14', updated:'2026-04-24', tags:['launch','ph'] },
+      { id:uid(), type:'Dependency', title:'Stripe integration for billing', description:'Paid plans require Stripe checkout, subscription management, and webhook handling to be production-ready.', category:'Technical', priority:'Medium', status:'Met', owner:'AJ', mitigation:'Stripe integration complete. Checkout, portal, webhooks all tested. Ready for paid launch.', created:'2026-04-04', updated:'2026-04-22', tags:['stripe','billing'] },
+      { id:uid(), type:'Risk', title:'Solo founder burnout before PMF', description:'Running product, engineering, marketing, and content alone. Risk of burnout before reaching product-market fit.', category:'Resource', priority:'High', status:'Accepted', probability:4, impact:3, owner:'AJ', mitigation:'Time-boxing work sessions. Using AI tools (Cursor, OpenClaw) for 10x leverage. Content batching.', contingency:'Hire first contractor at $2K MRR milestone for support/content.', created:'2026-04-01', updated:'2026-04-20', tags:['burnout','founder'] }
+    ]
+  };
+  state.projects = [proj];
+  state.activeProject = proj.id;
+  save();
+}
+
+// ── Render ──
+function render() {
+  const app = document.getElementById('app');
+  const proj = getProject();
+  app.innerHTML = `
+    ${renderSidebar()}
+    <div class="main">
+      ${renderTopbar()}
+      <div class="content">
+        ${!proj ? renderNoProject() : renderView()}
+      </div>
+    </div>
+    ${state.modal ? renderModal() : ''}
+    ${state.helpOpen ? renderHelp() : ''}
+  `;
+  bindEvents();
+}
+
+function renderSidebar() {
+  const items = getItems();
+  const counts = { Risk:0, Assumption:0, Issue:0, Dependency:0 };
+  items.forEach(i => counts[i.type]++);
+  const total = items.length;
+  const views = [
+    { id:'all', icon:'📋', label:'All Items', badge:total },
+    { id:'matrix', icon:'🎯', label:'Risk Matrix', badge:counts.Risk },
+    { id:'table', icon:'📊', label:'Table View', badge:total },
+    { id:'dashboard', icon:'📈', label:'Dashboard', badge:'' },
+  ];
+  const filters = [
+    { id:'Risk', icon:'⚠️', label:'Risks', badge:counts.Risk },
+    { id:'Assumption', icon:'💡', label:'Assumptions', badge:counts.Assumption },
+    { id:'Issue', icon:'🔥', label:'Issues', badge:counts.Issue },
+    { id:'Dependency', icon:'🔗', label:'Dependencies', badge:counts.Dependency },
+  ];
+  return `<div class="sidebar">
+    <div class="sidebar-header"><h1><span>🛡️</span> RAID Log</h1></div>
+    <div class="sidebar-search"><input type="text" id="search-input" placeholder="Search items... (/)" value="${state.search}"></div>
+    <div class="sidebar-nav">
+      <div style="padding:4px 12px 8px;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600">Views</div>
+      ${views.map(v => `<div class="nav-item ${state.view===v.id && !state.filter?'active':''}" data-view="${v.id}">${v.icon} ${v.label} ${v.badge!==''?`<span class="badge">${v.badge}</span>`:''}</div>`).join('')}
+      <div class="nav-divider"></div>
+      <div style="padding:4px 12px 8px;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600">Filter by Type</div>
+      ${filters.map(f => `<div class="nav-item ${state.filter===f.id?'active':''}" data-filter="${f.id}">${f.icon} ${f.label} <span class="badge">${f.badge}</span></div>`).join('')}
+      <div class="nav-divider"></div>
+      <div style="padding:4px 12px 8px;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600">Projects</div>
+      ${state.projects.map(p => `<div class="nav-item ${p.id===state.activeProject?'active':''}" data-project="${p.id}">📁 ${p.name} <span class="badge">${p.items.length}</span></div>`).join('')}
+      <div class="nav-item" data-action="add-project" style="color:var(--accent2)">+ New Project</div>
+    </div>
+    <div class="sidebar-footer">
+      <button data-action="add-item">+ Add RAID Item</button>
+    </div>
+  </div>`;
+}
+
+function renderTopbar() {
+  const proj = getProject();
+  return `<div class="topbar">
+    <h2>${proj ? proj.name : 'RAID Log'}</h2>
+    <div class="topbar-actions">
+      <button class="btn btn-secondary btn-sm" data-action="import" title="Import JSON">📥 Import</button>
+      <button class="btn btn-secondary btn-sm" data-action="export" title="Export JSON">📤 Export</button>
+      <button class="btn btn-secondary btn-sm" data-action="help" title="Keyboard shortcuts (?)">⌨️</button>
+    </div>
+  </div>`;
+}
+
+function renderNoProject() {
+  return `<div class="empty"><div class="icon">🛡️</div><h3>No Project Selected</h3><p>Create a project to start tracking risks, assumptions, issues, and dependencies.</p></div>`;
+}
+
+function renderView() {
+  if (state.view === 'detail' && state.selectedId) return renderDetail();
+  if (state.view === 'matrix') return renderMatrix();
+  if (state.view === 'table') return renderTable();
+  if (state.view === 'dashboard') return renderDashboard();
+  return renderAll();
+}
+
+function renderAll() {
+  const items = getFiltered();
+  if (!items.length) return `<div class="empty"><div class="icon">${state.filter ? '🔍' : '📋'}</div><h3>No items found</h3><p>${state.filter ? 'No '+state.filter.toLowerCase()+'s match your filters.' : 'Add your first RAID item to get started.'}</p></div>`;
+  return `<div class="raid-grid">${items.map(renderRaidCard).join('')}</div>`;
+}
+
+function renderRaidCard(item) {
+  const typeTag = `<span class="tag tag-${TYPE_COLORS[item.type]}">${item.type}</span>`;
+  const statusTag = `<span class="tag tag-${item.status.toLowerCase().replace(/\s+/g,'-')}">${item.status}</span>`;
+  const priorityTag = item.priority ? `<span class="tag tag-${item.priority.toLowerCase()}">${item.priority}</span>` : '';
+  let scoreBadge = '';
+  if (item.type === 'Risk' && item.probability && item.impact) {
+    const s = riskScore(item.probability, item.impact);
+    scoreBadge = `<div class="score-badge" style="background:${riskColor(s)}20;color:${riskColor(s)}">${s}</div>`;
+  }
+  return `<div class="raid-card" data-item="${item.id}">
+    ${scoreBadge}
+    <div class="raid-card-header"><div class="raid-card-title">${item.title}</div></div>
+    <div class="raid-card-desc">${item.description}</div>
+    <div class="raid-card-meta">
+      ${typeTag} ${statusTag} ${priorityTag}
+      ${item.owner ? `<span class="owner">👤 ${item.owner}</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderMatrix() {
+  const risks = getItems().filter(i => i.type === 'Risk' && i.probability && i.impact);
+  const cellColors = [
+    ['green','green','yellow','yellow','orange'],
+    ['green','yellow','yellow','orange','orange'],
+    ['yellow','yellow','orange','orange','red'],
+    ['yellow','orange','orange','red','red'],
+    ['orange','orange','red','red','red']
+  ];
+  let cells = '';
+  for (let row = 4; row >= 0; row--) {
+    cells += `<div class="matrix-label-y">${row+1}</div>`;
+    for (let col = 0; col < 5; col++) {
+      const cellRisks = risks.filter(r => r.impact === (col+1) && r.probability === (row+1));
+      const dots = cellRisks.map(r => `<div class="matrix-dot" data-item="${r.id}" title="${r.title}" style="background:${riskColor(riskScore(r.probability,r.impact))}">${r.title.charAt(0)}</div>`).join('');
+      cells += `<div class="matrix-cell matrix-${cellColors[4-row][col]}" style="position:relative">${dots}</div>`;
+    }
+  }
+  cells += `<div></div>`;
+  for (let i = 1; i <= 5; i++) cells += `<div class="matrix-label-x">${i}</div>`;
+
+  const risksByLevel = { Critical:[], High:[], Medium:[], Low:[] };
+  risks.forEach(r => { const l = riskLevel(riskScore(r.probability,r.impact)); risksByLevel[l].push(r); });
+
+  return `<div class="matrix-container">
+    <div class="matrix-wrap">
+      <div class="card" style="padding:24px">
+        <h3 style="margin-bottom:20px;font-size:16px">Risk Matrix — Probability × Impact</h3>
+        <div class="matrix-wrapper">
+          <div class="matrix-y-label">PROBABILITY →</div>
+          <div class="matrix">${cells}</div>
+          <div class="matrix-axes"><span></span><span>IMPACT →</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="matrix-legend">
+      <div class="card" style="padding:20px">
+        <h3 style="margin-bottom:16px;font-size:16px">Risk Summary</h3>
+        ${['Critical','High','Medium','Low'].map(level => {
+          const rs = risksByLevel[level];
+          const color = level==='Critical'?'var(--red)':level==='High'?'var(--orange)':level==='Medium'?'var(--yellow)':'var(--green)';
+          return `<div style="margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <div class="matrix-legend-dot" style="background:${color}"></div>
+              <span style="font-weight:600;font-size:14px">${level}</span>
+              <span style="color:var(--text3);font-size:13px">(${rs.length})</span>
+            </div>
+            ${rs.map(r => `<div style="padding:3px 0 3px 18px;font-size:12px;color:var(--text2);cursor:pointer" data-item="${r.id}">• ${r.title} <span style="color:var(--text3)">(${riskScore(r.probability,r.impact)})</span></div>`).join('')}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderTable() {
+  const items = getFiltered();
+  const { field, dir } = state.sort;
+  const sc = (f) => field===f ? `sorted-${dir}` : '';
+  return `<div class="card"><div class="table-wrap"><table>
+    <thead><tr>
+      <th class="sortable ${sc('type')}" data-sort="type">Type</th>
+      <th class="sortable ${sc('title')}" data-sort="title">Title</th>
+      <th class="sortable ${sc('category')}" data-sort="category">Category</th>
+      <th class="sortable ${sc('priority')}" data-sort="priority">Priority</th>
+      <th class="sortable ${sc('status')}" data-sort="status">Status</th>
+      <th class="sortable ${sc('score')}" data-sort="score">Score</th>
+      <th class="sortable ${sc('owner')}" data-sort="owner">Owner</th>
+      <th class="sortable ${sc('updated')}" data-sort="updated">Updated</th>
+    </tr></thead>
+    <tbody>${items.map(i => {
+      const score = i.type==='Risk' ? riskScore(i.probability||1,i.impact||1) : '—';
+      return `<tr data-item="${i.id}">
+        <td><span class="tag tag-${TYPE_COLORS[i.type]}">${i.type}</span></td>
+        <td style="font-weight:600;max-width:260px">${i.title}</td>
+        <td><span style="color:var(--text2)">${i.category||'—'}</span></td>
+        <td>${i.priority ? `<span class="tag tag-${i.priority.toLowerCase()}">${i.priority}</span>` : '—'}</td>
+        <td><span class="tag tag-${i.status.toLowerCase().replace(/\s+/g,'-')}">${i.status}</span></td>
+        <td>${score !== '—' ? `<span style="font-weight:700;color:${riskColor(score)}">${score}</span>` : '—'}</td>
+        <td style="color:var(--text2)">${i.owner||'—'}</td>
+        <td style="color:var(--text3);font-size:12px">${i.updated||i.created}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div></div>`;
+}
+
+function renderDashboard() {
+  const items = getItems();
+  const risks = items.filter(i => i.type === 'Risk');
+  const assumptions = items.filter(i => i.type === 'Assumption');
+  const issues = items.filter(i => i.type === 'Issue');
+  const deps = items.filter(i => i.type === 'Dependency');
+  const openItems = items.filter(i => ['Open','In Progress','Monitoring','Testing','At Risk','Pending'].includes(i.status));
+  const criticalItems = items.filter(i => i.priority === 'Critical');
+
+  // Risk scores
+  const avgScore = risks.length ? (risks.reduce((s,r) => s + riskScore(r.probability||1,r.impact||1), 0) / risks.length).toFixed(1) : '0';
+  const maxScore = risks.length ? Math.max(...risks.map(r => riskScore(r.probability||1,r.impact||1))) : 0;
+
+  // Status distribution
+  const statusCounts = {};
+  items.forEach(i => { statusCounts[i.status] = (statusCounts[i.status]||0) + 1; });
+
+  // Category distribution
+  const catCounts = {};
+  items.forEach(i => { if(i.category) catCounts[i.category] = (catCounts[i.category]||0) + 1; });
+  const maxCat = Math.max(...Object.values(catCounts), 1);
+
+  // Priority distribution
+  const priCounts = { Critical:0, High:0, Medium:0, Low:0 };
+  items.forEach(i => { if(i.priority) priCounts[i.priority]++; });
+  const maxPri = Math.max(...Object.values(priCounts), 1);
+
+  // Type donut
+  const typeData = [
+    { label:'Risks', count:risks.length, color:'var(--red)' },
+    { label:'Assumptions', count:assumptions.length, color:'var(--blue)' },
+    { label:'Issues', count:issues.length, color:'var(--orange)' },
+    { label:'Dependencies', count:deps.length, color:'var(--pink)' },
+  ];
+  const total = items.length || 1;
+  let donutOffset = 0;
+  const donutSegments = typeData.map(d => {
+    const pct = (d.count / total) * 100;
+    const seg = `<circle cx="80" cy="80" r="60" fill="none" stroke="${d.color}" stroke-width="20" stroke-dasharray="${pct * 3.77} ${377 - pct * 3.77}" stroke-dashoffset="${-donutOffset * 3.77}" opacity="0.85"/>`;
+    donutOffset += pct;
+    return seg;
+  }).join('');
+
+  return `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value" style="color:var(--accent)">${items.length}</div><div class="stat-label">Total Items</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--yellow)">${openItems.length}</div><div class="stat-label">Open / Active</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--red)">${criticalItems.length}</div><div class="stat-label">Critical</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--orange)">${avgScore}</div><div class="stat-label">Avg Risk Score</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:${riskColor(maxScore)}">${maxScore}</div><div class="stat-label">Max Risk Score</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--green)">${items.filter(i=>['Closed','Resolved','Met','Validated','Mitigated'].includes(i.status)).length}</div><div class="stat-label">Resolved</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h4>RAID Type Distribution</h4>
+        <div class="donut-container">
+          <svg width="160" height="160" viewBox="0 0 160 160">${donutSegments}<text x="80" y="76" text-anchor="middle" fill="var(--text)" font-size="24" font-weight="800">${items.length}</text><text x="80" y="94" text-anchor="middle" fill="var(--text3)" font-size="11">ITEMS</text></svg>
+          <div class="donut-legend">${typeData.map(d => `<div class="donut-legend-item"><div class="donut-legend-dot" style="background:${d.color}"></div>${d.label}: ${d.count}</div>`).join('')}</div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h4>Priority Breakdown</h4>
+        ${['Critical','High','Medium','Low'].map(p => {
+          const c = priCounts[p];
+          const color = p==='Critical'?'var(--red)':p==='High'?'var(--orange)':p==='Medium'?'var(--yellow)':'var(--green)';
+          return `<div class="bar-row"><div class="bar-label">${p}</div><div class="bar-track"><div class="bar-fill" style="width:${(c/maxPri)*100}%;background:${color}">${c}</div></div></div>`;
+        }).join('')}
+      </div>
+      <div class="chart-card">
+        <h4>Category Breakdown</h4>
+        ${Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([cat,count]) => {
+          return `<div class="bar-row"><div class="bar-label">${cat}</div><div class="bar-track"><div class="bar-fill" style="width:${(count/maxCat)*100}%;background:var(--accent)">${count}</div></div></div>`;
+        }).join('')}
+      </div>
+      <div class="chart-card">
+        <h4>Status Overview</h4>
+        ${Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]).map(([status,count]) => {
+          const color = ['Open','Pending'].includes(status)?'var(--yellow)':['Closed','Resolved','Met','Validated','Mitigated'].includes(status)?'var(--green)':['Blocked','Occurred','Invalid','Overdue'].includes(status)?'var(--red)':'var(--cyan)';
+          return `<div class="bar-row"><div class="bar-label">${status}</div><div class="bar-track"><div class="bar-fill" style="width:${(count/Math.max(...Object.values(statusCounts),1))*100}%;background:${color}">${count}</div></div></div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h4 style="margin-bottom:16px;font-size:14px;color:var(--text2)">🔥 Critical & High Priority Open Items</h4>
+      ${items.filter(i => (i.priority==='Critical'||i.priority==='High') && !['Closed','Resolved','Met','Validated','Mitigated'].includes(i.status)).map(i => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" data-item="${i.id}">
+          <span class="tag tag-${TYPE_COLORS[i.type]}" style="min-width:80px;justify-content:center">${i.type}</span>
+          <span class="tag tag-${i.priority.toLowerCase()}">${i.priority}</span>
+          <span style="font-weight:600;font-size:13px;flex:1">${i.title}</span>
+          <span class="tag tag-${i.status.toLowerCase().replace(/\s+/g,'-')}">${i.status}</span>
+          ${i.type==='Risk'?`<span style="font-weight:700;font-size:13px;color:${riskColor(riskScore(i.probability||1,i.impact||1))}">${riskScore(i.probability||1,i.impact||1)}</span>`:''}
+        </div>
+      `).join('') || '<div style="color:var(--text3);font-size:13px;padding:12px 0">No critical or high priority open items. Nice! 🎉</div>'}
+    </div>
+  `;
+}
+
+function renderDetail() {
+  const item = getItems().find(i => i.id === state.selectedId);
+  if (!item) return renderAll();
+  const score = item.type === 'Risk' ? riskScore(item.probability||1, item.impact||1) : null;
+  return `
+    <div style="margin-bottom:16px"><button class="btn btn-secondary btn-sm" data-action="back">← Back</button></div>
+    <div class="detail-header">
+      <div>
+        <div class="detail-title">${item.title}</div>
+        <div class="detail-tags">
+          <span class="tag tag-${TYPE_COLORS[item.type]}">${item.type}</span>
+          <span class="tag tag-${item.status.toLowerCase().replace(/\s+/g,'-')}">${item.status}</span>
+          ${item.priority ? `<span class="tag tag-${item.priority.toLowerCase()}">${item.priority}</span>` : ''}
+          ${item.category ? `<span class="tag" style="background:var(--surface3);color:var(--text2)">${item.category}</span>` : ''}
+          ${(item.tags||[]).map(t => `<span class="tag" style="background:var(--accent-bg);color:var(--accent2)">#${t}</span>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" data-action="edit-item" data-id="${item.id}">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" data-action="delete-item" data-id="${item.id}">🗑️ Delete</button>
+      </div>
+    </div>
+    <div class="detail-grid" style="margin-bottom:20px">
+      ${item.owner ? `<div class="detail-field"><div class="label">Owner</div><div class="value">👤 ${item.owner}</div></div>` : ''}
+      ${score !== null ? `<div class="detail-field"><div class="label">Risk Score</div><div class="value" style="color:${riskColor(score)}">${score} (${riskLevel(score)})</div></div>` : ''}
+      ${item.probability ? `<div class="detail-field"><div class="label">Probability</div><div class="value">${item.probability}/5</div></div>` : ''}
+      ${item.impact ? `<div class="detail-field"><div class="label">Impact</div><div class="value">${item.impact}/5</div></div>` : ''}
+      <div class="detail-field"><div class="label">Created</div><div class="value">${item.created}</div></div>
+      <div class="detail-field"><div class="label">Last Updated</div><div class="value">${item.updated || item.created}</div></div>
+    </div>
+    <div class="detail-section"><h4>Description</h4><p>${item.description || 'No description.'}</p></div>
+    ${item.mitigation ? `<div class="detail-section"><h4>${item.type==='Risk'?'Mitigation Plan':'Action / Response'}</h4><p>${item.mitigation}</p></div>` : ''}
+    ${item.contingency ? `<div class="detail-section"><h4>Contingency Plan</h4><p>${item.contingency}</p></div>` : ''}
+  `;
+}
+
+function renderModal() {
+  const isEdit = state.modal === 'edit';
+  const item = isEdit ? state.editItem : {};
+  const type = item.type || 'Risk';
+  const statuses = getStatuses(type);
+  return `<div class="modal-overlay" data-action="close-modal">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>${isEdit ? 'Edit' : 'New'} RAID Item</h3>
+        <button class="modal-close" data-action="close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Type</label>
+            <select id="f-type" onchange="updateModalType(this.value)">
+              ${TYPES.map(t => `<option value="${t}" ${type===t?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="f-status">
+              ${statuses.map(s => `<option value="${s}" ${(item.status||statuses[0])===s?'selected':''}>${s}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>Title</label><input id="f-title" value="${item.title||''}" placeholder="Brief, descriptive title"></div>
+        <div class="form-group"><label>Description</label><textarea id="f-desc" rows="3" placeholder="What is this risk/assumption/issue/dependency?">${item.description||''}</textarea></div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Category</label>
+            <select id="f-category">
+              <option value="">— None —</option>
+              ${CATEGORIES.map(c => `<option value="${c}" ${(item.category||'')=== c?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Priority</label>
+            <select id="f-priority">
+              ${PRIORITIES.map(p => `<option value="${p}" ${(item.priority||'Medium')===p?'selected':''}>${p}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group"><label>Owner</label><input id="f-owner" value="${item.owner||''}" placeholder="Who owns this?"></div>
+        </div>
+        <div id="risk-fields" style="${type==='Risk'?'':'display:none'}">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Probability (1-5)</label>
+              <div class="slider-group">
+                <input type="range" id="f-prob" min="1" max="5" value="${item.probability||3}" oninput="document.getElementById('prob-val').textContent=this.value">
+                <span class="slider-value" id="prob-val">${item.probability||3}</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Impact (1-5)</label>
+              <div class="slider-group">
+                <input type="range" id="f-impact" min="1" max="5" value="${item.impact||3}" oninput="document.getElementById('impact-val').textContent=this.value">
+                <span class="slider-value" id="impact-val">${item.impact||3}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group"><label>${type==='Risk'?'Mitigation Plan':'Action / Response'}</label><textarea id="f-mitigation" rows="2" placeholder="How will you address this?">${item.mitigation||''}</textarea></div>
+        <div id="contingency-field" style="${type==='Risk'?'':'display:none'}">
+          <div class="form-group"><label>Contingency Plan</label><textarea id="f-contingency" rows="2" placeholder="What if the risk occurs?">${item.contingency||''}</textarea></div>
+        </div>
+        <div class="form-group"><label>Tags (comma-separated)</label><input id="f-tags" value="${(item.tags||[]).join(', ')}" placeholder="launch, technical, p0"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-action="close-modal">Cancel</button>
+        <button class="btn btn-primary" data-action="save-item">${isEdit ? 'Update' : 'Create'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderHelp() {
+  const shortcuts = [
+    ['N', 'New RAID item'],
+    ['/', 'Focus search'],
+    ['1-4', 'Switch views (All/Matrix/Table/Dashboard)'],
+    ['R', 'Filter: Risks'],
+    ['A', 'Filter: Assumptions'],
+    ['I', 'Filter: Issues'],
+    ['P', 'Filter: Dependencies'],
+    ['0', 'Clear filter'],
+    ['E', 'Export JSON'],
+    ['D', 'Dark mode (always on 😎)'],
+    ['?', 'Toggle help'],
+    ['Esc', 'Close modal / Back'],
+  ];
+  return `<div class="help-overlay" data-action="close-help">
+    <div class="help-box" onclick="event.stopPropagation()">
+      <h3>⌨️ Keyboard Shortcuts</h3>
+      ${shortcuts.map(([k,d]) => `<div class="help-row"><kbd>${k}</kbd><span>${d}</span></div>`).join('')}
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-secondary btn-sm" data-action="close-help">Close</button></div>
+    </div>
+  </div>`;
+}
+
+// ── Modal Type Switch ──
+window.updateModalType = function(type) {
+  document.getElementById('risk-fields').style.display = type==='Risk' ? '' : 'none';
+  document.getElementById('contingency-field').style.display = type==='Risk' ? '' : 'none';
+  const statusSel = document.getElementById('f-status');
+  const statuses = getStatuses(type);
+  statusSel.innerHTML = statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+};
+
+// ── Events ──
+function bindEvents() {
+  // Nav
+  document.querySelectorAll('[data-view]').forEach(el => el.onclick = () => { state.view = el.dataset.view; state.filter = null; state.selectedId = null; render(); });
+  document.querySelectorAll('[data-filter]').forEach(el => el.onclick = () => {
+    if (state.filter === el.dataset.filter) { state.filter = null; } else { state.filter = el.dataset.filter; state.view = 'all'; }
+    render();
+  });
+  document.querySelectorAll('[data-project]').forEach(el => el.onclick = () => { state.activeProject = el.dataset.project; render(); });
+
+  // Items
+  document.querySelectorAll('[data-item]').forEach(el => el.onclick = (e) => {
+    if (e.target.closest('[data-action]')) return;
+    state.selectedId = el.dataset.item; state.view = 'detail'; render();
+  });
+
+  // Sorting
+  document.querySelectorAll('[data-sort]').forEach(el => el.onclick = () => {
+    const f = el.dataset.sort;
+    if (state.sort.field === f) state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
+    else { state.sort.field = f; state.sort.dir = 'desc'; }
+    render();
+  });
+
+  // Actions
+  document.querySelectorAll('[data-action]').forEach(el => {
+    const a = el.dataset.action;
+    if (el._bound) return; el._bound = true;
+    el.onclick = (e) => {
+      e.stopPropagation();
+      if (a === 'add-item') { state.modal = 'add'; state.editItem = {}; render(); }
+      else if (a === 'edit-item') { state.modal = 'edit'; state.editItem = {...getItems().find(i => i.id === el.dataset.id), tags: [...(getItems().find(i => i.id === el.dataset.id)?.tags||[])]}; render(); }
+      else if (a === 'delete-item') { if(confirm('Delete this item?')) { const proj = getProject(); proj.items = proj.items.filter(i => i.id !== el.dataset.id); save(); state.view = 'all'; state.selectedId = null; render(); } }
+      else if (a === 'close-modal') { state.modal = null; state.editItem = null; render(); }
+      else if (a === 'save-item') saveItem();
+      else if (a === 'back') { state.view = 'all'; state.selectedId = null; render(); }
+      else if (a === 'export') exportJSON();
+      else if (a === 'import') importJSON();
+      else if (a === 'help' || a === 'close-help') { state.helpOpen = !state.helpOpen; render(); }
+      else if (a === 'add-project') addProject();
+    };
+  });
+
+  // Search
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.oninput = () => { state.search = searchInput.value; render(); };
+  }
+}
+
+function saveItem() {
+  const proj = getProject();
+  if (!proj) return;
+  const today = new Date().toISOString().slice(0,10);
+  const type = document.getElementById('f-type').value;
+  const data = {
+    type,
+    title: document.getElementById('f-title').value.trim(),
+    description: document.getElementById('f-desc').value.trim(),
+    category: document.getElementById('f-category').value,
+    priority: document.getElementById('f-priority').value,
+    status: document.getElementById('f-status').value,
+    owner: document.getElementById('f-owner').value.trim(),
+    mitigation: document.getElementById('f-mitigation').value.trim(),
+    tags: document.getElementById('f-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    updated: today
+  };
+  if (type === 'Risk') {
+    data.probability = parseInt(document.getElementById('f-prob').value);
+    data.impact = parseInt(document.getElementById('f-impact').value);
+    data.contingency = document.getElementById('f-contingency').value.trim();
+  }
+  if (!data.title) { alert('Title is required'); return; }
+
+  if (state.modal === 'edit' && state.editItem?.id) {
+    const idx = proj.items.findIndex(i => i.id === state.editItem.id);
+    if (idx >= 0) proj.items[idx] = { ...proj.items[idx], ...data };
+  } else {
+    data.id = uid();
+    data.created = today;
+    proj.items.unshift(data);
+  }
+  save();
+  state.modal = null;
+  state.editItem = null;
+  render();
+}
+
+function addProject() {
+  const name = prompt('Project name:');
+  if (!name) return;
+  const proj = { id: uid(), name, items: [] };
+  state.projects.push(proj);
+  state.activeProject = proj.id;
+  save();
+  render();
+}
+
+function exportJSON() {
+  const data = JSON.stringify({ projects: state.projects }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'raid-log-export.json';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function importJSON() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.projects) {
+          state.projects = data.projects;
+          state.activeProject = data.projects[0]?.id || null;
+          save(); render();
+        }
+      } catch(err) { alert('Invalid JSON file'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ── Keyboard Shortcuts ──
+document.addEventListener('keydown', (e) => {
+  if (state.modal || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') { state.modal = null; state.editItem = null; state.helpOpen = false; render(); }
+    return;
+  }
+  switch(e.key) {
+    case 'n': case 'N': e.preventDefault(); state.modal = 'add'; state.editItem = {}; render(); break;
+    case '/': e.preventDefault(); document.getElementById('search-input')?.focus(); break;
+    case '1': state.view = 'all'; state.filter = null; render(); break;
+    case '2': state.view = 'matrix'; state.filter = null; render(); break;
+    case '3': state.view = 'table'; state.filter = null; render(); break;
+    case '4': state.view = 'dashboard'; state.filter = null; render(); break;
+    case 'r': case 'R': state.filter = state.filter==='Risk'?null:'Risk'; state.view='all'; render(); break;
+    case 'a': case 'A': state.filter = state.filter==='Assumption'?null:'Assumption'; state.view='all'; render(); break;
+    case 'i': case 'I': state.filter = state.filter==='Issue'?null:'Issue'; state.view='all'; render(); break;
+    case 'p': state.filter = state.filter==='Dependency'?null:'Dependency'; state.view='all'; render(); break;
+    case '0': state.filter = null; render(); break;
+    case 'e': case 'E': exportJSON(); break;
+    case '?': state.helpOpen = !state.helpOpen; render(); break;
+    case 'Escape':
+      if (state.helpOpen) { state.helpOpen = false; render(); }
+      else if (state.view === 'detail') { state.view = 'all'; state.selectedId = null; render(); }
+      break;
+  }
+});
+
+// ── Init ──
+load();
+if (!state.projects.length) seedData();
+render();
+</script>
+</body>
+</html>

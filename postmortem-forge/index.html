@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Postmortem Forge — Incident Postmortem & Root Cause Analysis Builder</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#161822;--bg3:#1e2030;--bg4:#262840;
+  --text:#e0e0e8;--text2:#a0a0b8;--text3:#6c6c80;
+  --border:#2a2c40;--border2:#363850;
+  --accent:#6c8cff;--accent2:#5070e0;--accent-bg:rgba(108,140,255,0.1);
+  --red:#ff6b6b;--red-bg:rgba(255,107,107,0.12);
+  --orange:#ffb347;--orange-bg:rgba(255,179,71,0.12);
+  --green:#69db7c;--green-bg:rgba(105,219,124,0.12);
+  --yellow:#ffd43b;--yellow-bg:rgba(255,212,59,0.12);
+  --purple:#b197fc;--purple-bg:rgba(177,151,252,0.12);
+  --cyan:#66d9e8;--cyan-bg:rgba(102,217,232,0.12);
+  --pink:#f06595;--pink-bg:rgba(240,101,149,0.12);
+  --teal:#38d9a9;--teal-bg:rgba(56,217,169,0.12);
+  --radius:8px;--radius-lg:12px;
+  --shadow:0 2px 8px rgba(0,0,0,0.3);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.4);
+  --transition:0.2s ease;
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+input,textarea,select,button{font-family:inherit;font-size:inherit;color:inherit}
+input,textarea,select{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);outline:none;transition:border var(--transition)}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:80px}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23a0a0b8' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+button{cursor:pointer;border:none;background:none;color:var(--text);transition:all var(--transition)}
+.btn{padding:8px 16px;border-radius:var(--radius);font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{background:var(--bg3);border:1px solid var(--border)}.btn-secondary:hover{background:var(--bg4)}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{opacity:0.85}
+.btn-ghost{color:var(--text2)}.btn-ghost:hover{color:var(--text);background:var(--bg3)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius)}
+.btn-icon:hover{background:var(--bg3)}
+
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:280px;min-width:280px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-search{padding:12px 16px;border-bottom:1px solid var(--border)}
+.sidebar-search input{width:100%;background:var(--bg3)}
+.sidebar-list{flex:1;overflow-y:auto;padding:8px}
+.sidebar-item{padding:10px 12px;border-radius:var(--radius);cursor:pointer;margin-bottom:2px;transition:background var(--transition)}
+.sidebar-item:hover{background:var(--bg3)}
+.sidebar-item.active{background:var(--accent-bg);border:1px solid rgba(108,140,255,0.2)}
+.sidebar-item-title{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-item-meta{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:8px;margin-top:2px}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px}
+.sidebar-footer .btn{flex:1;justify-content:center}
+
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:12px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--bg2)}
+.topbar .view-tabs{display:flex;gap:4px}
+.topbar .view-tab{padding:6px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;color:var(--text2);cursor:pointer}
+.topbar .view-tab:hover{background:var(--bg3);color:var(--text)}
+.topbar .view-tab.active{background:var(--accent-bg);color:var(--accent)}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* Severity badges */
+.severity{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.severity-critical{background:var(--red-bg);color:var(--red)}
+.severity-high{background:var(--orange-bg);color:var(--orange)}
+.severity-medium{background:var(--yellow-bg);color:var(--yellow)}
+.severity-low{background:var(--green-bg);color:var(--green)}
+/* Status badges */
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}
+.status-draft{background:var(--bg3);color:var(--text2)}
+.status-investigating{background:var(--purple-bg);color:var(--purple)}
+.status-identified{background:var(--orange-bg);color:var(--orange)}
+.status-resolved{background:var(--green-bg);color:var(--green)}
+.status-learning{background:var(--cyan-bg);color:var(--cyan)}
+
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.card-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.section-title{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;text-align:center}
+.stat-value{font-size:28px;font-weight:800;margin-bottom:2px}
+.stat-label{font-size:12px;color:var(--text2)}
+
+/* Timeline */
+.timeline{position:relative;padding-left:32px}
+.timeline::before{content:'';position:absolute;left:11px;top:8px;bottom:8px;width:2px;background:var(--border2)}
+.timeline-item{position:relative;margin-bottom:16px}
+.timeline-dot{position:absolute;left:-25px;top:6px;width:12px;height:12px;border-radius:50%;border:2px solid var(--border2);background:var(--bg)}
+.timeline-item.type-detected .timeline-dot{background:var(--red);border-color:var(--red)}
+.timeline-item.type-investigated .timeline-dot{background:var(--orange);border-color:var(--orange)}
+.timeline-item.type-mitigated .timeline-dot{background:var(--yellow);border-color:var(--yellow)}
+.timeline-item.type-resolved .timeline-dot{background:var(--green);border-color:var(--green)}
+.timeline-item.type-communicated .timeline-dot{background:var(--cyan);border-color:var(--cyan)}
+.timeline-item.type-escalated .timeline-dot{background:var(--purple);border-color:var(--purple)}
+.timeline-item.type-monitoring .timeline-dot{background:var(--teal);border-color:var(--teal)}
+.timeline-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px}
+.timeline-time{font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600}
+.timeline-desc{font-size:13px;color:var(--text)}
+.timeline-type{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px}
+
+/* 5 Whys */
+.why-chain{position:relative;padding-left:24px}
+.why-chain::before{content:'';position:absolute;left:8px;top:16px;bottom:16px;width:2px;background:var(--border2);border-radius:2px}
+.why-step{position:relative;margin-bottom:12px}
+.why-step::before{content:'';position:absolute;left:-19px;top:14px;width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+.why-step:last-child::before{background:var(--red)}
+.why-label{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.why-step:last-child .why-label{color:var(--red)}
+.why-input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px}
+.why-input:focus{border-color:var(--accent)}
+.why-arrow{text-align:center;color:var(--text3);font-size:18px;margin:4px 0}
+
+/* Action items */
+.action-item{display:flex;align-items:flex-start;gap:12px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px}
+.action-check{width:20px;height:20px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all var(--transition)}
+.action-check:hover{border-color:var(--accent)}
+.action-check.done{background:var(--green);border-color:var(--green)}
+.action-check.done::after{content:'✓';color:#fff;font-size:12px;font-weight:700}
+.action-content{flex:1;min-width:0}
+.action-title{font-weight:600;font-size:13px}
+.action-title.done{text-decoration:line-through;color:var(--text3)}
+.action-meta{font-size:11px;color:var(--text3);display:flex;gap:8px;margin-top:2px;flex-wrap:wrap}
+.action-priority{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px}
+.priority-critical{background:var(--red-bg);color:var(--red)}
+.priority-high{background:var(--orange-bg);color:var(--orange)}
+.priority-medium{background:var(--yellow-bg);color:var(--yellow)}
+.priority-low{background:var(--green-bg);color:var(--green)}
+
+/* Impact metrics */
+.impact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.impact-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+.impact-value{font-size:24px;font-weight:800;margin-bottom:2px}
+.impact-label{font-size:11px;color:var(--text2)}
+
+/* Contributing factors */
+.factor-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:16px;font-size:12px;font-weight:500;margin:3px;cursor:default}
+.factor-process{background:var(--purple-bg);color:var(--purple)}
+.factor-technical{background:var(--cyan-bg);color:var(--cyan)}
+.factor-human{background:var(--orange-bg);color:var(--orange)}
+.factor-external{background:var(--pink-bg);color:var(--pink)}
+.factor-tooling{background:var(--yellow-bg);color:var(--yellow)}
+.factor-communication{background:var(--teal-bg);color:var(--teal)}
+
+/* Report view */
+.report{max-width:800px;margin:0 auto}
+.report h2{font-size:20px;font-weight:800;margin:28px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+.report h3{font-size:15px;font-weight:700;margin:20px 0 8px;color:var(--accent)}
+.report p,.report li{color:var(--text2);line-height:1.7}
+.report ul{padding-left:20px;margin:8px 0}
+
+/* Chart */
+.chart-bar{height:24px;border-radius:4px;margin-bottom:6px;position:relative;min-width:2px;transition:width 0.4s ease}
+.chart-label{font-size:11px;color:var(--text2);margin-bottom:3px;display:flex;justify-content:space-between}
+.bar-container{margin-bottom:12px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity var(--transition)}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);width:90%;max-width:640px;max-height:85vh;overflow-y:auto;padding:24px;box-shadow:var(--shadow-lg)}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* Tabs inside views */
+.inner-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:8px}
+.inner-tab{padding:6px 14px;border-radius:var(--radius) var(--radius) 0 0;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer}
+.inner-tab:hover{color:var(--text);background:var(--bg3)}
+.inner-tab.active{color:var(--accent);border-bottom:2px solid var(--accent)}
+
+/* Learning tags */
+.learning-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:8px}
+.learning-category{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+
+/* Empty state */
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.empty-text{font-size:16px;margin-bottom:8px}
+.empty-sub{font-size:13px}
+
+/* Keyboard hint */
+.kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:11px;font-weight:600;color:var(--text2)}
+.help-grid{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:center}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+
+/* Overdue pulse */
+@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:0.6}}
+.overdue{animation:pulse-red 2s ease-in-out infinite}
+
+/* Print */
+@media print{#sidebar,.topbar{display:none!important}#main{margin:0}body{background:#fff;color:#000}.content{padding:20px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <h1><span class="forge-icon">🔥</span> Postmortem Forge</h1>
+    </div>
+    <div class="sidebar-search">
+      <input type="text" id="searchInput" placeholder="Search postmortems... ( / )">
+    </div>
+    <div class="sidebar-list" id="sidebarList"></div>
+    <div class="sidebar-footer">
+      <button class="btn btn-primary btn-sm" onclick="openNewModal()">+ New</button>
+      <button class="btn btn-secondary btn-sm" onclick="exportJSON()">⬇ Export</button>
+      <button class="btn btn-secondary btn-sm" onclick="importJSON()">⬆ Import</button>
+    </div>
+  </div>
+  <div id="main">
+    <div class="topbar">
+      <div class="view-tabs" id="viewTabs">
+        <div class="view-tab active" data-view="editor" onclick="setView('editor')">📝 Editor</div>
+        <div class="view-tab" data-view="report" onclick="setView('report')">📄 Report</div>
+        <div class="view-tab" data-view="actions" onclick="setView('actions')">✅ Actions</div>
+        <div class="view-tab" data-view="learnings" onclick="setView('learnings')">🧠 Learnings</div>
+        <div class="view-tab" data-view="dashboard" onclick="setView('dashboard')">📊 Dashboard</div>
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost btn-sm" onclick="copyMarkdown()" title="Copy as Markdown">📋 MD</button>
+      <button class="btn btn-ghost btn-sm" onclick="showHelp()" title="Keyboard shortcuts">⌨ ?</button>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleImport(event)">
+
+<script>
+// ===== STATE =====
+const STORE_KEY = 'postmortem_forge_v1';
+let state = {
+  postmortems: [],
+  activeId: null,
+  view: 'editor',
+  innerTab: 'summary',
+  search: ''
+};
+
+const SEVERITIES = ['Critical','High','Medium','Low'];
+const STATUSES = ['Draft','Investigating','Identified','Resolved','Learning'];
+const TIMELINE_TYPES = ['Detected','Investigated','Escalated','Mitigated','Communicated','Monitoring','Resolved'];
+const FACTOR_TYPES = ['Process','Technical','Human','External','Tooling','Communication'];
+const PRIORITIES = ['Critical','High','Medium','Low'];
+const CATEGORIES = ['Detection','Monitoring','Process','Testing','Communication','Architecture','Documentation','Automation'];
+
+function save(){localStorage.setItem(STORE_KEY,JSON.stringify(state))}
+function load(){
+  try{const d=JSON.parse(localStorage.getItem(STORE_KEY));if(d){state={...state,...d}}}catch(e){}
+  if(!state.postmortems.length) seedData();
+}
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function fmt(d){if(!d)return'—';const dt=new Date(d);return dt.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
+function fmtTime(d){if(!d)return'';const dt=new Date(d);return dt.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false})}
+function fmtDuration(ms){if(!ms||ms<0)return'—';const m=Math.floor(ms/60000);if(m<60)return m+'m';const h=Math.floor(m/60);const rm=m%60;return h+'h '+rm+'m'}
+function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function active(){return state.postmortems.find(p=>p.id===state.activeId)}
+
+// ===== CRUD =====
+function createPostmortem(data){
+  const pm = {
+    id: uid(),
+    title: data.title || 'Untitled Incident',
+    severity: data.severity || 'Medium',
+    status: data.status || 'Draft',
+    date: data.date || new Date().toISOString().slice(0,10),
+    detectedAt: data.detectedAt || '',
+    resolvedAt: data.resolvedAt || '',
+    summary: data.summary || '',
+    impact: {
+      usersAffected: data.usersAffected || 0,
+      durationMin: data.durationMin || 0,
+      revenueImpact: data.revenueImpact || '',
+      requestsAffected: data.requestsAffected || 0,
+      slaBreached: data.slaBreached || false,
+      description: data.impactDesc || ''
+    },
+    timeline: data.timeline || [],
+    whys: data.whys || ['','','','',''],
+    rootCause: data.rootCause || '',
+    contributingFactors: data.contributingFactors || [],
+    actionItems: data.actionItems || [],
+    learnings: data.learnings || [],
+    tags: data.tags || [],
+    owner: data.owner || '',
+    team: data.team || '',
+    services: data.services || '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  state.postmortems.unshift(pm);
+  state.activeId = pm.id;
+  save();render();
+  return pm;
+}
+
+function updatePM(id, updates){
+  const pm = state.postmortems.find(p=>p.id===id);
+  if(!pm) return;
+  Object.assign(pm, updates, {updatedAt: new Date().toISOString()});
+  save();
+}
+
+function deletePM(id){
+  if(!confirm('Delete this postmortem?'))return;
+  state.postmortems = state.postmortems.filter(p=>p.id!==id);
+  if(state.activeId===id) state.activeId = state.postmortems[0]?.id || null;
+  save();render();
+}
+
+// ===== VIEWS =====
+function setView(v){state.view=v;document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));renderContent();save()}
+
+function render(){
+  renderSidebar();
+  renderContent();
+}
+
+function renderSidebar(){
+  const list = document.getElementById('sidebarList');
+  const q = state.search.toLowerCase();
+  const filtered = state.postmortems.filter(p=>
+    !q || p.title.toLowerCase().includes(q) || p.tags.some(t=>t.toLowerCase().includes(q)) || p.severity.toLowerCase().includes(q)
+  );
+  list.innerHTML = filtered.length ? filtered.map(p=>`
+    <div class="sidebar-item ${p.id===state.activeId?'active':''}" onclick="selectPM('${p.id}')">
+      <div class="sidebar-item-title">${esc(p.title)}</div>
+      <div class="sidebar-item-meta">
+        <span class="severity severity-${p.severity.toLowerCase()}" style="padding:1px 6px;font-size:10px">${p.severity}</span>
+        <span class="status-badge status-${p.status.toLowerCase()}" style="padding:1px 6px;font-size:10px">${p.status}</span>
+        <span>${fmt(p.date)}</span>
+      </div>
+    </div>
+  `).join('') : '<div class="empty" style="padding:40px 16px"><div style="font-size:32px;margin-bottom:8px">🔍</div><div style="font-size:13px">No postmortems found</div></div>';
+}
+
+function selectPM(id){state.activeId=id;save();render()}
+
+function renderContent(){
+  const el = document.getElementById('content');
+  const pm = active();
+  if(!pm){
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🔥</div><div class="empty-text">Select or create a postmortem</div><div class="empty-sub">Press <span class="kbd">N</span> to create new</div></div>`;
+    if(state.view==='dashboard') renderDashboard(el);
+    if(state.view==='actions') renderAllActions(el);
+    if(state.view==='learnings') renderAllLearnings(el);
+    return;
+  }
+  switch(state.view){
+    case 'editor': renderEditor(el, pm); break;
+    case 'report': renderReport(el, pm); break;
+    case 'actions': renderAllActions(el); break;
+    case 'learnings': renderAllLearnings(el); break;
+    case 'dashboard': renderDashboard(el); break;
+  }
+}
+
+function renderEditor(el, pm){
+  const tabs = ['summary','timeline','5whys','impact','actions','learnings'];
+  const tabLabels = {summary:'📋 Summary',timeline:'⏱ Timeline','5whys':'🔍 5 Whys',impact:'💥 Impact',actions:'✅ Actions',learnings:'🧠 Learnings'};
+  if(!tabs.includes(state.innerTab)) state.innerTab='summary';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div style="flex:1">
+        <input type="text" value="${esc(pm.title)}" onchange="updatePM('${pm.id}',{title:this.value});renderSidebar()" style="width:100%;font-size:20px;font-weight:700;background:transparent;border:none;padding:4px 0" placeholder="Incident title...">
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <select onchange="updatePM('${pm.id}',{severity:this.value});renderSidebar()" style="font-size:12px;padding:4px 24px 4px 8px">
+            ${SEVERITIES.map(s=>`<option ${s===pm.severity?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <select onchange="updatePM('${pm.id}',{status:this.value});renderSidebar()" style="font-size:12px;padding:4px 24px 4px 8px">
+            ${STATUSES.map(s=>`<option ${s===pm.status?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <input type="text" value="${esc(pm.owner)}" onchange="updatePM('${pm.id}',{owner:this.value})" placeholder="Owner" style="width:120px;font-size:12px;padding:4px 8px">
+          <input type="text" value="${esc(pm.team)}" onchange="updatePM('${pm.id}',{team:this.value})" placeholder="Team" style="width:120px;font-size:12px;padding:4px 8px">
+          <input type="text" value="${esc(pm.services)}" onchange="updatePM('${pm.id}',{services:this.value})" placeholder="Services affected" style="width:160px;font-size:12px;padding:4px 8px">
+        </div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="deletePM('${pm.id}')">🗑</button>
+    </div>
+
+    <div class="inner-tabs">
+      ${tabs.map(t=>`<div class="inner-tab ${state.innerTab===t?'active':''}" onclick="state.innerTab='${t}';renderContent()">${tabLabels[t]}</div>`).join('')}
+    </div>
+    <div id="editorPane"></div>
+  `;
+
+  const pane = document.getElementById('editorPane');
+  switch(state.innerTab){
+    case 'summary': renderSummaryTab(pane, pm); break;
+    case 'timeline': renderTimelineTab(pane, pm); break;
+    case '5whys': render5WhysTab(pane, pm); break;
+    case 'impact': renderImpactTab(pane, pm); break;
+    case 'actions': renderActionsTab(pane, pm); break;
+    case 'learnings': renderLearningsTab(pane, pm); break;
+  }
+}
+
+function renderSummaryTab(el, pm){
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px">Incident Summary</div>
+      <div class="form-row" style="margin-bottom:12px">
+        <div class="form-group">
+          <label class="form-label">Incident Date</label>
+          <input type="date" value="${pm.date}" onchange="updatePM('${pm.id}',{date:this.value})">
+        </div>
+        <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <label class="form-label">Detected At</label>
+            <input type="datetime-local" value="${pm.detectedAt}" onchange="updatePM('${pm.id}',{detectedAt:this.value})" style="font-size:12px">
+          </div>
+          <div>
+            <label class="form-label">Resolved At</label>
+            <input type="datetime-local" value="${pm.resolvedAt}" onchange="updatePM('${pm.id}',{resolvedAt:this.value})" style="font-size:12px">
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">What happened?</label>
+        <textarea rows="4" onchange="updatePM('${pm.id}',{summary:this.value})" placeholder="Describe what happened, who was affected, and the scope of the incident...">${esc(pm.summary)}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Root Cause</label>
+        <textarea rows="3" onchange="updatePM('${pm.id}',{rootCause:this.value})" placeholder="The underlying root cause of the incident...">${esc(pm.rootCause)}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tags (comma separated)</label>
+        <input type="text" value="${pm.tags.join(', ')}" onchange="updatePM('${pm.id}',{tags:this.value.split(',').map(t=>t.trim()).filter(Boolean)})" placeholder="api, database, deployment...">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px">Contributing Factors</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">
+        ${pm.contributingFactors.map((f,i)=>`<span class="factor-tag factor-${f.type.toLowerCase()}">${f.type}: ${esc(f.description)} <span style="cursor:pointer;margin-left:4px" onclick="removeContribFactor('${pm.id}',${i})">×</span></span>`).join('')}
+        ${!pm.contributingFactors.length?'<span style="color:var(--text3);font-size:13px">No contributing factors added yet</span>':''}
+      </div>
+      <div style="display:flex;gap:8px">
+        <select id="factorType" style="width:140px;font-size:12px">
+          ${FACTOR_TYPES.map(t=>`<option>${t}</option>`).join('')}
+        </select>
+        <input type="text" id="factorDesc" placeholder="Description..." style="flex:1;font-size:12px" onkeydown="if(event.key==='Enter')addContribFactor('${pm.id}')">
+        <button class="btn btn-primary btn-sm" onclick="addContribFactor('${pm.id}')">Add</button>
+      </div>
+    </div>
+  `;
+}
+
+function addContribFactor(id){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  const type=document.getElementById('factorType').value;
+  const desc=document.getElementById('factorDesc').value.trim();
+  if(!desc)return;
+  pm.contributingFactors.push({type,description:desc});
+  document.getElementById('factorDesc').value='';
+  updatePM(id,{contributingFactors:pm.contributingFactors});
+  renderContent();
+}
+function removeContribFactor(id,i){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  pm.contributingFactors.splice(i,1);
+  updatePM(id,{contributingFactors:pm.contributingFactors});
+  renderContent();
+}
+
+function renderTimelineTab(el, pm){
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">⏱ Incident Timeline</div>
+        <button class="btn btn-primary btn-sm" onclick="addTimelineEvent('${pm.id}')">+ Event</button>
+      </div>
+      ${pm.timeline.length ? `
+        <div class="timeline">
+          ${pm.timeline.sort((a,b)=>new Date(a.time)-new Date(b.time)).map((ev,i)=>`
+            <div class="timeline-item type-${ev.type.toLowerCase()}">
+              <div class="timeline-dot"></div>
+              <div class="timeline-card">
+                <div class="timeline-time">${fmtTime(ev.time)} — ${fmt(ev.time)}</div>
+                <div class="timeline-desc">${esc(ev.description)}</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+                  <span class="timeline-type" style="color:var(--text3)">${ev.type}</span>
+                  ${ev.actor?`<span style="font-size:11px;color:var(--text3)">by ${esc(ev.actor)}</span>`:''}
+                  <div style="flex:1"></div>
+                  <button class="btn-icon btn-sm" onclick="editTimelineEvent('${pm.id}',${i})" title="Edit">✏️</button>
+                  <button class="btn-icon btn-sm" onclick="removeTimelineEvent('${pm.id}',${i})" title="Delete">🗑</button>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : '<div style="text-align:center;padding:40px;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px">⏱</div>No timeline events yet. Add the first event to start documenting.</div>'}
+      ${pm.detectedAt && pm.resolvedAt ? `
+        <div style="margin-top:16px;padding:12px;background:var(--bg3);border-radius:var(--radius);text-align:center">
+          <span style="color:var(--text2);font-size:13px">Total incident duration: </span>
+          <span style="font-weight:700;color:var(--orange)">${fmtDuration(new Date(pm.resolvedAt)-new Date(pm.detectedAt))}</span>
+        </div>
+      `:''}
+    </div>
+  `;
+}
+
+function addTimelineEvent(id){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  showModal(`
+    <div class="modal-title">⏱ Add Timeline Event</div>
+    <div class="form-group">
+      <label class="form-label">When</label>
+      <input type="datetime-local" id="tlTime" value="${new Date().toISOString().slice(0,16)}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <select id="tlType">${TIMELINE_TYPES.map(t=>`<option>${t}</option>`).join('')}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea id="tlDesc" rows="3" placeholder="What happened at this point?"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Actor (who)</label>
+      <input type="text" id="tlActor" placeholder="Person or system">
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTimelineEvent('${id}',-1)">Add Event</button>
+    </div>
+  `);
+}
+
+function editTimelineEvent(id,i){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  const ev=pm.timeline.sort((a,b)=>new Date(a.time)-new Date(b.time))[i];
+  showModal(`
+    <div class="modal-title">✏️ Edit Timeline Event</div>
+    <div class="form-group">
+      <label class="form-label">When</label>
+      <input type="datetime-local" id="tlTime" value="${ev.time}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <select id="tlType">${TIMELINE_TYPES.map(t=>`<option ${t===ev.type?'selected':''}>${t}</option>`).join('')}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea id="tlDesc" rows="3">${esc(ev.description)}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Actor</label>
+      <input type="text" id="tlActor" value="${esc(ev.actor||'')}">
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTimelineEvent('${id}',${i})">Save</button>
+    </div>
+  `);
+}
+
+function saveTimelineEvent(id,idx){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  const ev={
+    time:document.getElementById('tlTime').value,
+    type:document.getElementById('tlType').value,
+    description:document.getElementById('tlDesc').value.trim(),
+    actor:document.getElementById('tlActor').value.trim()
+  };
+  if(!ev.description){alert('Description required');return}
+  const sorted=pm.timeline.sort((a,b)=>new Date(a.time)-new Date(b.time));
+  if(idx>=0) sorted[idx]=ev;
+  else pm.timeline.push(ev);
+  updatePM(id,{timeline:pm.timeline});
+  closeModal();renderContent();
+}
+
+function removeTimelineEvent(id,i){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  const sorted=pm.timeline.sort((a,b)=>new Date(a.time)-new Date(b.time));
+  const ev=sorted[i];
+  pm.timeline=pm.timeline.filter(e=>e!==ev);
+  updatePM(id,{timeline:pm.timeline});
+  renderContent();
+}
+
+function render5WhysTab(el, pm){
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🔍 5 Whys Analysis</div>
+      </div>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:20px">
+        Drill down from the symptom to the root cause. Each "Why?" should dig deeper than the last. The final answer is your true root cause.
+      </p>
+      <div class="why-chain">
+        ${pm.whys.map((w,i)=>`
+          <div class="why-step">
+            <div class="why-label">${i===0?'Symptom / What happened?':i===4?'🎯 Root Cause (Why #5)':'Why #'+(i)+'?'}</div>
+            <input class="why-input" type="text" value="${esc(w)}" 
+              placeholder="${i===0?'The incident started because...':i===4?'The fundamental root cause is...':'Because...'}"
+              onchange="updateWhy('${pm.id}',${i},this.value)">
+          </div>
+          ${i<4?'<div class="why-arrow">↓</div>':''}
+        `).join('')}
+      </div>
+      ${pm.whys[4]?`
+        <div style="margin-top:20px;padding:16px;background:var(--red-bg);border:1px solid rgba(255,107,107,0.2);border-radius:var(--radius)">
+          <div style="font-weight:700;color:var(--red);margin-bottom:4px">🎯 Root Cause Identified</div>
+          <div style="color:var(--text)">${esc(pm.whys[4])}</div>
+        </div>
+      `:''}
+    </div>
+  `;
+}
+
+function updateWhy(id,i,val){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  pm.whys[i]=val;
+  updatePM(id,{whys:pm.whys});
+}
+
+function renderImpactTab(el, pm){
+  const dur = pm.detectedAt && pm.resolvedAt ? fmtDuration(new Date(pm.resolvedAt)-new Date(pm.detectedAt)) : '—';
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">💥 Impact Assessment</div>
+      <div class="impact-grid" style="margin-bottom:20px">
+        <div class="impact-card">
+          <div class="impact-value" style="color:var(--orange)">${pm.impact.usersAffected.toLocaleString()}</div>
+          <div class="impact-label">Users Affected</div>
+        </div>
+        <div class="impact-card">
+          <div class="impact-value" style="color:var(--red)">${dur}</div>
+          <div class="impact-label">Duration</div>
+        </div>
+        <div class="impact-card">
+          <div class="impact-value" style="color:var(--yellow)">${pm.impact.requestsAffected.toLocaleString()}</div>
+          <div class="impact-label">Requests Affected</div>
+        </div>
+        <div class="impact-card">
+          <div class="impact-value" style="color:${pm.impact.slaBreached?'var(--red)':'var(--green)'}">${pm.impact.slaBreached?'Yes':'No'}</div>
+          <div class="impact-label">SLA Breached</div>
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:12px">
+        <div class="form-group">
+          <label class="form-label">Users Affected</label>
+          <input type="number" value="${pm.impact.usersAffected}" onchange="updateImpact('${pm.id}','usersAffected',parseInt(this.value)||0)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Requests Affected</label>
+          <input type="number" value="${pm.impact.requestsAffected}" onchange="updateImpact('${pm.id}','requestsAffected',parseInt(this.value)||0)">
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:12px">
+        <div class="form-group">
+          <label class="form-label">Revenue Impact</label>
+          <input type="text" value="${esc(pm.impact.revenueImpact)}" onchange="updateImpact('${pm.id}','revenueImpact',this.value)" placeholder="e.g. $2,400 lost revenue">
+        </div>
+        <div class="form-group">
+          <label class="form-label">SLA Breached</label>
+          <select onchange="updateImpact('${pm.id}','slaBreached',this.value==='true')">
+            <option value="false" ${!pm.impact.slaBreached?'selected':''}>No</option>
+            <option value="true" ${pm.impact.slaBreached?'selected':''}>Yes</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Impact Description</label>
+        <textarea rows="3" onchange="updateImpact('${pm.id}','description',this.value)" placeholder="Describe the full scope of the impact...">${esc(pm.impact.description)}</textarea>
+      </div>
+    </div>
+  `;
+}
+
+function updateImpact(id,key,val){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  pm.impact[key]=val;
+  updatePM(id,{impact:pm.impact});
+}
+
+function renderActionsTab(el, pm){
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">✅ Action Items</div>
+        <button class="btn btn-primary btn-sm" onclick="addAction('${pm.id}')">+ Action</button>
+      </div>
+      ${pm.actionItems.length ? pm.actionItems.map((a,i)=>`
+        <div class="action-item">
+          <div class="action-check ${a.done?'done':''}" onclick="toggleAction('${pm.id}',${i})"></div>
+          <div class="action-content">
+            <div class="action-title ${a.done?'done':''}">${esc(a.title)}</div>
+            <div class="action-meta">
+              <span class="action-priority priority-${a.priority.toLowerCase()}">${a.priority}</span>
+              ${a.owner?`<span>👤 ${esc(a.owner)}</span>`:''}
+              ${a.dueDate?`<span ${new Date(a.dueDate)<new Date()&&!a.done?'class="overdue" style="color:var(--red)"':''}">📅 ${fmt(a.dueDate)}</span>`:''}
+              <span style="color:var(--text3)">${a.category||''}</span>
+            </div>
+            ${a.notes?`<div style="font-size:12px;color:var(--text3);margin-top:4px">${esc(a.notes)}</div>`:''}
+          </div>
+          <button class="btn-icon btn-sm" onclick="editAction('${pm.id}',${i})">✏️</button>
+          <button class="btn-icon btn-sm" onclick="removeAction('${pm.id}',${i})">🗑</button>
+        </div>
+      `).join('') : '<div style="text-align:center;padding:30px;color:var(--text3)">No action items yet. Add items to prevent this from happening again.</div>'}
+    </div>
+  `;
+}
+
+function addAction(id){
+  showModal(`
+    <div class="modal-title">✅ Add Action Item</div>
+    <div class="form-group">
+      <label class="form-label">Action</label>
+      <input type="text" id="actTitle" placeholder="What needs to be done?">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Priority</label>
+        <select id="actPriority">${PRIORITIES.map(p=>`<option>${p}</option>`).join('')}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select id="actCategory">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Owner</label>
+        <input type="text" id="actOwner" placeholder="Assignee">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Due Date</label>
+        <input type="date" id="actDue">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <textarea id="actNotes" rows="2" placeholder="Additional context..."></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAction('${id}',-1)">Add</button>
+    </div>
+  `);
+}
+
+function editAction(id,i){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  const a=pm.actionItems[i];
+  showModal(`
+    <div class="modal-title">✏️ Edit Action Item</div>
+    <div class="form-group">
+      <label class="form-label">Action</label>
+      <input type="text" id="actTitle" value="${esc(a.title)}">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Priority</label>
+        <select id="actPriority">${PRIORITIES.map(p=>`<option ${p===a.priority?'selected':''}>${p}</option>`).join('')}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select id="actCategory">${CATEGORIES.map(c=>`<option ${c===a.category?'selected':''}>${c}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Owner</label>
+        <input type="text" id="actOwner" value="${esc(a.owner||'')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Due Date</label>
+        <input type="date" id="actDue" value="${a.dueDate||''}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <textarea id="actNotes" rows="2">${esc(a.notes||'')}</textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAction('${id}',${i})">Save</button>
+    </div>
+  `);
+}
+
+function saveAction(id,idx){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  const a={
+    title:document.getElementById('actTitle').value.trim(),
+    priority:document.getElementById('actPriority').value,
+    category:document.getElementById('actCategory').value,
+    owner:document.getElementById('actOwner').value.trim(),
+    dueDate:document.getElementById('actDue').value,
+    notes:document.getElementById('actNotes').value.trim(),
+    done:idx>=0?pm.actionItems[idx].done:false
+  };
+  if(!a.title){alert('Action title required');return}
+  if(idx>=0) pm.actionItems[idx]=a;
+  else pm.actionItems.push(a);
+  updatePM(id,{actionItems:pm.actionItems});
+  closeModal();renderContent();
+}
+
+function toggleAction(id,i){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  pm.actionItems[i].done=!pm.actionItems[i].done;
+  updatePM(id,{actionItems:pm.actionItems});
+  renderContent();
+}
+
+function removeAction(id,i){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  pm.actionItems.splice(i,1);
+  updatePM(id,{actionItems:pm.actionItems});
+  renderContent();
+}
+
+function renderLearningsTab(el, pm){
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🧠 Learnings & Takeaways</div>
+        <button class="btn btn-primary btn-sm" onclick="addLearning('${pm.id}')">+ Learning</button>
+      </div>
+      ${pm.learnings.length ? pm.learnings.map((l,i)=>`
+        <div class="learning-card">
+          <div class="learning-category" style="color:var(--${l.type==='What went well'?'green':l.type==='What went wrong'?'red':l.type==='Where we got lucky'?'yellow':'cyan'})">${l.type}</div>
+          <div style="font-size:13px">${esc(l.description)}</div>
+          <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+            <button class="btn-icon btn-sm" onclick="editLearning('${pm.id}',${i})">✏️</button>
+            <button class="btn-icon btn-sm" onclick="removeLearning('${pm.id}',${i})">🗑</button>
+          </div>
+        </div>
+      `).join('') : '<div style="text-align:center;padding:30px;color:var(--text3)">No learnings captured yet. Document what this incident taught the team.</div>'}
+    </div>
+  `;
+}
+
+const LEARNING_TYPES = ['What went well','What went wrong','Where we got lucky','Improvement needed'];
+
+function addLearning(id){
+  showModal(`
+    <div class="modal-title">🧠 Add Learning</div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <select id="learnType">${LEARNING_TYPES.map(t=>`<option>${t}</option>`).join('')}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea id="learnDesc" rows="3" placeholder="What did we learn?"></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveLearning('${id}',-1)">Add</button>
+    </div>
+  `);
+}
+
+function editLearning(id,i){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  const l=pm.learnings[i];
+  showModal(`
+    <div class="modal-title">✏️ Edit Learning</div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <select id="learnType">${LEARNING_TYPES.map(t=>`<option ${t===l.type?'selected':''}>${t}</option>`).join('')}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea id="learnDesc" rows="3">${esc(l.description)}</textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveLearning('${id}',${i})">Save</button>
+    </div>
+  `);
+}
+
+function saveLearning(id,idx){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  const l={type:document.getElementById('learnType').value,description:document.getElementById('learnDesc').value.trim()};
+  if(!l.description){alert('Description required');return}
+  if(idx>=0) pm.learnings[idx]=l;
+  else pm.learnings.push(l);
+  updatePM(id,{learnings:pm.learnings});
+  closeModal();renderContent();
+}
+
+function removeLearning(id,i){
+  const pm=state.postmortems.find(p=>p.id===id);if(!pm)return;
+  pm.learnings.splice(i,1);
+  updatePM(id,{learnings:pm.learnings});
+  renderContent();
+}
+
+// ===== REPORT VIEW =====
+function renderReport(el, pm){
+  const dur = pm.detectedAt&&pm.resolvedAt?fmtDuration(new Date(pm.resolvedAt)-new Date(pm.detectedAt)):'N/A';
+  el.innerHTML = `
+    <div class="report">
+      <div style="text-align:center;margin-bottom:32px">
+        <span class="severity severity-${pm.severity.toLowerCase()}" style="margin-bottom:8px">${pm.severity} Severity</span>
+        <h1 style="font-size:28px;font-weight:800;margin:12px 0">${esc(pm.title)}</h1>
+        <div style="color:var(--text2)">
+          ${fmt(pm.date)} · ${esc(pm.owner||'No owner')} · ${esc(pm.team||'No team')}
+          <span class="status-badge status-${pm.status.toLowerCase()}" style="margin-left:8px">${pm.status}</span>
+        </div>
+      </div>
+
+      <h2>📋 Executive Summary</h2>
+      <p>${esc(pm.summary)||'<em>No summary provided</em>'}</p>
+
+      <h2>💥 Impact</h2>
+      <div class="impact-grid" style="margin:12px 0">
+        <div class="impact-card"><div class="impact-value" style="color:var(--orange)">${pm.impact.usersAffected.toLocaleString()}</div><div class="impact-label">Users Affected</div></div>
+        <div class="impact-card"><div class="impact-value" style="color:var(--red)">${dur}</div><div class="impact-label">Duration</div></div>
+        <div class="impact-card"><div class="impact-value" style="color:var(--yellow)">${esc(pm.impact.revenueImpact)||'—'}</div><div class="impact-label">Revenue Impact</div></div>
+        <div class="impact-card"><div class="impact-value" style="color:${pm.impact.slaBreached?'var(--red)':'var(--green)'}">${pm.impact.slaBreached?'Yes':'No'}</div><div class="impact-label">SLA Breach</div></div>
+      </div>
+      ${pm.impact.description?`<p>${esc(pm.impact.description)}</p>`:''}
+      ${pm.services?`<p><strong>Services affected:</strong> ${esc(pm.services)}</p>`:''}
+
+      <h2>⏱ Timeline</h2>
+      ${pm.timeline.length?`
+        <div class="timeline" style="margin:12px 0">
+          ${pm.timeline.sort((a,b)=>new Date(a.time)-new Date(b.time)).map(ev=>`
+            <div class="timeline-item type-${ev.type.toLowerCase()}">
+              <div class="timeline-dot"></div>
+              <div class="timeline-card">
+                <div class="timeline-time">${fmtTime(ev.time)} — ${ev.type}${ev.actor?' ('+esc(ev.actor)+')':''}</div>
+                <div class="timeline-desc">${esc(ev.description)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `:'<p><em>No timeline documented</em></p>'}
+
+      <h2>🔍 Root Cause Analysis (5 Whys)</h2>
+      ${pm.whys.some(w=>w)?`
+        <div style="margin:12px 0">
+          ${pm.whys.map((w,i)=>w?`
+            <div style="padding:10px 16px;margin-bottom:8px;background:var(--bg3);border-left:3px solid ${i===4?'var(--red)':'var(--accent)'};border-radius:0 var(--radius) var(--radius) 0">
+              <strong style="color:${i===4?'var(--red)':'var(--accent)'}">
+                ${i===0?'Symptom':i===4?'🎯 Root Cause':'Why #'+i}:
+              </strong> ${esc(w)}
+            </div>
+          `:'').join('')}
+        </div>
+      `:'<p><em>5 Whys analysis not completed</em></p>'}
+      ${pm.rootCause?`<h3>Root Cause Summary</h3><p>${esc(pm.rootCause)}</p>`:''}
+
+      <h2>🧩 Contributing Factors</h2>
+      ${pm.contributingFactors.length?`
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin:12px 0">
+          ${pm.contributingFactors.map(f=>`<span class="factor-tag factor-${f.type.toLowerCase()}">${f.type}: ${esc(f.description)}</span>`).join('')}
+        </div>
+      `:'<p><em>No contributing factors documented</em></p>'}
+
+      <h2>✅ Action Items</h2>
+      ${pm.actionItems.length?`
+        <div style="margin:12px 0">
+          ${pm.actionItems.map(a=>`
+            <div class="action-item">
+              <div class="action-check ${a.done?'done':''}"></div>
+              <div class="action-content">
+                <div class="action-title ${a.done?'done':''}">${esc(a.title)}</div>
+                <div class="action-meta">
+                  <span class="action-priority priority-${a.priority.toLowerCase()}">${a.priority}</span>
+                  ${a.owner?`<span>👤 ${esc(a.owner)}</span>`:''}
+                  ${a.dueDate?`<span>📅 ${fmt(a.dueDate)}</span>`:''}
+                  <span>${a.category||''}</span>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `:'<p><em>No action items yet</em></p>'}
+
+      <h2>🧠 Learnings</h2>
+      ${pm.learnings.length?`
+        <div style="margin:12px 0">
+          ${pm.learnings.map(l=>`
+            <div class="learning-card">
+              <div class="learning-category" style="color:var(--${l.type==='What went well'?'green':l.type==='What went wrong'?'red':l.type==='Where we got lucky'?'yellow':'cyan'})">${l.type}</div>
+              <div style="font-size:13px">${esc(l.description)}</div>
+            </div>
+          `).join('')}
+        </div>
+      `:'<p><em>No learnings captured</em></p>'}
+    </div>
+  `;
+}
+
+// ===== ALL ACTIONS VIEW =====
+function renderAllActions(el){
+  const allActions = [];
+  state.postmortems.forEach(pm=>{
+    pm.actionItems.forEach((a,i)=>{
+      allActions.push({...a, pmId:pm.id, pmTitle:pm.title, pmSeverity:pm.severity, idx:i});
+    });
+  });
+  const pending = allActions.filter(a=>!a.done).sort((a,b)=>{
+    const po={Critical:0,High:1,Medium:2,Low:3};
+    return (po[a.priority]||3)-(po[b.priority]||3);
+  });
+  const done = allActions.filter(a=>a.done);
+  const overdue = pending.filter(a=>a.dueDate&&new Date(a.dueDate)<new Date());
+
+  el.innerHTML = `
+    <div class="section-title">✅ All Action Items Across Postmortems</div>
+    <div class="stats-grid" style="margin-bottom:20px">
+      <div class="stat-card"><div class="stat-value" style="color:var(--accent)">${allActions.length}</div><div class="stat-label">Total Actions</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--orange)">${pending.length}</div><div class="stat-label">Pending</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--green)">${done.length}</div><div class="stat-label">Completed</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--red)">${overdue.length}</div><div class="stat-label">Overdue</div></div>
+    </div>
+    ${overdue.length?`
+      <div class="card" style="border-color:rgba(255,107,107,0.3)">
+        <div class="card-title" style="color:var(--red);margin-bottom:12px">⚠️ Overdue (${overdue.length})</div>
+        ${overdue.map(a=>renderActionRow(a)).join('')}
+      </div>
+    `:''}
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px">Pending (${pending.length})</div>
+      ${pending.length?pending.map(a=>renderActionRow(a)).join(''):'<div style="text-align:center;padding:20px;color:var(--text3)">All clear! 🎉</div>'}
+    </div>
+    ${done.length?`
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">Completed (${done.length})</div>
+        ${done.map(a=>renderActionRow(a)).join('')}
+      </div>
+    `:''}
+  `;
+}
+
+function renderActionRow(a){
+  return `
+    <div class="action-item">
+      <div class="action-check ${a.done?'done':''}" onclick="toggleAction('${a.pmId}',${a.idx});renderContent()"></div>
+      <div class="action-content">
+        <div class="action-title ${a.done?'done':''}">${esc(a.title)}</div>
+        <div class="action-meta">
+          <span class="action-priority priority-${a.priority.toLowerCase()}">${a.priority}</span>
+          ${a.owner?`<span>👤 ${esc(a.owner)}</span>`:''}
+          ${a.dueDate?`<span ${new Date(a.dueDate)<new Date()&&!a.done?'class="overdue" style="color:var(--red)"':''}">📅 ${fmt(a.dueDate)}</span>`:''}
+          <span style="cursor:pointer;color:var(--accent)" onclick="selectPM('${a.pmId}')">${esc(a.pmTitle)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ===== ALL LEARNINGS VIEW =====
+function renderAllLearnings(el){
+  const all = [];
+  state.postmortems.forEach(pm=>{
+    pm.learnings.forEach(l=>{
+      all.push({...l, pmTitle:pm.title, pmId:pm.id, pmSeverity:pm.severity, pmDate:pm.date});
+    });
+  });
+  const grouped = {};
+  LEARNING_TYPES.forEach(t=>grouped[t]=[]);
+  all.forEach(l=>{if(grouped[l.type])grouped[l.type].push(l)});
+
+  el.innerHTML = `
+    <div class="section-title">🧠 All Learnings Across Postmortems</div>
+    <div class="stats-grid" style="margin-bottom:20px">
+      <div class="stat-card"><div class="stat-value" style="color:var(--accent)">${all.length}</div><div class="stat-label">Total Learnings</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--green)">${grouped['What went well'].length}</div><div class="stat-label">Went Well</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--red)">${grouped['What went wrong'].length}</div><div class="stat-label">Went Wrong</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--yellow)">${grouped['Where we got lucky'].length}</div><div class="stat-label">Got Lucky</div></div>
+    </div>
+    ${LEARNING_TYPES.map(type=>`
+      <div class="card">
+        <div class="card-title" style="color:var(--${type==='What went well'?'green':type==='What went wrong'?'red':type==='Where we got lucky'?'yellow':'cyan'});margin-bottom:12px">${type} (${grouped[type].length})</div>
+        ${grouped[type].length?grouped[type].map(l=>`
+          <div class="learning-card">
+            <div style="font-size:13px">${esc(l.description)}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px;cursor:pointer" onclick="selectPM('${l.pmId}')">from: ${esc(l.pmTitle)} · ${fmt(l.pmDate)}</div>
+          </div>
+        `).join(''):'<div style="text-align:center;padding:16px;color:var(--text3)">None yet</div>'}
+      </div>
+    `).join('')}
+  `;
+}
+
+// ===== DASHBOARD =====
+function renderDashboard(el){
+  const pms = state.postmortems;
+  const totalActions = pms.reduce((s,p)=>s+p.actionItems.length,0);
+  const doneActions = pms.reduce((s,p)=>s+p.actionItems.filter(a=>a.done).length,0);
+  const totalLearnings = pms.reduce((s,p)=>s+p.learnings.length,0);
+
+  // Severity distribution
+  const sevCounts = {};
+  SEVERITIES.forEach(s=>sevCounts[s]=0);
+  pms.forEach(p=>sevCounts[p.severity]=(sevCounts[p.severity]||0)+1);
+  const maxSev = Math.max(...Object.values(sevCounts),1);
+
+  // Status distribution
+  const statCounts = {};
+  STATUSES.forEach(s=>statCounts[s]=0);
+  pms.forEach(p=>statCounts[p.status]=(statCounts[p.status]||0)+1);
+  const maxStat = Math.max(...Object.values(statCounts),1);
+
+  // MTTR (Mean Time to Resolve)
+  const resolved = pms.filter(p=>p.detectedAt&&p.resolvedAt);
+  const avgMTTR = resolved.length ? resolved.reduce((s,p)=>s+(new Date(p.resolvedAt)-new Date(p.detectedAt)),0)/resolved.length : 0;
+
+  // Contributing factors
+  const factorCounts = {};
+  pms.forEach(p=>p.contributingFactors.forEach(f=>{factorCounts[f.type]=(factorCounts[f.type]||0)+1}));
+  const maxFactor = Math.max(...Object.values(factorCounts),1);
+
+  // Monthly trend
+  const months = {};
+  pms.forEach(p=>{const m=p.date.slice(0,7);months[m]=(months[m]||0)+1});
+  const sortedMonths = Object.keys(months).sort();
+  const maxMonth = Math.max(...Object.values(months),1);
+
+  const sevColors = {Critical:'var(--red)',High:'var(--orange)',Medium:'var(--yellow)',Low:'var(--green)'};
+  const statColors = {Draft:'var(--text3)',Investigating:'var(--purple)',Identified:'var(--orange)',Resolved:'var(--green)',Learning:'var(--cyan)'};
+  const factorColors = {Process:'var(--purple)',Technical:'var(--cyan)',Human:'var(--orange)',External:'var(--pink)',Tooling:'var(--yellow)',Communication:'var(--teal)'};
+
+  el.innerHTML = `
+    <div class="section-title">📊 Dashboard</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value" style="color:var(--accent)">${pms.length}</div><div class="stat-label">Total Postmortems</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--red)">${sevCounts.Critical||0}</div><div class="stat-label">Critical Incidents</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--orange)">${fmtDuration(avgMTTR)}</div><div class="stat-label">Avg MTTR</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--green)">${totalActions?Math.round(doneActions/totalActions*100):0}%</div><div class="stat-label">Actions Complete</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--purple)">${totalActions}</div><div class="stat-label">Total Actions</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--cyan)">${totalLearnings}</div><div class="stat-label">Learnings Captured</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px">Severity Distribution</div>
+        ${SEVERITIES.map(s=>`
+          <div class="bar-container">
+            <div class="chart-label"><span>${s}</span><span>${sevCounts[s]||0}</span></div>
+            <div class="chart-bar" style="width:${((sevCounts[s]||0)/maxSev*100)}%;background:${sevColors[s]}"></div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px">Status Distribution</div>
+        ${STATUSES.map(s=>`
+          <div class="bar-container">
+            <div class="chart-label"><span>${s}</span><span>${statCounts[s]||0}</span></div>
+            <div class="chart-bar" style="width:${((statCounts[s]||0)/maxStat*100)}%;background:${statColors[s]}"></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px">Contributing Factors</div>
+        ${Object.keys(factorCounts).length?Object.entries(factorCounts).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+          <div class="bar-container">
+            <div class="chart-label"><span>${k}</span><span>${v}</span></div>
+            <div class="chart-bar" style="width:${(v/maxFactor*100)}%;background:${factorColors[k]||'var(--accent)'}"></div>
+          </div>
+        `).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">No factors tracked</div>'}
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px">Monthly Trend</div>
+        ${sortedMonths.length?sortedMonths.map(m=>`
+          <div class="bar-container">
+            <div class="chart-label"><span>${m}</span><span>${months[m]}</span></div>
+            <div class="chart-bar" style="width:${(months[m]/maxMonth*100)}%;background:var(--accent)"></div>
+          </div>
+        `).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">No data yet</div>'}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-title" style="margin-bottom:16px">Recent Critical/High Incidents</div>
+      ${pms.filter(p=>p.severity==='Critical'||p.severity==='High').slice(0,5).map(p=>`
+        <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg3);border-radius:var(--radius);margin-bottom:6px;cursor:pointer" onclick="selectPM('${p.id}');setView('editor')">
+          <span class="severity severity-${p.severity.toLowerCase()}" style="font-size:10px;padding:2px 8px">${p.severity}</span>
+          <span style="font-weight:600;flex:1">${esc(p.title)}</span>
+          <span style="font-size:12px;color:var(--text3)">${fmt(p.date)}</span>
+          <span class="status-badge status-${p.status.toLowerCase()}" style="font-size:10px;padding:2px 8px">${p.status}</span>
+        </div>
+      `).join('')||'<div style="text-align:center;padding:16px;color:var(--text3)">No critical/high incidents</div>'}
+    </div>
+  `;
+}
+
+// ===== MARKDOWN EXPORT =====
+function copyMarkdown(){
+  const pm = active();
+  if(!pm){alert('Select a postmortem first');return}
+  const dur = pm.detectedAt&&pm.resolvedAt?fmtDuration(new Date(pm.resolvedAt)-new Date(pm.detectedAt)):'N/A';
+  let md = `# Postmortem: ${pm.title}\n\n`;
+  md += `**Severity:** ${pm.severity} | **Status:** ${pm.status} | **Date:** ${fmt(pm.date)}\n`;
+  md += `**Owner:** ${pm.owner||'—'} | **Team:** ${pm.team||'—'} | **Services:** ${pm.services||'—'}\n\n`;
+
+  md += `## Summary\n${pm.summary||'N/A'}\n\n`;
+
+  md += `## Impact\n`;
+  md += `- **Users Affected:** ${pm.impact.usersAffected.toLocaleString()}\n`;
+  md += `- **Duration:** ${dur}\n`;
+  md += `- **Revenue Impact:** ${pm.impact.revenueImpact||'—'}\n`;
+  md += `- **SLA Breached:** ${pm.impact.slaBreached?'Yes':'No'}\n`;
+  if(pm.impact.description) md += `- **Description:** ${pm.impact.description}\n`;
+  md += `\n`;
+
+  if(pm.timeline.length){
+    md += `## Timeline\n`;
+    pm.timeline.sort((a,b)=>new Date(a.time)-new Date(b.time)).forEach(ev=>{
+      md += `- **${fmtTime(ev.time)}** [${ev.type}] ${ev.description}${ev.actor?' ('+ev.actor+')':''}\n`;
+    });
+    md += `\n`;
+  }
+
+  if(pm.whys.some(w=>w)){
+    md += `## Root Cause Analysis (5 Whys)\n`;
+    pm.whys.forEach((w,i)=>{
+      if(w) md += `${i===0?'**Symptom:**':i===4?'**🎯 Root Cause:**':'**Why #'+i+':**'} ${w}\n`;
+    });
+    md += `\n`;
+  }
+  if(pm.rootCause) md += `### Root Cause Summary\n${pm.rootCause}\n\n`;
+
+  if(pm.contributingFactors.length){
+    md += `## Contributing Factors\n`;
+    pm.contributingFactors.forEach(f=>md+=`- **${f.type}:** ${f.description}\n`);
+    md += `\n`;
+  }
+
+  if(pm.actionItems.length){
+    md += `## Action Items\n`;
+    pm.actionItems.forEach(a=>{
+      md += `- [${a.done?'x':' '}] **[${a.priority}]** ${a.title}${a.owner?' — '+a.owner:''}${a.dueDate?' (due '+fmt(a.dueDate)+')':''}\n`;
+    });
+    md += `\n`;
+  }
+
+  if(pm.learnings.length){
+    md += `## Learnings\n`;
+    pm.learnings.forEach(l=>md+=`- **${l.type}:** ${l.description}\n`);
+  }
+
+  navigator.clipboard.writeText(md).then(()=>alert('Markdown copied to clipboard!')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=md;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();alert('Copied!');
+  });
+}
+
+// ===== MODAL =====
+function showModal(html){
+  document.getElementById('modalContent').innerHTML=html;
+  document.getElementById('modalOverlay').classList.add('show');
+  setTimeout(()=>{const first=document.querySelector('#modalContent input,#modalContent textarea');if(first)first.focus()},100);
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show')}
+
+function openNewModal(){
+  showModal(`
+    <div class="modal-title">🔥 New Postmortem</div>
+    <div class="form-group">
+      <label class="form-label">Incident Title</label>
+      <input type="text" id="newTitle" placeholder="e.g. API Gateway 502 Errors">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Severity</label>
+        <select id="newSeverity">${SEVERITIES.map(s=>`<option>${s}</option>`).join('')}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input type="date" id="newDate" value="${new Date().toISOString().slice(0,10)}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Owner</label>
+        <input type="text" id="newOwner" placeholder="Who's leading this?">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Team</label>
+        <input type="text" id="newTeam" placeholder="Engineering, Platform...">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Services Affected</label>
+      <input type="text" id="newServices" placeholder="API, Database, Auth...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Quick Template</label>
+      <select id="newTemplate" onchange="applyTemplate()">
+        <option value="">Blank</option>
+        <option value="api">API/Service Outage</option>
+        <option value="deploy">Bad Deployment</option>
+        <option value="data">Data Integrity Issue</option>
+        <option value="security">Security Incident</option>
+        <option value="performance">Performance Degradation</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewPostmortem()">Create</button>
+    </div>
+  `);
+}
+
+function applyTemplate(){
+  const tpl = document.getElementById('newTemplate').value;
+  const templates = {
+    api:{title:'API/Service Outage',severity:'High',services:'API Gateway'},
+    deploy:{title:'Bad Deployment Rollback',severity:'High',services:'Production'},
+    data:{title:'Data Integrity Issue',severity:'Critical',services:'Database'},
+    security:{title:'Security Incident',severity:'Critical',services:'Auth, API'},
+    performance:{title:'Performance Degradation',severity:'Medium',services:'Application'}
+  };
+  if(templates[tpl]){
+    if(!document.getElementById('newTitle').value)document.getElementById('newTitle').value=templates[tpl].title;
+    document.getElementById('newSeverity').value=templates[tpl].severity;
+    document.getElementById('newServices').value=templates[tpl].services;
+  }
+}
+
+function saveNewPostmortem(){
+  const title = document.getElementById('newTitle').value.trim();
+  if(!title){alert('Title required');return}
+  createPostmortem({
+    title,
+    severity:document.getElementById('newSeverity').value,
+    date:document.getElementById('newDate').value,
+    owner:document.getElementById('newOwner').value.trim(),
+    team:document.getElementById('newTeam').value.trim(),
+    services:document.getElementById('newServices').value.trim()
+  });
+  closeModal();
+}
+
+// ===== IMPORT / EXPORT =====
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(state.postmortems,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'postmortem-forge-export.json';
+  a.click();
+}
+
+function importJSON(){document.getElementById('fileInput').click()}
+function handleImport(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(Array.isArray(data)){
+        const merged = [...state.postmortems];
+        const ids = new Set(merged.map(p=>p.id));
+        data.forEach(p=>{if(!ids.has(p.id)){merged.push(p);ids.add(p.id)}});
+        state.postmortems=merged;
+        save();render();
+        alert(`Imported! ${data.length} postmortems processed.`);
+      }
+    }catch(err){alert('Invalid JSON file')}
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+// ===== KEYBOARD SHORTCUTS =====
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT'){
+    if(e.key==='Escape'){e.target.blur();return}
+    if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){
+      const btn=document.querySelector('.modal.show .btn-primary, .form-actions .btn-primary');
+      if(btn)btn.click();
+      return;
+    }
+    return;
+  }
+  if(document.getElementById('modalOverlay').classList.contains('show')){
+    if(e.key==='Escape'){closeModal();return}
+    return;
+  }
+  switch(e.key){
+    case 'n':case 'N':e.preventDefault();openNewModal();break;
+    case '/':e.preventDefault();document.getElementById('searchInput').focus();break;
+    case '1':e.preventDefault();setView('editor');break;
+    case '2':e.preventDefault();setView('report');break;
+    case '3':e.preventDefault();setView('actions');break;
+    case '4':e.preventDefault();setView('learnings');break;
+    case '5':e.preventDefault();setView('dashboard');break;
+    case 'e':case 'E':if(!e.metaKey&&!e.ctrlKey){e.preventDefault();exportJSON()}break;
+    case 'i':case 'I':if(!e.metaKey&&!e.ctrlKey){e.preventDefault();importJSON()}break;
+    case 'm':case 'M':e.preventDefault();copyMarkdown();break;
+    case '?':e.preventDefault();showHelp();break;
+    case 'Escape':break;
+  }
+});
+
+function showHelp(){
+  showModal(`
+    <div class="modal-title">⌨ Keyboard Shortcuts</div>
+    <div class="help-grid">
+      <span class="kbd">N</span><span>New postmortem</span>
+      <span class="kbd">/</span><span>Search</span>
+      <span class="kbd">1</span><span>Editor view</span>
+      <span class="kbd">2</span><span>Report view</span>
+      <span class="kbd">3</span><span>Actions view</span>
+      <span class="kbd">4</span><span>Learnings view</span>
+      <span class="kbd">5</span><span>Dashboard view</span>
+      <span class="kbd">M</span><span>Copy as Markdown</span>
+      <span class="kbd">E</span><span>Export JSON</span>
+      <span class="kbd">I</span><span>Import JSON</span>
+      <span class="kbd">?</span><span>Show this help</span>
+      <span class="kbd">Esc</span><span>Close modal / blur</span>
+      <span class="kbd">⌘↵</span><span>Save in modal</span>
+    </div>
+    <div class="form-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
+  `);
+}
+
+// ===== SEARCH =====
+document.getElementById('searchInput').addEventListener('input',e=>{
+  state.search=e.target.value;
+  renderSidebar();
+});
+
+// ===== SEED DATA =====
+function seedData(){
+  // 1. UTMStamp Click Tracking Pipeline Failure
+  state.postmortems.push({
+    id: uid(),
+    title: 'Click Tracking Pipeline — 4hr Data Loss',
+    severity: 'Critical',
+    status: 'Resolved',
+    date: '2026-04-15',
+    detectedAt: '2026-04-15T09:30',
+    resolvedAt: '2026-04-15T13:45',
+    summary: 'The UTMStamp click tracking pipeline stopped processing events at 09:30 IST due to a Supabase Edge Function cold start timeout during a traffic spike. Approximately 4 hours of click data was lost for ~2,400 active signatures across 180 teams. No clicks were tracked, dashboards showed zero activity, and customers started reporting the issue at 10:15.',
+    impact: {
+      usersAffected: 2400,
+      durationMin: 255,
+      revenueImpact: '$0 direct, but 3 enterprise trial users churned citing "unreliable analytics"',
+      requestsAffected: 47000,
+      slaBreached: true,
+      description: 'Complete loss of click tracking for all UTMStamp users. Signature links still redirected correctly (no broken links), but no analytics data was recorded. Dashboard showed misleading zero-click data. 3 enterprise trial users (combined $2,400 ARR potential) cited this as reason for not converting.'
+    },
+    timeline: [
+      {time:'2026-04-15T09:30',type:'Detected',description:'Monitoring alert: click event ingestion dropped to 0 events/min',actor:'PagerDuty'},
+      {time:'2026-04-15T09:35',type:'Investigated',description:'Checked Supabase dashboard — Edge Functions showing timeout errors',actor:'AJ'},
+      {time:'2026-04-15T09:50',type:'Escalated',description:'Opened Supabase support ticket — suspected platform issue during traffic spike',actor:'AJ'},
+      {time:'2026-04-15T10:15',type:'Communicated',description:'First customer report via feedback board: "Dashboard shows 0 clicks today"',actor:'Customer'},
+      {time:'2026-04-15T10:30',type:'Communicated',description:'Posted status update: "Investigating click tracking delays"',actor:'AJ'},
+      {time:'2026-04-15T11:00',type:'Investigated',description:'Identified root cause: Edge Function cold starts timing out under concurrent load > 500 req/min',actor:'AJ'},
+      {time:'2026-04-15T12:00',type:'Mitigated',description:'Deployed fallback: direct Supabase insert bypassing Edge Functions',actor:'AJ'},
+      {time:'2026-04-15T13:00',type:'Monitoring',description:'Click tracking restored, monitoring for stability',actor:'AJ'},
+      {time:'2026-04-15T13:45',type:'Resolved',description:'Confirmed stable for 45 min, marked resolved. Historical data for 09:30-12:00 is unrecoverable.',actor:'AJ'}
+    ],
+    whys: [
+      'Click tracking showed 0 events for 4 hours on April 15th',
+      'Supabase Edge Functions were timing out and dropping events silently',
+      'Cold start latency spiked to 8-12 seconds under concurrent load above 500 req/min',
+      'No queue/buffer exists between the redirect endpoint and the analytics write — events are fire-and-forget',
+      'Architecture was designed for MVP speed, not resilience — no dead letter queue, no retry logic, no async processing'
+    ],
+    rootCause: 'Fire-and-forget architecture with no buffering between click redirect and analytics write. When Supabase Edge Functions hit cold-start timeouts under load, events were silently dropped with no retry mechanism.',
+    contributingFactors: [
+      {type:'Technical',description:'No message queue between redirect and analytics — single point of failure'},
+      {type:'Technical',description:'Edge Function cold starts not accounted for in load testing'},
+      {type:'Process',description:'No load testing performed before launch — MVP shipped without stress test'},
+      {type:'Tooling',description:'Silent failure — no error alerting on dropped events, only on zero throughput'},
+      {type:'Communication',description:'Status page not updated for 60 minutes after first customer report'}
+    ],
+    actionItems: [
+      {title:'Add message queue (SQS/Redis) between redirect and analytics write',priority:'Critical',category:'Architecture',owner:'AJ',dueDate:'2026-04-30',done:true,notes:'Prevents silent data loss during spikes'},
+      {title:'Implement dead letter queue for failed events',priority:'Critical',category:'Architecture',owner:'AJ',dueDate:'2026-05-05',done:false,notes:''},
+      {title:'Add per-event error alerting (not just throughput-based)',priority:'High',category:'Monitoring',owner:'AJ',dueDate:'2026-04-25',done:true,notes:'Alert on error rate > 1%'},
+      {title:'Run load test simulating 2x peak traffic monthly',priority:'High',category:'Testing',owner:'AJ',dueDate:'2026-05-15',done:false,notes:''},
+      {title:'Auto-update status page when monitoring alerts fire',priority:'Medium',category:'Communication',owner:'AJ',dueDate:'2026-05-10',done:false,notes:'Use Status Beacon webhook integration'},
+      {title:'Evaluate moving analytics pipeline to Cloudflare Workers (no cold start)',priority:'Low',category:'Architecture',owner:'AJ',dueDate:'2026-06-01',done:false,notes:'Cloudflare Workers have 0ms cold starts'}
+    ],
+    learnings: [
+      {type:'What went wrong',description:'Fire-and-forget architecture is a ticking time bomb for analytics. MVP speed trade-off came back to bite us hard.'},
+      {type:'What went wrong',description:'60 minutes between first customer report and status page update is too long. Customers lost trust.'},
+      {type:'What went well',description:'Redirect endpoint never went down — users could still click links, just analytics were lost. Separation of redirect from tracking saved us from a much worse incident.'},
+      {type:'Where we got lucky',description:'This happened during a weekday morning, not during a major campaign send. If this hit during a Product Hunt launch day, it would have been catastrophic.'},
+      {type:'Improvement needed',description:'Need an incident response playbook with clear steps: assess → communicate → fix → verify → postmortem. Currently winging it each time.'}
+    ],
+    tags: ['analytics','supabase','edge-functions','data-loss','pipeline'],
+    owner: 'AJ',
+    team: 'Engineering',
+    services: 'Click Tracking, Analytics Dashboard, Edge Functions',
+    createdAt: '2026-04-15T14:00:00Z',
+    updatedAt: '2026-04-16T10:00:00Z'
+  });
+
+  // 2. Auth Token Expiry Bug
+  state.postmortems.push({
+    id: uid(),
+    title: 'Auth Token Expiry — Users Logged Out Mid-Session',
+    severity: 'High',
+    status: 'Learning',
+    date: '2026-04-08',
+    detectedAt: '2026-04-08T14:00',
+    resolvedAt: '2026-04-08T16:30',
+    summary: 'A deployment on April 8th changed the JWT token expiry from 7 days to 1 hour without updating the refresh token logic. Users were silently logged out mid-session when tokens expired. The dashboard would show a blank white screen instead of redirecting to login. ~340 users affected over 2.5 hours before the fix was deployed.',
+    impact: {
+      usersAffected: 340,
+      durationMin: 150,
+      revenueImpact: 'Minimal direct, but 12 support emails received',
+      requestsAffected: 8500,
+      slaBreached: false,
+      description: 'Users experienced white screen on dashboard after ~1 hour of inactivity. Required manual page refresh and re-login. Support burden: 12 emails in 2 hours (normal is 1-2/day).'
+    },
+    timeline: [
+      {time:'2026-04-08T13:30',type:'Detected',description:'Deployed auth refactor to production (PR #147)',actor:'AJ'},
+      {time:'2026-04-08T14:00',type:'Detected',description:'First "blank screen" report from beta user on Slack',actor:'Priya'},
+      {time:'2026-04-08T14:15',type:'Investigated',description:'Reproduced issue — token expiry was set to 3600s instead of 604800s',actor:'AJ'},
+      {time:'2026-04-08T14:30',type:'Investigated',description:'Identified refresh token endpoint returning 401 instead of issuing new token',actor:'AJ'},
+      {time:'2026-04-08T15:00',type:'Mitigated',description:'Hotfix deployed: reverted token expiry to 7 days',actor:'AJ'},
+      {time:'2026-04-08T16:00',type:'Mitigated',description:'Deployed proper fix: 1hr token + working refresh flow + graceful redirect on 401',actor:'AJ'},
+      {time:'2026-04-08T16:30',type:'Resolved',description:'Confirmed fix working, sent apology email to affected users',actor:'AJ'}
+    ],
+    whys: [
+      'Users were logged out and saw a blank white screen mid-session',
+      'JWT tokens expired after 1 hour but the refresh token flow was broken',
+      'The auth refactor PR changed expiry but didn\'t update the token refresh endpoint',
+      'No integration test exists for the refresh token flow — unit tests only covered token generation',
+      'Auth was treated as a "set it and forget it" module with no regression test suite'
+    ],
+    rootCause: 'Auth refactor changed token expiry without updating refresh logic, and no integration test covered the full token lifecycle (generate → expire → refresh → re-issue).',
+    contributingFactors: [
+      {type:'Process',description:'No pre-deploy checklist for auth-related changes'},
+      {type:'Testing',description:'Unit tests passed but no integration test for token refresh flow'},
+      {type:'Technical',description:'White screen on 401 instead of graceful redirect to login'},
+      {type:'Human',description:'Single reviewer on auth PR — should require 2 reviewers for security-critical changes'}
+    ],
+    actionItems: [
+      {title:'Add integration test for full token lifecycle',priority:'Critical',category:'Testing',owner:'AJ',dueDate:'2026-04-15',done:true,notes:'Generate → use → expire → refresh → re-issue → use again'},
+      {title:'Add graceful 401 handling — redirect to login with "session expired" message',priority:'High',category:'Architecture',owner:'AJ',dueDate:'2026-04-12',done:true,notes:''},
+      {title:'Require 2 reviewers for auth/security PRs',priority:'Medium',category:'Process',owner:'AJ',dueDate:'2026-04-20',done:false,notes:'When team grows. Solo dev for now.'},
+      {title:'Add Sentry error tracking for auth failures',priority:'Medium',category:'Monitoring',owner:'AJ',dueDate:'2026-04-25',done:true,notes:''}
+    ],
+    learnings: [
+      {type:'What went wrong',description:'Unit tests gave false confidence. The individual functions worked, but the flow between them was broken. Integration tests are non-negotiable for auth.'},
+      {type:'What went well',description:'Hotfix was deployed within 1 hour of identification. Fast deploy pipeline proved its worth.'},
+      {type:'What went well',description:'Beta user caught it early on Slack. Having an active beta community is a real safety net.'},
+      {type:'Improvement needed',description:'Need a pre-deploy checklist for sensitive areas: auth, payments, data deletion. "Did you test the full flow?" should be a gate.'}
+    ],
+    tags: ['auth','jwt','token','white-screen','ux'],
+    owner: 'AJ',
+    team: 'Engineering',
+    services: 'Auth, Dashboard',
+    createdAt: '2026-04-08T17:00:00Z',
+    updatedAt: '2026-04-09T10:00:00Z'
+  });
+
+  // 3. DNS Migration Gone Wrong
+  state.postmortems.push({
+    id: uid(),
+    title: 'DNS Migration — 45min Complete Downtime',
+    severity: 'High',
+    status: 'Resolved',
+    date: '2026-03-22',
+    detectedAt: '2026-03-22T11:00',
+    resolvedAt: '2026-03-22T11:45',
+    summary: 'During migration from GoDaddy to Cloudflare DNS, a misconfigured CNAME record caused utmstamp.com to resolve to the wrong Vercel deployment (a preview branch instead of production). The site showed a "404 — Deployment Not Found" error for 45 minutes. All signature redirect links were also broken during this window.',
+    impact: {
+      usersAffected: 890,
+      durationMin: 45,
+      revenueImpact: 'None directly — free plan users mostly',
+      requestsAffected: 3200,
+      slaBreached: false,
+      description: 'Complete site downtime including all signature redirect URLs. ~3,200 clicks during the window returned 404. Signatures in sent emails showed broken tracking links until DNS propagated.'
+    },
+    timeline: [
+      {time:'2026-03-22T10:45',type:'Detected',description:'Started DNS migration to Cloudflare, updated nameservers',actor:'AJ'},
+      {time:'2026-03-22T11:00',type:'Detected',description:'Site started showing "Deployment Not Found" — Vercel error page',actor:'AJ'},
+      {time:'2026-03-22T11:05',type:'Investigated',description:'Checked Cloudflare DNS records — CNAME pointing to wrong Vercel URL',actor:'AJ'},
+      {time:'2026-03-22T11:10',type:'Mitigated',description:'Updated CNAME to correct production deployment URL',actor:'AJ'},
+      {time:'2026-03-22T11:15',type:'Monitoring',description:'Waiting for DNS propagation... site still showing old record',actor:'AJ'},
+      {time:'2026-03-22T11:45',type:'Resolved',description:'DNS propagated, site back online, verified click tracking working',actor:'AJ'}
+    ],
+    whys: [
+      'Site showed 404 "Deployment Not Found" for 45 minutes',
+      'CNAME record pointed to a Vercel preview deployment URL instead of production',
+      'Copy-pasted the wrong URL from Vercel dashboard during migration',
+      'No verification checklist for DNS migration — rushed through it during lunch break',
+      'DNS changes were treated as "simple" infrastructure work not requiring the same rigor as code deploys'
+    ],
+    rootCause: 'Manual copy-paste error during DNS migration. Wrong Vercel URL (preview branch instead of production) was entered in Cloudflare CNAME record, with no verification step.',
+    contributingFactors: [
+      {type:'Human',description:'Copy-paste error — Vercel has similar-looking URLs for preview and production'},
+      {type:'Process',description:'No migration checklist or runbook for DNS changes'},
+      {type:'Process',description:'Performed during lunch break without a rollback plan'},
+      {type:'External',description:'DNS propagation delay meant fix took 30 min even after correction'}
+    ],
+    actionItems: [
+      {title:'Create DNS migration runbook with verification steps',priority:'High',category:'Documentation',owner:'AJ',dueDate:'2026-04-01',done:true,notes:'Include: verify before switching, have rollback nameservers ready, test redirect URLs post-migration'},
+      {title:'Set up uptime monitoring with 1-min intervals on critical URLs',priority:'High',category:'Monitoring',owner:'AJ',dueDate:'2026-03-30',done:true,notes:'Monitor / and /r/ redirect endpoint separately'},
+      {title:'Schedule infrastructure changes in low-traffic windows (not lunch)',priority:'Medium',category:'Process',owner:'AJ',dueDate:'2026-04-01',done:true,notes:''}
+    ],
+    learnings: [
+      {type:'What went wrong',description:'Treated DNS migration as a 5-minute task. Infrastructure changes deserve the same rigor as code deployments.'},
+      {type:'Where we got lucky',description:'This was during a low-traffic period. If it happened during US business hours (our peak), 10x more clicks would have been lost.'},
+      {type:'What went well',description:'Quick identification — recognized the Vercel error page immediately. Fix was applied in 10 minutes, just had to wait for propagation.'},
+      {type:'Improvement needed',description:'Need to set Cloudflare TTL to minimum (1 min) BEFORE migration, not after. Reduces propagation delay for any corrections.'}
+    ],
+    tags: ['dns','cloudflare','vercel','downtime','migration'],
+    owner: 'AJ',
+    team: 'Infrastructure',
+    services: 'Website, Click Tracking, Redirect Service',
+    createdAt: '2026-03-22T12:00:00Z',
+    updatedAt: '2026-03-23T10:00:00Z'
+  });
+
+  // 4. ZYOD — QR Code Misprint Incident
+  state.postmortems.push({
+    id: uid(),
+    title: 'ZYOD QR-WMS — Fabric Roll QR Misprint Batch',
+    severity: 'Medium',
+    status: 'Learning',
+    date: '2026-02-14',
+    detectedAt: '2026-02-14T08:00',
+    resolvedAt: '2026-02-14T14:00',
+    summary: 'A batch of 240 fabric roll QR codes were printed with the wrong prefix, causing them to be unrecognizable by the WMS scanning app. Factory floor workers couldn\'t scan incoming fabric for 6 hours, reverting to manual paper logging. Root cause was a config change pushed to the QR generation service that prepended a "v2-" prefix for a migration that wasn\'t yet deployed to the scanner app.',
+    impact: {
+      usersAffected: 45,
+      durationMin: 360,
+      revenueImpact: '~₹2L in delayed processing (estimated)',
+      requestsAffected: 240,
+      slaBreached: false,
+      description: '45 factory floor workers affected. 240 fabric rolls couldn\'t be scanned. Manual paper logs used as fallback — data re-entered into WMS that evening. No fabric lost but processing delayed by ~6 hours.'
+    },
+    timeline: [
+      {time:'2026-02-14T07:30',type:'Detected',description:'Config update deployed to QR generation: added "v2-" prefix for planned migration',actor:'Vikram'},
+      {time:'2026-02-14T08:00',type:'Detected',description:'Factory shift starts — first batch of fabric rolls with new QR codes',actor:'Factory'},
+      {time:'2026-02-14T08:15',type:'Detected',description:'Workers report: "Scanner says invalid QR code" on all new rolls',actor:'Floor Supervisor'},
+      {time:'2026-02-14T08:30',type:'Investigated',description:'Checked scanner app — it expects old prefix format, v2 parser not deployed yet',actor:'AJ'},
+      {time:'2026-02-14T09:00',type:'Mitigated',description:'Reverted QR generation config, started reprinting labels for affected batch',actor:'Vikram'},
+      {time:'2026-02-14T10:00',type:'Communicated',description:'Informed factory manager, switched to paper logging for affected rolls',actor:'AJ'},
+      {time:'2026-02-14T13:00',type:'Mitigated',description:'Reprinted and re-applied 240 QR labels, started re-scanning',actor:'Factory'},
+      {time:'2026-02-14T14:00',type:'Resolved',description:'All 240 rolls scanned into WMS, paper logs reconciled',actor:'AJ'}
+    ],
+    whys: [
+      '240 fabric rolls had QR codes that couldn\'t be scanned',
+      'QR codes had a "v2-" prefix that the scanner app didn\'t recognize',
+      'QR generation service was updated with v2 prefix before the scanner app was updated',
+      'No coordinated deployment plan — backend and frontend changes deployed independently',
+      'No staging/testing environment that mirrors factory floor setup — can\'t test QR→Scanner flow end-to-end before production'
+    ],
+    rootCause: 'Uncoordinated deployment: QR generation updated to v2 format before scanner app could parse it. No end-to-end test environment for the physical QR→scan→WMS flow.',
+    contributingFactors: [
+      {type:'Process',description:'No deployment coordination between QR generation and scanner app'},
+      {type:'Technical',description:'No backward compatibility — v2 QR format broke all existing scanners'},
+      {type:'Tooling',description:'No staging environment that simulates factory QR scanning'},
+      {type:'Communication',description:'Config change not communicated to factory team before deployment'}
+    ],
+    actionItems: [
+      {title:'Implement backward-compatible QR format (support both v1 and v2 in scanner)',priority:'Critical',category:'Architecture',owner:'Vikram',dueDate:'2026-03-01',done:true,notes:'Scanner should try v2 parse first, fall back to v1'},
+      {title:'Create deployment coordination checklist for multi-component changes',priority:'High',category:'Process',owner:'AJ',dueDate:'2026-02-28',done:true,notes:''},
+      {title:'Set up staging QR scanning test (even a single test scanner)',priority:'Medium',category:'Testing',owner:'AJ',dueDate:'2026-03-15',done:false,notes:''},
+      {title:'Add QR format validation in generation service — reject if scanner version doesn\'t support it',priority:'Medium',category:'Architecture',owner:'Vikram',dueDate:'2026-03-10',done:true,notes:'Feature flag approach'}
+    ],
+    learnings: [
+      {type:'What went wrong',description:'Physical world deployments are unforgiving. You can\'t rollback a printed QR code stuck on 240 fabric rolls. Digital deploys are easy to revert — physical ones are not.'},
+      {type:'What went well',description:'Paper logging fallback worked. The manual process we thought was obsolete saved us from losing any fabric tracking data.'},
+      {type:'What went well',description:'Factory supervisor caught it within 15 minutes and escalated immediately. Good communication culture on the floor.'},
+      {type:'Improvement needed',description:'Any change that affects physical outputs (QR codes, labels, prints) needs a "physical impact review" step before deployment.'}
+    ],
+    tags: ['zyod','qr-code','wms','factory','deployment'],
+    owner: 'AJ',
+    team: 'Product & Engineering',
+    services: 'QR Generation, Scanner App, WMS',
+    createdAt: '2026-02-14T15:00:00Z',
+    updatedAt: '2026-02-15T10:00:00Z'
+  });
+
+  // 5. Draft — Email Delivery Failure (recent, not fully documented)
+  state.postmortems.push({
+    id: uid(),
+    title: 'Email Delivery — Signature Update Notifications Bouncing',
+    severity: 'Low',
+    status: 'Draft',
+    date: '2026-04-28',
+    detectedAt: '2026-04-28T16:00',
+    resolvedAt: '',
+    summary: 'Team notification emails ("Your signature has been updated by admin") started bouncing for ~15% of recipients. Suspected SPF/DKIM misconfiguration after switching transactional email from Resend to Postmark.',
+    impact: {
+      usersAffected: 120,
+      durationMin: 0,
+      revenueImpact: 'Minimal — notification emails only, not core functionality',
+      requestsAffected: 340,
+      slaBreached: false,
+      description: 'Notification emails bouncing. Core product unaffected. Users just don\'t know their signatures were updated until they check dashboard.'
+    },
+    timeline: [
+      {time:'2026-04-28T16:00',type:'Detected',description:'Postmark dashboard showing 15% bounce rate on signature update notifications',actor:'AJ'}
+    ],
+    whys: ['Notification emails bouncing for ~15% of recipients after Postmark migration','','','',''],
+    rootCause: '',
+    contributingFactors: [],
+    actionItems: [
+      {title:'Verify SPF, DKIM, DMARC records for utmstamp.com with Postmark',priority:'High',category:'Architecture',owner:'AJ',dueDate:'2026-05-01',done:false,notes:''},
+      {title:'Check bounce logs — are these hard bounces (bad emails) or soft bounces (config)?',priority:'High',category:'Monitoring',owner:'AJ',dueDate:'2026-04-30',done:false,notes:''}
+    ],
+    learnings: [],
+    tags: ['email','postmark','spf','dkim','notifications'],
+    owner: 'AJ',
+    team: 'Engineering',
+    services: 'Email Notifications',
+    createdAt: '2026-04-28T17:00:00Z',
+    updatedAt: '2026-04-28T17:00:00Z'
+  });
+
+  state.activeId = state.postmortems[0].id;
+  save();
+}
+
+// ===== INIT =====
+load();
+render();
+</script>
+</body>
+</html>

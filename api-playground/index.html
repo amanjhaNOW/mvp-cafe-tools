@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Playground — Browser-Based REST Client</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#242836;--bg4:#2d3244;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--accent:#6366f1;--accent2:#818cf8;--green:#22c55e;--red:#ef4444;--orange:#f59e0b;--cyan:#06b6d4;--pink:#ec4899;--border:#2d3244;--radius:8px;--shadow:0 4px 24px rgba(0,0,0,.3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:14px}
+button{cursor:pointer;font-family:inherit;font-size:inherit;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;font-size:inherit;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* Top bar */
+.topbar{display:flex;align-items:center;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);gap:12px;flex-shrink:0;height:48px}
+.topbar .logo{font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.topbar .logo span{color:var(--accent2)}
+.env-selector{display:flex;align-items:center;gap:6px;margin-left:auto}
+.env-selector select{padding:4px 8px;font-size:12px;background:var(--bg3)}
+.env-btn{padding:4px 10px;font-size:12px;border-radius:var(--radius);background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
+.env-btn:hover{background:var(--bg4);color:var(--text)}
+.topbar-actions{display:flex;gap:6px}
+.topbar-actions button{padding:4px 10px;font-size:12px;border-radius:var(--radius);background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
+.topbar-actions button:hover{background:var(--bg4);color:var(--text)}
+
+/* Main layout */
+.main{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.sidebar.collapsed{width:40px}
+.sidebar.collapsed .sidebar-content,.sidebar.collapsed .sidebar-header-text,.sidebar.collapsed .sidebar-search{display:none}
+.sidebar-toggle{width:40px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text2);font-size:16px}
+.sidebar-toggle:hover{color:var(--text)}
+.sidebar-header{display:flex;align-items:center;padding:0 4px;border-bottom:1px solid var(--border);height:36px;flex-shrink:0}
+.sidebar-header-text{font-size:12px;font-weight:600;text-transform:uppercase;color:var(--text3);letter-spacing:.5px;flex:1}
+.sidebar-header button{font-size:16px;color:var(--text3);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:4px}
+.sidebar-header button:hover{background:var(--bg3);color:var(--text)}
+.sidebar-search{padding:6px 8px;flex-shrink:0}
+.sidebar-search input{width:100%;padding:5px 8px;font-size:12px;border-radius:4px}
+.sidebar-content{flex:1;overflow-y:auto;padding:4px}
+.collection{margin-bottom:2px}
+.collection-header{display:flex;align-items:center;padding:4px 8px;border-radius:4px;cursor:pointer;gap:4px;font-size:13px;color:var(--text2)}
+.collection-header:hover{background:var(--bg3)}
+.collection-header .arrow{font-size:10px;width:16px;text-align:center;transition:transform .15s}
+.collection-header .arrow.open{transform:rotate(90deg)}
+.collection-header .cname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.collection-header .ccount{font-size:11px;color:var(--text3)}
+.collection-actions{display:none;gap:2px}
+.collection-header:hover .collection-actions{display:flex}
+.collection-actions button{width:20px;height:20px;font-size:11px;display:flex;align-items:center;justify-content:center;border-radius:3px;color:var(--text3)}
+.collection-actions button:hover{background:var(--bg4);color:var(--text)}
+.collection-items{padding-left:12px}
+.req-item{display:flex;align-items:center;padding:4px 8px;border-radius:4px;cursor:pointer;gap:6px;font-size:13px}
+.req-item:hover{background:var(--bg3)}
+.req-item.active{background:var(--accent);background:rgba(99,102,241,.15);color:var(--accent2)}
+.req-item .method-badge{font-size:10px;font-weight:700;width:36px;text-align:center;flex-shrink:0;letter-spacing:.3px}
+.method-GET{color:var(--green)}.method-POST{color:var(--orange)}.method-PUT{color:var(--cyan)}.method-PATCH{color:var(--pink)}.method-DELETE{color:var(--red)}.method-HEAD{color:var(--text3)}.method-OPTIONS{color:var(--text3)}
+.req-item .rname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
+.req-item.active .rname{color:var(--accent2)}
+.req-item-actions{display:none;gap:2px}
+.req-item:hover .req-item-actions{display:flex}
+.req-item-actions button{width:18px;height:18px;font-size:10px;display:flex;align-items:center;justify-content:center;border-radius:3px;color:var(--text3)}
+.req-item-actions button:hover{background:var(--bg4);color:var(--text)}
+.history-item{display:flex;align-items:center;padding:4px 8px;border-radius:4px;cursor:pointer;gap:6px;font-size:12px;color:var(--text3)}
+.history-item:hover{background:var(--bg3);color:var(--text2)}
+.history-item .method-badge{font-size:9px;font-weight:700;width:32px}
+.history-item .hurl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.history-item .hstatus{font-size:11px;font-weight:600}
+.history-item .htime{font-size:11px}
+
+/* Tabs */
+.sidebar-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.sidebar-tabs button{flex:1;padding:6px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);border-bottom:2px solid transparent}
+.sidebar-tabs button.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.sidebar-tabs button:hover{color:var(--text)}
+
+/* Workspace */
+.workspace{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Request bar */
+.request-bar{display:flex;padding:12px 16px;gap:8px;flex-shrink:0;align-items:center}
+.method-select{width:100px;padding:8px;font-weight:700;font-size:13px;border-radius:var(--radius) 0 0 var(--radius);border-right:none}
+.url-input{flex:1;padding:8px 12px;font-size:13px;font-family:'SF Mono',Consolas,monospace;border-radius:0}
+.send-btn{padding:8px 24px;background:var(--accent);color:#fff;font-weight:600;border-radius:0 var(--radius) var(--radius) 0;font-size:13px;letter-spacing:.3px}
+.send-btn:hover{background:var(--accent2)}
+.send-btn.loading{opacity:.7;cursor:wait}
+.save-btn{padding:8px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text2);font-size:12px}
+.save-btn:hover{background:var(--bg4);color:var(--text)}
+
+/* Panels */
+.panels{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0 16px 12px}
+.panel-split{display:flex;flex:1;gap:12px;overflow:hidden}
+.panel{flex:1;display:flex;flex-direction:column;background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;min-width:0}
+.panel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;padding:0 4px}
+.panel-tabs button{padding:8px 14px;font-size:12px;color:var(--text3);border-bottom:2px solid transparent;white-space:nowrap}
+.panel-tabs button.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.panel-tabs button:hover{color:var(--text)}
+.panel-tabs .badge{font-size:10px;background:var(--bg4);color:var(--text3);padding:1px 6px;border-radius:10px;margin-left:4px}
+.panel-body{flex:1;overflow:auto;padding:12px}
+
+/* KV editor */
+.kv-table{width:100%}
+.kv-row{display:flex;gap:4px;margin-bottom:4px;align-items:center}
+.kv-row .kv-check{width:20px;height:20px;accent-color:var(--accent)}
+.kv-row input{flex:1;padding:6px 8px;font-size:12px;font-family:'SF Mono',Consolas,monospace}
+.kv-row .kv-val{flex:1.5}
+.kv-row .kv-del{width:24px;height:24px;font-size:14px;display:flex;align-items:center;justify-content:center;border-radius:4px;color:var(--text3)}
+.kv-row .kv-del:hover{background:rgba(239,68,68,.15);color:var(--red)}
+.kv-add{font-size:12px;color:var(--accent2);padding:4px 0;margin-top:4px}
+.kv-add:hover{text-decoration:underline}
+
+/* Body editor */
+.body-type-bar{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.body-type-bar label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);cursor:pointer}
+.body-type-bar input[type=radio]{accent-color:var(--accent)}
+.code-editor{width:100%;flex:1;resize:none;padding:12px;font-family:'SF Mono',Consolas,monospace;font-size:13px;line-height:1.5;background:var(--bg);border:none;border-radius:0;color:var(--text);tab-size:2}
+.code-editor:focus{outline:none}
+
+/* Auth */
+.auth-type-bar{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.auth-type-bar label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);cursor:pointer}
+.auth-type-bar input[type=radio]{accent-color:var(--accent)}
+.auth-fields{padding:12px}
+.auth-field{margin-bottom:10px}
+.auth-field label{display:block;font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.auth-field input{width:100%;max-width:400px}
+
+/* Response */
+.response-meta{display:flex;gap:16px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;font-size:12px;align-items:center}
+.response-meta .status{font-weight:700;padding:2px 8px;border-radius:4px}
+.status-2xx{background:rgba(34,197,94,.15);color:var(--green)}
+.status-3xx{background:rgba(6,182,212,.15);color:var(--cyan)}
+.status-4xx{background:rgba(239,68,68,.15);color:var(--red)}
+.status-5xx{background:rgba(239,68,68,.15);color:var(--red)}
+.response-meta .timing{color:var(--text3)}
+.response-meta .size{color:var(--text3)}
+.response-body{flex:1;overflow:auto}
+.response-body pre{padding:12px;font-family:'SF Mono',Consolas,monospace;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--text)}
+.response-empty{display:flex;align-items:center;justify-content:center;flex:1;color:var(--text3);font-size:14px;flex-direction:column;gap:8px}
+.response-empty .hint{font-size:12px}
+.response-error{padding:16px;color:var(--red);font-family:'SF Mono',Consolas,monospace;font-size:13px;white-space:pre-wrap}
+
+/* Syntax highlighting */
+.json-key{color:#6ee7b7}.json-str{color:#fbbf24}.json-num{color:#818cf8}.json-bool{color:#f472b6}.json-null{color:#94a3b8}
+.xml-tag{color:#6ee7b7}.xml-attr{color:#fbbf24}.xml-val{color:#818cf8}
+
+/* Response headers */
+.resp-headers{padding:12px;font-family:'SF Mono',Consolas,monospace;font-size:12px;line-height:1.8}
+.resp-header-key{color:var(--cyan)}.resp-header-val{color:var(--text2)}
+
+/* Modals */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;width:90%;max-width:520px;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal h2{font-size:16px;margin-bottom:16px;color:var(--text)}
+.modal-field{margin-bottom:12px}
+.modal-field label{display:block;font-size:12px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.modal-field input,.modal-field textarea,.modal-field select{width:100%}
+.modal-field textarea{min-height:80px;resize:vertical}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.modal-actions button{padding:8px 16px;border-radius:var(--radius);font-size:13px}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{background:var(--bg3);border:1px solid var(--border);color:var(--text2)}.btn-secondary:hover{background:var(--bg4)}
+.btn-danger{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.2)}.btn-danger:hover{background:rgba(239,68,68,.25)}
+
+/* Env editor */
+.env-editor{padding:12px}
+.env-row{display:flex;gap:4px;margin-bottom:4px;align-items:center}
+.env-row input{flex:1;padding:6px 8px;font-size:12px;font-family:'SF Mono',Consolas,monospace}
+.env-row .kv-del:hover{background:rgba(239,68,68,.15);color:var(--red)}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--border);padding:10px 16px;border-radius:var(--radius);font-size:13px;z-index:2000;animation:slideIn .2s;box-shadow:var(--shadow)}
+@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Import/export */
+.import-area{margin-top:12px;padding:12px;background:var(--bg);border-radius:var(--radius);border:2px dashed var(--border);text-align:center;color:var(--text3);font-size:13px;cursor:pointer}
+.import-area:hover{border-color:var(--accent);color:var(--text2)}
+
+/* Cookies tab */
+.cookies-table{width:100%;font-size:12px}
+.cookies-table th{text-align:left;color:var(--text3);font-weight:600;padding:4px 8px;border-bottom:1px solid var(--border)}
+.cookies-table td{padding:4px 8px;color:var(--text2);word-break:break-all}
+
+/* Tab bar for request name */
+.req-name-bar{display:flex;align-items:center;padding:0 16px;gap:8px;flex-shrink:0}
+.req-name-input{background:transparent;border:none;color:var(--text);font-size:14px;font-weight:500;padding:4px 0;flex:1}
+.req-name-input:focus{border-bottom:1px solid var(--accent)}
+
+/* Help */
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1001;display:flex;align-items:center;justify-content:center}
+.help-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto}
+.help-box h2{margin-bottom:16px;font-size:16px}
+.help-box table{width:100%;font-size:13px}
+.help-box td{padding:4px 8px}
+.help-box .key{background:var(--bg3);padding:2px 8px;border-radius:4px;font-family:'SF Mono',Consolas,monospace;font-size:12px;color:var(--accent2);white-space:nowrap}
+
+/* Quick buttons */
+.quick-actions{display:flex;gap:4px;flex-shrink:0}
+.quick-actions button{padding:4px 8px;font-size:11px;border-radius:4px;color:var(--text3);background:var(--bg3)}
+.quick-actions button:hover{color:var(--text);background:var(--bg4)}
+
+/* Responsive */
+@media(max-width:900px){.sidebar{width:200px}.panel-split{flex-direction:column}}
+@media(max-width:600px){.sidebar{position:fixed;left:0;top:48px;bottom:0;z-index:100;width:260px;transform:translateX(-100%);transition:transform .2s}.sidebar.open{transform:translateX(0)}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">⚡ <span>API Playground</span></div>
+  <div class="env-selector">
+    <select id="envSelect" onchange="switchEnv()"></select>
+    <button class="env-btn" onclick="showEnvModal()">⚙ Env</button>
+  </div>
+  <div class="topbar-actions">
+    <button onclick="importExport()">📦 Import/Export</button>
+    <button onclick="showHelp()">? Help</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+      <span class="sidebar-header-text">Explorer</span>
+      <button title="New Collection" onclick="newCollection()">+</button>
+    </div>
+    <div class="sidebar-tabs">
+      <button class="active" onclick="switchSidebarTab('collections',this)">Collections</button>
+      <button onclick="switchSidebarTab('history',this)">History</button>
+    </div>
+    <div class="sidebar-search"><input type="text" placeholder="Search..." id="sidebarSearch" oninput="renderSidebar()"></div>
+    <div class="sidebar-content" id="sidebarContent"></div>
+  </div>
+
+  <div class="workspace">
+    <div class="req-name-bar">
+      <input class="req-name-input" id="reqName" placeholder="Untitled Request" oninput="updateReqName()">
+      <div class="quick-actions">
+        <button onclick="formatBody()">{ } Format</button>
+        <button onclick="copyAsCurl()">📋 cURL</button>
+        <button onclick="clearAll()">🗑 Clear</button>
+      </div>
+    </div>
+    <div class="request-bar">
+      <select class="method-select" id="methodSelect" onchange="onMethodChange()">
+        <option value="GET">GET</option>
+        <option value="POST">POST</option>
+        <option value="PUT">PUT</option>
+        <option value="PATCH">PATCH</option>
+        <option value="DELETE">DELETE</option>
+        <option value="HEAD">HEAD</option>
+        <option value="OPTIONS">OPTIONS</option>
+      </select>
+      <input class="url-input" id="urlInput" placeholder="https://api.example.com/endpoint" onkeydown="if(event.key==='Enter')sendRequest()">
+      <button class="send-btn" id="sendBtn" onclick="sendRequest()">Send</button>
+      <button class="save-btn" onclick="saveRequest()">💾 Save</button>
+    </div>
+
+    <div class="panels">
+      <div class="panel-split">
+        <!-- Request panel -->
+        <div class="panel">
+          <div class="panel-tabs" id="reqTabs">
+            <button class="active" onclick="switchReqTab('params',this)">Params</button>
+            <button onclick="switchReqTab('headers',this)">Headers <span class="badge" id="headerCount">0</span></button>
+            <button onclick="switchReqTab('body',this)">Body</button>
+            <button onclick="switchReqTab('auth',this)">Auth</button>
+            <button onclick="switchReqTab('preReq',this)">Pre-req</button>
+          </div>
+          <div class="panel-body" id="reqPanel">
+          </div>
+        </div>
+
+        <!-- Response panel -->
+        <div class="panel">
+          <div class="panel-tabs" id="resTabs">
+            <button class="active" onclick="switchResTab('body',this)">Body</button>
+            <button onclick="switchResTab('headers',this)">Headers <span class="badge" id="resHeaderCount">0</span></button>
+            <button onclick="switchResTab('cookies',this)">Cookies</button>
+          </div>
+          <div id="responseMeta" style="display:none" class="response-meta"></div>
+          <div class="panel-body" id="resPanel">
+            <div class="response-empty">
+              <div style="font-size:32px">⚡</div>
+              <div>Hit <b>Send</b> to fire a request</div>
+              <div class="hint">or press ⌘Enter</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Help overlay -->
+<div class="help-overlay" id="helpOverlay" style="display:none" onclick="if(event.target===this)closeHelp()">
+  <div class="help-box">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <table>
+      <tr><td><span class="key">⌘ Enter</span></td><td>Send request</td></tr>
+      <tr><td><span class="key">⌘ S</span></td><td>Save request</td></tr>
+      <tr><td><span class="key">⌘ N</span></td><td>New request</td></tr>
+      <tr><td><span class="key">⌘ E</span></td><td>Export data</td></tr>
+      <tr><td><span class="key">⌘ L</span></td><td>Focus URL bar</td></tr>
+      <tr><td><span class="key">⌘ \\</span></td><td>Toggle sidebar</td></tr>
+      <tr><td><span class="key">/</span></td><td>Search (when not focused)</td></tr>
+      <tr><td><span class="key">Esc</span></td><td>Close modals</td></tr>
+    </table>
+    <div style="margin-top:16px;font-size:12px;color:var(--text3)">
+      <p><b>Variables:</b> Use <code style="color:var(--accent2)">{{variable}}</code> in URLs, headers, and body. Define them in environments.</p>
+      <p style="margin-top:8px"><b>CORS Note:</b> Browser CORS policies may block some requests. For full API testing, use a CORS proxy or run locally.</p>
+    </div>
+    <div style="text-align:right;margin-top:16px"><button class="btn-secondary" onclick="closeHelp()">Close</button></div>
+  </div>
+</div>
+
+<script>
+// ==================== STATE ====================
+const STORAGE_KEY = 'api-playground-v1';
+let state = {
+  collections: [],
+  history: [],
+  environments: [{ id: 'default', name: 'Default', vars: [] }],
+  activeEnvId: 'default',
+  activeReqId: null,
+  sidebarTab: 'collections',
+  sidebarCollapsed: false,
+};
+
+// Current request state (not saved until explicit save)
+let current = {
+  id: null,
+  name: 'Untitled Request',
+  method: 'GET',
+  url: '',
+  params: [{ enabled: true, key: '', value: '' }],
+  headers: [
+    { enabled: true, key: 'Content-Type', value: 'application/json' },
+    { enabled: true, key: '', value: '' }
+  ],
+  bodyType: 'json', // json, form, raw, none
+  bodyJson: '{\n  \n}',
+  bodyForm: [{ enabled: true, key: '', value: '' }],
+  bodyRaw: '',
+  authType: 'none', // none, bearer, basic, apikey
+  authBearer: '',
+  authBasicUser: '',
+  authBasicPass: '',
+  authApiKey: '',
+  authApiKeyName: 'X-API-Key',
+  authApiKeyIn: 'header', // header, query
+  preReqScript: '// Pre-request script\n// Available: env.get(key), env.set(key, val)\n',
+  collectionId: null,
+};
+
+let response = null;
+let reqTab = 'params';
+let resTab = 'body';
+
+// ==================== PERSISTENCE ====================
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (d) {
+      state = { ...state, ...d };
+      if (!state.environments?.length) state.environments = [{ id: 'default', name: 'Default', vars: [] }];
+      if (!state.activeEnvId) state.activeEnvId = state.environments[0].id;
+    }
+  } catch(e) {}
+}
+
+// ==================== UTILS ====================
+function uid() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2500);
+}
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function resolveVars(text) {
+  const env = state.environments.find(e => e.id === state.activeEnvId);
+  if (!env) return text;
+  return (text || '').replace(/\{\{(\w+)\}\}/g, (m, k) => {
+    const v = env.vars.find(v => v.key === k);
+    return v ? v.value : m;
+  });
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+// ==================== SIDEBAR ====================
+function toggleSidebar() {
+  state.sidebarCollapsed = !state.sidebarCollapsed;
+  document.getElementById('sidebar').classList.toggle('collapsed');
+  save();
+}
+
+function switchSidebarTab(tab, btn) {
+  state.sidebarTab = tab;
+  document.querySelectorAll('.sidebar-tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSidebar();
+}
+
+function renderSidebar() {
+  const el = document.getElementById('sidebarContent');
+  const search = (document.getElementById('sidebarSearch').value || '').toLowerCase();
+
+  if (state.sidebarTab === 'collections') {
+    let html = '';
+    // Unsaved requests not in collections
+    const unsaved = [];
+    state.collections.forEach(col => {
+      const items = (col.requests || []).filter(r =>
+        !search || r.name.toLowerCase().includes(search) || r.url.toLowerCase().includes(search) || r.method.toLowerCase().includes(search)
+      );
+      if (search && !items.length && !col.name.toLowerCase().includes(search)) return;
+      const open = col.open !== false;
+      html += `<div class="collection">
+        <div class="collection-header" onclick="toggleCollection('${col.id}')">
+          <span class="arrow ${open?'open':''}">▶</span>
+          <span class="cname">${escHtml(col.name)}</span>
+          <span class="ccount">${col.requests?.length || 0}</span>
+          <div class="collection-actions">
+            <button onclick="event.stopPropagation();addReqToCollection('${col.id}')" title="Add request">+</button>
+            <button onclick="event.stopPropagation();renameCollection('${col.id}')" title="Rename">✎</button>
+            <button onclick="event.stopPropagation();deleteCollection('${col.id}')" title="Delete">×</button>
+          </div>
+        </div>`;
+      if (open) {
+        html += '<div class="collection-items">';
+        items.forEach(r => {
+          const active = r.id === current.id ? ' active' : '';
+          html += `<div class="req-item${active}" onclick="loadRequest('${col.id}','${r.id}')">
+            <span class="method-badge method-${r.method}">${r.method}</span>
+            <span class="rname">${escHtml(r.name || r.url || 'Untitled')}</span>
+            <div class="req-item-actions">
+              <button onclick="event.stopPropagation();duplicateRequest('${col.id}','${r.id}')" title="Duplicate">⎘</button>
+              <button onclick="event.stopPropagation();deleteRequest('${col.id}','${r.id}')" title="Delete">×</button>
+            </div>
+          </div>`;
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+    if (!state.collections.length) {
+      html = '<div style="padding:16px;text-align:center;color:var(--text3);font-size:12px">No collections yet<br><button onclick="newCollection()" style="margin-top:8px;color:var(--accent2);font-size:12px">+ Create Collection</button></div>';
+    }
+    el.innerHTML = html;
+  } else {
+    // History
+    let html = '';
+    const filtered = state.history.filter(h =>
+      !search || h.url.toLowerCase().includes(search) || h.method.toLowerCase().includes(search)
+    );
+    if (!filtered.length) {
+      html = '<div style="padding:16px;text-align:center;color:var(--text3);font-size:12px">No history yet</div>';
+    }
+    filtered.slice(0, 100).forEach(h => {
+      const sc = h.status >= 200 && h.status < 300 ? 'color:var(--green)' : h.status >= 400 ? 'color:var(--red)' : 'color:var(--text3)';
+      html += `<div class="history-item" onclick="loadFromHistory('${h.id}')">
+        <span class="method-badge method-${h.method}">${h.method}</span>
+        <span class="hurl">${escHtml(h.url)}</span>
+        <span class="hstatus" style="${sc}">${h.status || '—'}</span>
+        <span class="htime">${h.time}ms</span>
+      </div>`;
+    });
+    if (filtered.length) {
+      html += `<div style="padding:8px;text-align:center"><button onclick="clearHistory()" style="font-size:11px;color:var(--red)">Clear History</button></div>`;
+    }
+    el.innerHTML = html;
+  }
+}
+
+function toggleCollection(id) {
+  const col = state.collections.find(c => c.id === id);
+  if (col) { col.open = col.open === false ? true : false; save(); renderSidebar(); }
+}
+
+function newCollection() {
+  const name = prompt('Collection name:', 'New Collection');
+  if (!name) return;
+  state.collections.push({ id: uid(), name, requests: [], open: true });
+  save(); renderSidebar();
+  toast('Collection created');
+}
+
+function renameCollection(id) {
+  const col = state.collections.find(c => c.id === id);
+  if (!col) return;
+  const name = prompt('Rename collection:', col.name);
+  if (name) { col.name = name; save(); renderSidebar(); }
+}
+
+function deleteCollection(id) {
+  if (!confirm('Delete this collection and all its requests?')) return;
+  state.collections = state.collections.filter(c => c.id !== id);
+  save(); renderSidebar();
+  toast('Collection deleted');
+}
+
+function addReqToCollection(colId) {
+  const col = state.collections.find(c => c.id === colId);
+  if (!col) return;
+  if (!col.requests) col.requests = [];
+  const req = { ...structuredClone(current), id: uid(), collectionId: colId };
+  col.requests.push(req);
+  current.id = req.id;
+  current.collectionId = colId;
+  save(); renderSidebar();
+  toast('Request added');
+}
+
+function deleteRequest(colId, reqId) {
+  const col = state.collections.find(c => c.id === colId);
+  if (!col) return;
+  col.requests = (col.requests || []).filter(r => r.id !== reqId);
+  if (current.id === reqId) { resetCurrent(); renderAll(); }
+  save(); renderSidebar();
+}
+
+function duplicateRequest(colId, reqId) {
+  const col = state.collections.find(c => c.id === colId);
+  if (!col) return;
+  const orig = col.requests.find(r => r.id === reqId);
+  if (!orig) return;
+  const dupe = { ...structuredClone(orig), id: uid(), name: orig.name + ' (copy)' };
+  col.requests.push(dupe);
+  save(); renderSidebar();
+  toast('Request duplicated');
+}
+
+function loadRequest(colId, reqId) {
+  const col = state.collections.find(c => c.id === colId);
+  if (!col) return;
+  const req = col.requests.find(r => r.id === reqId);
+  if (!req) return;
+  current = structuredClone(req);
+  current.collectionId = colId;
+  response = null;
+  renderAll();
+}
+
+function loadFromHistory(hid) {
+  const h = state.history.find(x => x.id === hid);
+  if (!h) return;
+  resetCurrent();
+  current.method = h.method;
+  current.url = h.url;
+  if (h.headers) current.headers = [...h.headers, { enabled: true, key: '', value: '' }];
+  if (h.body) current.bodyJson = h.body;
+  if (h.bodyType) current.bodyType = h.bodyType;
+  response = null;
+  renderAll();
+}
+
+function clearHistory() {
+  if (!confirm('Clear all history?')) return;
+  state.history = [];
+  save(); renderSidebar();
+  toast('History cleared');
+}
+
+// ==================== REQUEST TABS ====================
+function switchReqTab(tab, btn) {
+  reqTab = tab;
+  document.querySelectorAll('#reqTabs button').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderReqPanel();
+}
+
+function renderReqPanel() {
+  const el = document.getElementById('reqPanel');
+  readCurrentFromUI(); // save current tab state before switching
+
+  if (reqTab === 'params') {
+    el.innerHTML = renderKVEditor('params', current.params, 'Query parameter');
+  } else if (reqTab === 'headers') {
+    el.innerHTML = renderKVEditor('headers', current.headers, 'Header');
+  } else if (reqTab === 'body') {
+    const checked = t => current.bodyType === t ? 'checked' : '';
+    el.innerHTML = `
+      <div class="body-type-bar">
+        <label><input type="radio" name="bodyType" value="none" ${checked('none')} onchange="current.bodyType='none';renderReqPanel()"> None</label>
+        <label><input type="radio" name="bodyType" value="json" ${checked('json')} onchange="current.bodyType='json';renderReqPanel()"> JSON</label>
+        <label><input type="radio" name="bodyType" value="form" ${checked('form')} onchange="current.bodyType='form';renderReqPanel()"> Form</label>
+        <label><input type="radio" name="bodyType" value="raw" ${checked('raw')} onchange="current.bodyType='raw';renderReqPanel()"> Raw</label>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      ${current.bodyType === 'json' ? `<textarea class="code-editor" id="bodyEditor" spellcheck="false" oninput="current.bodyJson=this.value">${escHtml(current.bodyJson)}</textarea>` :
+        current.bodyType === 'form' ? renderKVEditor('bodyForm', current.bodyForm, 'Form field') :
+        current.bodyType === 'raw' ? `<textarea class="code-editor" id="bodyEditor" spellcheck="false" placeholder="Raw body content..." oninput="current.bodyRaw=this.value">${escHtml(current.bodyRaw)}</textarea>` :
+        '<div style="padding:24px;text-align:center;color:var(--text3)">No body for this request</div>'}
+      </div>`;
+  } else if (reqTab === 'auth') {
+    const checked = t => current.authType === t ? 'checked' : '';
+    let fields = '';
+    if (current.authType === 'bearer') {
+      fields = `<div class="auth-field"><label>Token</label><input type="text" value="${escHtml(current.authBearer)}" oninput="current.authBearer=this.value" placeholder="Enter bearer token"></div>`;
+    } else if (current.authType === 'basic') {
+      fields = `<div class="auth-field"><label>Username</label><input type="text" value="${escHtml(current.authBasicUser)}" oninput="current.authBasicUser=this.value"></div>
+        <div class="auth-field"><label>Password</label><input type="password" value="${escHtml(current.authBasicPass)}" oninput="current.authBasicPass=this.value"></div>`;
+    } else if (current.authType === 'apikey') {
+      fields = `<div class="auth-field"><label>Key Name</label><input type="text" value="${escHtml(current.authApiKeyName)}" oninput="current.authApiKeyName=this.value"></div>
+        <div class="auth-field"><label>Value</label><input type="text" value="${escHtml(current.authApiKey)}" oninput="current.authApiKey=this.value"></div>
+        <div class="auth-field"><label>Add to</label><select onchange="current.authApiKeyIn=this.value"><option value="header" ${current.authApiKeyIn==='header'?'selected':''}>Header</option><option value="query" ${current.authApiKeyIn==='query'?'selected':''}>Query Param</option></select></div>`;
+    }
+    el.innerHTML = `
+      <div class="auth-type-bar">
+        <label><input type="radio" name="authType" value="none" ${checked('none')} onchange="current.authType='none';renderReqPanel()"> None</label>
+        <label><input type="radio" name="authType" value="bearer" ${checked('bearer')} onchange="current.authType='bearer';renderReqPanel()"> Bearer</label>
+        <label><input type="radio" name="authType" value="basic" ${checked('basic')} onchange="current.authType='basic';renderReqPanel()"> Basic</label>
+        <label><input type="radio" name="authType" value="apikey" ${checked('apikey')} onchange="current.authType='apikey';renderReqPanel()"> API Key</label>
+      </div>
+      <div class="auth-fields">${fields || '<div style="padding:24px;text-align:center;color:var(--text3)">No auth configured</div>'}</div>`;
+  } else if (reqTab === 'preReq') {
+    el.innerHTML = `<textarea class="code-editor" id="preReqEditor" spellcheck="false" oninput="current.preReqScript=this.value" placeholder="// Pre-request JavaScript\n// env.get('key'), env.set('key','val')">${escHtml(current.preReqScript)}</textarea>`;
+  }
+
+  updateBadges();
+}
+
+function renderKVEditor(name, arr, placeholder) {
+  let html = '<div class="kv-table">';
+  arr.forEach((item, i) => {
+    html += `<div class="kv-row">
+      <input type="checkbox" class="kv-check" ${item.enabled?'checked':''} onchange="current.${name}[${i}].enabled=this.checked">
+      <input type="text" value="${escHtml(item.key)}" placeholder="${placeholder} key" onchange="current.${name}[${i}].key=this.value;autoAddKVRow('${name}',${i})">
+      <input type="text" class="kv-val" value="${escHtml(item.value)}" placeholder="Value" onchange="current.${name}[${i}].value=this.value;autoAddKVRow('${name}',${i})">
+      <button class="kv-del" onclick="removeKVRow('${name}',${i})">×</button>
+    </div>`;
+  });
+  html += `</div><button class="kv-add" onclick="addKVRow('${name}')">+ Add ${placeholder}</button>`;
+  return html;
+}
+
+function addKVRow(name) {
+  current[name].push({ enabled: true, key: '', value: '' });
+  renderReqPanel();
+}
+
+function removeKVRow(name, idx) {
+  current[name].splice(idx, 1);
+  if (!current[name].length) current[name].push({ enabled: true, key: '', value: '' });
+  renderReqPanel();
+}
+
+function autoAddKVRow(name, idx) {
+  const arr = current[name];
+  if (idx === arr.length - 1 && (arr[idx].key || arr[idx].value)) {
+    arr.push({ enabled: true, key: '', value: '' });
+  }
+}
+
+function updateBadges() {
+  const hc = current.headers.filter(h => h.key && h.enabled).length;
+  document.getElementById('headerCount').textContent = hc;
+}
+
+// ==================== RESPONSE TABS ====================
+function switchResTab(tab, btn) {
+  resTab = tab;
+  document.querySelectorAll('#resTabs button').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderResPanel();
+}
+
+function renderResPanel() {
+  const el = document.getElementById('resPanel');
+  const meta = document.getElementById('responseMeta');
+
+  if (!response) {
+    meta.style.display = 'none';
+    el.innerHTML = '<div class="response-empty"><div style="font-size:32px">⚡</div><div>Hit <b>Send</b> to fire a request</div><div class="hint">or press ⌘Enter</div></div>';
+    return;
+  }
+
+  // Meta bar
+  const sc = response.status >= 200 && response.status < 300 ? 'status-2xx' : response.status >= 300 && response.status < 400 ? 'status-3xx' : response.status >= 400 && response.status < 500 ? 'status-4xx' : 'status-5xx';
+  meta.style.display = 'flex';
+  meta.innerHTML = `
+    <span class="status ${sc}">${response.status} ${response.statusText || ''}</span>
+    <span class="timing">⏱ ${response.time}ms</span>
+    <span class="size">📦 ${formatBytes(response.size)}</span>
+    <button style="margin-left:auto;font-size:11px;color:var(--accent2)" onclick="copyResponse()">📋 Copy</button>
+  `;
+
+  const rhc = response.headers ? Object.keys(response.headers).length : 0;
+  document.getElementById('resHeaderCount').textContent = rhc;
+
+  if (resTab === 'body') {
+    if (response.error) {
+      el.innerHTML = `<div class="response-error">${escHtml(response.error)}</div>`;
+    } else {
+      el.innerHTML = `<div class="response-body"><pre>${highlightBody(response.body, response.contentType)}</pre></div>`;
+    }
+  } else if (resTab === 'headers') {
+    if (response.headers) {
+      let html = '<div class="resp-headers">';
+      Object.entries(response.headers).forEach(([k, v]) => {
+        html += `<div><span class="resp-header-key">${escHtml(k)}</span>: <span class="resp-header-val">${escHtml(v)}</span></div>`;
+      });
+      html += '</div>';
+      el.innerHTML = html;
+    } else {
+      el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">No headers available</div>';
+    }
+  } else if (resTab === 'cookies') {
+    const cookies = parseCookies(response.headers);
+    if (cookies.length) {
+      let html = '<table class="cookies-table"><thead><tr><th>Name</th><th>Value</th><th>Domain</th><th>Path</th></tr></thead><tbody>';
+      cookies.forEach(c => {
+        html += `<tr><td>${escHtml(c.name)}</td><td>${escHtml(c.value)}</td><td>${escHtml(c.domain||'')}</td><td>${escHtml(c.path||'/')}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      el.innerHTML = html;
+    } else {
+      el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">No cookies in response</div>';
+    }
+  }
+}
+
+function highlightBody(body, contentType) {
+  if (!body) return '<span style="color:var(--text3)">Empty response</span>';
+  const ct = (contentType || '').toLowerCase();
+  if (ct.includes('json') || (body.trim().startsWith('{') || body.trim().startsWith('['))) {
+    try {
+      const parsed = JSON.parse(body);
+      return highlightJSON(JSON.stringify(parsed, null, 2));
+    } catch(e) {}
+  }
+  if (ct.includes('xml') || ct.includes('html')) {
+    return highlightXML(body);
+  }
+  return escHtml(body);
+}
+
+function highlightJSON(s) {
+  return s.replace(/("(?:\\.|[^"\\])*")\s*:/g, '<span class="json-key">$1</span>:')
+    .replace(/:(\s*)("(?:\\.|[^"\\])*")/g, ':<span class="json-str">$2</span>')
+    .replace(/:\s*(-?\d+\.?\d*(?:e[+-]?\d+)?)/gi, ': <span class="json-num">$1</span>')
+    .replace(/:\s*(true|false)/g, ': <span class="json-bool">$1</span>')
+    .replace(/:\s*(null)/g, ': <span class="json-null">$1</span>');
+}
+
+function highlightXML(s) {
+  return escHtml(s).replace(/&lt;(\/?[\w:-]+)/g, '&lt;<span class="xml-tag">$1</span>')
+    .replace(/([\w:-]+)=&quot;([^&]*)&quot;/g, '<span class="xml-attr">$1</span>=&quot;<span class="xml-val">$2</span>&quot;');
+}
+
+function parseCookies(headers) {
+  if (!headers) return [];
+  const sc = headers['set-cookie'] || headers['Set-Cookie'];
+  if (!sc) return [];
+  const arr = Array.isArray(sc) ? sc : [sc];
+  return arr.map(c => {
+    const parts = c.split(';');
+    const [name, ...rest] = parts[0].split('=');
+    const cookie = { name: name.trim(), value: rest.join('=').trim() };
+    parts.slice(1).forEach(p => {
+      const [k, v] = p.split('=');
+      if (k.trim().toLowerCase() === 'domain') cookie.domain = (v||'').trim();
+      if (k.trim().toLowerCase() === 'path') cookie.path = (v||'').trim();
+    });
+    return cookie;
+  });
+}
+
+// ==================== SEND REQUEST ====================
+async function sendRequest() {
+  readCurrentFromUI();
+  const url = resolveVars(current.url);
+  if (!url) { toast('Enter a URL'); return; }
+
+  const btn = document.getElementById('sendBtn');
+  btn.classList.add('loading');
+  btn.textContent = '...';
+
+  // Run pre-req script
+  runPreReqScript();
+
+  try {
+    // Build URL with params
+    let fullUrl = url;
+    const activeParams = current.params.filter(p => p.enabled && p.key);
+    if (activeParams.length) {
+      const u = new URL(fullUrl.startsWith('http') ? fullUrl : 'https://' + fullUrl);
+      activeParams.forEach(p => u.searchParams.set(resolveVars(p.key), resolveVars(p.value)));
+      fullUrl = u.toString();
+    }
+
+    // API key in query
+    if (current.authType === 'apikey' && current.authApiKeyIn === 'query' && current.authApiKey) {
+      const u = new URL(fullUrl.startsWith('http') ? fullUrl : 'https://' + fullUrl);
+      u.searchParams.set(resolveVars(current.authApiKeyName), resolveVars(current.authApiKey));
+      fullUrl = u.toString();
+    }
+
+    if (!fullUrl.startsWith('http')) fullUrl = 'https://' + fullUrl;
+
+    // Build headers
+    const headers = {};
+    current.headers.filter(h => h.enabled && h.key).forEach(h => {
+      headers[resolveVars(h.key)] = resolveVars(h.value);
+    });
+
+    // Auth headers
+    if (current.authType === 'bearer' && current.authBearer) {
+      headers['Authorization'] = 'Bearer ' + resolveVars(current.authBearer);
+    } else if (current.authType === 'basic') {
+      headers['Authorization'] = 'Basic ' + btoa(resolveVars(current.authBasicUser) + ':' + resolveVars(current.authBasicPass));
+    } else if (current.authType === 'apikey' && current.authApiKeyIn === 'header' && current.authApiKey) {
+      headers[resolveVars(current.authApiKeyName)] = resolveVars(current.authApiKey);
+    }
+
+    // Build body
+    const opts = { method: current.method, headers };
+    if (!['GET', 'HEAD'].includes(current.method)) {
+      if (current.bodyType === 'json' && current.bodyJson.trim()) {
+        opts.body = resolveVars(current.bodyJson);
+        if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
+      } else if (current.bodyType === 'form') {
+        const fd = new URLSearchParams();
+        current.bodyForm.filter(f => f.enabled && f.key).forEach(f => fd.set(resolveVars(f.key), resolveVars(f.value)));
+        opts.body = fd.toString();
+        if (!headers['Content-Type']) headers['Content-Type'] = 'application/x-www-form-urlencoded';
+      } else if (current.bodyType === 'raw' && current.bodyRaw.trim()) {
+        opts.body = resolveVars(current.bodyRaw);
+      }
+    }
+
+    const startTime = performance.now();
+    const res = await fetch(fullUrl, opts);
+    const elapsed = Math.round(performance.now() - startTime);
+    const body = await res.text();
+
+    // Parse response headers
+    const resHeaders = {};
+    res.headers.forEach((v, k) => { resHeaders[k] = v; });
+
+    response = {
+      status: res.status,
+      statusText: res.statusText,
+      time: elapsed,
+      size: new Blob([body]).size,
+      body,
+      headers: resHeaders,
+      contentType: res.headers.get('content-type') || '',
+      error: null
+    };
+
+    // Add to history
+    state.history.unshift({
+      id: uid(),
+      method: current.method,
+      url: current.url,
+      status: res.status,
+      time: elapsed,
+      timestamp: Date.now(),
+      headers: current.headers.filter(h => h.enabled && h.key),
+      body: opts.body || null,
+      bodyType: current.bodyType,
+    });
+    if (state.history.length > 200) state.history = state.history.slice(0, 200);
+    save();
+
+  } catch (e) {
+    response = {
+      status: 0,
+      statusText: 'Error',
+      time: 0,
+      size: 0,
+      body: null,
+      headers: null,
+      contentType: '',
+      error: e.message || 'Request failed. This may be a CORS issue.\n\nTip: Try a CORS proxy like https://corsproxy.io/? or run your API locally.'
+    };
+  }
+
+  btn.classList.remove('loading');
+  btn.textContent = 'Send';
+  renderResPanel();
+  renderSidebar();
+}
+
+function runPreReqScript() {
+  if (!current.preReqScript || current.preReqScript.startsWith('//')) return;
+  try {
+    const env = {
+      get: (key) => {
+        const e = state.environments.find(e => e.id === state.activeEnvId);
+        const v = e?.vars.find(v => v.key === key);
+        return v?.value || '';
+      },
+      set: (key, val) => {
+        const e = state.environments.find(e => e.id === state.activeEnvId);
+        if (!e) return;
+        const v = e.vars.find(v => v.key === key);
+        if (v) v.value = val;
+        else e.vars.push({ key, value: val });
+        save();
+      }
+    };
+    new Function('env', current.preReqScript)(env);
+  } catch(e) {
+    console.warn('Pre-req script error:', e);
+  }
+}
+
+// ==================== SAVE REQUEST ====================
+function saveRequest() {
+  readCurrentFromUI();
+  if (!current.url && !current.name) { toast('Nothing to save'); return; }
+
+  if (current.id && current.collectionId) {
+    // Update existing
+    const col = state.collections.find(c => c.id === current.collectionId);
+    if (col) {
+      const idx = col.requests.findIndex(r => r.id === current.id);
+      if (idx >= 0) {
+        col.requests[idx] = structuredClone(current);
+        save(); renderSidebar();
+        toast('Request saved');
+        return;
+      }
+    }
+  }
+
+  // Save to collection
+  if (!state.collections.length) {
+    state.collections.push({ id: uid(), name: 'My Collection', requests: [], open: true });
+  }
+
+  // Show quick picker if multiple collections
+  let colId;
+  if (state.collections.length === 1) {
+    colId = state.collections[0].id;
+  } else {
+    const names = state.collections.map((c, i) => `${i + 1}. ${c.name}`).join('\n');
+    const choice = prompt(`Save to which collection?\n${names}\n\nEnter number:`, '1');
+    if (!choice) return;
+    const idx = parseInt(choice) - 1;
+    if (idx < 0 || idx >= state.collections.length) { toast('Invalid choice'); return; }
+    colId = state.collections[idx].id;
+  }
+
+  const col = state.collections.find(c => c.id === colId);
+  current.id = uid();
+  current.collectionId = colId;
+  col.requests.push(structuredClone(current));
+  save(); renderSidebar();
+  toast('Request saved to ' + col.name);
+}
+
+// ==================== ENVIRONMENTS ====================
+function renderEnvSelect() {
+  const sel = document.getElementById('envSelect');
+  sel.innerHTML = state.environments.map(e =>
+    `<option value="${e.id}" ${e.id === state.activeEnvId ? 'selected' : ''}>${escHtml(e.name)}</option>`
+  ).join('');
+}
+
+function switchEnv() {
+  state.activeEnvId = document.getElementById('envSelect').value;
+  save();
+}
+
+function showEnvModal() {
+  const env = state.environments.find(e => e.id === state.activeEnvId) || state.environments[0];
+  let html = `<div class="modal-overlay" id="envModal" onclick="if(event.target===this)closeModal('envModal')">
+    <div class="modal">
+      <h2>🔧 Environment: ${escHtml(env.name)}</h2>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn-secondary" onclick="addEnv()">+ New Env</button>
+        <button class="btn-secondary" onclick="renameEnv()">Rename</button>
+        ${state.environments.length > 1 ? `<button class="btn-danger" onclick="deleteEnv()">Delete</button>` : ''}
+      </div>
+      <div class="env-editor" id="envVars">`;
+  (env.vars || []).forEach((v, i) => {
+    html += `<div class="env-row">
+      <input type="text" value="${escHtml(v.key)}" placeholder="Key" data-env-key="${i}">
+      <input type="text" value="${escHtml(v.value)}" placeholder="Value" data-env-val="${i}">
+      <button class="kv-del" onclick="removeEnvVar(${i})">×</button>
+    </div>`;
+  });
+  html += `</div>
+      <button class="kv-add" onclick="addEnvVar()" style="margin-left:12px">+ Add Variable</button>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('envModal')">Cancel</button>
+        <button class="btn-primary" onclick="saveEnvVars()">Save</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function addEnvVar() {
+  const env = state.environments.find(e => e.id === state.activeEnvId);
+  env.vars.push({ key: '', value: '' });
+  closeModal('envModal');
+  showEnvModal();
+}
+
+function removeEnvVar(idx) {
+  const env = state.environments.find(e => e.id === state.activeEnvId);
+  env.vars.splice(idx, 1);
+  save();
+  closeModal('envModal');
+  showEnvModal();
+}
+
+function saveEnvVars() {
+  const env = state.environments.find(e => e.id === state.activeEnvId);
+  const keys = document.querySelectorAll('[data-env-key]');
+  const vals = document.querySelectorAll('[data-env-val]');
+  env.vars = [];
+  keys.forEach((k, i) => {
+    if (k.value || vals[i].value) env.vars.push({ key: k.value, value: vals[i].value });
+  });
+  save();
+  closeModal('envModal');
+  toast('Environment saved');
+}
+
+function addEnv() {
+  const name = prompt('Environment name:', 'New Environment');
+  if (!name) return;
+  const env = { id: uid(), name, vars: [] };
+  state.environments.push(env);
+  state.activeEnvId = env.id;
+  save(); renderEnvSelect();
+  closeModal('envModal');
+  showEnvModal();
+}
+
+function renameEnv() {
+  const env = state.environments.find(e => e.id === state.activeEnvId);
+  const name = prompt('Rename environment:', env.name);
+  if (name) { env.name = name; save(); renderEnvSelect(); closeModal('envModal'); showEnvModal(); }
+}
+
+function deleteEnv() {
+  if (!confirm('Delete this environment?')) return;
+  state.environments = state.environments.filter(e => e.id !== state.activeEnvId);
+  state.activeEnvId = state.environments[0].id;
+  save(); renderEnvSelect();
+  closeModal('envModal');
+  showEnvModal();
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+// ==================== IMPORT/EXPORT ====================
+function importExport() {
+  let html = `<div class="modal-overlay" id="ieModal" onclick="if(event.target===this)closeModal('ieModal')">
+    <div class="modal">
+      <h2>📦 Import / Export</h2>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn-primary" onclick="exportData()">📥 Export All (JSON)</button>
+        <button class="btn-secondary" onclick="exportCurl()">📋 Copy as cURL</button>
+      </div>
+      <h3 style="font-size:13px;color:var(--text2);margin-bottom:8px">Import</h3>
+      <div class="import-area" onclick="document.getElementById('importFile').click()">
+        Click to import JSON file
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(this)">
+      </div>
+      <div style="margin-top:12px">
+        <textarea id="importText" style="width:100%;height:80px;font-size:12px" placeholder="Or paste JSON here..."></textarea>
+        <button class="btn-secondary" style="margin-top:4px" onclick="importFromText()">Import from Text</button>
+      </div>
+      <h3 style="font-size:13px;color:var(--text2);margin:16px 0 8px">Import Postman Collection</h3>
+      <div class="import-area" onclick="document.getElementById('postmanFile').click()">
+        Click to import Postman Collection v2.1 JSON
+        <input type="file" id="postmanFile" accept=".json" style="display:none" onchange="handlePostmanImport(this)">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('ieModal')">Close</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function exportData() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'api-playground-export.json'; a.click();
+  URL.revokeObjectURL(url);
+  toast('Exported!');
+}
+
+function handleImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (data.collections) {
+        // Merge
+        data.collections.forEach(col => {
+          const existing = state.collections.find(c => c.name === col.name);
+          if (existing) {
+            (col.requests || []).forEach(r => {
+              if (!existing.requests.find(er => er.url === r.url && er.method === r.method)) {
+                existing.requests.push(r);
+              }
+            });
+          } else {
+            state.collections.push(col);
+          }
+        });
+        if (data.environments) {
+          data.environments.forEach(env => {
+            if (!state.environments.find(e => e.name === env.name)) state.environments.push(env);
+          });
+        }
+        save(); renderAll();
+        toast('Imported successfully!');
+      }
+    } catch(e) { toast('Invalid JSON file'); }
+  };
+  reader.readAsText(file);
+  closeModal('ieModal');
+}
+
+function importFromText() {
+  const text = document.getElementById('importText').value;
+  if (!text) return;
+  try {
+    const data = JSON.parse(text);
+    if (data.collections) {
+      data.collections.forEach(col => state.collections.push(col));
+      save(); renderAll();
+      toast('Imported!');
+      closeModal('ieModal');
+    } else {
+      toast('No collections found in data');
+    }
+  } catch(e) { toast('Invalid JSON'); }
+}
+
+function handlePostmanImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const pm = JSON.parse(reader.result);
+      const col = { id: uid(), name: pm.info?.name || 'Imported Collection', requests: [], open: true };
+
+      function parseItems(items) {
+        (items || []).forEach(item => {
+          if (item.item) { parseItems(item.item); return; }
+          const req = item.request;
+          if (!req) return;
+          const method = (typeof req.method === 'string' ? req.method : 'GET').toUpperCase();
+          let url = '';
+          if (typeof req.url === 'string') url = req.url;
+          else if (req.url?.raw) url = req.url.raw;
+
+          const headers = (req.header || []).map(h => ({ enabled: !h.disabled, key: h.key || '', value: h.value || '' }));
+          headers.push({ enabled: true, key: '', value: '' });
+
+          let bodyJson = '{\n  \n}', bodyType = 'none';
+          if (req.body) {
+            if (req.body.mode === 'raw') { bodyJson = req.body.raw || ''; bodyType = 'json'; }
+            else if (req.body.mode === 'urlencoded') { bodyType = 'form'; }
+          }
+
+          col.requests.push({
+            id: uid(), name: item.name || url, method, url, collectionId: col.id,
+            params: [{ enabled: true, key: '', value: '' }],
+            headers, bodyType, bodyJson, bodyForm: [{ enabled: true, key: '', value: '' }],
+            bodyRaw: '', authType: 'none', authBearer: '', authBasicUser: '', authBasicPass: '',
+            authApiKey: '', authApiKeyName: 'X-API-Key', authApiKeyIn: 'header',
+            preReqScript: ''
+          });
+        });
+      }
+
+      parseItems(pm.item);
+      state.collections.push(col);
+      save(); renderAll();
+      toast(`Imported ${col.requests.length} requests from Postman`);
+      closeModal('ieModal');
+    } catch(e) { toast('Invalid Postman file: ' + e.message); }
+  };
+  reader.readAsText(file);
+}
+
+// ==================== UTILS ====================
+function readCurrentFromUI() {
+  current.method = document.getElementById('methodSelect').value;
+  current.url = document.getElementById('urlInput').value;
+  current.name = document.getElementById('reqName').value;
+  const be = document.getElementById('bodyEditor');
+  if (be) {
+    if (current.bodyType === 'json') current.bodyJson = be.value;
+    else if (current.bodyType === 'raw') current.bodyRaw = be.value;
+  }
+  const pre = document.getElementById('preReqEditor');
+  if (pre) current.preReqScript = pre.value;
+}
+
+function updateReqName() {
+  current.name = document.getElementById('reqName').value;
+}
+
+function onMethodChange() {
+  current.method = document.getElementById('methodSelect').value;
+}
+
+function resetCurrent() {
+  current = {
+    id: null, name: 'Untitled Request', method: 'GET', url: '',
+    params: [{ enabled: true, key: '', value: '' }],
+    headers: [{ enabled: true, key: 'Content-Type', value: 'application/json' }, { enabled: true, key: '', value: '' }],
+    bodyType: 'json', bodyJson: '{\n  \n}', bodyForm: [{ enabled: true, key: '', value: '' }],
+    bodyRaw: '', authType: 'none', authBearer: '', authBasicUser: '', authBasicPass: '',
+    authApiKey: '', authApiKeyName: 'X-API-Key', authApiKeyIn: 'header',
+    preReqScript: '// Pre-request script\n// Available: env.get(key), env.set(key, val)\n',
+    collectionId: null,
+  };
+}
+
+function renderAll() {
+  document.getElementById('methodSelect').value = current.method;
+  document.getElementById('urlInput').value = current.url;
+  document.getElementById('reqName').value = current.name || '';
+  renderEnvSelect();
+  renderSidebar();
+  renderReqPanel();
+  renderResPanel();
+}
+
+function formatBody() {
+  if (current.bodyType === 'json') {
+    try {
+      const parsed = JSON.parse(current.bodyJson);
+      current.bodyJson = JSON.stringify(parsed, null, 2);
+      const editor = document.getElementById('bodyEditor');
+      if (editor) editor.value = current.bodyJson;
+      toast('Formatted');
+    } catch(e) { toast('Invalid JSON'); }
+  }
+}
+
+function copyAsCurl() {
+  readCurrentFromUI();
+  let cmd = `curl -X ${current.method}`;
+
+  // Headers
+  current.headers.filter(h => h.enabled && h.key).forEach(h => {
+    cmd += ` \\\n  -H '${resolveVars(h.key)}: ${resolveVars(h.value)}'`;
+  });
+
+  // Auth
+  if (current.authType === 'bearer' && current.authBearer) {
+    cmd += ` \\\n  -H 'Authorization: Bearer ${resolveVars(current.authBearer)}'`;
+  } else if (current.authType === 'basic') {
+    cmd += ` \\\n  -u '${resolveVars(current.authBasicUser)}:${resolveVars(current.authBasicPass)}'`;
+  } else if (current.authType === 'apikey' && current.authApiKeyIn === 'header') {
+    cmd += ` \\\n  -H '${resolveVars(current.authApiKeyName)}: ${resolveVars(current.authApiKey)}'`;
+  }
+
+  // Body
+  if (!['GET', 'HEAD'].includes(current.method)) {
+    if (current.bodyType === 'json' && current.bodyJson.trim()) {
+      cmd += ` \\\n  -d '${resolveVars(current.bodyJson).replace(/'/g, "'\\''")}'`;
+    } else if (current.bodyType === 'form') {
+      current.bodyForm.filter(f => f.enabled && f.key).forEach(f => {
+        cmd += ` \\\n  -d '${resolveVars(f.key)}=${resolveVars(f.value)}'`;
+      });
+    } else if (current.bodyType === 'raw' && current.bodyRaw.trim()) {
+      cmd += ` \\\n  -d '${resolveVars(current.bodyRaw).replace(/'/g, "'\\''")}'`;
+    }
+  }
+
+  let url = resolveVars(current.url);
+  if (!url.startsWith('http')) url = 'https://' + url;
+  cmd += ` \\\n  '${url}'`;
+
+  navigator.clipboard.writeText(cmd).then(() => toast('cURL copied!')).catch(() => toast('Copy failed'));
+}
+
+function copyResponse() {
+  if (response?.body) {
+    navigator.clipboard.writeText(response.body).then(() => toast('Response copied!')).catch(() => toast('Copy failed'));
+  }
+}
+
+function clearAll() {
+  response = null;
+  resetCurrent();
+  renderAll();
+}
+
+function showHelp() { document.getElementById('helpOverlay').style.display = 'flex'; }
+function closeHelp() { document.getElementById('helpOverlay').style.display = 'none'; }
+
+function exportCurl() {
+  copyAsCurl();
+  closeModal('ieModal');
+}
+
+// ==================== KEYBOARD ====================
+document.addEventListener('keydown', e => {
+  const mod = e.metaKey || e.ctrlKey;
+  if (mod && e.key === 'Enter') { e.preventDefault(); sendRequest(); }
+  else if (mod && e.key === 's') { e.preventDefault(); saveRequest(); }
+  else if (mod && e.key === 'n') { e.preventDefault(); resetCurrent(); response = null; renderAll(); toast('New request'); }
+  else if (mod && e.key === 'e') { e.preventDefault(); importExport(); }
+  else if (mod && e.key === 'l') { e.preventDefault(); document.getElementById('urlInput').focus(); }
+  else if (mod && e.key === '\\') { e.preventDefault(); toggleSidebar(); }
+  else if (e.key === 'Escape') {
+    closeHelp();
+    document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+  }
+  else if (e.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) {
+    e.preventDefault();
+    document.getElementById('sidebarSearch').focus();
+  }
+  else if (e.key === '?' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) {
+    e.preventDefault(); showHelp();
+  }
+});
+
+// Tab key support in editors
+document.addEventListener('keydown', e => {
+  if (e.key === 'Tab' && (e.target.id === 'bodyEditor' || e.target.id === 'preReqEditor')) {
+    e.preventDefault();
+    const s = e.target.selectionStart, end = e.target.selectionEnd;
+    e.target.value = e.target.value.substring(0, s) + '  ' + e.target.value.substring(end);
+    e.target.selectionStart = e.target.selectionEnd = s + 2;
+  }
+});
+
+// ==================== SEED DATA ====================
+function seedData() {
+  if (state.collections.length) return;
+
+  const colId = uid();
+  state.collections = [{
+    id: colId, name: 'Example APIs', open: true,
+    requests: [
+      {
+        id: uid(), name: 'Get Users', method: 'GET', url: 'https://jsonplaceholder.typicode.com/users',
+        params: [{ enabled: true, key: '', value: '' }],
+        headers: [{ enabled: true, key: 'Accept', value: 'application/json' }, { enabled: true, key: '', value: '' }],
+        bodyType: 'none', bodyJson: '{\n  \n}', bodyForm: [{ enabled: true, key: '', value: '' }],
+        bodyRaw: '', authType: 'none', authBearer: '', authBasicUser: '', authBasicPass: '',
+        authApiKey: '', authApiKeyName: '', authApiKeyIn: 'header', preReqScript: '', collectionId: colId,
+      },
+      {
+        id: uid(), name: 'Get Single Post', method: 'GET', url: 'https://jsonplaceholder.typicode.com/posts/1',
+        params: [{ enabled: true, key: '', value: '' }],
+        headers: [{ enabled: true, key: '', value: '' }],
+        bodyType: 'none', bodyJson: '{\n  \n}', bodyForm: [{ enabled: true, key: '', value: '' }],
+        bodyRaw: '', authType: 'none', authBearer: '', authBasicUser: '', authBasicPass: '',
+        authApiKey: '', authApiKeyName: '', authApiKeyIn: 'header', preReqScript: '', collectionId: colId,
+      },
+      {
+        id: uid(), name: 'Create Post', method: 'POST', url: 'https://jsonplaceholder.typicode.com/posts',
+        params: [{ enabled: true, key: '', value: '' }],
+        headers: [{ enabled: true, key: 'Content-Type', value: 'application/json' }, { enabled: true, key: '', value: '' }],
+        bodyType: 'json', bodyJson: JSON.stringify({ title: 'UTMStamp Launch', body: 'We just shipped the best email signature tool!', userId: 1 }, null, 2),
+        bodyForm: [{ enabled: true, key: '', value: '' }],
+        bodyRaw: '', authType: 'none', authBearer: '', authBasicUser: '', authBasicPass: '',
+        authApiKey: '', authApiKeyName: '', authApiKeyIn: 'header', preReqScript: '', collectionId: colId,
+      },
+      {
+        id: uid(), name: 'Update Post', method: 'PUT', url: 'https://jsonplaceholder.typicode.com/posts/1',
+        params: [{ enabled: true, key: '', value: '' }],
+        headers: [{ enabled: true, key: 'Content-Type', value: 'application/json' }, { enabled: true, key: '', value: '' }],
+        bodyType: 'json', bodyJson: JSON.stringify({ id: 1, title: 'Updated Title', body: 'Updated body content', userId: 1 }, null, 2),
+        bodyForm: [{ enabled: true, key: '', value: '' }],
+        bodyRaw: '', authType: 'none', authBearer: '', authBasicUser: '', authBasicPass: '',
+        authApiKey: '', authApiKeyName: '', authApiKeyIn: 'header', preReqScript: '', collectionId: colId,
+      },
+      {
+        id: uid(), name: 'Delete Post', method: 'DELETE', url: 'https://jsonplaceholder.typicode.com/posts/1',
+        params: [{ enabled: true, key: '', value: '' }],
+        headers: [{ enabled: true, key: '', value: '' }],
+        bodyType: 'none', bodyJson: '{\n  \n}', bodyForm: [{ enabled: true, key: '', value: '' }],
+        bodyRaw: '', authType: 'none', authBearer: '', authBasicUser: '', authBasicPass: '',
+        authApiKey: '', authApiKeyName: '', authApiKeyIn: 'header', preReqScript: '', collectionId: colId,
+      },
+      {
+        id: uid(), name: 'Search Users (Params)', method: 'GET', url: 'https://jsonplaceholder.typicode.com/posts',
+        params: [{ enabled: true, key: 'userId', value: '1' }, { enabled: true, key: '', value: '' }],
+        headers: [{ enabled: true, key: 'Accept', value: 'application/json' }, { enabled: true, key: '', value: '' }],
+        bodyType: 'none', bodyJson: '{\n  \n}', bodyForm: [{ enabled: true, key: '', value: '' }],
+        bodyRaw: '', authType: 'none', authBearer: '', authBasicUser: '', authBasicPass: '',
+        authApiKey: '', authApiKeyName: '', authApiKeyIn: 'header', preReqScript: '', collectionId: colId,
+      },
+      {
+        id: uid(), name: 'GitHub API (Auth Example)', method: 'GET', url: 'https://api.github.com/user',
+        params: [{ enabled: true, key: '', value: '' }],
+        headers: [{ enabled: true, key: 'Accept', value: 'application/vnd.github.v3+json' }, { enabled: true, key: 'User-Agent', value: 'API-Playground' }, { enabled: true, key: '', value: '' }],
+        bodyType: 'none', bodyJson: '{\n  \n}', bodyForm: [{ enabled: true, key: '', value: '' }],
+        bodyRaw: '', authType: 'bearer', authBearer: '{{github_token}}', authBasicUser: '', authBasicPass: '',
+        authApiKey: '', authApiKeyName: '', authApiKeyIn: 'header', preReqScript: '', collectionId: colId,
+      },
+    ]
+  }];
+
+  state.environments = [
+    { id: 'default', name: 'Development', vars: [
+      { key: 'base_url', value: 'https://jsonplaceholder.typicode.com' },
+      { key: 'github_token', value: 'your-token-here' },
+    ]},
+    { id: uid(), name: 'Production', vars: [
+      { key: 'base_url', value: 'https://api.production.com' },
+      { key: 'github_token', value: '' },
+    ]},
+  ];
+  state.activeEnvId = 'default';
+  save();
+}
+
+// ==================== INIT ====================
+load();
+seedData();
+if (state.sidebarCollapsed) document.getElementById('sidebar').classList.add('collapsed');
+renderAll();
+
+// Load first request if any
+if (state.collections.length && state.collections[0].requests?.length) {
+  const col = state.collections[0];
+  const req = col.requests[0];
+  current = structuredClone(req);
+  current.collectionId = col.id;
+  renderAll();
+}
+</script>
+</body>
+</html>

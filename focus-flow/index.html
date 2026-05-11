@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Focus Flow — Deep Work Timer & Productivity Tracker</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0f1117;--surface:#1a1d27;--surface2:#242836;--surface3:#2e3345;
+--text:#e8eaed;--text2:#9aa0b0;--text3:#636980;
+--accent:#6c5ce7;--accent2:#a29bfe;--accent3:#4834d4;
+--green:#00b894;--green2:#55efc4;--red:#ff6b6b;--red2:#ff8787;
+--orange:#fdcb6e;--blue:#74b9ff;--pink:#fd79a8;--cyan:#81ecec;
+--radius:12px;--radius2:8px;--shadow:0 4px 24px rgba(0,0,0,.3);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+button{cursor:pointer;font-family:inherit;border:none;outline:none}
+input,textarea,select{font-family:inherit;outline:none;border:none;background:var(--surface2);color:var(--text);padding:8px 12px;border-radius:var(--radius2);font-size:14px}
+input:focus,textarea:focus,select:focus{box-shadow:0 0 0 2px var(--accent)}
+textarea{resize:vertical}
+select{cursor:pointer}
+
+/* Layout */
+.app{display:flex;flex-direction:column;min-height:100vh}
+header{background:var(--surface);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--surface3);position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px}
+.logo h1{font-size:20px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo span{font-size:22px}
+.nav{display:flex;gap:4px;background:var(--surface2);padding:3px;border-radius:var(--radius)}
+.nav button{padding:8px 16px;border-radius:var(--radius2);background:transparent;color:var(--text2);font-size:13px;font-weight:500;transition:.2s}
+.nav button:hover{color:var(--text)}
+.nav button.active{background:var(--accent);color:#fff}
+.header-actions{display:flex;gap:8px;align-items:center}
+.btn{padding:8px 16px;border-radius:var(--radius2);font-size:13px;font-weight:500;transition:.2s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent3)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--surface3)}.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius2);background:var(--surface2);color:var(--text2);font-size:16px;transition:.2s}.btn-icon:hover{background:var(--surface3);color:var(--text)}
+main{flex:1;padding:24px;max-width:1200px;margin:0 auto;width:100%}
+
+/* Timer View */
+.timer-container{display:flex;flex-direction:column;align-items:center;gap:32px;padding:40px 0}
+.timer-mode-tabs{display:flex;gap:4px;background:var(--surface);padding:4px;border-radius:var(--radius)}
+.timer-mode-tabs button{padding:10px 24px;border-radius:var(--radius2);background:transparent;color:var(--text2);font-size:14px;font-weight:500;transition:.2s}
+.timer-mode-tabs button:hover{color:var(--text)}
+.timer-mode-tabs button.active{background:var(--accent);color:#fff}
+
+.timer-ring-wrapper{position:relative;width:320px;height:320px}
+.timer-ring{width:100%;height:100%}
+.timer-ring circle{fill:none;stroke-width:8;stroke-linecap:round}
+.timer-ring .bg{stroke:var(--surface2)}
+.timer-ring .progress{stroke:var(--accent);transition:stroke-dashoffset .5s ease;transform:rotate(-90deg);transform-origin:50% 50%}
+.timer-ring.break .progress{stroke:var(--green)}
+.timer-display{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.timer-display .time{font-size:64px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:2px}
+.timer-display .label{font-size:14px;color:var(--text2);margin-top:4px}
+.timer-display .session-count{font-size:12px;color:var(--text3);margin-top:8px}
+.timer-display .session-count span{color:var(--accent2)}
+
+.timer-controls{display:flex;gap:12px;align-items:center}
+.timer-btn{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;transition:.2s}
+.timer-btn.play{background:var(--accent);color:#fff;width:72px;height:72px;font-size:28px}.timer-btn.play:hover{background:var(--accent3);transform:scale(1.05)}
+.timer-btn.secondary{background:var(--surface2);color:var(--text2)}.timer-btn.secondary:hover{background:var(--surface3);color:var(--text)}
+
+.timer-meta{display:flex;gap:24px;align-items:center}
+.timer-meta-item{display:flex;flex-direction:column;align-items:center;gap:4px}
+.timer-meta-item .val{font-size:20px;font-weight:600}
+.timer-meta-item .lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+
+.quick-category{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+.cat-chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;background:var(--surface2);color:var(--text2);transition:.2s;cursor:pointer}
+.cat-chip:hover{background:var(--surface3);color:var(--text)}
+.cat-chip.active{background:var(--accent);color:#fff}
+
+.daily-goal-bar{width:100%;max-width:400px;margin-top:8px}
+.daily-goal-bar .bar-bg{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.daily-goal-bar .bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .5s}
+.daily-goal-bar .bar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:4px}
+
+/* Sessions List */
+.sessions-view{display:flex;flex-direction:column;gap:16px}
+.sessions-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.search-box{position:relative}
+.search-box input{padding-left:32px;width:260px;background:var(--surface)}
+.search-box::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px}
+.filter-row{display:flex;gap:8px;flex-wrap:wrap}
+.filter-chip{padding:5px 12px;border-radius:16px;font-size:12px;background:var(--surface);color:var(--text2);cursor:pointer;transition:.2s}
+.filter-chip:hover{background:var(--surface2)}
+.filter-chip.active{background:var(--accent);color:#fff}
+
+.session-card{background:var(--surface);border-radius:var(--radius);padding:16px;display:flex;align-items:center;gap:16px;transition:.2s;cursor:pointer}
+.session-card:hover{background:var(--surface2);transform:translateX(4px)}
+.session-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.session-info{flex:1;min-width:0}
+.session-info h3{font-size:14px;font-weight:600;margin-bottom:2px;display:flex;align-items:center;gap:8px}
+.session-info .meta{font-size:12px;color:var(--text3);display:flex;gap:12px;flex-wrap:wrap}
+.session-duration{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent2)}
+.session-actions{display:flex;gap:4px}
+.energy-dots{display:flex;gap:2px}
+.energy-dot{width:8px;height:8px;border-radius:50%;background:var(--surface3)}
+.energy-dot.filled{background:var(--orange)}
+.energy-dot.filled.high{background:var(--green)}
+.energy-dot.filled.low{background:var(--red)}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-state .icon{font-size:48px;margin-bottom:16px}
+.empty-state h3{font-size:18px;color:var(--text2);margin-bottom:8px}
+
+/* Dashboard */
+.dashboard{display:flex;flex-direction:column;gap:24px}
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.stat-card{background:var(--surface);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-card .icon{font-size:24px;margin-bottom:8px}
+.stat-card .val{font-size:28px;font-weight:700}
+.stat-card .lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+.stat-card .sub{font-size:12px;color:var(--text2);margin-top:2px}
+
+.chart-section{background:var(--surface);border-radius:var(--radius);padding:20px}
+.chart-section h3{font-size:15px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.chart-grid{grid-template-columns:1fr}}
+
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:10px}
+.bar-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.bar-col .bar{width:100%;border-radius:4px 4px 0 0;background:var(--accent);min-height:2px;transition:height .5s}
+.bar-col .bar.green{background:var(--green)}
+.bar-col .lbl{font-size:10px;color:var(--text3)}
+.bar-col .val{font-size:10px;color:var(--text2);font-weight:600}
+
+.heatmap{display:flex;flex-direction:column;gap:2px}
+.heatmap-row{display:flex;gap:2px}
+.heatmap-cell{width:14px;height:14px;border-radius:2px;background:var(--surface2);transition:.2s}
+.heatmap-cell:hover{transform:scale(1.3)}
+.heatmap-cell.l1{background:rgba(108,92,231,.2)}
+.heatmap-cell.l2{background:rgba(108,92,231,.4)}
+.heatmap-cell.l3{background:rgba(108,92,231,.6)}
+.heatmap-cell.l4{background:rgba(108,92,231,.8)}
+.heatmap-cell.l5{background:rgba(108,92,231,1)}
+.heatmap-legend{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);margin-top:4px;justify-content:flex-end}
+
+.streak-display{display:flex;align-items:center;gap:16px;padding:20px;background:var(--surface);border-radius:var(--radius)}
+.streak-fire{font-size:48px}
+.streak-info h2{font-size:32px;font-weight:700;background:linear-gradient(135deg,var(--orange),var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.streak-info p{color:var(--text2);font-size:13px}
+
+.category-breakdown{display:flex;flex-direction:column;gap:8px}
+.cat-row{display:flex;align-items:center;gap:12px}
+.cat-row .cat-color{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.cat-row .cat-name{font-size:13px;width:100px;flex-shrink:0}
+.cat-row .cat-bar-bg{flex:1;height:8px;background:var(--surface3);border-radius:4px;overflow:hidden}
+.cat-row .cat-bar-fill{height:100%;border-radius:4px;transition:width .5s}
+.cat-row .cat-hours{font-size:12px;color:var(--text2);width:50px;text-align:right;flex-shrink:0}
+
+/* Goals View */
+.goals-view{display:flex;flex-direction:column;gap:20px}
+.goal-card{background:var(--surface);border-radius:var(--radius);padding:20px}
+.goal-card h3{font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.goal-setting{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.goal-setting label{font-size:13px;color:var(--text2);width:120px;flex-shrink:0}
+.goal-setting input[type=number]{width:80px;text-align:center}
+.goal-setting input[type=range]{flex:1;accent-color:var(--accent)}
+.goal-setting .val{font-size:14px;font-weight:600;width:40px;text-align:center}
+.goal-progress{margin-top:8px}
+.goal-progress .bar-bg{height:12px;background:var(--surface2);border-radius:6px;overflow:hidden;position:relative}
+.goal-progress .bar-fill{height:100%;border-radius:6px;transition:width .5s}
+.goal-progress .bar-fill.on-track{background:linear-gradient(90deg,var(--green),var(--green2))}
+.goal-progress .bar-fill.behind{background:linear-gradient(90deg,var(--orange),var(--red))}
+.goal-progress .bar-fill.achieved{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.goal-progress .labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:4px}
+
+/* Distraction Log */
+.distraction-log{background:var(--surface);border-radius:var(--radius);padding:20px}
+.distraction-log h3{font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.distraction-input{display:flex;gap:8px;margin-bottom:12px}
+.distraction-input input{flex:1}
+.distraction-list{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
+.distraction-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:var(--radius2);font-size:13px}
+.distraction-item .time{color:var(--text3);font-size:11px}
+.distraction-item .del{color:var(--text3);cursor:pointer;font-size:14px}.distraction-item .del:hover{color:var(--red)}
+
+/* Modal */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal{background:var(--surface);border-radius:var(--radius);padding:24px;width:90%;max-width:500px;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.modal .form-group{margin-bottom:14px}
+.modal .form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.modal .form-group input,.modal .form-group textarea,.modal .form-group select{width:100%}
+.modal .form-group textarea{min-height:60px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+
+/* Energy selector */
+.energy-selector{display:flex;gap:8px;align-items:center}
+.energy-btn{width:36px;height:36px;border-radius:50%;background:var(--surface2);color:var(--text3);font-size:16px;display:flex;align-items:center;justify-content:center;transition:.2s}
+.energy-btn:hover{background:var(--surface3)}
+.energy-btn.selected{border:2px solid var(--orange);color:var(--orange)}
+
+/* Notification toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);color:var(--text);padding:12px 20px;border-radius:var(--radius);box-shadow:var(--shadow);font-size:14px;z-index:300;transform:translateY(80px);opacity:0;transition:.3s}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-left:4px solid var(--green)}
+.toast.info{border-left:4px solid var(--accent)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+
+/* Animations */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.pulse{animation:pulse 2s ease-in-out infinite}
+
+/* Keyboard shortcut hint */
+.kbd{display:inline-block;padding:2px 6px;background:var(--surface3);border-radius:4px;font-size:11px;color:var(--text3);font-family:monospace;margin-left:4px}
+.help-panel{position:fixed;bottom:16px;left:16px;background:var(--surface);border-radius:var(--radius);padding:12px 16px;font-size:12px;color:var(--text3);z-index:50;box-shadow:var(--shadow)}
+.help-panel kbd{margin-right:8px}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo"><span>⏱️</span><h1>Focus Flow</h1></div>
+  <div class="nav" id="nav">
+    <button class="active" data-view="timer">Timer</button>
+    <button data-view="sessions">Sessions</button>
+    <button data-view="dashboard">Dashboard</button>
+    <button data-view="goals">Goals</button>
+  </div>
+  <div class="header-actions">
+    <button class="btn-icon" onclick="toggleHelp()" title="Keyboard Shortcuts (?)">⌨️</button>
+    <button class="btn-icon" onclick="exportData()" title="Export JSON (E)">📤</button>
+    <button class="btn-icon" onclick="importData()" title="Import JSON (I)">📥</button>
+  </div>
+</header>
+
+<main id="main"></main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="help-panel" id="helpPanel" style="display:none">
+  <div><kbd>Space</kbd>Start / Pause timer</div>
+  <div><kbd>R</kbd>Reset timer</div>
+  <div><kbd>S</kbd>Skip to next</div>
+  <div><kbd>1-4</kbd>Switch views</div>
+  <div><kbd>/</kbd>Search sessions</div>
+  <div><kbd>D</kbd>Log distraction</div>
+  <div><kbd>E</kbd>Export</div>
+  <div><kbd>I</kbd>Import</div>
+  <div><kbd>?</kbd>Toggle help</div>
+  <div><kbd>Esc</kbd>Close modal</div>
+</div>
+
+<input type="file" id="importInput" accept=".json" style="display:none">
+
+<script>
+// ==================== STATE ====================
+const CATEGORIES = [
+  {id:'coding',name:'Coding',emoji:'💻',color:'var(--accent)'},
+  {id:'writing',name:'Writing',emoji:'✍️',color:'var(--green)'},
+  {id:'design',name:'Design',emoji:'🎨',color:'var(--pink)'},
+  {id:'research',name:'Research',emoji:'🔍',color:'var(--blue)'},
+  {id:'planning',name:'Planning',emoji:'📋',color:'var(--orange)'},
+  {id:'meetings',name:'Meetings',emoji:'🤝',color:'var(--cyan)'},
+  {id:'learning',name:'Learning',emoji:'📚',color:'var(--red2)'},
+  {id:'admin',name:'Admin',emoji:'📁',color:'var(--text3)'}
+];
+
+const DEFAULTS = {
+  focusDuration: 25,
+  shortBreak: 5,
+  longBreak: 15,
+  longBreakAfter: 4,
+  dailyGoalMinutes: 240,
+  weeklyGoalMinutes: 1200,
+  autoStartBreaks: true,
+  soundEnabled: true
+};
+
+let state = loadState();
+let timerInterval = null;
+let currentView = 'timer';
+
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem('focusflow_state'));
+    if (s) return {...getDefaultState(), ...s};
+  } catch(e) {}
+  return getDefaultState();
+}
+
+function getDefaultState() {
+  return {
+    settings: {...DEFAULTS},
+    sessions: [],
+    distractions: [],
+    timer: {
+      mode: 'focus', // focus, shortBreak, longBreak
+      secondsLeft: DEFAULTS.focusDuration * 60,
+      totalSeconds: DEFAULTS.focusDuration * 60,
+      running: false,
+      sessionsCompleted: 0,
+      currentCategory: 'coding',
+      currentNote: '',
+      startedAt: null,
+      energy: 3
+    }
+  };
+}
+
+function saveState() {
+  localStorage.setItem('focusflow_state', JSON.stringify(state));
+}
+
+// ==================== TIMER LOGIC ====================
+function startTimer() {
+  if (state.timer.running) return;
+  state.timer.running = true;
+  if (!state.timer.startedAt) state.timer.startedAt = Date.now();
+  timerInterval = setInterval(() => {
+    state.timer.secondsLeft--;
+    if (state.timer.secondsLeft <= 0) {
+      timerComplete();
+    }
+    saveState();
+    if (currentView === 'timer') renderTimer();
+  }, 1000);
+  saveState();
+  renderTimer();
+}
+
+function pauseTimer() {
+  state.timer.running = false;
+  clearInterval(timerInterval);
+  timerInterval = null;
+  saveState();
+  renderTimer();
+}
+
+function resetTimer() {
+  pauseTimer();
+  const dur = getModeDuration(state.timer.mode);
+  state.timer.secondsLeft = dur * 60;
+  state.timer.totalSeconds = dur * 60;
+  state.timer.startedAt = null;
+  saveState();
+  renderTimer();
+}
+
+function skipTimer() {
+  pauseTimer();
+  timerComplete();
+}
+
+function timerComplete() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  state.timer.running = false;
+
+  if (state.timer.mode === 'focus') {
+    // Log completed focus session
+    const dur = state.timer.totalSeconds - state.timer.secondsLeft;
+    state.sessions.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      date: new Date().toISOString(),
+      startedAt: state.timer.startedAt ? new Date(state.timer.startedAt).toISOString() : new Date().toISOString(),
+      durationSeconds: state.timer.totalSeconds,
+      actualSeconds: dur > 0 ? state.timer.totalSeconds : state.timer.totalSeconds,
+      category: state.timer.currentCategory,
+      note: state.timer.currentNote,
+      energy: state.timer.energy,
+      type: 'pomodoro'
+    });
+    state.timer.sessionsCompleted++;
+    state.timer.currentNote = '';
+
+    // Switch to break
+    if (state.timer.sessionsCompleted % state.settings.longBreakAfter === 0) {
+      switchMode('longBreak');
+    } else {
+      switchMode('shortBreak');
+    }
+    showToast('🎉 Focus session complete!', 'success');
+    playSound();
+  } else {
+    // Break complete, back to focus
+    switchMode('focus');
+    showToast('☕ Break over — time to focus!', 'info');
+    playSound();
+  }
+  saveState();
+  if (currentView === 'timer') renderTimer();
+}
+
+function switchMode(mode) {
+  state.timer.mode = mode;
+  const dur = getModeDuration(mode);
+  state.timer.secondsLeft = dur * 60;
+  state.timer.totalSeconds = dur * 60;
+  state.timer.running = false;
+  state.timer.startedAt = null;
+  clearInterval(timerInterval);
+  timerInterval = null;
+
+  if (mode !== 'focus' && state.settings.autoStartBreaks) {
+    setTimeout(() => startTimer(), 500);
+  }
+}
+
+function getModeDuration(mode) {
+  switch(mode) {
+    case 'focus': return state.settings.focusDuration;
+    case 'shortBreak': return state.settings.shortBreak;
+    case 'longBreak': return state.settings.longBreak;
+    default: return 25;
+  }
+}
+
+function playSound() {
+  if (!state.settings.soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 800;
+    osc.type = 'sine';
+    gain.gain.value = 0.3;
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.stop(ctx.currentTime + 0.5);
+    setTimeout(() => {
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.frequency.value = 1000;
+      osc2.type = 'sine';
+      gain2.gain.value = 0.3;
+      osc2.start();
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+      osc2.stop(ctx.currentTime + 0.8);
+    }, 200);
+  } catch(e) {}
+}
+
+// ==================== HELPERS ====================
+function formatTime(secs) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+}
+
+function formatDuration(secs) {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN', {day:'numeric',month:'short'});
+}
+
+function formatDateTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString('en-IN', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+
+function todayStr() {
+  return new Date().toISOString().slice(0,10);
+}
+
+function getToday() {
+  return todayStr();
+}
+
+function getTodaySessions() {
+  const today = getToday();
+  return state.sessions.filter(s => s.date.slice(0,10) === today);
+}
+
+function getTodayMinutes() {
+  return getTodaySessions().reduce((sum, s) => sum + Math.round(s.actualSeconds / 60), 0);
+}
+
+function getWeekSessions() {
+  const now = new Date();
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  return state.sessions.filter(s => new Date(s.date) >= weekAgo);
+}
+
+function getWeekMinutes() {
+  return getWeekSessions().reduce((sum, s) => sum + Math.round(s.actualSeconds / 60), 0);
+}
+
+function getStreak() {
+  if (state.sessions.length === 0) return 0;
+  let streak = 0;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const ds = d.toISOString().slice(0,10);
+    const hasSessions = state.sessions.some(s => s.date.slice(0,10) === ds);
+    if (hasSessions) streak++;
+    else if (i === 0) continue; // today might not have sessions yet
+    else break;
+  }
+  return streak;
+}
+
+function getCatById(id) {
+  return CATEGORIES.find(c => c.id === id) || CATEGORIES[0];
+}
+
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ==================== RENDER ====================
+function render() {
+  const main = document.getElementById('main');
+  switch(currentView) {
+    case 'timer': renderTimer(); break;
+    case 'sessions': renderSessions(); break;
+    case 'dashboard': renderDashboard(); break;
+    case 'goals': renderGoals(); break;
+  }
+  // Update nav
+  document.querySelectorAll('#nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === currentView);
+  });
+  // Update page title with timer
+  if (state.timer.running) {
+    document.title = `${formatTime(state.timer.secondsLeft)} — Focus Flow`;
+  } else {
+    document.title = 'Focus Flow — Deep Work Timer';
+  }
+}
+
+function renderTimer() {
+  const main = document.getElementById('main');
+  const t = state.timer;
+  const progress = 1 - (t.secondsLeft / t.totalSeconds);
+  const circumference = 2 * Math.PI * 140;
+  const offset = circumference * (1 - progress);
+  const isBreak = t.mode !== 'focus';
+  const cat = getCatById(t.currentCategory);
+  const todayMin = getTodayMinutes();
+  const goalPct = Math.min(100, Math.round((todayMin / state.settings.dailyGoalMinutes) * 100));
+
+  main.innerHTML = `
+    <div class="timer-container">
+      <div class="timer-mode-tabs">
+        <button class="${t.mode==='focus'?'active':''}" onclick="setTimerMode('focus')">🎯 Focus</button>
+        <button class="${t.mode==='shortBreak'?'active':''}" onclick="setTimerMode('shortBreak')">☕ Short Break</button>
+        <button class="${t.mode==='longBreak'?'active':''}" onclick="setTimerMode('longBreak')">🌿 Long Break</button>
+      </div>
+
+      <div class="timer-ring-wrapper">
+        <svg class="timer-ring ${isBreak?'break':''}" viewBox="0 0 300 300">
+          <circle class="bg" cx="150" cy="150" r="140"/>
+          <circle class="progress" cx="150" cy="150" r="140"
+            stroke-dasharray="${circumference}"
+            stroke-dashoffset="${offset}"/>
+        </svg>
+        <div class="timer-display">
+          <div class="time">${formatTime(t.secondsLeft)}</div>
+          <div class="label">${isBreak ? (t.mode==='shortBreak'?'Short Break':'Long Break') : 'Deep Focus'}</div>
+          <div class="session-count">Session <span>${t.sessionsCompleted + 1}</span> of ${state.settings.longBreakAfter}</div>
+        </div>
+      </div>
+
+      <div class="timer-controls">
+        <button class="timer-btn secondary" onclick="resetTimer()" title="Reset (R)">↺</button>
+        <button class="timer-btn play ${t.running?'pulse':''}" onclick="${t.running?'pauseTimer()':'startTimer()'}" title="Space">
+          ${t.running ? '⏸' : '▶'}
+        </button>
+        <button class="timer-btn secondary" onclick="skipTimer()" title="Skip (S)">⏭</button>
+      </div>
+
+      <div class="timer-meta">
+        <div class="timer-meta-item">
+          <div class="val">${t.sessionsCompleted}</div>
+          <div class="lbl">Sessions</div>
+        </div>
+        <div class="timer-meta-item">
+          <div class="val">${formatDuration(todayMin * 60)}</div>
+          <div class="lbl">Today</div>
+        </div>
+        <div class="timer-meta-item">
+          <div class="val">🔥 ${getStreak()}</div>
+          <div class="lbl">Streak</div>
+        </div>
+      </div>
+
+      <div class="quick-category">
+        ${CATEGORIES.map(c => `
+          <div class="cat-chip ${t.currentCategory===c.id?'active':''}" onclick="setCategory('${c.id}')">
+            ${c.emoji} ${c.name}
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="daily-goal-bar">
+        <div class="bar-bg"><div class="bar-fill" style="width:${goalPct}%"></div></div>
+        <div class="bar-label">
+          <span>Daily Goal: ${formatDuration(todayMin*60)} / ${formatDuration(state.settings.dailyGoalMinutes*60)}</span>
+          <span>${goalPct}%</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+        <span style="font-size:12px;color:var(--text3)">Energy:</span>
+        <div class="energy-selector">
+          ${[1,2,3,4,5].map(n => `
+            <button class="energy-btn ${t.energy>=n?'selected':''}" onclick="setEnergy(${n})">${n<=2?'😴':n<=3?'😐':n<=4?'⚡':'🔥'}</button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div style="width:100%;max-width:400px;margin-top:8px">
+        <input type="text" placeholder="What are you working on? (optional)" value="${escHTML(t.currentNote)}" 
+          oninput="state.timer.currentNote=this.value;saveState()" style="width:100%;text-align:center;background:var(--surface)">
+      </div>
+
+      <div class="distraction-log" style="width:100%;max-width:400px;margin-top:12px">
+        <h3>🚫 Distraction Log <span style="font-size:12px;color:var(--text3);font-weight:400">(press D)</span></h3>
+        <div class="distraction-input">
+          <input type="text" id="distractionInput" placeholder="Log a distraction..." onkeydown="if(event.key==='Enter')addDistraction()">
+          <button class="btn btn-primary btn-sm" onclick="addDistraction()">+</button>
+        </div>
+        <div class="distraction-list">
+          ${getTodayDistractions().slice(0,5).map(d => `
+            <div class="distraction-item">
+              <span>${escHTML(d.text)}</span>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span class="time">${new Date(d.date).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</span>
+                <span class="del" onclick="deleteDistraction('${d.id}')">✕</span>
+              </div>
+            </div>
+          `).join('')}
+          ${getTodayDistractions().length===0?'<div style="text-align:center;color:var(--text3);font-size:12px;padding:8px">No distractions logged today 🎯</div>':''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSessions() {
+  const main = document.getElementById('main');
+  const searchVal = (window._sessionSearch || '').toLowerCase();
+  const filterCat = window._sessionFilter || 'all';
+  
+  let filtered = [...state.sessions].reverse();
+  if (searchVal) filtered = filtered.filter(s => 
+    (s.note||'').toLowerCase().includes(searchVal) || 
+    s.category.toLowerCase().includes(searchVal)
+  );
+  if (filterCat !== 'all') filtered = filtered.filter(s => s.category === filterCat);
+
+  main.innerHTML = `
+    <div class="sessions-view">
+      <div class="sessions-header">
+        <h2 style="font-size:20px;font-weight:700">📝 Focus Sessions</h2>
+        <div class="search-box">
+          <input type="text" placeholder="Search sessions..." value="${escHTML(searchVal)}" 
+            oninput="window._sessionSearch=this.value;renderSessions()" id="sessionSearchInput">
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="filter-chip ${filterCat==='all'?'active':''}" onclick="window._sessionFilter='all';renderSessions()">All (${state.sessions.length})</div>
+        ${CATEGORIES.map(c => {
+          const count = state.sessions.filter(s => s.category === c.id).length;
+          return count > 0 ? `<div class="filter-chip ${filterCat===c.id?'active':''}" onclick="window._sessionFilter='${c.id}';renderSessions()">${c.emoji} ${c.name} (${count})</div>` : '';
+        }).join('')}
+      </div>
+      ${filtered.length === 0 ? `
+        <div class="empty-state">
+          <div class="icon">🎯</div>
+          <h3>${state.sessions.length===0?'No sessions yet':'No matching sessions'}</h3>
+          <p>${state.sessions.length===0?'Start your first focus session from the Timer tab!':'Try adjusting your filters.'}</p>
+        </div>
+      ` : `
+        ${filtered.map(s => {
+          const cat = getCatById(s.category);
+          const energyLevel = s.energy <= 2 ? 'low' : s.energy >= 4 ? 'high' : '';
+          return `
+            <div class="session-card" onclick="editSession('${s.id}')">
+              <div class="session-icon" style="background:${cat.color}22;color:${cat.color}">${cat.emoji}</div>
+              <div class="session-info">
+                <h3>${s.note || cat.name + ' Session'}
+                  <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${cat.color}22;color:${cat.color}">${cat.name}</span>
+                </h3>
+                <div class="meta">
+                  <span>📅 ${formatDateTime(s.date)}</span>
+                  <span>⚡ ${['','😴','😴','😐','⚡','🔥'][s.energy||3]}</span>
+                </div>
+              </div>
+              <div class="session-duration">${formatDuration(s.actualSeconds)}</div>
+              <button class="btn-icon" onclick="event.stopPropagation();deleteSession('${s.id}')" title="Delete">🗑️</button>
+            </div>
+          `;
+        }).join('')}
+      `}
+    </div>
+  `;
+}
+
+function renderDashboard() {
+  const main = document.getElementById('main');
+  const todayMin = getTodayMinutes();
+  const weekMin = getWeekMinutes();
+  const totalMin = state.sessions.reduce((s,x) => s + Math.round(x.actualSeconds/60), 0);
+  const streak = getStreak();
+  const todayDistractions = getTodayDistractions().length;
+  const avgSessionMin = state.sessions.length > 0 ? Math.round(totalMin / state.sessions.length) : 0;
+
+  // Last 7 days bar chart
+  const last7 = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const ds = d.toISOString().slice(0,10);
+    const dayMin = state.sessions.filter(s => s.date.slice(0,10) === ds).reduce((sum,s) => sum + Math.round(s.actualSeconds/60), 0);
+    last7.push({label: d.toLocaleDateString('en-IN',{weekday:'short'}), minutes: dayMin, date: ds});
+  }
+  const maxMin = Math.max(...last7.map(d => d.minutes), 1);
+
+  // Category breakdown
+  const catTotals = {};
+  state.sessions.forEach(s => {
+    if (!catTotals[s.category]) catTotals[s.category] = 0;
+    catTotals[s.category] += Math.round(s.actualSeconds / 60);
+  });
+  const catSorted = Object.entries(catTotals).sort((a,b) => b[1]-a[1]);
+  const maxCatMin = catSorted.length > 0 ? catSorted[0][1] : 1;
+
+  // Heatmap (last 12 weeks)
+  const heatmapData = [];
+  for (let i = 83; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const ds = d.toISOString().slice(0,10);
+    const dayMin = state.sessions.filter(s => s.date.slice(0,10) === ds).reduce((sum,s) => sum + Math.round(s.actualSeconds/60), 0);
+    heatmapData.push({date: ds, minutes: dayMin});
+  }
+
+  // Energy trend
+  const recentSessions = state.sessions.slice(-20);
+  const avgEnergy = recentSessions.length > 0 ? (recentSessions.reduce((s,x) => s + (x.energy||3), 0) / recentSessions.length).toFixed(1) : '—';
+
+  main.innerHTML = `
+    <div class="dashboard">
+      <div class="streak-display">
+        <div class="streak-fire">${streak > 0 ? '🔥' : '💤'}</div>
+        <div class="streak-info">
+          <h2>${streak} day${streak!==1?'s':''}</h2>
+          <p>${streak > 0 ? 'Focus streak — keep it going!' : 'Start a session to build your streak!'}</p>
+        </div>
+      </div>
+
+      <div class="stat-cards">
+        <div class="stat-card">
+          <div class="icon">⏱️</div>
+          <div class="val">${formatDuration(todayMin*60)}</div>
+          <div class="lbl">Today</div>
+          <div class="sub">${getTodaySessions().length} sessions</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">📊</div>
+          <div class="val">${formatDuration(weekMin*60)}</div>
+          <div class="lbl">This Week</div>
+          <div class="sub">${getWeekSessions().length} sessions</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">🏆</div>
+          <div class="val">${formatDuration(totalMin*60)}</div>
+          <div class="lbl">All Time</div>
+          <div class="sub">${state.sessions.length} sessions</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">⚡</div>
+          <div class="val">${avgEnergy}</div>
+          <div class="lbl">Avg Energy</div>
+          <div class="sub">last 20 sessions</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">🎯</div>
+          <div class="val">${avgSessionMin}m</div>
+          <div class="lbl">Avg Session</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">🚫</div>
+          <div class="val">${todayDistractions}</div>
+          <div class="lbl">Distractions</div>
+          <div class="sub">today</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-section">
+          <h3>📈 Last 7 Days</h3>
+          <div class="bar-chart">
+            ${last7.map(d => `
+              <div class="bar-col">
+                <div class="val">${d.minutes > 0 ? formatDuration(d.minutes*60) : ''}</div>
+                <div class="bar ${d.date===getToday()?'green':''}" style="height:${Math.max(2, (d.minutes/maxMin)*130)}px"></div>
+                <div class="lbl">${d.label}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="chart-section">
+          <h3>🏷️ Category Breakdown</h3>
+          <div class="category-breakdown">
+            ${catSorted.length === 0 ? '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">No data yet</div>' : ''}
+            ${catSorted.map(([catId, mins]) => {
+              const cat = getCatById(catId);
+              return `
+                <div class="cat-row">
+                  <div class="cat-color" style="background:${cat.color}"></div>
+                  <div class="cat-name">${cat.emoji} ${cat.name}</div>
+                  <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${(mins/maxCatMin)*100}%;background:${cat.color}"></div></div>
+                  <div class="cat-hours">${formatDuration(mins*60)}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-section">
+        <h3>🟩 12-Week Activity Heatmap</h3>
+        <div class="heatmap">
+          ${(() => {
+            // Arrange into rows of 7 (weeks)
+            const weeks = [];
+            for (let i = 0; i < heatmapData.length; i += 7) {
+              weeks.push(heatmapData.slice(i, i + 7));
+            }
+            return weeks.map(week => `
+              <div class="heatmap-row">
+                ${week.map(d => {
+                  let level = '';
+                  if (d.minutes > 0) level = 'l1';
+                  if (d.minutes >= 30) level = 'l2';
+                  if (d.minutes >= 60) level = 'l3';
+                  if (d.minutes >= 120) level = 'l4';
+                  if (d.minutes >= 240) level = 'l5';
+                  return `<div class="heatmap-cell ${level}" title="${d.date}: ${formatDuration(d.minutes*60)}"></div>`;
+                }).join('')}
+              </div>
+            `).join('');
+          })()}
+        </div>
+        <div class="heatmap-legend">
+          Less <div class="heatmap-cell" style="display:inline-block"></div>
+          <div class="heatmap-cell l1" style="display:inline-block"></div>
+          <div class="heatmap-cell l2" style="display:inline-block"></div>
+          <div class="heatmap-cell l3" style="display:inline-block"></div>
+          <div class="heatmap-cell l4" style="display:inline-block"></div>
+          <div class="heatmap-cell l5" style="display:inline-block"></div> More
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderGoals() {
+  const main = document.getElementById('main');
+  const todayMin = getTodayMinutes();
+  const weekMin = getWeekMinutes();
+  const dailyPct = Math.min(100, Math.round((todayMin / state.settings.dailyGoalMinutes) * 100));
+  const weeklyPct = Math.min(100, Math.round((weekMin / state.settings.weeklyGoalMinutes) * 100));
+  const dailyStatus = dailyPct >= 100 ? 'achieved' : dailyPct >= 50 ? 'on-track' : 'behind';
+  const weeklyStatus = weeklyPct >= 100 ? 'achieved' : weeklyPct >= 40 ? 'on-track' : 'behind';
+
+  main.innerHTML = `
+    <div class="goals-view">
+      <div class="goal-card">
+        <h3>🎯 Daily Focus Goal</h3>
+        <div class="goal-setting">
+          <label>Target (minutes)</label>
+          <input type="number" value="${state.settings.dailyGoalMinutes}" min="15" max="720" step="15"
+            onchange="state.settings.dailyGoalMinutes=parseInt(this.value);saveState();renderGoals()">
+          <span class="val">${formatDuration(state.settings.dailyGoalMinutes*60)}</span>
+        </div>
+        <div class="goal-progress">
+          <div class="bar-bg"><div class="bar-fill ${dailyStatus}" style="width:${dailyPct}%"></div></div>
+          <div class="labels">
+            <span>${formatDuration(todayMin*60)} focused today</span>
+            <span>${dailyPct}%${dailyPct>=100?' ✅':''}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="goal-card">
+        <h3>📊 Weekly Focus Goal</h3>
+        <div class="goal-setting">
+          <label>Target (minutes)</label>
+          <input type="number" value="${state.settings.weeklyGoalMinutes}" min="60" max="5040" step="60"
+            onchange="state.settings.weeklyGoalMinutes=parseInt(this.value);saveState();renderGoals()">
+          <span class="val">${formatDuration(state.settings.weeklyGoalMinutes*60)}</span>
+        </div>
+        <div class="goal-progress">
+          <div class="bar-bg"><div class="bar-fill ${weeklyStatus}" style="width:${weeklyPct}%"></div></div>
+          <div class="labels">
+            <span>${formatDuration(weekMin*60)} this week</span>
+            <span>${weeklyPct}%${weeklyPct>=100?' ✅':''}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="goal-card">
+        <h3>⚙️ Timer Settings</h3>
+        <div class="goal-setting">
+          <label>Focus Duration</label>
+          <input type="range" min="5" max="90" step="5" value="${state.settings.focusDuration}"
+            oninput="state.settings.focusDuration=parseInt(this.value);saveState();this.nextElementSibling.textContent=this.value+'m'">
+          <span class="val">${state.settings.focusDuration}m</span>
+        </div>
+        <div class="goal-setting">
+          <label>Short Break</label>
+          <input type="range" min="1" max="15" step="1" value="${state.settings.shortBreak}"
+            oninput="state.settings.shortBreak=parseInt(this.value);saveState();this.nextElementSibling.textContent=this.value+'m'">
+          <span class="val">${state.settings.shortBreak}m</span>
+        </div>
+        <div class="goal-setting">
+          <label>Long Break</label>
+          <input type="range" min="5" max="30" step="5" value="${state.settings.longBreak}"
+            oninput="state.settings.longBreak=parseInt(this.value);saveState();this.nextElementSibling.textContent=this.value+'m'">
+          <span class="val">${state.settings.longBreak}m</span>
+        </div>
+        <div class="goal-setting">
+          <label>Long Break After</label>
+          <input type="range" min="2" max="8" step="1" value="${state.settings.longBreakAfter}"
+            oninput="state.settings.longBreakAfter=parseInt(this.value);saveState();this.nextElementSibling.textContent=this.value+' sessions'">
+          <span class="val">${state.settings.longBreakAfter} sessions</span>
+        </div>
+        <div class="goal-setting">
+          <label>Auto-start Breaks</label>
+          <button class="btn btn-sm ${state.settings.autoStartBreaks?'btn-primary':'btn-ghost'}" 
+            onclick="state.settings.autoStartBreaks=!state.settings.autoStartBreaks;saveState();renderGoals()">
+            ${state.settings.autoStartBreaks ? '✅ On' : '❌ Off'}
+          </button>
+        </div>
+        <div class="goal-setting">
+          <label>Sound</label>
+          <button class="btn btn-sm ${state.settings.soundEnabled?'btn-primary':'btn-ghost'}" 
+            onclick="state.settings.soundEnabled=!state.settings.soundEnabled;saveState();renderGoals()">
+            ${state.settings.soundEnabled ? '🔊 On' : '🔇 Off'}
+          </button>
+        </div>
+      </div>
+
+      <div class="goal-card">
+        <h3>📊 Focus Patterns</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:8px">BEST FOCUS TIME</div>
+            <div style="font-size:18px;font-weight:600">${getBestFocusTime()}</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:8px">MOST PRODUCTIVE DAY</div>
+            <div style="font-size:18px;font-weight:600">${getMostProductiveDay()}</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:8px">LONGEST SESSION</div>
+            <div style="font-size:18px;font-weight:600">${getLongestSession()}</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:8px">TOP CATEGORY</div>
+            <div style="font-size:18px;font-weight:600">${getTopCategory()}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="goal-card">
+        <h3>🗑️ Data</h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="if(confirm('Clear all sessions?')){state.sessions=[];state.distractions=[];saveState();render();showToast('Data cleared','info')}">Clear All Sessions</button>
+          <button class="btn btn-ghost" onclick="resetTimerState()">Reset Timer</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ==================== ANALYTICS HELPERS ====================
+function getBestFocusTime() {
+  if (state.sessions.length < 3) return '—';
+  const hours = {};
+  state.sessions.forEach(s => {
+    const h = new Date(s.startedAt || s.date).getHours();
+    const bucket = h < 6 ? 'Night' : h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening';
+    if (!hours[bucket]) hours[bucket] = 0;
+    hours[bucket] += s.actualSeconds;
+  });
+  const best = Object.entries(hours).sort((a,b) => b[1]-a[1])[0];
+  return best ? best[0] : '—';
+}
+
+function getMostProductiveDay() {
+  if (state.sessions.length < 3) return '—';
+  const days = {};
+  state.sessions.forEach(s => {
+    const d = new Date(s.date).toLocaleDateString('en-IN',{weekday:'long'});
+    if (!days[d]) days[d] = 0;
+    days[d] += s.actualSeconds;
+  });
+  const best = Object.entries(days).sort((a,b) => b[1]-a[1])[0];
+  return best ? best[0] : '—';
+}
+
+function getLongestSession() {
+  if (state.sessions.length === 0) return '—';
+  const max = Math.max(...state.sessions.map(s => s.actualSeconds));
+  return formatDuration(max);
+}
+
+function getTopCategory() {
+  if (state.sessions.length === 0) return '—';
+  const cats = {};
+  state.sessions.forEach(s => {
+    if (!cats[s.category]) cats[s.category] = 0;
+    cats[s.category] += s.actualSeconds;
+  });
+  const best = Object.entries(cats).sort((a,b) => b[1]-a[1])[0];
+  const cat = getCatById(best[0]);
+  return cat.emoji + ' ' + cat.name;
+}
+
+// ==================== DISTRACTIONS ====================
+function getTodayDistractions() {
+  const today = getToday();
+  return (state.distractions || []).filter(d => d.date.slice(0,10) === today).reverse();
+}
+
+function addDistraction() {
+  const input = document.getElementById('distractionInput');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  if (!state.distractions) state.distractions = [];
+  state.distractions.push({
+    id: Date.now().toString(36),
+    text,
+    date: new Date().toISOString()
+  });
+  input.value = '';
+  saveState();
+  if (currentView === 'timer') renderTimer();
+}
+
+function deleteDistraction(id) {
+  state.distractions = (state.distractions || []).filter(d => d.id !== id);
+  saveState();
+  render();
+}
+
+// ==================== SESSION CRUD ====================
+function editSession(id) {
+  const s = state.sessions.find(x => x.id === id);
+  if (!s) return;
+  const cat = getCatById(s.category);
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>✏️ Edit Session</h2>
+      <div class="form-group">
+        <label>Note</label>
+        <input type="text" id="editNote" value="${escHTML(s.note||'')}">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="editCat">
+          ${CATEGORIES.map(c => `<option value="${c.id}" ${c.id===s.category?'selected':''}>${c.emoji} ${c.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Duration (minutes)</label>
+        <input type="number" id="editDur" value="${Math.round(s.actualSeconds/60)}" min="1" max="480">
+      </div>
+      <div class="form-group">
+        <label>Energy (1-5)</label>
+        <input type="number" id="editEnergy" value="${s.energy||3}" min="1" max="5">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSession('${id}')">Save</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function saveSession(id) {
+  const s = state.sessions.find(x => x.id === id);
+  if (!s) return;
+  s.note = document.getElementById('editNote').value.trim();
+  s.category = document.getElementById('editCat').value;
+  s.actualSeconds = parseInt(document.getElementById('editDur').value) * 60;
+  s.energy = parseInt(document.getElementById('editEnergy').value);
+  saveState();
+  document.querySelector('.modal-overlay')?.remove();
+  render();
+  showToast('Session updated', 'success');
+}
+
+function deleteSession(id) {
+  if (!confirm('Delete this session?')) return;
+  state.sessions = state.sessions.filter(s => s.id !== id);
+  saveState();
+  render();
+  showToast('Session deleted', 'info');
+}
+
+function addManualSession() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>➕ Add Manual Session</h2>
+      <div class="form-group">
+        <label>What did you work on?</label>
+        <input type="text" id="manualNote" placeholder="e.g. UTMStamp refactor">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="manualCat">
+          ${CATEGORIES.map(c => `<option value="${c.id}">${c.emoji} ${c.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Duration (minutes)</label>
+        <input type="number" id="manualDur" value="25" min="1" max="480">
+      </div>
+      <div class="form-group">
+        <label>Energy (1-5)</label>
+        <input type="number" id="manualEnergy" value="3" min="1" max="5">
+      </div>
+      <div class="form-group">
+        <label>Date & Time</label>
+        <input type="datetime-local" id="manualDate" value="${new Date().toISOString().slice(0,16)}">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveManualSession()">Add Session</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function saveManualSession() {
+  const note = document.getElementById('manualNote').value.trim();
+  const cat = document.getElementById('manualCat').value;
+  const dur = parseInt(document.getElementById('manualDur').value);
+  const energy = parseInt(document.getElementById('manualEnergy').value);
+  const date = new Date(document.getElementById('manualDate').value).toISOString();
+  
+  state.sessions.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    date,
+    startedAt: date,
+    durationSeconds: dur * 60,
+    actualSeconds: dur * 60,
+    category: cat,
+    note,
+    energy,
+    type: 'manual'
+  });
+  saveState();
+  document.querySelector('.modal-overlay')?.remove();
+  render();
+  showToast('Session added!', 'success');
+}
+
+// ==================== ACTIONS ====================
+function setTimerMode(mode) {
+  if (state.timer.running) {
+    if (!confirm('Timer is running. Switch mode?')) return;
+    pauseTimer();
+  }
+  switchMode(mode);
+  saveState();
+  renderTimer();
+}
+
+function setCategory(catId) {
+  state.timer.currentCategory = catId;
+  saveState();
+  renderTimer();
+}
+
+function setEnergy(n) {
+  state.timer.energy = n;
+  saveState();
+  renderTimer();
+}
+
+function resetTimerState() {
+  state.timer = {
+    mode: 'focus',
+    secondsLeft: state.settings.focusDuration * 60,
+    totalSeconds: state.settings.focusDuration * 60,
+    running: false,
+    sessionsCompleted: 0,
+    currentCategory: 'coding',
+    currentNote: '',
+    startedAt: null,
+    energy: 3
+  };
+  clearInterval(timerInterval);
+  timerInterval = null;
+  saveState();
+  render();
+  showToast('Timer reset', 'info');
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `focusflow-backup-${getToday()}.json`;
+  a.click();
+  showToast('Data exported!', 'success');
+}
+
+function importData() {
+  document.getElementById('importInput').click();
+}
+
+document.getElementById('importInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      state = {...getDefaultState(), ...data};
+      saveState();
+      render();
+      showToast(`Imported! ${state.sessions.length} sessions loaded.`, 'success');
+    } catch(err) {
+      showToast('Invalid JSON file', 'error');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function toggleHelp() {
+  const hp = document.getElementById('helpPanel');
+  hp.style.display = hp.style.display === 'none' ? 'block' : 'none';
+}
+
+function escHTML(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ==================== NAVIGATION ====================
+document.getElementById('nav').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-view]');
+  if (!btn) return;
+  currentView = btn.dataset.view;
+  render();
+});
+
+// ==================== KEYBOARD SHORTCUTS ====================
+document.addEventListener('keydown', e => {
+  // Skip if in input
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) {
+    if (e.key === 'Escape') e.target.blur();
+    return;
+  }
+  
+  // Close modals
+  if (e.key === 'Escape') {
+    const modal = document.querySelector('.modal-overlay');
+    if (modal) { modal.remove(); return; }
+    const hp = document.getElementById('helpPanel');
+    if (hp.style.display !== 'none') { hp.style.display = 'none'; return; }
+  }
+
+  switch(e.key) {
+    case ' ':
+      e.preventDefault();
+      if (currentView === 'timer') {
+        state.timer.running ? pauseTimer() : startTimer();
+      }
+      break;
+    case 'r': case 'R':
+      if (currentView === 'timer') resetTimer();
+      break;
+    case 's': case 'S':
+      if (currentView === 'timer') skipTimer();
+      break;
+    case '1': currentView='timer'; render(); break;
+    case '2': currentView='sessions'; render(); break;
+    case '3': currentView='dashboard'; render(); break;
+    case '4': currentView='goals'; render(); break;
+    case '/':
+      e.preventDefault();
+      currentView='sessions';
+      render();
+      setTimeout(() => document.getElementById('sessionSearchInput')?.focus(), 100);
+      break;
+    case 'd': case 'D':
+      if (currentView === 'timer') {
+        setTimeout(() => document.getElementById('distractionInput')?.focus(), 100);
+      }
+      break;
+    case 'n': case 'N':
+      addManualSession();
+      break;
+    case 'e':
+      exportData();
+      break;
+    case 'i':
+      importData();
+      break;
+    case '?':
+      toggleHelp();
+      break;
+  }
+});
+
+// ==================== SEED DATA ====================
+function seedDemoData() {
+  if (state.sessions.length > 0) return;
+  
+  const now = new Date();
+  const sessions = [];
+  const notes = {
+    coding: ['UTMStamp API refactor', 'Signature template engine', 'Analytics dashboard', 'Click tracking pipeline', 'Chrome extension v2', 'Email parser fix'],
+    writing: ['LinkedIn post draft', 'Build in public update', 'Blog: shipping fast', 'Case study writeup', 'README overhaul'],
+    research: ['Competitor analysis', 'PLG benchmarks', 'Email signature market', 'Pricing research', 'User interviews'],
+    planning: ['Sprint planning', 'Roadmap review', 'Feature prioritization', 'OKR check-in', 'Q2 strategy'],
+    design: ['Signature templates', 'Dashboard mockups', 'Landing page redesign', 'Email design system'],
+    learning: ['React Server Components', 'Vercel Edge Functions', 'PM interview prep', 'AI/ML applications'],
+    meetings: ['Team standup', '1:1 with design', 'Investor call prep', 'User feedback call'],
+    admin: ['Inbox zero', 'Invoice cleanup', 'Tool audit', 'Account setup']
+  };
+
+  // Generate 30 days of realistic data
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    
+    // Skip some days randomly (weekends less likely)
+    const dayOfWeek = d.getDay();
+    if (Math.random() < 0.15) continue; // 15% skip
+    
+    // 2-6 sessions per day, fewer on weekends
+    const sessCount = dayOfWeek === 0 || dayOfWeek === 6 
+      ? Math.floor(Math.random() * 3) + 1 
+      : Math.floor(Math.random() * 4) + 2;
+    
+    for (let j = 0; j < sessCount; j++) {
+      const hour = 8 + Math.floor(Math.random() * 12); // 8am-8pm
+      d.setHours(hour, Math.floor(Math.random() * 60), 0, 0);
+      
+      const catKeys = Object.keys(notes);
+      const cat = catKeys[Math.floor(Math.random() * catKeys.length)];
+      const catNotes = notes[cat];
+      const note = catNotes[Math.floor(Math.random() * catNotes.length)];
+      const duration = [25, 25, 25, 45, 50, 25, 30][Math.floor(Math.random() * 7)] * 60;
+      const energy = Math.floor(Math.random() * 3) + 2 + (hour < 14 ? 1 : 0); // Higher energy in morning
+      
+      sessions.push({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2,8),
+        date: d.toISOString(),
+        startedAt: d.toISOString(),
+        durationSeconds: duration,
+        actualSeconds: duration,
+        category: cat,
+        note,
+        energy: Math.min(5, Math.max(1, energy)),
+        type: 'pomodoro'
+      });
+    }
+  }
+
+  state.sessions = sessions;
+  
+  // Some distractions
+  const distractionTexts = ['Checked Twitter', 'Slack notification', 'Phone call', 'Quick email check', 'YouTube rabbit hole', 'Random browsing'];
+  for (let i = 0; i < 3; i++) {
+    state.distractions.push({
+      id: Date.now().toString(36) + i,
+      text: distractionTexts[Math.floor(Math.random() * distractionTexts.length)],
+      date: new Date().toISOString()
+    });
+  }
+  
+  saveState();
+}
+
+// ==================== INIT ====================
+seedDemoData();
+
+// Restore timer if it was running
+if (state.timer.running && state.timer.secondsLeft > 0) {
+  // Calculate elapsed time while away
+  if (state.timer.startedAt) {
+    const elapsed = Math.floor((Date.now() - state.timer.startedAt) / 1000);
+    const remaining = state.timer.totalSeconds - elapsed;
+    if (remaining > 0) {
+      state.timer.secondsLeft = remaining;
+      startTimer();
+    } else {
+      timerComplete();
+    }
+  }
+}
+
+render();
+</script>
+</body>
+</html>

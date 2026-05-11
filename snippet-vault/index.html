@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snippet Vault — Code Snippet Manager</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--bg4:#30363d;--fg:#e6edf3;--fg2:#8b949e;--fg3:#484f58;--accent:#58a6ff;--accent2:#388bfd;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#bc8cff;--pink:#f778ba;--cyan:#39d353;--border:#30363d;--hover:#1f2937;--radius:8px;--shadow:0 2px 8px rgba(0,0,0,.3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--fg);height:100vh;overflow:hidden;display:flex}
+button{cursor:pointer;border:none;background:none;color:var(--fg);font-family:inherit}
+input,textarea,select{font-family:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;outline:none;font-size:14px}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* Sidebar */
+.sidebar{width:280px;min-width:280px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:18px;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.sidebar-header h1 span{font-size:22px}
+.search-box{position:relative;display:flex;gap:8px}
+.search-box input{flex:1;padding-left:32px}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--fg2);font-size:13px;pointer-events:none}
+.btn-new{background:var(--accent);color:#fff;padding:8px 12px;border-radius:var(--radius);font-size:13px;font-weight:600;white-space:nowrap}
+.btn-new:hover{background:var(--accent2)}
+
+/* Filters */
+.sidebar-filters{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px}
+.filter-chip{padding:4px 10px;border-radius:12px;font-size:12px;background:var(--bg3);color:var(--fg2);cursor:pointer;transition:.15s}
+.filter-chip:hover,.filter-chip.active{background:var(--accent);color:#fff}
+.filter-chip .count{margin-left:4px;opacity:.7}
+
+/* Folders */
+.sidebar-folders{padding:8px 0;border-bottom:1px solid var(--border)}
+.folder-header{padding:4px 16px;font-size:11px;text-transform:uppercase;color:var(--fg3);letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center}
+.folder-header button{font-size:16px;color:var(--fg3);padding:2px 6px;border-radius:4px}
+.folder-header button:hover{color:var(--fg);background:var(--bg3)}
+.folder-item{padding:6px 16px 6px 20px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--fg2)}
+.folder-item:hover{background:var(--hover);color:var(--fg)}
+.folder-item.active{color:var(--accent);background:rgba(88,166,255,.08)}
+.folder-item .folder-icon{font-size:14px}
+.folder-item .folder-count{margin-left:auto;font-size:11px;opacity:.6}
+.folder-item .folder-del{display:none;font-size:11px;margin-left:4px;padding:2px 4px;border-radius:3px;color:var(--red)}
+.folder-item:hover .folder-del{display:inline}
+.folder-item .folder-del:hover{background:rgba(248,81,73,.15)}
+
+/* Snippet List */
+.sidebar-list{flex:1;overflow-y:auto;padding:4px 0}
+.snippet-item{padding:10px 16px;cursor:pointer;border-left:3px solid transparent;transition:.1s}
+.snippet-item:hover{background:var(--hover)}
+.snippet-item.active{background:rgba(88,166,255,.08);border-left-color:var(--accent)}
+.snippet-item .si-title{font-size:13px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.snippet-item .si-meta{font-size:11px;color:var(--fg2);display:flex;gap:8px;align-items:center}
+.snippet-item .si-lang{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:10px;text-transform:uppercase}
+.snippet-item .si-fav{color:var(--orange)}
+.snippet-item .si-preview{font-size:11px;color:var(--fg3);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'SF Mono',Consolas,monospace}
+
+/* Sidebar footer */
+.sidebar-footer{padding:10px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--fg3);display:flex;justify-content:space-between;align-items:center}
+.sidebar-footer button{font-size:11px;color:var(--fg2);padding:4px 8px;border-radius:4px;background:var(--bg3)}
+.sidebar-footer button:hover{background:var(--bg4)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.main-header{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;min-height:52px}
+.main-header .title-input{font-size:16px;font-weight:600;border:none;background:transparent;color:var(--fg);flex:1;padding:4px 0}
+.main-header .title-input:focus{border-bottom:2px solid var(--accent)}
+.header-actions{display:flex;gap:6px;align-items:center}
+.header-actions button{padding:6px 10px;border-radius:var(--radius);font-size:12px;background:var(--bg3);color:var(--fg2);display:flex;align-items:center;gap:4px}
+.header-actions button:hover{background:var(--bg4);color:var(--fg)}
+.header-actions .btn-fav{font-size:16px;background:none}
+.header-actions .btn-fav.active{color:var(--orange)}
+.header-actions .btn-copy{background:var(--green);color:#fff}
+.header-actions .btn-copy:hover{filter:brightness(1.1)}
+.header-actions .btn-del{color:var(--red)}
+.header-actions .btn-del:hover{background:rgba(248,81,73,.15)}
+
+/* Meta bar */
+.meta-bar{padding:8px 20px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:13px}
+.meta-bar label{color:var(--fg2);display:flex;align-items:center;gap:6px}
+.meta-bar select{padding:4px 8px;font-size:12px}
+.meta-bar .tags-area{display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex:1}
+.tag{background:var(--bg3);padding:2px 8px;border-radius:10px;font-size:11px;color:var(--fg2);display:flex;align-items:center;gap:4px}
+.tag .tag-x{cursor:pointer;font-size:10px;opacity:.6}
+.tag .tag-x:hover{opacity:1;color:var(--red)}
+.tag-input{border:none;background:transparent;color:var(--fg);font-size:12px;width:80px;padding:2px}
+.meta-bar .usage{color:var(--fg3);font-size:11px;margin-left:auto}
+
+/* Editor */
+.editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.code-container{flex:1;position:relative;overflow:hidden;display:flex}
+.line-numbers{padding:12px 0;background:var(--bg2);color:var(--fg3);font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:13px;line-height:1.6;text-align:right;min-width:48px;padding-right:12px;padding-left:12px;user-select:none;overflow:hidden;border-right:1px solid var(--border)}
+.code-editor{flex:1;padding:12px 16px;font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:13px;line-height:1.6;border:none;background:transparent;color:var(--fg);resize:none;outline:none;tab-size:2;white-space:pre;overflow:auto}
+
+/* Notes */
+.notes-area{border-top:1px solid var(--border);padding:8px 20px;max-height:80px}
+.notes-area textarea{width:100%;border:none;background:transparent;color:var(--fg2);font-size:12px;resize:none;height:40px;line-height:1.5}
+
+/* Empty state */
+.empty-state{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--fg3);gap:12px}
+.empty-state .empty-icon{font-size:48px;opacity:.4}
+.empty-state p{font-size:14px}
+.empty-state .hint{font-size:12px;color:var(--fg3)}
+
+/* Dashboard */
+.dashboard{flex:1;overflow-y:auto;padding:24px}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-card .stat-label{font-size:12px;color:var(--fg2);margin-bottom:4px}
+.stat-card .stat-value{font-size:24px;font-weight:700}
+.stat-card .stat-sub{font-size:11px;color:var(--fg3);margin-top:2px}
+.dash-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.dash-section h3{font-size:14px;margin-bottom:12px;color:var(--fg2)}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
+.bar-label{min-width:80px;color:var(--fg2);text-align:right}
+.bar-track{flex:1;height:16px;background:var(--bg3);border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;transition:.3s}
+.bar-val{min-width:32px;color:var(--fg3);font-size:11px}
+.recent-list{display:flex;flex-direction:column;gap:4px}
+.recent-item{display:flex;justify-content:space-between;padding:6px 8px;border-radius:4px;font-size:12px;cursor:pointer}
+.recent-item:hover{background:var(--bg3)}
+.recent-item .ri-title{color:var(--fg)}
+.recent-item .ri-date{color:var(--fg3)}
+
+/* Views toggle */
+.view-tabs{display:flex;gap:2px;background:var(--bg3);border-radius:var(--radius);padding:2px}
+.view-tab{padding:6px 14px;border-radius:6px;font-size:12px;color:var(--fg2);transition:.15s}
+.view-tab:hover{color:var(--fg)}
+.view-tab.active{background:var(--bg);color:var(--fg);font-weight:600}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;min-width:400px;max-width:500px}
+.modal h2{font-size:16px;margin-bottom:16px}
+.modal .form-group{margin-bottom:12px}
+.modal .form-group label{display:block;font-size:12px;color:var(--fg2);margin-bottom:4px}
+.modal .form-group input,.modal .form-group select{width:100%}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.modal-actions button{padding:8px 16px;border-radius:var(--radius);font-size:13px}
+.modal-actions .btn-primary{background:var(--accent);color:#fff}
+.modal-actions .btn-primary:hover{background:var(--accent2)}
+.modal-actions .btn-cancel{background:var(--bg3);color:var(--fg2)}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);color:var(--fg);padding:10px 16px;border-radius:var(--radius);font-size:13px;z-index:200;opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none;border:1px solid var(--border)}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* Help */
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:150}
+.help-overlay.show{display:flex}
+.help-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:480px;max-height:80vh;overflow-y:auto}
+.help-box h2{margin-bottom:16px;font-size:16px}
+.help-row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px solid var(--border)}
+.help-row:last-child{border:none}
+.help-key{background:var(--bg3);padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px}
+
+/* Syntax colors */
+.sh-keyword{color:#ff7b72}
+.sh-string{color:#a5d6ff}
+.sh-comment{color:#8b949e;font-style:italic}
+.sh-number{color:#79c0ff}
+.sh-func{color:#d2a8ff}
+.sh-type{color:#ff7b72}
+.sh-operator{color:#ff7b72}
+.sh-property{color:#79c0ff}
+.sh-tag{color:#7ee787}
+.sh-attr{color:#79c0ff}
+.sh-punct{color:#8b949e}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span>📦</span> Snippet Vault</h1>
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search snippets..." />
+      <button class="btn-new" onclick="newSnippet()" title="New Snippet (N)">+ New</button>
+    </div>
+  </div>
+  <div class="sidebar-filters" id="langFilters"></div>
+  <div class="sidebar-folders">
+    <div class="folder-header">
+      <span>Folders</span>
+      <button onclick="showFolderModal()" title="New Folder">+</button>
+    </div>
+    <div id="folderList"></div>
+  </div>
+  <div class="sidebar-list" id="snippetList"></div>
+  <div class="sidebar-footer">
+    <span id="snippetCount"></span>
+    <div style="display:flex;gap:4px">
+      <button onclick="exportAll()" title="Export">📤 Export</button>
+      <button onclick="document.getElementById('importFile').click()" title="Import">📥</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importAll(event)">
+      <button onclick="toggleHelp()" title="Help (?)">❓</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="main-header">
+    <div class="view-tabs">
+      <button class="view-tab active" data-view="editor" onclick="setView('editor')">✏️ Editor</button>
+      <button class="view-tab" data-view="dashboard" onclick="setView('dashboard')">📊 Dashboard</button>
+    </div>
+    <div id="editorHeader" style="display:contents">
+      <input type="text" class="title-input" id="titleInput" placeholder="Snippet title..." />
+      <div class="header-actions">
+        <button class="btn-fav" id="favBtn" onclick="toggleFav()" title="Favorite (F)">☆</button>
+        <button class="header-actions btn-copy" onclick="copyCode()" title="Copy Code (⌘C when not editing)">📋 Copy</button>
+        <button onclick="duplicateSnippet()" title="Duplicate">⊕ Dup</button>
+        <button onclick="shareSnippet()" title="Export as HTML">🔗 Share</button>
+        <button class="btn-del" onclick="deleteSnippet()" title="Delete">🗑</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Editor View -->
+  <div id="editorView">
+    <div class="meta-bar" id="metaBar">
+      <label>Lang: <select id="langSelect" onchange="updateLang()"></select></label>
+      <label>Folder: <select id="folderSelect" onchange="updateFolder()"></select></label>
+      <div class="tags-area">
+        <span style="color:var(--fg3);font-size:12px">Tags:</span>
+        <div id="tagsContainer"></div>
+        <input type="text" class="tag-input" id="tagInput" placeholder="add tag..." />
+      </div>
+      <span class="usage" id="usageCount"></span>
+    </div>
+    <div class="editor-area">
+      <div class="code-container">
+        <div class="line-numbers" id="lineNumbers"></div>
+        <textarea class="code-editor" id="codeEditor" placeholder="Paste your code here..." spellcheck="false"></textarea>
+      </div>
+    </div>
+    <div class="notes-area">
+      <textarea id="notesInput" placeholder="Notes about this snippet..."></textarea>
+    </div>
+  </div>
+
+  <!-- Dashboard View -->
+  <div id="dashboardView" class="dashboard" style="display:none"></div>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="emptyState" style="display:none">
+    <div class="empty-icon">📦</div>
+    <p>No snippet selected</p>
+    <div class="hint">Press <strong>N</strong> to create a new snippet or select one from the sidebar</div>
+  </div>
+</div>
+
+<!-- Folder Modal -->
+<div class="modal-overlay" id="folderModal">
+  <div class="modal">
+    <h2 id="folderModalTitle">New Folder</h2>
+    <div class="form-group">
+      <label>Folder Name</label>
+      <input type="text" id="folderNameInput" placeholder="e.g. React Hooks" />
+    </div>
+    <div class="form-group">
+      <label>Emoji</label>
+      <input type="text" id="folderEmojiInput" placeholder="📁" maxlength="4" style="width:60px" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeFolderModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveFolder()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Help -->
+<div class="help-overlay" id="helpOverlay" onclick="toggleHelp()">
+  <div class="help-box" onclick="event.stopPropagation()">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="help-row"><span>New snippet</span><span class="help-key">N</span></div>
+    <div class="help-row"><span>Search</span><span class="help-key">/</span></div>
+    <div class="help-row"><span>Favorite toggle</span><span class="help-key">F</span></div>
+    <div class="help-row"><span>Copy code</span><span class="help-key">⌘ + C (when not in editor)</span></div>
+    <div class="help-row"><span>Dashboard</span><span class="help-key">1</span></div>
+    <div class="help-row"><span>Editor</span><span class="help-key">2</span></div>
+    <div class="help-row"><span>Delete snippet</span><span class="help-key">Backspace</span></div>
+    <div class="help-row"><span>Duplicate</span><span class="help-key">D</span></div>
+    <div class="help-row"><span>Export all</span><span class="help-key">E</span></div>
+    <div class="help-row"><span>Help</span><span class="help-key">?</span></div>
+    <div class="help-row"><span>Close/Back</span><span class="help-key">Esc</span></div>
+    <div class="help-row"><span>Navigate list</span><span class="help-key">↑ / ↓</span></div>
+    <div class="help-row"><span>Tab in editor</span><span class="help-key">Tab</span></div>
+    <div style="margin-top:16px;font-size:12px;color:var(--fg3)">
+      <p style="margin-bottom:8px"><strong>Syntax Highlighting:</strong> 15 languages supported</p>
+      <p>JavaScript, TypeScript, Python, HTML, CSS, SQL, Bash, JSON, Go, Rust, Java, C/C++, Ruby, PHP, YAML</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ DATA ============
+const LANGUAGES = [
+  'javascript','typescript','python','html','css','sql','bash','json',
+  'go','rust','java','c','cpp','ruby','php','yaml','markdown','text','other'
+];
+
+const LANG_COLORS = {
+  javascript:'#f1e05a',typescript:'#3178c6',python:'#3572a5',html:'#e34c26',
+  css:'#563d7c',sql:'#e38c00',bash:'#89e051',json:'#292929',go:'#00add8',
+  rust:'#dea584',java:'#b07219',c:'#555555',cpp:'#f34b7d',ruby:'#701516',
+  php:'#4f5d95',yaml:'#cb171e',markdown:'#083fa1',text:'#8b949e',other:'#8b949e'
+};
+
+let state = {
+  snippets: [],
+  folders: [{id:'all',name:'All Snippets',emoji:'📁'},{id:'favorites',name:'Favorites',emoji:'⭐'}],
+  activeSnippet: null,
+  activeFolder: 'all',
+  activeLang: null,
+  view: 'editor',
+  search: ''
+};
+
+// ============ PERSISTENCE ============
+function save() {
+  localStorage.setItem('snippet-vault', JSON.stringify({snippets:state.snippets,folders:state.folders}));
+}
+function load() {
+  const d = localStorage.getItem('snippet-vault');
+  if (d) {
+    const p = JSON.parse(d);
+    state.snippets = p.snippets || [];
+    if (p.folders && p.folders.length > 2) state.folders = p.folders;
+  } else {
+    seedDemo();
+  }
+}
+
+// ============ SNIPPET CRUD ============
+function newSnippet() {
+  const s = {
+    id: crypto.randomUUID(),
+    title: 'Untitled Snippet',
+    code: '',
+    language: 'javascript',
+    folder: state.activeFolder === 'all' || state.activeFolder === 'favorites' ? null : state.activeFolder,
+    tags: [],
+    notes: '',
+    favorite: false,
+    usageCount: 0,
+    created: new Date().toISOString(),
+    updated: new Date().toISOString()
+  };
+  state.snippets.unshift(s);
+  state.activeSnippet = s.id;
+  state.view = 'editor';
+  save();
+  render();
+  document.getElementById('titleInput').focus();
+  document.getElementById('titleInput').select();
+}
+
+function deleteSnippet() {
+  if (!state.activeSnippet) return;
+  const s = getActive();
+  if (!s) return;
+  if (!confirm(`Delete "${s.title}"?`)) return;
+  state.snippets = state.snippets.filter(x => x.id !== s.id);
+  state.activeSnippet = state.snippets.length ? state.snippets[0].id : null;
+  save();
+  render();
+  toast('Snippet deleted');
+}
+
+function duplicateSnippet() {
+  const s = getActive();
+  if (!s) return;
+  const dup = {...s, id:crypto.randomUUID(), title:s.title+' (copy)', tags:[...s.tags], usageCount:0, created:new Date().toISOString(), updated:new Date().toISOString()};
+  state.snippets.unshift(dup);
+  state.activeSnippet = dup.id;
+  save();
+  render();
+  toast('Duplicated');
+}
+
+function getActive() {
+  return state.snippets.find(s => s.id === state.activeSnippet);
+}
+
+// ============ RENDER ============
+function render() {
+  renderFilters();
+  renderFolders();
+  renderList();
+  renderEditor();
+  renderViewTabs();
+  document.getElementById('snippetCount').textContent = `${state.snippets.length} snippets`;
+}
+
+function renderFilters() {
+  const counts = {};
+  state.snippets.forEach(s => { counts[s.language] = (counts[s.language]||0)+1; });
+  const langs = Object.keys(counts).sort((a,b) => counts[b]-counts[a]);
+  const el = document.getElementById('langFilters');
+  el.innerHTML = `<button class="filter-chip ${!state.activeLang?'active':''}" onclick="filterLang(null)">All</button>` +
+    langs.map(l => `<button class="filter-chip ${state.activeLang===l?'active':''}" onclick="filterLang('${l}')">${l}<span class="count">${counts[l]}</span></button>`).join('');
+}
+
+function renderFolders() {
+  const el = document.getElementById('folderList');
+  const counts = {};
+  state.snippets.forEach(s => {
+    if (s.folder) counts[s.folder] = (counts[s.folder]||0)+1;
+  });
+  el.innerHTML = state.folders.map(f => {
+    let cnt = 0;
+    if (f.id==='all') cnt = state.snippets.length;
+    else if (f.id==='favorites') cnt = state.snippets.filter(s=>s.favorite).length;
+    else cnt = counts[f.id]||0;
+    const del = f.id!=='all'&&f.id!=='favorites' ? `<span class="folder-del" onclick="event.stopPropagation();deleteFolder('${f.id}')">×</span>` : '';
+    return `<div class="folder-item ${state.activeFolder===f.id?'active':''}" onclick="selectFolder('${f.id}')">
+      <span class="folder-icon">${f.emoji||'📁'}</span>${f.name}<span class="folder-count">${cnt}</span>${del}</div>`;
+  }).join('');
+}
+
+function renderList() {
+  let items = [...state.snippets];
+  // Folder filter
+  if (state.activeFolder === 'favorites') items = items.filter(s => s.favorite);
+  else if (state.activeFolder !== 'all') items = items.filter(s => s.folder === state.activeFolder);
+  // Lang filter
+  if (state.activeLang) items = items.filter(s => s.language === state.activeLang);
+  // Search
+  if (state.search) {
+    const q = state.search.toLowerCase();
+    items = items.filter(s => s.title.toLowerCase().includes(q) || s.code.toLowerCase().includes(q) || s.tags.some(t=>t.toLowerCase().includes(q)) || s.notes.toLowerCase().includes(q));
+  }
+  // Sort: favorites first, then by updated
+  items.sort((a,b) => (b.favorite?1:0)-(a.favorite?1:0) || new Date(b.updated)-new Date(a.updated));
+  
+  const el = document.getElementById('snippetList');
+  if (!items.length) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--fg3);font-size:12px">No snippets found</div>';
+    return;
+  }
+  el.innerHTML = items.map(s => {
+    const preview = s.code.split('\n')[0]?.substring(0,50) || '';
+    const langColor = LANG_COLORS[s.language]||'#8b949e';
+    return `<div class="snippet-item ${state.activeSnippet===s.id?'active':''}" onclick="selectSnippet('${s.id}')">
+      <div class="si-title">${s.favorite?'<span class="si-fav">★</span> ':''}${esc(s.title)}</div>
+      <div class="si-meta">
+        <span class="si-lang" style="border-left:2px solid ${langColor}">${s.language}</span>
+        <span>${timeAgo(s.updated)}</span>
+        ${s.usageCount?`<span>📋${s.usageCount}</span>`:''}
+      </div>
+      ${preview?`<div class="si-preview">${esc(preview)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function renderEditor() {
+  const s = getActive();
+  const ev = document.getElementById('editorView');
+  const dv = document.getElementById('dashboardView');
+  const es = document.getElementById('emptyState');
+  const eh = document.getElementById('editorHeader');
+  
+  if (state.view === 'dashboard') {
+    ev.style.display = 'none';
+    es.style.display = 'none';
+    eh.style.display = 'none';
+    dv.style.display = '';
+    renderDashboard();
+    return;
+  }
+  
+  dv.style.display = 'none';
+  
+  if (!s) {
+    ev.style.display = 'none';
+    eh.style.display = 'none';
+    es.style.display = '';
+    return;
+  }
+  
+  ev.style.display = '';
+  eh.style.display = 'contents';
+  es.style.display = 'none';
+  
+  document.getElementById('titleInput').value = s.title;
+  document.getElementById('codeEditor').value = s.code;
+  document.getElementById('notesInput').value = s.notes || '';
+  document.getElementById('favBtn').textContent = s.favorite ? '★' : '☆';
+  document.getElementById('favBtn').classList.toggle('active', s.favorite);
+  document.getElementById('usageCount').textContent = `📋 ${s.usageCount} copies`;
+  
+  // Lang select
+  const ls = document.getElementById('langSelect');
+  ls.innerHTML = LANGUAGES.map(l => `<option value="${l}" ${s.language===l?'selected':''}>${l}</option>`).join('');
+  
+  // Folder select
+  const fs = document.getElementById('folderSelect');
+  const userFolders = state.folders.filter(f => f.id!=='all'&&f.id!=='favorites');
+  fs.innerHTML = `<option value="">None</option>` + userFolders.map(f => `<option value="${f.id}" ${s.folder===f.id?'selected':''}>${f.emoji} ${f.name}</option>`).join('');
+  
+  // Tags
+  const tc = document.getElementById('tagsContainer');
+  tc.innerHTML = s.tags.map((t,i) => `<span class="tag">${esc(t)}<span class="tag-x" onclick="removeTag(${i})">×</span></span>`).join('');
+  
+  updateLineNumbers();
+}
+
+function renderDashboard() {
+  const el = document.getElementById('dashboardView');
+  const snippets = state.snippets;
+  const total = snippets.length;
+  const favs = snippets.filter(s=>s.favorite).length;
+  const totalCopies = snippets.reduce((a,s)=>a+s.usageCount,0);
+  const totalLines = snippets.reduce((a,s)=>a+s.code.split('\n').length,0);
+  const totalChars = snippets.reduce((a,s)=>a+s.code.length,0);
+  const totalTags = new Set(snippets.flatMap(s=>s.tags)).size;
+  
+  // Lang distribution
+  const langCounts = {};
+  snippets.forEach(s => { langCounts[s.language] = (langCounts[s.language]||0)+1; });
+  const topLangs = Object.entries(langCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxLang = topLangs[0]?topLangs[0][1]:1;
+  
+  // Tag distribution
+  const tagCounts = {};
+  snippets.forEach(s => s.tags.forEach(t => { tagCounts[t] = (tagCounts[t]||0)+1; }));
+  const topTags = Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  
+  // Most copied
+  const topCopied = [...snippets].sort((a,b)=>b.usageCount-a.usageCount).slice(0,5);
+  
+  // Recent
+  const recent = [...snippets].sort((a,b)=>new Date(b.updated)-new Date(a.updated)).slice(0,8);
+  
+  // Weekly activity
+  const now = new Date();
+  const weekCounts = Array(7).fill(0);
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  snippets.forEach(s => {
+    const d = new Date(s.updated);
+    const diff = Math.floor((now-d)/(86400000));
+    if (diff < 7) weekCounts[d.getDay()]++;
+  });
+  const maxWeek = Math.max(...weekCounts,1);
+  
+  el.innerHTML = `
+    <h2 style="margin-bottom:16px">📊 Dashboard</h2>
+    <div class="dash-grid">
+      <div class="stat-card"><div class="stat-label">Total Snippets</div><div class="stat-value">${total}</div></div>
+      <div class="stat-card"><div class="stat-label">Favorites</div><div class="stat-value" style="color:var(--orange)">${favs}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Copies</div><div class="stat-value" style="color:var(--green)">${totalCopies}</div></div>
+      <div class="stat-card"><div class="stat-label">Lines of Code</div><div class="stat-value" style="color:var(--purple)">${totalLines.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Characters</div><div class="stat-value" style="color:var(--cyan)">${totalChars.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Unique Tags</div><div class="stat-value" style="color:var(--pink)">${totalTags}</div></div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="dash-section">
+        <h3>🔤 Languages</h3>
+        ${topLangs.map(([l,c]) => `<div class="bar-row">
+          <span class="bar-label">${l}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${c/maxLang*100}%;background:${LANG_COLORS[l]||'var(--accent)'}"></div></div>
+          <span class="bar-val">${c}</span>
+        </div>`).join('')}
+      </div>
+      
+      <div class="dash-section">
+        <h3>🏷️ Top Tags</h3>
+        ${topTags.length ? topTags.map(([t,c]) => `<div class="bar-row">
+          <span class="bar-label">${esc(t)}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${c/topTags[0][1]*100}%;background:var(--accent)"></div></div>
+          <span class="bar-val">${c}</span>
+        </div>`).join('') : '<div style="color:var(--fg3);font-size:12px">No tags yet</div>'}
+      </div>
+      
+      <div class="dash-section">
+        <h3>📋 Most Copied</h3>
+        <div class="recent-list">
+          ${topCopied.map(s => `<div class="recent-item" onclick="selectSnippet('${s.id}');setView('editor')">
+            <span class="ri-title">${esc(s.title)}</span>
+            <span class="ri-date">📋 ${s.usageCount}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+      
+      <div class="dash-section">
+        <h3>🕐 Recently Updated</h3>
+        <div class="recent-list">
+          ${recent.map(s => `<div class="recent-item" onclick="selectSnippet('${s.id}');setView('editor')">
+            <span class="ri-title">${esc(s.title)}</span>
+            <span class="ri-date">${timeAgo(s.updated)}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+    
+    <div class="dash-section">
+      <h3>📅 This Week's Activity</h3>
+      <div style="display:flex;gap:8px;align-items:flex-end;height:80px;padding-top:8px">
+        ${weekCounts.map((c,i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:100%;background:${c?'var(--accent)':'var(--bg3)'};height:${Math.max(c/maxWeek*60,4)}px;border-radius:4px;transition:.3s"></div>
+          <span style="font-size:10px;color:var(--fg3)">${dayNames[i]}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderViewTabs() {
+  document.querySelectorAll('.view-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.view === state.view);
+  });
+}
+
+// ============ ACTIONS ============
+function selectSnippet(id) {
+  state.activeSnippet = id;
+  if (state.view === 'dashboard') state.view = 'editor';
+  render();
+}
+
+function selectFolder(id) {
+  state.activeFolder = id;
+  render();
+}
+
+function filterLang(lang) {
+  state.activeLang = lang;
+  render();
+}
+
+function setView(v) {
+  state.view = v;
+  render();
+}
+
+function toggleFav() {
+  const s = getActive();
+  if (!s) return;
+  s.favorite = !s.favorite;
+  s.updated = new Date().toISOString();
+  save();
+  render();
+}
+
+function updateLang() {
+  const s = getActive();
+  if (!s) return;
+  s.language = document.getElementById('langSelect').value;
+  s.updated = new Date().toISOString();
+  save();
+  renderFilters();
+  renderList();
+}
+
+function updateFolder() {
+  const s = getActive();
+  if (!s) return;
+  s.folder = document.getElementById('folderSelect').value || null;
+  s.updated = new Date().toISOString();
+  save();
+  renderFolders();
+  renderList();
+}
+
+function removeTag(i) {
+  const s = getActive();
+  if (!s) return;
+  s.tags.splice(i,1);
+  s.updated = new Date().toISOString();
+  save();
+  render();
+}
+
+function copyCode() {
+  const s = getActive();
+  if (!s) return;
+  navigator.clipboard.writeText(s.code);
+  s.usageCount++;
+  s.updated = new Date().toISOString();
+  save();
+  document.getElementById('usageCount').textContent = `📋 ${s.usageCount} copies`;
+  toast('Copied to clipboard!');
+}
+
+function deleteFolder(id) {
+  if (!confirm('Delete this folder? Snippets will be unassigned.')) return;
+  state.folders = state.folders.filter(f => f.id !== id);
+  state.snippets.forEach(s => { if (s.folder === id) s.folder = null; });
+  if (state.activeFolder === id) state.activeFolder = 'all';
+  save();
+  render();
+}
+
+// ============ FOLDER MODAL ============
+let editingFolder = null;
+function showFolderModal(id) {
+  editingFolder = id || null;
+  document.getElementById('folderModalTitle').textContent = id ? 'Edit Folder' : 'New Folder';
+  document.getElementById('folderNameInput').value = '';
+  document.getElementById('folderEmojiInput').value = '📁';
+  if (id) {
+    const f = state.folders.find(f=>f.id===id);
+    if (f) {
+      document.getElementById('folderNameInput').value = f.name;
+      document.getElementById('folderEmojiInput').value = f.emoji;
+    }
+  }
+  document.getElementById('folderModal').classList.add('show');
+  document.getElementById('folderNameInput').focus();
+}
+
+function closeFolderModal() {
+  document.getElementById('folderModal').classList.remove('show');
+}
+
+function saveFolder() {
+  const name = document.getElementById('folderNameInput').value.trim();
+  if (!name) return;
+  const emoji = document.getElementById('folderEmojiInput').value || '📁';
+  if (editingFolder) {
+    const f = state.folders.find(f=>f.id===editingFolder);
+    if (f) { f.name = name; f.emoji = emoji; }
+  } else {
+    state.folders.push({id:crypto.randomUUID(),name,emoji});
+  }
+  save();
+  closeFolderModal();
+  render();
+}
+
+// ============ SHARE ============
+function shareSnippet() {
+  const s = getActive();
+  if (!s) return;
+  const highlighted = highlightCode(s.code, s.language);
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(s.title)} — Snippet Vault</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;padding:40px;display:flex;justify-content:center}
+.card{max-width:800px;width:100%;background:#161b22;border:1px solid #30363d;border-radius:12px;overflow:hidden}
+.card-header{padding:16px 20px;border-bottom:1px solid #30363d;display:flex;justify-content:space-between;align-items:center}
+.card-header h1{font-size:16px}.card-header .lang{background:#21262d;padding:4px 12px;border-radius:12px;font-size:12px;color:#8b949e}
+pre{padding:20px;font-family:'SF Mono',Consolas,monospace;font-size:13px;line-height:1.6;overflow-x:auto;white-space:pre}
+.meta{padding:12px 20px;border-top:1px solid #30363d;font-size:12px;color:#484f58;display:flex;gap:16px}
+.sh-keyword{color:#ff7b72}.sh-string{color:#a5d6ff}.sh-comment{color:#8b949e;font-style:italic}.sh-number{color:#79c0ff}
+.sh-func{color:#d2a8ff}.sh-type{color:#ff7b72}.sh-operator{color:#ff7b72}.sh-property{color:#79c0ff}
+.sh-tag{color:#7ee787}.sh-attr{color:#79c0ff}.sh-punct{color:#8b949e}
+</style></head><body><div class="card">
+<div class="card-header"><h1>${esc(s.title)}</h1><span class="lang">${s.language}</span></div>
+<pre>${highlighted}</pre>
+<div class="meta"><span>📦 Snippet Vault</span>${s.tags.length?`<span>🏷 ${s.tags.join(', ')}</span>`:''}<span>${new Date(s.created).toLocaleDateString()}</span></div>
+</div></body></html>`;
+  const blob = new Blob([html],{type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${s.title.replace(/[^a-zA-Z0-9]/g,'-')}.html`;
+  a.click();
+  toast('Exported as HTML');
+}
+
+// ============ IMPORT/EXPORT ============
+function exportAll() {
+  const data = {snippets:state.snippets,folders:state.folders,exported:new Date().toISOString()};
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `snippet-vault-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('Exported!');
+}
+
+function importAll(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.snippets) {
+        const existIds = new Set(state.snippets.map(s=>s.id));
+        let added = 0;
+        data.snippets.forEach(s => {
+          if (!existIds.has(s.id)) { state.snippets.push(s); added++; }
+        });
+        if (data.folders) {
+          const existF = new Set(state.folders.map(f=>f.id));
+          data.folders.forEach(f => { if (!existF.has(f.id)) state.folders.push(f); });
+        }
+        save();
+        render();
+        toast(`Imported ${added} new snippets`);
+      }
+    } catch(err) { toast('Invalid JSON file'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ============ SYNTAX HIGHLIGHTING ============
+function highlightCode(code, lang) {
+  const e = esc(code);
+  const rules = {
+    javascript: [
+      [/\b(const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|new|this|class|extends|import|from|export|default|async|await|try|catch|throw|finally|typeof|instanceof|in|of|yield|void|delete|null|undefined|true|false|NaN|Infinity)\b/g,'keyword'],
+      [/(\/\/.*$)/gm,'comment'],
+      [/(\/\*[\s\S]*?\*\/)/g,'comment'],
+      [/(`(?:\\.|[^`])*`)/g,'string'],
+      [/('(?:\\.|[^'])*')/g,'string'],
+      [/("(?:\\.|[^"])*")/g,'string'],
+      [/\b(\d+\.?\d*(?:e[+-]?\d+)?)\b/g,'number'],
+      [/\b([A-Z][a-zA-Z0-9]*)\b/g,'type'],
+      [/(=&gt;|===|!==|==|!=|&lt;=|&gt;=|&amp;&amp;|\|\||[+\-*/%]=?)/g,'operator'],
+    ],
+    typescript: null, // inherits JS
+    python: [
+      [/\b(def|class|return|if|elif|else|for|while|break|continue|import|from|as|try|except|finally|raise|with|yield|lambda|pass|None|True|False|and|or|not|in|is|global|nonlocal|assert|del|async|await|self)\b/g,'keyword'],
+      [/(#.*$)/gm,'comment'],
+      [/('''[\s\S]*?'''|"""[\s\S]*?""")/g,'string'],
+      [/('(?:\\.|[^'])*')/g,'string'],
+      [/("(?:\\.|[^"])*")/g,'string'],
+      [/\b(\d+\.?\d*(?:e[+-]?\d+)?)\b/g,'number'],
+      [/\b([A-Z][a-zA-Z0-9_]*)\b/g,'type'],
+      [/@(\w+)/g,'func'],
+    ],
+    html: [
+      [/(&lt;\/?)([\w-]+)/g, (m,p1,p2) => `${p1}<span class="sh-tag">${p2}</span>`],
+      [/\b([\w-]+)(=)/g, (m,p1,p2) => `<span class="sh-attr">${p1}</span>${p2}`],
+      [/("(?:\\.|[^"])*")/g,'string'],
+      [/('(?:\\.|[^'])*')/g,'string'],
+      [/(&lt;!--[\s\S]*?--&gt;)/g,'comment'],
+    ],
+    css: [
+      [/(\/\*[\s\S]*?\*\/)/g,'comment'],
+      [/([.#][\w-]+)/g,'func'],
+      [/([\w-]+)\s*:/g, (m,p1) => `<span class="sh-property">${p1}</span>:`],
+      [/('(?:\\.|[^'])*')/g,'string'],
+      [/("(?:\\.|[^"])*")/g,'string'],
+      [/\b(\d+\.?\d*)(px|em|rem|%|vh|vw|s|ms|deg|fr)?\b/g,'number'],
+      [/(@[\w-]+)\b/g,'keyword'],
+      [/\b(important|inherit|initial|unset|none|auto|flex|grid|block|inline|relative|absolute|fixed|sticky)\b/g,'keyword'],
+    ],
+    sql: [
+      [/\b(SELECT|FROM|WHERE|AND|OR|NOT|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|ALTER|DROP|JOIN|INNER|LEFT|RIGHT|OUTER|ON|AS|ORDER|BY|GROUP|HAVING|LIMIT|OFFSET|UNION|ALL|DISTINCT|IN|BETWEEN|LIKE|IS|NULL|EXISTS|CASE|WHEN|THEN|ELSE|END|COUNT|SUM|AVG|MAX|MIN|INDEX|PRIMARY|KEY|FOREIGN|REFERENCES|DEFAULT|CONSTRAINT|CASCADE|TRIGGER|VIEW|GRANT|REVOKE|BEGIN|COMMIT|ROLLBACK)\b/gi,'keyword'],
+      [/(--.*$)/gm,'comment'],
+      [/(\/\*[\s\S]*?\*\/)/g,'comment'],
+      [/('(?:\\.|[^'])*')/g,'string'],
+      [/\b(\d+\.?\d*)\b/g,'number'],
+    ],
+    bash: [
+      [/\b(if|then|else|elif|fi|for|while|do|done|case|esac|in|function|return|local|export|source|alias|unalias|echo|printf|read|set|unset|shift|exit|cd|pwd|ls|cp|mv|rm|mkdir|chmod|chown|grep|sed|awk|find|cat|head|tail|sort|wc|curl|wget|git|npm|node|python|pip|docker|sudo|apt|brew|yarn)\b/g,'keyword'],
+      [/(#.*$)/gm,'comment'],
+      [/("(?:\\.|[^"])*")/g,'string'],
+      [/('(?:\\.|[^'])*')/g,'string'],
+      [/(\$\{?\w+\}?)/g,'func'],
+      [/\b(\d+)\b/g,'number'],
+    ],
+    json: [
+      [/("(?:\\.|[^"])*")\s*:/g, (m,p1) => `<span class="sh-property">${p1}</span>:`],
+      [/:\s*("(?:\\.|[^"])*")/g, (m,p1) => `: <span class="sh-string">${p1}</span>`],
+      [/\b(true|false|null)\b/g,'keyword'],
+      [/\b(-?\d+\.?\d*(?:e[+-]?\d+)?)\b/g,'number'],
+    ],
+    go: [
+      [/\b(func|package|import|return|if|else|for|range|switch|case|default|break|continue|go|defer|chan|select|type|struct|interface|map|var|const|nil|true|false|make|new|len|cap|append|copy|delete|close|panic|recover)\b/g,'keyword'],
+      [/(\/\/.*$)/gm,'comment'],
+      [/(\/\*[\s\S]*?\*\/)/g,'comment'],
+      [/("(?:\\.|[^"])*")/g,'string'],
+      [/(`(?:\\.|[^`])*`)/g,'string'],
+      [/\b(\d+\.?\d*)\b/g,'number'],
+      [/\b(string|int|int64|float64|bool|byte|error|any)\b/g,'type'],
+    ],
+    rust: [
+      [/\b(fn|let|mut|const|if|else|for|while|loop|match|return|use|mod|pub|struct|enum|impl|trait|where|self|Self|super|crate|as|in|ref|move|async|await|unsafe|dyn|type|true|false|None|Some|Ok|Err)\b/g,'keyword'],
+      [/(\/\/.*$)/gm,'comment'],
+      [/(\/\*[\s\S]*?\*\/)/g,'comment'],
+      [/("(?:\\.|[^"])*")/g,'string'],
+      [/\b(\d+\.?\d*(?:_\d+)*)\b/g,'number'],
+      [/\b(i32|i64|u32|u64|f32|f64|bool|str|String|Vec|Option|Result|Box|Rc|Arc)\b/g,'type'],
+    ],
+    java: [
+      [/\b(public|private|protected|static|final|abstract|class|interface|extends|implements|new|return|if|else|for|while|do|switch|case|break|continue|try|catch|finally|throw|throws|import|package|this|super|void|null|true|false|instanceof|synchronized|volatile|transient|native|enum)\b/g,'keyword'],
+      [/(\/\/.*$)/gm,'comment'],
+      [/(\/\*[\s\S]*?\*\/)/g,'comment'],
+      [/("(?:\\.|[^"])*")/g,'string'],
+      [/\b(\d+\.?\d*[dDfFlL]?)\b/g,'number'],
+      [/\b(int|long|float|double|boolean|char|byte|short|String|Integer|Long|Double|Float|Boolean|List|Map|Set|Array|Object|Class|System|Math)\b/g,'type'],
+      [/@(\w+)/g,'func'],
+    ],
+    c: [
+      [/\b(if|else|for|while|do|switch|case|break|continue|return|goto|typedef|struct|union|enum|sizeof|static|extern|const|volatile|register|inline|void|NULL|true|false|include|define|ifdef|ifndef|endif|pragma)\b/g,'keyword'],
+      [/(\/\/.*$)/gm,'comment'],
+      [/(\/\*[\s\S]*?\*\/)/g,'comment'],
+      [/("(?:\\.|[^"])*")/g,'string'],
+      [/('(?:\\.|[^'])')/g,'string'],
+      [/\b(\d+\.?\d*[uUlLfF]*)\b/g,'number'],
+      [/(#\w+)/g,'func'],
+      [/\b(int|char|float|double|long|short|unsigned|signed|size_t|FILE|void)\b/g,'type'],
+    ],
+    ruby: [
+      [/\b(def|end|class|module|if|elsif|else|unless|while|until|for|do|begin|rescue|ensure|raise|return|yield|require|include|extend|attr_accessor|attr_reader|attr_writer|puts|print|nil|true|false|self|super|new|then|and|or|not|in|when|case)\b/g,'keyword'],
+      [/(#.*$)/gm,'comment'],
+      [/("(?:\\.|[^"])*")/g,'string'],
+      [/('(?:\\.|[^'])*')/g,'string'],
+      [/\b(\d+\.?\d*)\b/g,'number'],
+      [/(:\w+)/g,'func'],
+      [/(@\w+)/g,'property'],
+    ],
+    php: [
+      [/\b(function|class|return|if|else|elseif|for|foreach|while|do|switch|case|break|continue|new|echo|print|require|include|use|namespace|public|private|protected|static|const|var|null|true|false|array|isset|empty|unset|die|exit|try|catch|throw|finally|abstract|interface|extends|implements|trait|yield|match)\b/g,'keyword'],
+      [/(\/\/.*$)/gm,'comment'],
+      [/(#.*$)/gm,'comment'],
+      [/(\/\*[\s\S]*?\*\/)/g,'comment'],
+      [/("(?:\\.|[^"])*")/g,'string'],
+      [/('(?:\\.|[^'])*')/g,'string'],
+      [/(\$\w+)/g,'func'],
+      [/\b(\d+\.?\d*)\b/g,'number'],
+    ],
+    yaml: [
+      [/(#.*$)/gm,'comment'],
+      [/^(\s*[\w.-]+)(\s*:)/gm, (m,p1,p2) => `<span class="sh-property">${p1}</span>${p2}`],
+      [/("(?:\\.|[^"])*")/g,'string'],
+      [/('(?:\\.|[^'])*')/g,'string'],
+      [/\b(true|false|null|yes|no|on|off)\b/gi,'keyword'],
+      [/\b(\d+\.?\d*)\b/g,'number'],
+    ],
+  };
+  
+  rules.typescript = rules.javascript;
+  rules.cpp = rules.c;
+  
+  const langRules = rules[lang];
+  if (!langRules) return e;
+  
+  // Token-based highlighting to avoid nested spans
+  const tokens = [];
+  let working = e;
+  
+  langRules.forEach(rule => {
+    const [regex, cls] = rule;
+    if (typeof cls === 'function') return; // skip function-based rules for simple pass
+    working = working.replace(regex, (match, ...groups) => {
+      if (typeof cls === 'function') return cls(match, ...groups);
+      return `<span class="sh-${cls}">${match}</span>`;
+    });
+  });
+  
+  // Handle function-based rules
+  langRules.forEach(rule => {
+    if (typeof rule[1] === 'function') {
+      working = working.replace(rule[0], rule[1]);
+    }
+  });
+  
+  return working;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============ LINE NUMBERS ============
+function updateLineNumbers() {
+  const editor = document.getElementById('codeEditor');
+  const ln = document.getElementById('lineNumbers');
+  const lines = editor.value.split('\n').length;
+  ln.innerHTML = Array.from({length:lines},(_,i)=>`<div>${i+1}</div>`).join('');
+}
+
+// ============ HELPERS ============
+function timeAgo(iso) {
+  const d = new Date(iso);
+  const s = Math.floor((Date.now()-d)/1000);
+  if (s<60) return 'just now';
+  if (s<3600) return Math.floor(s/60)+'m ago';
+  if (s<86400) return Math.floor(s/3600)+'h ago';
+  if (s<604800) return Math.floor(s/86400)+'d ago';
+  return d.toLocaleDateString();
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2000);
+}
+
+function toggleHelp() {
+  document.getElementById('helpOverlay').classList.toggle('show');
+}
+
+// ============ EVENT LISTENERS ============
+document.getElementById('titleInput').addEventListener('input', (e) => {
+  const s = getActive();
+  if (s) { s.title = e.target.value; s.updated = new Date().toISOString(); save(); renderList(); }
+});
+
+document.getElementById('codeEditor').addEventListener('input', (e) => {
+  const s = getActive();
+  if (s) { s.code = e.target.value; s.updated = new Date().toISOString(); save(); updateLineNumbers(); }
+});
+
+document.getElementById('codeEditor').addEventListener('scroll', () => {
+  document.getElementById('lineNumbers').scrollTop = document.getElementById('codeEditor').scrollTop;
+});
+
+document.getElementById('codeEditor').addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const ta = e.target;
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    ta.value = ta.value.substring(0,start) + '  ' + ta.value.substring(end);
+    ta.selectionStart = ta.selectionEnd = start + 2;
+    ta.dispatchEvent(new Event('input'));
+  }
+});
+
+document.getElementById('notesInput').addEventListener('input', (e) => {
+  const s = getActive();
+  if (s) { s.notes = e.target.value; s.updated = new Date().toISOString(); save(); }
+});
+
+document.getElementById('tagInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const s = getActive();
+    const v = e.target.value.trim();
+    if (s && v && !s.tags.includes(v)) {
+      s.tags.push(v);
+      s.updated = new Date().toISOString();
+      save();
+      e.target.value = '';
+      render();
+    }
+  }
+});
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  state.search = e.target.value;
+  renderList();
+});
+
+document.getElementById('folderNameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') saveFolder();
+  if (e.key === 'Escape') closeFolderModal();
+});
+
+// Global keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  const tag = e.target.tagName;
+  const inInput = tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';
+  
+  // Esc closes modals
+  if (e.key === 'Escape') {
+    if (document.getElementById('helpOverlay').classList.contains('show')) { toggleHelp(); return; }
+    if (document.getElementById('folderModal').classList.contains('show')) { closeFolderModal(); return; }
+    if (inInput) { e.target.blur(); return; }
+  }
+  
+  if (inInput) return;
+  
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); newSnippet(); }
+  if (e.key === '/') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+  if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFav(); }
+  if (e.key === 'd' || e.key === 'D') { e.preventDefault(); duplicateSnippet(); }
+  if (e.key === 'e' || e.key === 'E') { e.preventDefault(); exportAll(); }
+  if (e.key === '?') { e.preventDefault(); toggleHelp(); }
+  if (e.key === '1') { e.preventDefault(); setView('editor'); }
+  if (e.key === '2') { e.preventDefault(); setView('dashboard'); }
+  if (e.key === 'Backspace') { e.preventDefault(); deleteSnippet(); }
+  
+  // Arrow navigation
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const items = document.querySelectorAll('.snippet-item');
+    if (!items.length) return;
+    let idx = -1;
+    items.forEach((el,i) => { if (el.classList.contains('active')) idx = i; });
+    if (e.key === 'ArrowDown') idx = Math.min(idx+1, items.length-1);
+    else idx = Math.max(idx-1, 0);
+    items[idx].click();
+    items[idx].scrollIntoView({block:'nearest'});
+  }
+});
+
+// ============ SEED DATA ============
+function seedDemo() {
+  const folders = [
+    {id:'all',name:'All Snippets',emoji:'📁'},
+    {id:'favorites',name:'Favorites',emoji:'⭐'},
+    {id:'f-react',name:'React',emoji:'⚛️'},
+    {id:'f-api',name:'API & Backend',emoji:'🔌'},
+    {id:'f-utils',name:'Utilities',emoji:'🔧'},
+    {id:'f-css',name:'CSS Tricks',emoji:'🎨'},
+    {id:'f-sql',name:'SQL Queries',emoji:'🗄️'},
+    {id:'f-devops',name:'DevOps',emoji:'🚀'},
+    {id:'f-python',name:'Python',emoji:'🐍'},
+  ];
+  
+  const snippets = [
+    {
+      id:crypto.randomUUID(), title:'React useDebounce Hook', language:'typescript',
+      folder:'f-react', tags:['hook','performance','debounce'], favorite:true, usageCount:12,
+      notes:'Custom hook for debouncing values. Great for search inputs.',
+      code:`import { useState, useEffect } from 'react';
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+export default useDebounce;
+
+// Usage:
+// const debouncedSearch = useDebounce(searchTerm, 300);
+// useEffect(() => { fetchResults(debouncedSearch); }, [debouncedSearch]);`
+    },
+    {
+      id:crypto.randomUUID(), title:'Express Error Handler Middleware', language:'javascript',
+      folder:'f-api', tags:['express','error-handling','middleware'], favorite:true, usageCount:8,
+      notes:'Centralized error handling for Express APIs. Catches all errors.',
+      code:`// Error handler middleware — must be last app.use()
+const errorHandler = (err, req, res, next) => {
+  console.error(\`[\${new Date().toISOString()}] \${err.stack}\`);
+
+  const statusCode = err.statusCode || 500;
+  const message = err.isOperational
+    ? err.message
+    : 'Internal server error';
+
+  res.status(statusCode).json({
+    success: false,
+    error: message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+};
+
+// Custom AppError class
+class AppError extends Error {
+  constructor(message, statusCode = 500) {
+    super(message);
+    this.statusCode = statusCode;
+    this.isOperational = true;
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+module.exports = { errorHandler, AppError };
+
+// Usage:
+// app.use(errorHandler);
+// throw new AppError('Not found', 404);`
+    },
+    {
+      id:crypto.randomUUID(), title:'Python FastAPI Auth Dependency', language:'python',
+      folder:'f-python', tags:['fastapi','auth','jwt','dependency'], favorite:false, usageCount:5,
+      notes:'Reusable JWT authentication dependency for FastAPI routes.',
+      code:`from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import jwt
+from datetime import datetime
+
+security = HTTPBearer()
+
+SECRET_KEY = "your-secret-key"
+ALGORITHM = "HS256"
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Validate JWT token and return current user."""
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("exp") and datetime.utcnow().timestamp() > payload["exp"]:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token expired"
+            )
+        return payload
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
+
+# Usage:
+# @app.get("/protected")
+# async def protected_route(user=Depends(get_current_user)):
+#     return {"user": user}`
+    },
+    {
+      id:crypto.randomUUID(), title:'CSS Grid Auto-Fit Cards', language:'css',
+      folder:'f-css', tags:['grid','responsive','cards','layout'], favorite:true, usageCount:15,
+      notes:'Responsive card grid that auto-fits without media queries.',
+      code:`.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.card {
+  background: var(--card-bg, #fff);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--border, #e2e8f0);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Skeleton loading state */
+.card.loading {
+  .card-title, .card-text {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+    color: transparent;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}`
+    },
+    {
+      id:crypto.randomUUID(), title:'PostgreSQL Upsert with Returning', language:'sql',
+      folder:'f-sql', tags:['postgres','upsert','conflict','returning'], favorite:false, usageCount:7,
+      notes:'Insert or update pattern with conflict handling. Returns the final row.',
+      code:`-- Upsert: Insert or update on conflict
+INSERT INTO users (email, name, updated_at)
+VALUES ('aj@mvp.cafe', 'Aman Jha', NOW())
+ON CONFLICT (email)
+DO UPDATE SET
+  name = EXCLUDED.name,
+  updated_at = NOW()
+RETURNING id, email, name, created_at, updated_at;
+
+-- Bulk upsert with values list
+INSERT INTO metrics (date, metric_name, value)
+VALUES
+  ('2026-05-01', 'signups', 42),
+  ('2026-05-01', 'revenue', 1500),
+  ('2026-05-02', 'signups', 58)
+ON CONFLICT (date, metric_name)
+DO UPDATE SET
+  value = EXCLUDED.value
+RETURNING *;
+
+-- Conditional upsert (only update if new value > old)
+INSERT INTO high_scores (user_id, score)
+VALUES (123, 9500)
+ON CONFLICT (user_id)
+DO UPDATE SET score = EXCLUDED.score
+WHERE EXCLUDED.score > high_scores.score
+RETURNING *;`
+    },
+    {
+      id:crypto.randomUUID(), title:'Docker Multi-Stage Build (Node)', language:'bash',
+      folder:'f-devops', tags:['docker','multi-stage','node','production'], favorite:true, usageCount:6,
+      notes:'Production-optimized Docker build. ~80% smaller than naive approach.',
+      code:`# Multi-stage Docker build for Node.js
+# Stage 1: Build
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production && \\
+    cp -R node_modules /tmp/node_modules && \\
+    npm ci
+COPY . .
+RUN npm run build
+
+# Stage 2: Production
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Non-root user
+RUN addgroup --system --gid 1001 nodejs && \\
+    adduser --system --uid 1001 app
+    
+COPY --from=builder --chown=app:nodejs /tmp/node_modules ./node_modules
+COPY --from=builder --chown=app:nodejs /app/dist ./dist
+COPY --from=builder --chown=app:nodejs /app/package.json ./
+
+USER app
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s \\
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+
+CMD ["node", "dist/server.js"]`
+    },
+    {
+      id:crypto.randomUUID(), title:'Zustand Store with Persist', language:'typescript',
+      folder:'f-react', tags:['zustand','state','persist','store'], favorite:false, usageCount:4,
+      notes:'Zustand store with localStorage persistence and TypeScript.',
+      code:`import { create } from 'zustand';
+import { persist, devtools } from 'zustand/middleware';
+
+interface AppState {
+  user: { name: string; email: string } | null;
+  theme: 'light' | 'dark';
+  notifications: number;
+  setUser: (user: AppState['user']) => void;
+  toggleTheme: () => void;
+  incrementNotifications: () => void;
+  clearNotifications: () => void;
+}
+
+export const useAppStore = create<AppState>()(
+  devtools(
+    persist(
+      (set) => ({
+        user: null,
+        theme: 'dark',
+        notifications: 0,
+        setUser: (user) => set({ user }),
+        toggleTheme: () =>
+          set((state) => ({
+            theme: state.theme === 'light' ? 'dark' : 'light',
+          })),
+        incrementNotifications: () =>
+          set((state) => ({
+            notifications: state.notifications + 1,
+          })),
+        clearNotifications: () => set({ notifications: 0 }),
+      }),
+      { name: 'app-store' }
+    )
+  )
+);
+
+// Usage:
+// const { user, theme, setUser } = useAppStore();
+// const theme = useAppStore((s) => s.theme); // selective`
+    },
+    {
+      id:crypto.randomUUID(), title:'Fetch with Retry & Timeout', language:'javascript',
+      folder:'f-utils', tags:['fetch','retry','timeout','resilience'], favorite:true, usageCount:10,
+      notes:'Production-grade fetch wrapper with exponential backoff, timeout, and abort.',
+      code:`async function fetchWithRetry(url, options = {}) {
+  const {
+    retries = 3,
+    backoff = 300,
+    timeout = 10000,
+    ...fetchOpts
+  } = options;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(url, {
+        ...fetchOpts,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        // Don't retry 4xx errors (except 429)
+        if (response.status < 500 && response.status !== 429) {
+          throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+        }
+        throw new Error(\`HTTP \${response.status}\`);
+      }
+
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (attempt === retries) throw error;
+
+      const delay = backoff * Math.pow(2, attempt);
+      console.warn(\`Retry \${attempt + 1}/\${retries} in \${delay}ms: \${error.message}\`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+}
+
+// Usage:
+// const res = await fetchWithRetry('/api/data', { retries: 3, timeout: 5000 });
+// const data = await res.json();`
+    },
+    {
+      id:crypto.randomUUID(), title:'Git Aliases — Power User', language:'bash',
+      folder:'f-devops', tags:['git','alias','productivity'], favorite:false, usageCount:3,
+      notes:'Add to ~/.gitconfig [alias] section. The ones I actually use daily.',
+      code:`# Add to ~/.gitconfig under [alias]
+[alias]
+  # Quick status
+  s = status -sb
+  
+  # Pretty log (my favorite)
+  lg = log --oneline --graph --decorate --all -20
+  ll = log --pretty=format:'%C(yellow)%h%C(reset) %s %C(blue)<%an>%C(reset) %C(green)(%cr)%C(reset)' -20
+  
+  # Commit shortcuts
+  cm = commit -m
+  ca = commit --amend --no-edit
+  cam = commit -am
+  
+  # Branch management
+  co = checkout
+  cb = checkout -b
+  bd = branch -d
+  bD = branch -D
+  
+  # Stash
+  ss = stash save
+  sp = stash pop
+  sl = stash list
+  
+  # Undo
+  undo = reset --soft HEAD~1
+  nuke = reset --hard HEAD~1
+  unstage = reset HEAD --
+  
+  # Diff
+  d = diff --stat
+  dc = diff --cached
+  
+  # Push/Pull
+  p = push
+  pf = push --force-with-lease
+  pl = pull --rebase
+  
+  # Cleanup merged branches
+  cleanup = "!git branch --merged | grep -v '\\*\\|main\\|master\\|develop' | xargs -n 1 git branch -d"
+  
+  # Who did what
+  who = shortlog -sne`
+    },
+    {
+      id:crypto.randomUUID(), title:'React usePrevious Hook', language:'typescript',
+      folder:'f-react', tags:['hook','previous','state','ref'], favorite:false, usageCount:2,
+      notes:'Track previous value of state/props. Useful for comparison effects.',
+      code:`import { useRef, useEffect } from 'react';
+
+function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T>();
+
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+
+  return ref.current;
+}
+
+export default usePrevious;
+
+// Usage:
+// const [count, setCount] = useState(0);
+// const prevCount = usePrevious(count);
+// 
+// useEffect(() => {
+//   if (prevCount !== undefined && count > prevCount) {
+//     console.log('Count increased!');
+//   }
+// }, [count, prevCount]);`
+    },
+    {
+      id:crypto.randomUUID(), title:'Supabase Row-Level Security', language:'sql',
+      folder:'f-sql', tags:['supabase','rls','security','postgres'], favorite:false, usageCount:4,
+      notes:'Common RLS patterns for multi-tenant SaaS. Used in UTMStamp.',
+      code:`-- Enable RLS on table
+ALTER TABLE signatures ENABLE ROW LEVEL SECURITY;
+
+-- Users can only see their org's data
+CREATE POLICY "Users see own org signatures"
+  ON signatures FOR SELECT
+  USING (org_id = auth.jwt() ->> 'org_id');
+
+-- Users can insert for their org
+CREATE POLICY "Users insert own org signatures"
+  ON signatures FOR INSERT
+  WITH CHECK (org_id = auth.jwt() ->> 'org_id');
+
+-- Only admins can delete
+CREATE POLICY "Admins can delete"
+  ON signatures FOR DELETE
+  USING (
+    org_id = auth.jwt() ->> 'org_id'
+    AND (auth.jwt() ->> 'role') = 'admin'
+  );
+
+-- Service role bypasses RLS (for server-side ops)
+-- Use supabase.auth.admin or service_role key
+
+-- Useful: Check current user's claims
+SELECT auth.uid();
+SELECT auth.jwt() ->> 'email';
+SELECT auth.jwt() ->> 'role';`
+    },
+    {
+      id:crypto.randomUUID(), title:'Python Dataclass with Validation', language:'python',
+      folder:'f-python', tags:['dataclass','validation','python3.10'], favorite:false, usageCount:1,
+      notes:'Modern Python dataclass with __post_init__ validation.',
+      code:`from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Optional
+import re
+
+@dataclass
+class User:
+    email: str
+    name: str
+    role: str = "member"
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    tags: list[str] = field(default_factory=list)
+    metadata: Optional[dict] = None
+
+    def __post_init__(self):
+        # Email validation
+        if not re.match(r'^[\\w.-]+@[\\w.-]+\\.\\w+$', self.email):
+            raise ValueError(f"Invalid email: {self.email}")
+        
+        # Role validation
+        valid_roles = {"admin", "member", "viewer"}
+        if self.role not in valid_roles:
+            raise ValueError(f"Role must be one of {valid_roles}")
+        
+        # Normalize
+        self.email = self.email.lower().strip()
+        self.name = self.name.strip()
+
+    @property
+    def display_name(self) -> str:
+        return f"{self.name} ({self.role})"
+
+    def to_dict(self) -> dict:
+        return {
+            "email": self.email,
+            "name": self.name,
+            "role": self.role,
+            "created_at": self.created_at.isoformat(),
+            "tags": self.tags,
+        }
+
+# Usage:
+# user = User(email="aj@mvp.cafe", name="Aman Jha", role="admin")
+# print(user.display_name)  # "Aman Jha (admin)"`
+    },
+    {
+      id:crypto.randomUUID(), title:'Nginx Reverse Proxy + SSL', language:'bash',
+      folder:'f-devops', tags:['nginx','ssl','proxy','production'], favorite:false, usageCount:3,
+      notes:'Production nginx config with SSL, headers, rate limiting.',
+      code:`# /etc/nginx/sites-available/myapp
+upstream backend {
+    server 127.0.0.1:3000;
+    keepalive 64;
+}
+
+# Rate limiting
+limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+
+server {
+    listen 80;
+    server_name app.example.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name app.example.com;
+
+    # SSL (certbot)
+    ssl_certificate /etc/letsencrypt/live/app.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app.example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    # Gzip
+    gzip on;
+    gzip_types text/plain application/json application/javascript text/css;
+
+    location /api/ {
+        limit_req zone=api burst=20 nodelay;
+        proxy_pass http://backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        root /var/www/app/dist;
+        try_files $uri $uri/ /index.html;
+        expires 1d;
+    }
+}`
+    },
+    {
+      id:crypto.randomUUID(), title:'CSS Dark Mode Toggle', language:'css',
+      folder:'f-css', tags:['dark-mode','theme','css-variables','toggle'], favorite:false, usageCount:6,
+      notes:'Complete dark/light mode with CSS variables. No JS flash on load.',
+      code:`/* System preference + manual override */
+:root {
+  --bg: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --text: #1a1a2e;
+  --text-secondary: #6b7280;
+  --border: #e5e7eb;
+  --accent: #3b82f6;
+  --card: #ffffff;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Dark theme */
+[data-theme="dark"],
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1117;
+    --bg-secondary: #161b22;
+    --text: #e6edf3;
+    --text-secondary: #8b949e;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --card: #161b22;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Apply everywhere */
+body {
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.3s, color 0.3s;
+}
+
+/* No-flash: add this inline in <head> */
+/* <script>
+  const theme = localStorage.getItem('theme') || 
+    (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+  document.documentElement.dataset.theme = theme;
+</script> */`
+    },
+  ];
+  
+  // Set created/updated dates spread over last 30 days
+  snippets.forEach((s,i) => {
+    const daysAgo = Math.floor(i * 2.5);
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    s.created = d.toISOString();
+    s.updated = new Date(d.getTime() + Math.random()*86400000).toISOString();
+  });
+  
+  state.folders = folders;
+  state.snippets = snippets;
+  save();
+}
+
+// ============ INIT ============
+load();
+render();
+if (state.snippets.length && !state.activeSnippet) {
+  state.activeSnippet = state.snippets[0].id;
+  render();
+}
+</script>
+</body>
+</html>

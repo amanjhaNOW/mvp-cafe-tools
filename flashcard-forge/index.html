@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashcard Forge — Spaced Repetition Learning</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#242736;--surface3:#2e3145;--border:#353849;--text:#e8eaed;--text2:#9aa0b0;--text3:#6b7185;--accent:#6366f1;--accent2:#818cf8;--green:#22c55e;--green2:#16a34a;--red:#ef4444;--orange:#f97316;--yellow:#eab308;--blue:#3b82f6;--purple:#a855f7;--pink:#ec4899;--cyan:#06b6d4;--radius:10px;--radius2:14px;--shadow:0 4px 24px rgba(0,0,0,.4)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:var(--text)}
+input,textarea,select{font-family:inherit;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;outline:none;font-size:14px}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:22px}
+.sidebar-search{padding:8px 12px}
+.sidebar-search input{width:100%;padding:7px 10px;font-size:13px;border-radius:6px}
+.deck-list{flex:1;overflow-y:auto;padding:6px 8px}
+.deck-item{padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:2px;display:flex;align-items:center;gap:10px;transition:background .15s}
+.deck-item:hover{background:var(--surface2)}
+.deck-item.active{background:var(--accent);color:#fff}
+.deck-item .deck-emoji{font-size:20px;flex-shrink:0}
+.deck-item .deck-info{flex:1;min-width:0}
+.deck-item .deck-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deck-item .deck-stats{font-size:11px;color:var(--text3);margin-top:2px}
+.deck-item.active .deck-stats{color:rgba(255,255,255,.7)}
+.deck-item .deck-due{font-size:11px;padding:2px 6px;border-radius:4px;background:var(--surface3);color:var(--orange);font-weight:600;flex-shrink:0}
+.deck-item.active .deck-due{background:rgba(255,255,255,.2);color:#fff}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border);display:flex;gap:6px}
+.sidebar-footer button{flex:1;padding:8px;border-radius:8px;font-size:13px;font-weight:500;background:var(--surface2);transition:background .15s}
+.sidebar-footer button:hover{background:var(--surface3)}
+.sidebar-footer button.primary{background:var(--accent);color:#fff}
+.sidebar-footer button.primary:hover{background:var(--accent2)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);gap:8px;flex-shrink:0}
+.topbar .view-tabs{display:flex;gap:4px;margin-left:auto}
+.view-tab{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text2);transition:all .15s}
+.view-tab:hover{color:var(--text);background:var(--surface2)}
+.view-tab.active{background:var(--accent);color:#fff}
+.topbar-title{font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px}
+.topbar-title span{font-size:18px}
+.content{flex:1;overflow-y:auto;padding:20px}
+
+/* Cards Grid */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.card-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:16px;cursor:pointer;transition:all .2s;position:relative}
+.card-item:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow)}
+.card-front{font-size:15px;font-weight:600;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card-back-preview{font-size:13px;color:var(--text2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-meta{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+.card-badge{font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600}
+.card-badge.new{background:rgba(99,102,241,.2);color:var(--accent2)}
+.card-badge.learning{background:rgba(249,115,22,.2);color:var(--orange)}
+.card-badge.review{background:rgba(34,197,94,.2);color:var(--green)}
+.card-badge.mature{background:rgba(6,182,212,.2);color:var(--cyan)}
+.card-ease{font-size:11px;color:var(--text3)}
+.card-due{font-size:11px;color:var(--text3);margin-left:auto}
+.card-actions{position:absolute;top:8px;right:8px;display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.card-item:hover .card-actions{opacity:1}
+.card-actions button{padding:4px 6px;border-radius:4px;font-size:12px;background:var(--surface2)}
+.card-actions button:hover{background:var(--surface3)}
+
+/* Study Mode */
+.study-container{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:20px}
+.study-progress{display:flex;gap:16px;margin-bottom:24px;align-items:center}
+.study-stat{text-align:center}
+.study-stat .num{font-size:24px;font-weight:700}
+.study-stat .label{font-size:11px;color:var(--text2);margin-top:2px}
+.study-stat.new-stat .num{color:var(--accent2)}
+.study-stat.learn-stat .num{color:var(--orange)}
+.study-stat.review-stat .num{color:var(--green)}
+.study-bar{width:400px;height:6px;background:var(--surface2);border-radius:3px;margin-bottom:32px;overflow:hidden;display:flex}
+.study-bar div{height:100%;transition:width .3s}
+.study-bar .done{background:var(--green)}
+.study-bar .learning{background:var(--orange)}
+.study-bar .remaining{background:var(--surface3)}
+.flashcard-container{perspective:1000px;width:100%;max-width:560px;height:340px;cursor:pointer;margin-bottom:28px}
+.flashcard{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .5s ease}
+.flashcard.flipped{transform:rotateX(180deg)}
+.flashcard-face{position:absolute;inset:0;backface-visibility:hidden;background:var(--surface);border:2px solid var(--border);border-radius:var(--radius2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center}
+.flashcard-face.back{transform:rotateX(180deg)}
+.flashcard-face .face-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;position:absolute;top:16px;left:20px}
+.flashcard-face .face-content{font-size:20px;line-height:1.5;max-height:240px;overflow-y:auto;width:100%}
+.flashcard-face .face-content.small{font-size:16px}
+.flashcard-face .deck-label{position:absolute;bottom:14px;right:16px;font-size:11px;color:var(--text3)}
+.flashcard-hint{font-size:13px;color:var(--text3);margin-bottom:20px}
+.study-buttons{display:flex;gap:10px}
+.study-btn{padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;min-width:100px;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:2px}
+.study-btn .interval{font-size:11px;font-weight:400;opacity:.7}
+.study-btn:hover{transform:translateY(-2px)}
+.study-btn.again{background:rgba(239,68,68,.2);color:var(--red)}
+.study-btn.again:hover{background:rgba(239,68,68,.3)}
+.study-btn.hard{background:rgba(249,115,22,.2);color:var(--orange)}
+.study-btn.hard:hover{background:rgba(249,115,22,.3)}
+.study-btn.good{background:rgba(34,197,94,.2);color:var(--green)}
+.study-btn.good:hover{background:rgba(34,197,94,.3)}
+.study-btn.easy{background:rgba(6,182,212,.2);color:var(--cyan)}
+.study-btn.easy:hover{background:rgba(6,182,212,.3)}
+.study-done{text-align:center}
+.study-done h2{font-size:28px;margin-bottom:8px}
+.study-done p{color:var(--text2);margin-bottom:24px}
+.study-done .stats-row{display:flex;gap:20px;justify-content:center;margin-bottom:24px}
+.study-done .stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 24px;text-align:center}
+.study-done .stat-box .num{font-size:28px;font-weight:700}
+.study-done .stat-box .label{font-size:12px;color:var(--text2);margin-top:4px}
+.study-done button{padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;background:var(--accent);color:#fff}
+
+/* Dashboard */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.dash-card .num{font-size:28px;font-weight:700}
+.dash-card .label{font-size:12px;color:var(--text2);margin-top:4px}
+.dash-card.accent .num{color:var(--accent2)}
+.dash-card.green .num{color:var(--green)}
+.dash-card.orange .num{color:var(--orange)}
+.dash-card.cyan .num{color:var(--cyan)}
+.dash-card.red .num{color:var(--red)}
+.dash-card.purple .num{color:var(--purple)}
+.dash-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;margin-bottom:16px}
+.dash-section h3{font-size:15px;font-weight:600;margin-bottom:14px}
+.heatmap-grid{display:flex;gap:3px;flex-wrap:wrap}
+.heatmap-cell{width:14px;height:14px;border-radius:3px;background:var(--surface2)}
+.heatmap-cell.l1{background:rgba(99,102,241,.2)}
+.heatmap-cell.l2{background:rgba(99,102,241,.4)}
+.heatmap-cell.l3{background:rgba(99,102,241,.6)}
+.heatmap-cell.l4{background:rgba(99,102,241,.9)}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:120px;padding-top:10px}
+.bar-col{display:flex;flex-direction:column;align-items:center;flex:1;gap:4px}
+.bar-col .bar{width:100%;border-radius:4px 4px 0 0;min-height:2px;transition:height .3s}
+.bar-col .bar-label{font-size:10px;color:var(--text3)}
+.streak-display{display:flex;align-items:center;gap:12px}
+.streak-display .fire{font-size:36px}
+.streak-display .streak-num{font-size:42px;font-weight:800;color:var(--orange)}
+.streak-display .streak-label{font-size:14px;color:var(--text2)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);width:520px;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.modal-header h2{font-size:16px;font-weight:600}
+.modal-header button{padding:4px 8px;border-radius:6px;font-size:18px;color:var(--text2)}
+.modal-header button:hover{background:var(--surface2)}
+.modal-body{padding:20px}
+.modal-body label{display:block;font-size:13px;font-weight:500;margin-bottom:4px;color:var(--text2)}
+.modal-body .field{margin-bottom:14px}
+.modal-body input,.modal-body textarea,.modal-body select{width:100%}
+.modal-body textarea{min-height:80px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.modal-footer button{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:500}
+.modal-footer .cancel{background:var(--surface2)}
+.modal-footer .cancel:hover{background:var(--surface3)}
+.modal-footer .save{background:var(--accent);color:#fff}
+.modal-footer .save:hover{background:var(--accent2)}
+.modal-footer .danger{background:rgba(239,68,68,.2);color:var(--red)}
+.modal-footer .danger:hover{background:rgba(239,68,68,.3)}
+
+/* Tags */
+.tags-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.tag{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--surface3);color:var(--text2)}
+.tag-input-wrap{display:flex;flex-wrap:wrap;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;align-items:center}
+.tag-input-wrap input{border:none;background:none;padding:2px;flex:1;min-width:80px;font-size:13px}
+.tag-input-wrap .tag{cursor:pointer}
+.tag-input-wrap .tag:hover{background:var(--red);color:#fff}
+
+/* Empty state */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60%;text-align:center;color:var(--text2)}
+.empty .icon{font-size:48px;margin-bottom:12px}
+.empty h3{font-size:18px;color:var(--text);margin-bottom:6px}
+.empty p{font-size:14px;max-width:360px;margin-bottom:16px}
+.empty button{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:500;background:var(--accent);color:#fff}
+
+/* Misc */
+.sr2{display:flex;gap:12px}.sr2>*{flex:1}
+.emoji-pick{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.emoji-pick button{font-size:20px;padding:4px;border-radius:6px;transition:background .1s}
+.emoji-pick button:hover{background:var(--surface3)}
+.emoji-pick button.sel{background:var(--accent)}
+.color-dots{display:flex;gap:6px;margin-top:4px}
+.color-dot{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border .15s}
+.color-dot.sel{border-color:#fff}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 20px;font-size:14px;z-index:200;transform:translateY(80px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+.kbd{display:inline-block;padding:2px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:monospace;color:var(--text2)}
+.help-grid{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px}
+.maturity-bar{display:flex;gap:2px;margin-top:6px}
+.maturity-bar div{height:8px;border-radius:2px;transition:width .3s}
+.forecast-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.forecast-row:last-child{border:none}
+.forecast-day{width:80px;font-size:13px;color:var(--text2)}
+.forecast-num{font-size:14px;font-weight:600;width:40px;text-align:center}
+.forecast-bar-wrap{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.forecast-bar-wrap div{height:100%;border-radius:4px;background:var(--accent)}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-header"><h1><span>🧠</span> Flashcard Forge</h1></div>
+  <div class="sidebar-search"><input type="text" id="deckSearch" placeholder="Search decks… (/)" /></div>
+  <div class="deck-list" id="deckList"></div>
+  <div class="sidebar-footer">
+    <button class="primary" onclick="newDeck()">+ Deck</button>
+    <button onclick="importData()">Import</button>
+    <button onclick="exportData()">Export</button>
+  </div>
+</div>
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbarTitle"><span>📚</span> All Cards</div>
+    <div class="view-tabs">
+      <button class="view-tab active" data-view="cards" onclick="setView('cards')">Cards</button>
+      <button class="view-tab" data-view="study" onclick="startStudy()">Study</button>
+      <button class="view-tab" data-view="dashboard" onclick="setView('dashboard')">Dashboard</button>
+      <button class="view-tab" data-view="help" onclick="setView('help')">?</button>
+    </div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+<div class="modal-overlay" id="modalOverlay" onclick="event.target===this&&closeModal()">
+  <div class="modal" id="modal"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== DATA ==========
+const LS_KEY = 'flashcard-forge-data';
+const EMOJIS = ['🧠','📚','💡','🎯','📊','🔬','🏗️','🚀','💼','🎨','⚡','🔧','📝','🌍','🎓','💰','🔑','🧩','📈','🗂️'];
+const COLORS = ['#6366f1','#3b82f6','#22c55e','#f97316','#ef4444','#a855f7','#ec4899','#06b6d4'];
+
+let state = loadState();
+let currentDeck = null;
+let currentView = 'cards';
+let studySession = null;
+
+function defaultState(){
+  return { decks:[], cards:[], reviews:[], settings:{ newPerDay:20, reviewPerDay:100 }};
+}
+
+function loadState(){
+  try{ const d=JSON.parse(localStorage.getItem(LS_KEY)); if(d&&d.decks) return d; } catch(e){}
+  const s = defaultState();
+  seedDemoData(s);
+  return s;
+}
+
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+
+function seedDemoData(s){
+  const now = Date.now();
+  const day = 86400000;
+  
+  const decks = [
+    { id:uid(), name:'PM Frameworks', emoji:'🎯', color:'#6366f1', created:now-30*day, desc:'Core product management frameworks for interviews' },
+    { id:uid(), name:'System Design', emoji:'🏗️', color:'#3b82f6', created:now-25*day, desc:'System design patterns and concepts' },
+    { id:uid(), name:'Metrics & Analytics', emoji:'📊', color:'#22c55e', created:now-20*day, desc:'Key metrics, formulas, and analytical frameworks' },
+    { id:uid(), name:'Behavioral Interview', emoji:'💼', color:'#f97316', created:now-15*day, desc:'STAR stories and behavioral question prep' },
+    { id:uid(), name:'Growth & Strategy', emoji:'🚀', color:'#a855f7', created:now-10*day, desc:'Growth loops, go-to-market, competitive strategy' },
+  ];
+  s.decks = decks;
+
+  const cardData = [
+    // PM Frameworks
+    { d:0, q:'What is the RICE prioritization framework?', a:'<b>R</b>each × <b>I</b>mpact × <b>C</b>onfidence ÷ <b>E</b>ffort\n\nReach: # users affected per quarter\nImpact: 0.25 (minimal) to 3 (massive)\nConfidence: 50-100%\nEffort: person-months\n\nHigher score = higher priority', tags:['prioritization','frameworks'], interval:7, ease:2.6, reps:5 },
+    { d:0, q:'Explain the Kano Model', a:'Categorizes features by customer satisfaction:\n\n1. <b>Must-be</b> (Basic): Expected, absence causes dissatisfaction\n2. <b>One-dimensional</b> (Performance): More is better, linear satisfaction\n3. <b>Attractive</b> (Delight): Unexpected, creates wow\n4. <b>Indifferent</b>: No impact on satisfaction\n5. <b>Reverse</b>: Causes dissatisfaction\n\nUse surveys with functional/dysfunctional questions.', tags:['frameworks','customer'], interval:3, ease:2.5, reps:3 },
+    { d:0, q:'What is Jobs-to-be-Done (JTBD)?', a:'Framework focusing on the "job" a customer hires a product to do.\n\n<b>Formula:</b> When [situation], I want to [motivation], so I can [expected outcome].\n\n<b>Key insight:</b> People don\'t buy products, they hire solutions.\n\nExample: People don\'t buy a drill — they buy a hole in the wall.', tags:['frameworks','customer'], interval:14, ease:2.7, reps:8 },
+    { d:0, q:'Describe the North Star Metric framework', a:'Single metric that captures the core value your product delivers to customers.\n\n<b>Criteria:</b>\n• Measures value delivered (not revenue)\n• Leading indicator of growth\n• Understood by everyone\n• Actionable\n\n<b>Examples:</b>\n• Airbnb: Nights booked\n• Slack: Messages sent\n• UTMStamp: Signature clicks tracked', tags:['metrics','frameworks'], interval:1, ease:2.3, reps:1 },
+    { d:0, q:'What is the ICE scoring framework?', a:'<b>I</b>mpact × <b>C</b>onfidence × <b>E</b>ase\n\nEach scored 1-10, averaged.\n\nSimpler than RICE. Good for growth experiments.\n\nICE > 7: Do it now\nICE 4-7: Consider\nICE < 4: Deprioritize', tags:['prioritization','growth'], interval:0, ease:2.5, reps:0 },
+    { d:0, q:'Explain the Opportunity Solution Tree', a:'Framework by Teresa Torres for continuous discovery.\n\n<b>Structure (top-down):</b>\n1. Desired Outcome (business goal)\n2. Opportunities (customer needs/pain points)\n3. Solutions (ideas per opportunity)\n4. Experiments (tests per solution)\n\nKey: Map multiple opportunities before jumping to solutions.', tags:['discovery','frameworks'], interval:0, ease:2.5, reps:0 },
+
+    // System Design
+    { d:1, q:'What is database sharding?', a:'Horizontal partitioning of data across multiple database instances.\n\n<b>Types:</b>\n• Range-based: By ID range\n• Hash-based: Hash(key) % N shards\n• Directory-based: Lookup table\n\n<b>Pros:</b> Horizontal scaling, less data per node\n<b>Cons:</b> Complex joins, rebalancing, hot shards\n\nUse when single DB can\'t handle load.', tags:['databases','scaling'], interval:5, ease:2.5, reps:4 },
+    { d:1, q:'CAP Theorem explained', a:'Distributed systems can guarantee at most 2 of 3:\n\n<b>C</b>onsistency: Every read gets the most recent write\n<b>A</b>vailability: Every request gets a response\n<b>P</b>artition Tolerance: System works despite network splits\n\nP is non-negotiable → choose CP or AP.\n\nCP: Banking (consistency > availability)\nAP: Social media (availability > consistency)', tags:['distributed','theory'], interval:10, ease:2.6, reps:6 },
+    { d:1, q:'Rate limiting strategies', a:'<b>1. Token Bucket:</b> Tokens added at fixed rate, consumed per request. Allows bursts.\n\n<b>2. Leaky Bucket:</b> Requests queue, processed at fixed rate. Smooth output.\n\n<b>3. Fixed Window:</b> Counter per time window. Edge case: 2x at boundary.\n\n<b>4. Sliding Window Log:</b> Timestamp-based. Accurate but memory-heavy.\n\n<b>5. Sliding Window Counter:</b> Weighted previous + current window.', tags:['api','scaling'], interval:0, ease:2.5, reps:0 },
+    { d:1, q:'Event-driven architecture vs request-response', a:'<b>Request-Response:</b>\n• Synchronous, coupled\n• Client waits for response\n• Simple, predictable\n\n<b>Event-Driven:</b>\n• Asynchronous, decoupled\n• Publishers emit events, subscribers react\n• Better scalability, resilience\n• Harder to debug, eventual consistency\n\n<b>Use events for:</b> Notifications, analytics, cross-service communication\n<b>Use req-res for:</b> CRUD, user-facing APIs', tags:['architecture','patterns'], interval:2, ease:2.4, reps:2 },
+
+    // Metrics
+    { d:2, q:'How to calculate Customer Lifetime Value (LTV)?', a:'<b>Simple:</b> ARPU × Average Lifespan\n\n<b>Better:</b> ARPU × Gross Margin % ÷ Churn Rate\n\n<b>SaaS formula:</b>\nLTV = (ARPA × Gross Margin) ÷ Revenue Churn Rate\n\nExample:\n$50/mo × 80% margin ÷ 3% churn = $1,333 LTV\n\n<b>Rule of thumb:</b> LTV:CAC should be > 3:1', tags:['saas','unit-economics'], interval:8, ease:2.6, reps:5 },
+    { d:2, q:'What is the Sean Ellis PMF test?', a:'Survey: "How would you feel if you could no longer use [product]?"\n\n• Very disappointed\n• Somewhat disappointed\n• Not disappointed\n• N/A - no longer use\n\n<b>Benchmark:</b> ≥40% "very disappointed" = product-market fit\n\nSurvey users who: used core value 2+ times, used it recently (past 2 weeks).', tags:['pmf','growth'], interval:12, ease:2.7, reps:7 },
+    { d:2, q:'Explain cohort analysis', a:'Grouping users by shared characteristic (usually sign-up date) and tracking behavior over time.\n\n<b>Types:</b>\n• Acquisition cohorts: By signup week/month\n• Behavioral cohorts: By action taken\n\n<b>What it reveals:</b>\n• Retention curves per cohort\n• Whether product is improving over time\n• Impact of changes on new users\n\nBetter than vanity metrics because it shows trends, not averages.', tags:['analytics','retention'], interval:0, ease:2.5, reps:0 },
+    { d:2, q:'Key SaaS metrics to track', a:'<b>Growth:</b> MRR, ARR, MRR Growth Rate\n<b>Acquisition:</b> CAC, CAC Payback Period\n<b>Retention:</b> Logo Churn, Revenue Churn, Net Revenue Retention (NRR)\n<b>Unit Economics:</b> LTV, LTV:CAC ratio (>3x)\n<b>Engagement:</b> DAU/MAU ratio, Feature adoption\n<b>Efficiency:</b> Rule of 40 (Growth % + Profit % ≥ 40)\n<b>Pipeline:</b> Lead velocity rate, conversion rates\n\nNRR > 120% = expansion revenue exceeding churn = magic', tags:['saas','metrics'], interval:4, ease:2.5, reps:3 },
+
+    // Behavioral
+    { d:3, q:'STAR: Tell me about a time you dealt with ambiguity', a:'<b>Situation:</b> Joined ZYOD — no product team, no process, no documentation. Manufacturing company with zero digital infrastructure.\n\n<b>Task:</b> Build Manufacturing OS from scratch while learning garment manufacturing domain.\n\n<b>Action:</b>\n• Spent 2 weeks on factory floor observing\n• Identified QR-WMS as highest-impact first project\n• Built prototype in 3 days, tested with operators\n• Iterated based on floor feedback, not assumptions\n\n<b>Result:</b> QR-WMS unlocked $1.4M blocked working capital. Validated approach of embedded discovery over top-down planning.', tags:['behavioral','ambiguity'], interval:6, ease:2.5, reps:4 },
+    { d:3, q:'STAR: Describe a product failure and what you learned', a:'<b>Situation:</b> At Fortunekit, built Infew — a gamification marketing SaaS platform.\n\n<b>Task:</b> Create a self-serve SaaS for marketing gamification.\n\n<b>Action:</b>\n• Built full product with team\n• Launched to market\n• COVID hit, marketing budgets froze\n\n<b>Result:</b> Product failed. Key learnings:\n1. Timing matters as much as execution\n2. B2B marketing tools die first in budget cuts\n3. Led to CTO-as-a-Cofounder model = better risk-adjusted\n\nThis taught me to validate market timing, not just product-market fit.', tags:['behavioral','failure'], interval:0, ease:2.5, reps:0 },
+    { d:3, q:'STAR: How did you influence without authority?', a:'<b>Situation:</b> At GoMechanic, WhatsApp bot was broken — marketing team couldn\'t test campaigns without engineers.\n\n<b>Task:</b> Fix customer experience and give marketing autonomy, despite no direct authority over engineering.\n\n<b>Action:</b>\n• Built business case: X% messages hitting silence = lost revenue\n• Created prototype panel using Karix API\n• Set up separate testing surface (no prod risk argument won eng over)\n• Showed marketing team the panel — they became advocates\n\n<b>Result:</b> Shipped agent-based bot + self-serve panel. Marketing team could test campaigns independently.', tags:['behavioral','influence'], interval:3, ease:2.4, reps:2 },
+
+    // Growth
+    { d:4, q:'What is the AARRR (Pirate Metrics) framework?', a:'<b>A</b>cquisition: How do users find you?\n<b>A</b>ctivation: Do they have a great first experience?\n<b>R</b>etention: Do they come back?\n<b>R</b>evenue: Do they pay?\n<b>R</b>eferral: Do they tell others?\n\nOptimize in this order. Fix retention before acquisition (leaky bucket problem).\n\nEach stage has specific metrics:\n• Acquisition: Traffic, signups\n• Activation: Onboarding completion, aha moment\n• Retention: D1/D7/D30, DAU/MAU\n• Revenue: ARPU, LTV, conversion rate\n• Referral: K-factor, NPS', tags:['growth','frameworks'], interval:15, ease:2.8, reps:9 },
+    { d:4, q:'Explain viral loops vs growth loops', a:'<b>Viral Loop:</b>\nUser → Invites → New User → Invites → ...\nK-factor = invites × conversion rate\nK > 1 = exponential growth\n\n<b>Growth Loop:</b>\nBroader concept. Output of one cycle feeds input of next.\n\nTypes:\n• Viral: User invites user\n• Content: User creates content → SEO → new users\n• Paid: Revenue → ads → users → revenue\n• Data: More users → better product → more users\n\nKey: Growth loops are sustainable systems, not one-time hacks.', tags:['growth','viral'], interval:0, ease:2.5, reps:0 },
+    { d:4, q:'Product-Led Growth (PLG) principles', a:'Users experience value before paying.\n\n<b>Core principles:</b>\n1. Free entry point (freemium/trial)\n2. Self-serve onboarding (no sales needed)\n3. Aha moment fast (time-to-value matters)\n4. Viral features built-in (sharing, collaboration)\n5. Usage-based expansion revenue\n\n<b>Examples:</b> Slack, Notion, Figma, Zoom\n\n<b>Key metrics:</b>\n• Time-to-value\n• PQL (Product Qualified Lead) rate\n• Free-to-paid conversion\n• Expansion revenue %\n\nUTMStamp follows PLG: free forever plan, value visible immediately.', tags:['growth','strategy'], interval:7, ease:2.6, reps:5 },
+    { d:4, q:'What is the "Aha Moment" and how to find it?', a:'The moment a user first realizes the value of your product.\n\n<b>Finding it:</b>\n1. Compare retained vs churned user behavior\n2. Identify actions retained users took early\n3. Test: Does pushing users to that action improve retention?\n\n<b>Famous examples:</b>\n• Facebook: 7 friends in 10 days\n• Slack: 2000 messages sent by team\n• Dropbox: File placed in folder\n\n<b>For UTMStamp:</b> Probably "sees first click tracked on their signature"', tags:['growth','activation'], interval:2, ease:2.4, reps:1 },
+  ];
+
+  s.cards = cardData.map((c,i) => {
+    const due = c.interval > 0 ? now - day * Math.floor(Math.random()*3) : now;
+    return {
+      id: uid(),
+      deckId: decks[c.d].id,
+      front: c.q,
+      back: c.a,
+      tags: c.tags || [],
+      created: now - (30-i)*day,
+      interval: c.interval,
+      ease: c.ease,
+      reps: c.reps,
+      lapses: Math.floor(Math.random()*2),
+      due: due,
+      lastReview: c.reps > 0 ? now - c.interval * day : null,
+    };
+  });
+
+  // Generate some review history
+  s.reviews = [];
+  for(let d = 30; d >= 0; d--){
+    const count = Math.floor(Math.random()*8)+2;
+    for(let j=0; j<count; j++){
+      s.reviews.push({
+        cardId: s.cards[Math.floor(Math.random()*s.cards.length)].id,
+        date: now - d*day + Math.floor(Math.random()*day),
+        rating: [1,2,3,3,3,4][Math.floor(Math.random()*6)],
+        ease: 2.5,
+        interval: Math.floor(Math.random()*14)+1
+      });
+    }
+  }
+}
+
+// ========== SM-2 ALGORITHM ==========
+function sm2(card, rating){
+  // rating: 1=Again, 2=Hard, 3=Good, 4=Easy
+  let { interval, ease, reps, lapses } = card;
+  const now = Date.now();
+
+  if(rating === 1){ // Again
+    reps = 0;
+    interval = 1/1440; // 1 minute (in days, for learning)
+    lapses++;
+    ease = Math.max(1.3, ease - 0.2);
+  } else if(rating === 2){ // Hard
+    if(reps === 0){
+      interval = 1/96; // 15 min
+    } else if(reps === 1){
+      interval = 1;
+    } else {
+      interval = Math.max(1, interval * 1.2);
+    }
+    ease = Math.max(1.3, ease - 0.15);
+    reps++;
+  } else if(rating === 3){ // Good
+    if(reps === 0){
+      interval = 1/96; // 15 min
+    } else if(reps === 1){
+      interval = 1;
+    } else if(reps === 2){
+      interval = 3;
+    } else {
+      interval = interval * ease;
+    }
+    reps++;
+  } else if(rating === 4){ // Easy
+    if(reps === 0){
+      interval = 1;
+    } else if(reps === 1){
+      interval = 4;
+    } else {
+      interval = interval * ease * 1.3;
+    }
+    ease += 0.15;
+    reps++;
+  }
+
+  // Fuzz factor for intervals > 2 days
+  if(interval > 2){
+    interval = interval * (0.95 + Math.random() * 0.1);
+  }
+
+  card.interval = Math.round(interval * 100) / 100;
+  card.ease = Math.round(ease * 100) / 100;
+  card.reps = reps;
+  card.lapses = lapses;
+  card.due = now + interval * 86400000;
+  card.lastReview = now;
+
+  // Log review
+  state.reviews.push({ cardId:card.id, date:now, rating, ease:card.ease, interval:card.interval });
+  save();
+  return card;
+}
+
+function getIntervalText(card, rating){
+  const c = {...card};
+  // Simulate
+  if(rating === 1) return '1m';
+  if(rating === 2){
+    if(c.reps===0) return '15m';
+    if(c.reps===1) return '1d';
+    return Math.max(1,Math.round(c.interval*1.2))+'d';
+  }
+  if(rating === 3){
+    if(c.reps===0) return '15m';
+    if(c.reps===1) return '1d';
+    if(c.reps===2) return '3d';
+    return Math.round(c.interval*c.ease)+'d';
+  }
+  if(rating === 4){
+    if(c.reps===0) return '1d';
+    if(c.reps===1) return '4d';
+    return Math.round(c.interval*c.ease*1.3)+'d';
+  }
+}
+
+function cardMaturity(card){
+  if(card.reps===0) return 'new';
+  if(card.interval < 1) return 'learning';
+  if(card.interval < 21) return 'review';
+  return 'mature';
+}
+
+// ========== RENDERING ==========
+function render(){
+  renderSidebar();
+  renderContent();
+  updateTabs();
+}
+
+function renderSidebar(){
+  const search = document.getElementById('deckSearch').value.toLowerCase();
+  const list = document.getElementById('deckList');
+  const now = Date.now();
+  const filtered = state.decks.filter(d => d.name.toLowerCase().includes(search));
+  
+  list.innerHTML = `<div class="deck-item ${!currentDeck?'active':''}" onclick="selectDeck(null)">
+    <span class="deck-emoji">📚</span>
+    <div class="deck-info"><div class="deck-name">All Cards</div>
+    <div class="deck-stats">${state.cards.length} cards</div></div>
+    ${getDueCount(null)>0?`<span class="deck-due">${getDueCount(null)}</span>`:''}
+  </div>` + filtered.map(d => {
+    const cards = state.cards.filter(c=>c.deckId===d.id);
+    const due = getDueCount(d.id);
+    return `<div class="deck-item ${currentDeck===d.id?'active':''}" onclick="selectDeck('${d.id}')">
+      <span class="deck-emoji">${d.emoji||'📚'}</span>
+      <div class="deck-info"><div class="deck-name">${esc(d.name)}</div>
+      <div class="deck-stats">${cards.length} cards</div></div>
+      ${due>0?`<span class="deck-due">${due}</span>`:''}
+    </div>`;
+  }).join('');
+}
+
+function getDueCount(deckId){
+  const now = Date.now();
+  return getStudyCards(deckId).length;
+}
+
+function getStudyCards(deckId){
+  const now = Date.now();
+  return state.cards.filter(c => {
+    if(deckId && c.deckId !== deckId) return false;
+    return c.reps === 0 || c.due <= now;
+  });
+}
+
+function getDeckCards(){
+  return currentDeck ? state.cards.filter(c=>c.deckId===currentDeck) : state.cards;
+}
+
+function renderContent(){
+  const el = document.getElementById('content');
+  if(currentView==='cards') renderCards(el);
+  else if(currentView==='study') renderStudy(el);
+  else if(currentView==='dashboard') renderDashboard(el);
+  else if(currentView==='help') renderHelp(el);
+}
+
+function renderCards(el){
+  const cards = getDeckCards();
+  const deck = state.decks.find(d=>d.id===currentDeck);
+  document.getElementById('topbarTitle').innerHTML = deck 
+    ? `<span>${deck.emoji}</span> ${esc(deck.name)}` 
+    : '<span>📚</span> All Cards';
+
+  if(!cards.length){
+    el.innerHTML = `<div class="empty"><div class="icon">🃏</div><h3>No cards yet</h3>
+      <p>${currentDeck?'Add cards to this deck to start studying':'Create a deck and add cards to begin'}</p>
+      <button onclick="${currentDeck?'newCard()':'newDeck()'}">+ ${currentDeck?'Add Card':'New Deck'}</button></div>`;
+    return;
+  }
+
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div style="font-size:14px;color:var(--text2)">${cards.length} cards${getDueCount(currentDeck)>0?` · <span style="color:var(--orange)">${getDueCount(currentDeck)} due</span>`:''}</div>
+    <button style="padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;background:var(--accent);color:#fff" onclick="newCard()">+ Add Card</button>
+  </div>
+  <div class="cards-grid">${cards.map(c => {
+    const mat = cardMaturity(c);
+    const deck = state.decks.find(d=>d.id===c.deckId);
+    const isDue = c.reps===0 || c.due <= Date.now();
+    return `<div class="card-item" onclick="editCard('${c.id}')">
+      <div class="card-actions">
+        <button onclick="event.stopPropagation();deleteCard('${c.id}')" title="Delete">🗑️</button>
+      </div>
+      <div class="card-front">${esc(c.front)}</div>
+      <div class="card-back-preview">${esc(stripHtml(c.back))}</div>
+      <div class="card-meta">
+        <span class="card-badge ${mat}">${mat}</span>
+        ${c.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}
+        <span class="card-ease">EF ${c.ease.toFixed(1)}</span>
+        <span class="card-due">${isDue?'<span style="color:var(--orange)">Due now</span>':relTime(c.due)}</span>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderStudy(el){
+  if(!studySession){
+    const cards = getStudyCards(currentDeck);
+    if(!cards.length){
+      el.innerHTML = `<div class="study-done"><h2>🎉 All caught up!</h2>
+        <p>No cards due for review right now.</p>
+        <button onclick="setView('cards')">Browse Cards</button></div>`;
+      return;
+    }
+    studySession = {
+      queue: shuffle([...cards]),
+      current: 0,
+      flipped: false,
+      results: { again:0, hard:0, good:0, easy:0 },
+      startTime: Date.now(),
+      total: cards.length
+    };
+  }
+
+  const ss = studySession;
+  if(ss.current >= ss.queue.length){
+    const elapsed = Math.round((Date.now()-ss.startTime)/1000);
+    const mins = Math.floor(elapsed/60);
+    const secs = elapsed%60;
+    const total = ss.results.again+ss.results.hard+ss.results.good+ss.results.easy;
+    el.innerHTML = `<div class="study-done">
+      <h2>🎉 Session Complete!</h2>
+      <p>You reviewed ${total} cards in ${mins}m ${secs}s</p>
+      <div class="stats-row">
+        <div class="stat-box"><div class="num" style="color:var(--red)">${ss.results.again}</div><div class="label">Again</div></div>
+        <div class="stat-box"><div class="num" style="color:var(--orange)">${ss.results.hard}</div><div class="label">Hard</div></div>
+        <div class="stat-box"><div class="num" style="color:var(--green)">${ss.results.good}</div><div class="label">Good</div></div>
+        <div class="stat-box"><div class="num" style="color:var(--cyan)">${ss.results.easy}</div><div class="label">Easy</div></div>
+      </div>
+      <button onclick="studySession=null;setView('cards')">Done</button>
+    </div>`;
+    return;
+  }
+
+  const card = ss.queue[ss.current];
+  const deck = state.decks.find(d=>d.id===card.deckId);
+  const remaining = ss.queue.length - ss.current;
+  const done = ss.current;
+  const pct = (done/ss.queue.length)*100;
+
+  el.innerHTML = `<div class="study-container">
+    <div class="study-progress">
+      <div class="study-stat new-stat"><div class="num">${remaining}</div><div class="label">Remaining</div></div>
+      <div class="study-stat learn-stat"><div class="num">${ss.results.again+ss.results.hard}</div><div class="label">Learning</div></div>
+      <div class="study-stat review-stat"><div class="num">${ss.results.good+ss.results.easy}</div><div class="label">Reviewed</div></div>
+    </div>
+    <div class="study-bar">
+      <div class="done" style="width:${(ss.results.good+ss.results.easy)/ss.queue.length*100}%"></div>
+      <div class="learning" style="width:${(ss.results.again+ss.results.hard)/ss.queue.length*100}%"></div>
+      <div class="remaining" style="width:${remaining/ss.queue.length*100}%"></div>
+    </div>
+    <div class="flashcard-container" onclick="flipCard()">
+      <div class="flashcard ${ss.flipped?'flipped':''}">
+        <div class="flashcard-face front">
+          <div class="face-label">Question</div>
+          <div class="face-content ${card.front.length>120?'small':''}">${formatText(card.front)}</div>
+          <div class="deck-label">${deck?deck.emoji+' '+esc(deck.name):''}</div>
+        </div>
+        <div class="flashcard-face back">
+          <div class="face-label">Answer</div>
+          <div class="face-content small">${formatText(card.back)}</div>
+          <div class="deck-label">${deck?deck.emoji+' '+esc(deck.name):''}</div>
+        </div>
+      </div>
+    </div>
+    ${ss.flipped ? `
+      <div class="study-buttons">
+        <button class="study-btn again" onclick="rateCard(1)"><span>Again</span><span class="interval">${getIntervalText(card,1)}</span></button>
+        <button class="study-btn hard" onclick="rateCard(2)"><span>Hard</span><span class="interval">${getIntervalText(card,2)}</span></button>
+        <button class="study-btn good" onclick="rateCard(3)"><span>Good</span><span class="interval">${getIntervalText(card,3)}</span></button>
+        <button class="study-btn easy" onclick="rateCard(4)"><span>Easy</span><span class="interval">${getIntervalText(card,4)}</span></button>
+      </div>
+    ` : `<div class="flashcard-hint">Click card or press Space to reveal answer</div>`}
+  </div>`;
+}
+
+function renderDashboard(el){
+  const cards = getDeckCards();
+  const now = Date.now();
+  const day = 86400000;
+  const deck = state.decks.find(d=>d.id===currentDeck);
+
+  // Stats
+  const newC = cards.filter(c=>c.reps===0).length;
+  const learning = cards.filter(c=>c.reps>0&&c.interval<1).length;
+  const review = cards.filter(c=>c.reps>0&&c.interval>=1&&c.interval<21).length;
+  const mature = cards.filter(c=>c.interval>=21).length;
+  const due = getStudyCards(currentDeck).length;
+  const avgEase = cards.length ? (cards.reduce((s,c)=>s+c.ease,0)/cards.length).toFixed(2) : '0';
+
+  // Streak
+  let streak = 0;
+  for(let d=0;d<365;d++){
+    const dayStart = new Date(now-d*day); dayStart.setHours(0,0,0,0);
+    const dayEnd = dayStart.getTime()+day;
+    const hasReview = state.reviews.some(r=> r.date>=dayStart.getTime() && r.date<dayEnd);
+    if(hasReview) streak++; else break;
+  }
+
+  // Reviews per day (last 14 days)
+  const dailyReviews = [];
+  for(let d=13;d>=0;d--){
+    const dayStart = new Date(now-d*day); dayStart.setHours(0,0,0,0);
+    const dayEnd = dayStart.getTime()+day;
+    const count = state.reviews.filter(r=>r.date>=dayStart.getTime()&&r.date<dayEnd).length;
+    const label = new Date(dayStart).toLocaleDateString('en',{weekday:'short'});
+    dailyReviews.push({label,count});
+  }
+  const maxReviews = Math.max(...dailyReviews.map(d=>d.count),1);
+
+  // Heatmap (90 days)
+  const heatmapData = [];
+  for(let d=89;d>=0;d--){
+    const dayStart = new Date(now-d*day); dayStart.setHours(0,0,0,0);
+    const dayEnd = dayStart.getTime()+day;
+    const count = state.reviews.filter(r=>r.date>=dayStart.getTime()&&r.date<dayEnd).length;
+    heatmapData.push(count);
+  }
+  const maxHeat = Math.max(...heatmapData,1);
+
+  // Forecast (next 7 days)
+  const forecast = [];
+  for(let d=0;d<7;d++){
+    const dayStart = new Date(now+d*day); dayStart.setHours(0,0,0,0);
+    const dayEnd = dayStart.getTime()+day;
+    const count = cards.filter(c=>c.due>=dayStart.getTime()&&c.due<dayEnd).length + (d===0?newC:0);
+    const label = d===0?'Today':d===1?'Tomorrow':new Date(dayStart).toLocaleDateString('en',{weekday:'short',month:'short',day:'numeric'});
+    forecast.push({label,count});
+  }
+  const maxForecast = Math.max(...forecast.map(f=>f.count),1);
+
+  el.innerHTML = `
+    <div class="dash-grid">
+      <div class="dash-card accent"><div class="num">${cards.length}</div><div class="label">Total Cards</div></div>
+      <div class="dash-card orange"><div class="num">${due}</div><div class="label">Due Now</div></div>
+      <div class="dash-card green"><div class="num">${mature}</div><div class="label">Mature</div></div>
+      <div class="dash-card cyan"><div class="num">${avgEase}</div><div class="label">Avg Ease</div></div>
+      <div class="dash-card purple"><div class="num">${state.reviews.length}</div><div class="label">Total Reviews</div></div>
+      <div class="dash-card red"><div class="num">${streak}🔥</div><div class="label">Day Streak</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="dash-section">
+        <h3>📊 Card Maturity</h3>
+        <div class="maturity-bar">
+          <div style="width:${cards.length?(newC/cards.length*100):25}%;background:var(--accent2)" title="New: ${newC}"></div>
+          <div style="width:${cards.length?(learning/cards.length*100):25}%;background:var(--orange)" title="Learning: ${learning}"></div>
+          <div style="width:${cards.length?(review/cards.length*100):25}%;background:var(--green)" title="Review: ${review}"></div>
+          <div style="width:${cards.length?(mature/cards.length*100):25}%;background:var(--cyan)" title="Mature: ${mature}"></div>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--text2)">
+          <span style="color:var(--accent2)">● New ${newC}</span>
+          <span style="color:var(--orange)">● Learning ${learning}</span>
+          <span style="color:var(--green)">● Review ${review}</span>
+          <span style="color:var(--cyan)">● Mature ${mature}</span>
+        </div>
+      </div>
+
+      <div class="dash-section">
+        <h3>🔮 7-Day Forecast</h3>
+        ${forecast.map(f=>`<div class="forecast-row">
+          <div class="forecast-day">${f.label}</div>
+          <div class="forecast-num">${f.count}</div>
+          <div class="forecast-bar-wrap"><div style="width:${f.count/maxForecast*100}%"></div></div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="dash-section" style="margin-top:16px">
+      <h3>📅 Review Activity (14 days)</h3>
+      <div class="bar-chart">
+        ${dailyReviews.map(d=>`<div class="bar-col">
+          <div class="bar" style="height:${d.count/maxReviews*100}%;background:var(--accent)"></div>
+          <div class="bar-label">${d.label}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="dash-section" style="margin-top:16px">
+      <h3>🌱 90-Day Heatmap</h3>
+      <div class="heatmap-grid">
+        ${heatmapData.map(c=>{
+          const level = c===0?'':'l'+(c<=maxHeat*.25?1:c<=maxHeat*.5?2:c<=maxHeat*.75?3:4);
+          return `<div class="heatmap-cell ${level}" title="${c} reviews"></div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:8px;justify-content:flex-end;font-size:11px;color:var(--text3)">
+        Less <div class="heatmap-cell"></div><div class="heatmap-cell l1"></div><div class="heatmap-cell l2"></div><div class="heatmap-cell l3"></div><div class="heatmap-cell l4"></div> More
+      </div>
+    </div>
+
+    ${!currentDeck?`<div class="dash-section" style="margin-top:16px">
+      <h3>📚 Decks Overview</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+        ${state.decks.map(d=>{
+          const dc = state.cards.filter(c=>c.deckId===d.id);
+          const dd = getStudyCards(d.id).length;
+          return `<div style="background:var(--surface2);border-radius:8px;padding:14px;cursor:pointer" onclick="selectDeck('${d.id}')">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="font-size:20px">${d.emoji}</span>
+              <span style="font-weight:600;font-size:14px">${esc(d.name)}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text2)">${dc.length} cards · ${dd} due</div>
+            <div class="maturity-bar" style="margin-top:8px">
+              <div style="width:${dc.length?(dc.filter(c=>c.reps===0).length/dc.length*100):0}%;background:var(--accent2)"></div>
+              <div style="width:${dc.length?(dc.filter(c=>c.reps>0&&c.interval<1).length/dc.length*100):0}%;background:var(--orange)"></div>
+              <div style="width:${dc.length?(dc.filter(c=>c.reps>0&&c.interval>=1&&c.interval<21).length/dc.length*100):0}%;background:var(--green)"></div>
+              <div style="width:${dc.length?(dc.filter(c=>c.interval>=21).length/dc.length*100):0}%;background:var(--cyan)"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`:''}
+  `;
+}
+
+function renderHelp(el){
+  el.innerHTML = `<div style="max-width:640px;margin:0 auto">
+    <h2 style="font-size:22px;margin-bottom:20px">⌨️ Keyboard Shortcuts</h2>
+    <div class="help-grid">
+      <span class="kbd">N</span><span>New card</span>
+      <span class="kbd">D</span><span>New deck</span>
+      <span class="kbd">/</span><span>Search decks</span>
+      <span class="kbd">S</span><span>Start study</span>
+      <span class="kbd">Space</span><span>Flip card (study mode)</span>
+      <span class="kbd">1</span><span>Again (study)</span>
+      <span class="kbd">2</span><span>Hard (study)</span>
+      <span class="kbd">3</span><span>Good (study)</span>
+      <span class="kbd">4</span><span>Easy (study)</span>
+      <span class="kbd">Esc</span><span>Close modal / Back to cards</span>
+      <span class="kbd">E</span><span>Export data</span>
+      <span class="kbd">I</span><span>Import data</span>
+      <span class="kbd">?</span><span>This help</span>
+    </div>
+    <h2 style="font-size:22px;margin:28px 0 16px">🧠 How Spaced Repetition Works</h2>
+    <div style="color:var(--text2);line-height:1.7;font-size:14px">
+      <p>Flashcard Forge uses the <b style="color:var(--text)">SM-2 algorithm</b> (SuperMemo 2) to schedule your reviews at optimal intervals.</p>
+      <p style="margin-top:12px"><b style="color:var(--text)">The idea:</b> Review cards just before you'd forget them. Each successful review increases the interval. Failed reviews reset it.</p>
+      <p style="margin-top:12px"><b style="color:var(--text)">Rating buttons:</b></p>
+      <ul style="margin-top:8px;padding-left:20px">
+        <li><b style="color:var(--red)">Again</b> — Forgot it. Card resets to learning phase.</li>
+        <li><b style="color:var(--orange)">Hard</b> — Struggled. Shorter interval, slightly lower ease.</li>
+        <li><b style="color:var(--green)">Good</b> — Remembered with effort. Normal interval increase.</li>
+        <li><b style="color:var(--cyan)">Easy</b> — No effort at all. Longer interval, ease boost.</li>
+      </ul>
+      <p style="margin-top:12px"><b style="color:var(--text)">Card stages:</b></p>
+      <ul style="margin-top:8px;padding-left:20px">
+        <li><span style="color:var(--accent2)">New</span> — Never reviewed</li>
+        <li><span style="color:var(--orange)">Learning</span> — Short intervals (minutes/hours)</li>
+        <li><span style="color:var(--green)">Review</span> — Intervals of 1-20 days</li>
+        <li><span style="color:var(--cyan)">Mature</span> — Intervals of 21+ days</li>
+      </ul>
+      <p style="margin-top:12px"><b style="color:var(--text)">Ease Factor (EF):</b> Each card has an ease factor (default 2.5). Higher = easier for you. Affects how fast intervals grow. Range: 1.3 to 3.0+.</p>
+    </div>
+  </div>`;
+}
+
+// ========== ACTIONS ==========
+function selectDeck(id){
+  currentDeck = id;
+  if(currentView === 'study') { studySession = null; }
+  render();
+}
+
+function setView(v){
+  currentView = v;
+  if(v !== 'study') studySession = null;
+  render();
+}
+
+function updateTabs(){
+  document.querySelectorAll('.view-tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.view === currentView);
+  });
+}
+
+function startStudy(){
+  currentView = 'study';
+  studySession = null;
+  render();
+}
+
+function flipCard(){
+  if(!studySession || studySession.flipped) return;
+  studySession.flipped = true;
+  renderContent();
+}
+
+function rateCard(rating){
+  if(!studySession) return;
+  const card = studySession.queue[studySession.current];
+  sm2(card, rating);
+  const key = rating===1?'again':rating===2?'hard':rating===3?'good':'easy';
+  studySession.results[key]++;
+  studySession.current++;
+  studySession.flipped = false;
+  renderContent();
+}
+
+function newDeck(){
+  showModal('New Deck', `
+    <div class="field"><label>Emoji</label>
+      <div class="emoji-pick">${EMOJIS.map((e,i)=>`<button onclick="document.getElementById('deckEmoji').value='${e}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('sel'));this.classList.add('sel')"${i===0?' class="sel"':''}>${e}</button>`).join('')}</div>
+      <input type="hidden" id="deckEmoji" value="${EMOJIS[0]}" />
+    </div>
+    <div class="field"><label>Name</label><input id="deckName" placeholder="e.g., PM Frameworks" autofocus /></div>
+    <div class="field"><label>Color</label>
+      <div class="color-dots">${COLORS.map((c,i)=>`<div class="color-dot ${i===0?'sel':''}" style="background:${c}" onclick="document.getElementById('deckColor').value='${c}';this.parentElement.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('sel'));this.classList.add('sel')"></div>`).join('')}</div>
+      <input type="hidden" id="deckColor" value="${COLORS[0]}" />
+    </div>
+    <div class="field"><label>Description (optional)</label><textarea id="deckDesc" rows="2" placeholder="What's this deck about?"></textarea></div>
+  `, [
+    { label:'Cancel', cls:'cancel', action:'closeModal()' },
+    { label:'Create Deck', cls:'save', action:'saveDeck()' }
+  ]);
+  setTimeout(()=>document.getElementById('deckName')?.focus(),100);
+}
+
+function saveDeck(){
+  const name = document.getElementById('deckName').value.trim();
+  if(!name){ toast('Name required'); return; }
+  state.decks.push({
+    id: uid(), name, emoji: document.getElementById('deckEmoji').value,
+    color: document.getElementById('deckColor').value,
+    desc: document.getElementById('deckDesc').value.trim(),
+    created: Date.now()
+  });
+  save(); closeModal(); render();
+  toast('Deck created ✨');
+}
+
+function editDeck(id){
+  const d = state.decks.find(x=>x.id===id);
+  if(!d) return;
+  showModal('Edit Deck', `
+    <div class="field"><label>Emoji</label>
+      <div class="emoji-pick">${EMOJIS.map(e=>`<button onclick="document.getElementById('deckEmoji').value='${e}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('sel'));this.classList.add('sel')" ${e===d.emoji?'class="sel"':''}>${e}</button>`).join('')}</div>
+      <input type="hidden" id="deckEmoji" value="${d.emoji}" />
+    </div>
+    <div class="field"><label>Name</label><input id="deckName" value="${esc(d.name)}" /></div>
+    <div class="field"><label>Description</label><textarea id="deckDesc" rows="2">${esc(d.desc||'')}</textarea></div>
+  `, [
+    { label:'Delete Deck', cls:'danger', action:`deleteDeck('${id}')` },
+    { label:'Cancel', cls:'cancel', action:'closeModal()' },
+    { label:'Save', cls:'save', action:`updateDeck('${id}')` }
+  ]);
+}
+
+function updateDeck(id){
+  const d = state.decks.find(x=>x.id===id);
+  if(!d) return;
+  d.name = document.getElementById('deckName').value.trim() || d.name;
+  d.emoji = document.getElementById('deckEmoji').value;
+  d.desc = document.getElementById('deckDesc').value.trim();
+  save(); closeModal(); render();
+  toast('Deck updated');
+}
+
+function deleteDeck(id){
+  if(!confirm('Delete this deck and all its cards?')) return;
+  state.cards = state.cards.filter(c=>c.deckId!==id);
+  state.decks = state.decks.filter(d=>d.id!==id);
+  if(currentDeck===id) currentDeck=null;
+  save(); closeModal(); render();
+  toast('Deck deleted');
+}
+
+function newCard(){
+  const deckId = currentDeck || (state.decks[0]?.id);
+  if(!state.decks.length){ toast('Create a deck first'); return; }
+  
+  showModal('New Card', `
+    <div class="field"><label>Deck</label>
+      <select id="cardDeck">${state.decks.map(d=>`<option value="${d.id}" ${d.id===deckId?'selected':''}>${d.emoji} ${esc(d.name)}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Front (Question)</label><textarea id="cardFront" rows="3" placeholder="What do you want to remember?" autofocus></textarea></div>
+    <div class="field"><label>Back (Answer)</label><textarea id="cardBack" rows="5" placeholder="The answer. Use &lt;b&gt; for bold."></textarea></div>
+    <div class="field"><label>Tags (press Enter to add)</label>
+      <div class="tag-input-wrap" id="tagWrap">
+        <input id="tagInput" placeholder="Add tag…" onkeydown="if(event.key==='Enter'){event.preventDefault();addTag()}" />
+      </div>
+    </div>
+  `, [
+    { label:'Cancel', cls:'cancel', action:'closeModal()' },
+    { label:'Add Card', cls:'save', action:'saveCard()' }
+  ]);
+  setTimeout(()=>document.getElementById('cardFront')?.focus(),100);
+}
+
+let tempTags = [];
+
+function addTag(){
+  const input = document.getElementById('tagInput');
+  const tag = input.value.trim().toLowerCase();
+  if(!tag || tempTags.includes(tag)) { input.value=''; return; }
+  tempTags.push(tag);
+  input.value = '';
+  renderTags();
+}
+
+function removeTag(t){
+  tempTags = tempTags.filter(x=>x!==t);
+  renderTags();
+}
+
+function renderTags(){
+  const wrap = document.getElementById('tagWrap');
+  const input = document.getElementById('tagInput');
+  wrap.innerHTML = tempTags.map(t=>`<span class="tag" onclick="removeTag('${esc(t)}')">${esc(t)} ×</span>`).join('');
+  wrap.appendChild(input);
+}
+
+function saveCard(){
+  const front = document.getElementById('cardFront').value.trim();
+  const back = document.getElementById('cardBack').value.trim();
+  const deckId = document.getElementById('cardDeck').value;
+  if(!front||!back){ toast('Both sides required'); return; }
+  state.cards.push({
+    id:uid(), deckId, front, back, tags:[...tempTags],
+    created:Date.now(), interval:0, ease:2.5, reps:0, lapses:0,
+    due:Date.now(), lastReview:null
+  });
+  tempTags=[];
+  save(); closeModal(); render();
+  toast('Card added ✨');
+}
+
+function editCard(id){
+  const c = state.cards.find(x=>x.id===id);
+  if(!c) return;
+  tempTags = [...c.tags];
+  const mat = cardMaturity(c);
+  
+  showModal('Edit Card', `
+    <div class="field"><label>Deck</label>
+      <select id="cardDeck">${state.decks.map(d=>`<option value="${d.id}" ${d.id===c.deckId?'selected':''}>${d.emoji} ${esc(d.name)}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Front (Question)</label><textarea id="cardFront" rows="3">${esc(c.front)}</textarea></div>
+    <div class="field"><label>Back (Answer)</label><textarea id="cardBack" rows="5">${esc(c.back)}</textarea></div>
+    <div class="field"><label>Tags</label>
+      <div class="tag-input-wrap" id="tagWrap">
+        ${tempTags.map(t=>`<span class="tag" onclick="removeTag('${esc(t)}')">${esc(t)} ×</span>`).join('')}
+        <input id="tagInput" placeholder="Add tag…" onkeydown="if(event.key==='Enter'){event.preventDefault();addTag()}" />
+      </div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-top:8px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Card Stats</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:13px">
+        <div><span class="card-badge ${mat}">${mat}</span></div>
+        <div>EF: ${c.ease.toFixed(2)}</div>
+        <div>Reps: ${c.reps}</div>
+        <div>Lapses: ${c.lapses}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-top:6px">
+        Interval: ${c.interval<1?Math.round(c.interval*1440)+'m':Math.round(c.interval)+'d'}
+        · Due: ${c.due<=Date.now()?'Now':relTime(c.due)}
+        ${c.lastReview?'· Last: '+new Date(c.lastReview).toLocaleDateString():''}
+      </div>
+    </div>
+  `, [
+    { label:'Delete', cls:'danger', action:`deleteCard('${id}')` },
+    { label:'Reset', cls:'cancel', action:`resetCard('${id}')`, title:'Reset scheduling to new' },
+    { label:'Cancel', cls:'cancel', action:'closeModal()' },
+    { label:'Save', cls:'save', action:`updateCard('${id}')` }
+  ]);
+}
+
+function updateCard(id){
+  const c = state.cards.find(x=>x.id===id);
+  if(!c) return;
+  c.front = document.getElementById('cardFront').value.trim() || c.front;
+  c.back = document.getElementById('cardBack').value.trim() || c.back;
+  c.deckId = document.getElementById('cardDeck').value;
+  c.tags = [...tempTags];
+  tempTags=[];
+  save(); closeModal(); render();
+  toast('Card updated');
+}
+
+function deleteCard(id){
+  if(!confirm('Delete this card?')) return;
+  state.cards = state.cards.filter(c=>c.id!==id);
+  state.reviews = state.reviews.filter(r=>r.cardId!==id);
+  save(); closeModal(); render();
+  toast('Card deleted');
+}
+
+function resetCard(id){
+  if(!confirm('Reset this card to new? All scheduling data will be cleared.')) return;
+  const c = state.cards.find(x=>x.id===id);
+  if(!c) return;
+  c.interval=0; c.ease=2.5; c.reps=0; c.lapses=0; c.due=Date.now(); c.lastReview=null;
+  save(); closeModal(); render();
+  toast('Card reset to new');
+}
+
+function exportData(){
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `flashcard-forge-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('Exported ✅');
+}
+
+function importData(){
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try{
+        const data = JSON.parse(ev.target.result);
+        if(!data.decks||!data.cards){ toast('Invalid file'); return; }
+        if(confirm(`Import ${data.decks.length} decks and ${data.cards.length} cards? This will replace all current data.`)){
+          state = data;
+          save(); render();
+          toast('Imported ✅');
+        }
+      }catch(e){ toast('Parse error'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ========== MODAL ==========
+function showModal(title, body, buttons){
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-header"><h2>${title}</h2><button onclick="closeModal()">✕</button></div>
+    <div class="modal-body">${body}</div>
+    <div class="modal-footer">${buttons.map(b=>`<button class="${b.cls}" onclick="${b.action}" ${b.title?`title="${b.title}"`:''}>${b.label}</button>`).join('')}</div>
+  `;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('show');
+  tempTags = [];
+}
+
+// ========== HELPERS ==========
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function stripHtml(s){ return s.replace(/<[^>]*>/g,''); }
+function formatText(s){
+  return esc(s).replace(/\n/g,'<br>').replace(/&lt;b&gt;(.*?)&lt;\/b&gt;/g,'<b>$1</b>');
+}
+
+function relTime(ts){
+  const diff = ts - Date.now();
+  const days = Math.round(diff/86400000);
+  if(days < 0) return Math.abs(days)+'d ago';
+  if(days === 0) return 'Today';
+  if(days === 1) return 'Tomorrow';
+  return 'in '+days+'d';
+}
+
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ========== KEYBOARD ==========
+document.addEventListener('keydown', e => {
+  const modal = document.getElementById('modalOverlay').classList.contains('show');
+  const inInput = ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);
+
+  if(e.key==='Escape'){
+    if(modal){ closeModal(); return; }
+    if(currentView==='study'){ studySession=null; setView('cards'); return; }
+  }
+
+  if(modal || inInput) return;
+
+  if(e.key==='/'){e.preventDefault();document.getElementById('deckSearch').focus();return;}
+  if(e.key==='n'||e.key==='N'){e.preventDefault();newCard();return;}
+  if(e.key==='d'){e.preventDefault();newDeck();return;}
+  if(e.key==='s'){e.preventDefault();startStudy();return;}
+  if(e.key==='e'){e.preventDefault();exportData();return;}
+  if(e.key==='i'){e.preventDefault();importData();return;}
+  if(e.key==='?'){e.preventDefault();setView('help');return;}
+
+  // Study mode shortcuts
+  if(currentView==='study' && studySession){
+    if(e.key===' '){e.preventDefault();if(!studySession.flipped)flipCard();return;}
+    if(studySession.flipped){
+      if(e.key==='1'){rateCard(1);return;}
+      if(e.key==='2'){rateCard(2);return;}
+      if(e.key==='3'){rateCard(3);return;}
+      if(e.key==='4'){rateCard(4);return;}
+    }
+  }
+});
+
+// Deck search
+document.getElementById('deckSearch').addEventListener('input', renderSidebar);
+
+// Double-click deck to edit
+document.getElementById('deckList').addEventListener('dblclick', e => {
+  const item = e.target.closest('.deck-item');
+  if(!item) return;
+  const deckId = item.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+  if(deckId && deckId!=='null') editDeck(deckId);
+});
+
+// Init
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Token Studio</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#21262d;--surface3:#30363d;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--text3:#484f58;--accent:#58a6ff;--accent2:#388bfd;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff;--orange:#f0883e;--pink:#f778ba;--radius:8px;--radius-sm:4px;--radius-lg:12px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;overflow:hidden;height:100vh}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;outline:none;font-size:13px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+
+/* Layout */
+.app{display:flex;height:100vh}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:18px}
+.sidebar-nav{flex:1;overflow-y:auto;padding:8px}
+.nav-section{margin-bottom:4px}
+.nav-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);padding:8px 12px 4px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-sm);font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent);background:rgba(88,166,255,.15);color:var(--accent)}
+.nav-item .icon{width:16px;text-align:center;font-size:14px}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:600;flex:1}
+.btn{padding:6px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-ghost{color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* Systems */
+.system-grid{display:grid;gap:16px}
+
+/* Color Section */
+.palette-group{margin-bottom:24px}
+.palette-group-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.palette-group-title{font-size:14px;font-weight:600}
+.color-row{display:flex;gap:2px;border-radius:var(--radius);overflow:hidden}
+.color-swatch{flex:1;min-width:60px;height:80px;display:flex;flex-direction:column;justify-content:flex-end;padding:6px 8px;cursor:pointer;position:relative;transition:transform .15s}
+.color-swatch:hover{transform:scaleY(1.05);z-index:1}
+.color-swatch .name{font-size:10px;font-weight:600;opacity:.85}
+.color-swatch .hex{font-size:9px;opacity:.7}
+.color-swatch.light .name,.color-swatch.light .hex{color:#1c2128}
+.color-swatch.dark .name,.color-swatch.dark .hex{color:#fff}
+
+.color-editor{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:12px}
+.color-editor-grid{display:grid;grid-template-columns:100px 1fr;gap:12px;align-items:start}
+.color-preview{width:100px;height:100px;border-radius:var(--radius);border:1px solid var(--border)}
+.color-fields{display:grid;gap:8px}
+.color-fields label{font-size:11px;color:var(--text2)}
+.color-fields input[type="color"]{width:36px;height:28px;padding:2px;cursor:pointer}
+.color-fields .row{display:flex;gap:8px;align-items:center}
+.contrast-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.contrast-badge.pass{background:rgba(63,185,80,.15);color:var(--green)}
+.contrast-badge.fail{background:rgba(248,81,73,.15);color:var(--red)}
+
+/* Typography */
+.type-scale-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;align-items:center;gap:16px}
+.type-meta{width:140px;flex-shrink:0}
+.type-meta .label{font-size:12px;font-weight:600;color:var(--accent)}
+.type-meta .specs{font-size:11px;color:var(--text2);margin-top:2px}
+.type-preview{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.type-actions{display:flex;gap:4px}
+
+/* Spacing */
+.spacing-item{display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--border)}
+.spacing-item:last-child{border-bottom:none}
+.spacing-label{width:80px;font-size:13px;font-weight:600;color:var(--accent)}
+.spacing-value{width:60px;font-size:12px;color:var(--text2)}
+.spacing-bar{height:24px;background:var(--accent);opacity:.3;border-radius:2px;transition:width .3s}
+.spacing-visual{flex:1}
+
+/* Shadows */
+.shadow-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;gap:20px}
+.shadow-preview-box{width:80px;height:80px;background:var(--surface2);border-radius:var(--radius);flex-shrink:0}
+.shadow-info{flex:1}
+.shadow-info .label{font-size:13px;font-weight:600;margin-bottom:4px}
+.shadow-info .value{font-size:11px;color:var(--text2);font-family:'SFMono-Regular',Consolas,monospace;word-break:break-all}
+
+/* Radii */
+.radius-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.radius-card{background:var(--surface);border:1px solid var(--border);padding:16px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.radius-preview{width:64px;height:64px;background:var(--accent);opacity:.25}
+.radius-label{font-size:12px;font-weight:600}
+.radius-value{font-size:11px;color:var(--text2)}
+
+/* Components Preview */
+.component-section{margin-bottom:24px}
+.component-section h3{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text2)}
+.component-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.preview-btn{padding:10px 20px;border-radius:var(--radius);font-size:14px;font-weight:500;cursor:default}
+.preview-input{padding:10px 14px;border-radius:var(--radius);font-size:14px;width:240px;cursor:default}
+.preview-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;width:280px}
+.preview-card h4{font-size:16px;margin-bottom:8px}
+.preview-card p{font-size:13px;color:var(--text2)}
+.preview-badge{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.preview-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff}
+
+/* Export */
+.export-tabs{display:flex;gap:4px;margin-bottom:16px}
+.export-tab{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;color:var(--text2);border:1px solid transparent}
+.export-tab.active{background:var(--surface2);color:var(--text);border-color:var(--border)}
+.export-code{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:'SFMono-Regular',Consolas,monospace;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:calc(100vh - 200px);overflow-y:auto;position:relative}
+.export-code .copy-btn{position:sticky;top:0;float:right;padding:4px 12px;background:var(--accent);color:#fff;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;z-index:1}
+
+/* Dashboard */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-card .num{font-size:28px;font-weight:700}
+.stat-card .label{font-size:12px;color:var(--text2);margin-top:2px}
+.theme-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all .15s}
+.theme-card:hover{border-color:var(--accent)}
+.theme-card.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.theme-card .theme-name{font-size:13px;font-weight:600;margin-bottom:8px}
+.theme-colors{display:flex;gap:4px}
+.theme-dot{width:20px;height:20px;border-radius:50%;border:1px solid rgba(255,255,255,.1)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;width:420px;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:16px;margin-bottom:16px}
+.modal .field{margin-bottom:12px}
+.modal .field label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+.modal .field input,.modal .field select{width:100%}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+.hidden{display:none!important}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:10px 20px;border-radius:var(--radius);font-size:13px;z-index:200;animation:fadeInUp .3s}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Breakpoints section */
+.bp-item{display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--border)}
+.bp-item:last-child{border-bottom:none}
+.bp-label{width:80px;font-size:13px;font-weight:600;color:var(--accent)}
+.bp-value{width:80px;font-size:12px;color:var(--text2)}
+.bp-bar{height:12px;background:var(--purple);opacity:.3;border-radius:2px;transition:width .3s}
+.bp-visual{flex:1;position:relative}
+.bp-marker{position:absolute;top:-2px;font-size:9px;color:var(--text3)}
+
+/* Help overlay */
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center}
+.help-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;width:480px;max-height:80vh;overflow-y:auto}
+.help-box h2{margin-bottom:12px}
+.help-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.help-row:last-child{border-bottom:none}
+.help-key{background:var(--surface2);padding:2px 8px;border-radius:3px;font-family:monospace;font-size:12px}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1><span>🎨</span> Token Studio</h1>
+    </div>
+    <div class="sidebar-nav" id="nav"></div>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Colors</div>
+      <button class="btn btn-ghost btn-sm" onclick="showHelp()" title="Keyboard shortcuts">?</button>
+      <button class="btn btn-ghost btn-sm" onclick="importData()">Import</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportJSON()">Export</button>
+      <button class="btn btn-primary btn-sm" onclick="switchView('export')">Export Code →</button>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div class="help-overlay hidden" id="help-overlay" onclick="if(event.target===this)hideHelp()">
+  <div class="help-box">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="help-row"><span>Navigate sections</span><span class="help-key">1-8</span></div>
+    <div class="help-row"><span>Add new token</span><span class="help-key">N</span></div>
+    <div class="help-row"><span>Export code view</span><span class="help-key">E</span></div>
+    <div class="help-row"><span>Dashboard</span><span class="help-key">D</span></div>
+    <div class="help-row"><span>Import JSON</span><span class="help-key">I</span></div>
+    <div class="help-row"><span>Search (in view)</span><span class="help-key">/</span></div>
+    <div class="help-row"><span>Show help</span><span class="help-key">?</span></div>
+    <div class="help-row"><span>Close modal/help</span><span class="help-key">Esc</span></div>
+    <div style="margin-top:12px;font-size:12px;color:var(--text2)">Design Token Studio — Day 49 Overnight Build</div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept=".json" class="hidden">
+
+<script>
+// ─── State ───
+const STORAGE_KEY = 'design-token-studio';
+const views = [
+  {id:'colors',icon:'🎨',label:'Colors'},
+  {id:'typography',icon:'🔤',label:'Typography'},
+  {id:'spacing',icon:'📏',label:'Spacing'},
+  {id:'shadows',icon:'🌓',label:'Shadows'},
+  {id:'radii',icon:'⬜',label:'Border Radius'},
+  {id:'breakpoints',icon:'📱',label:'Breakpoints'},
+  {id:'components',icon:'🧩',label:'Components'},
+  {id:'export',icon:'📦',label:'Export Code'},
+  {id:'dashboard',icon:'📊',label:'Dashboard'}
+];
+
+let state = loadState();
+let currentView = 'colors';
+let exportFormat = 'css';
+let editingColor = null;
+let modalOpen = false;
+
+function defaultState() {
+  return {
+    name: 'My Design System',
+    colors: {
+      primary: {
+        name: 'Primary',
+        shades: [
+          {name:'50',value:'#eff6ff'},{name:'100',value:'#dbeafe'},{name:'200',value:'#bfdbfe'},
+          {name:'300',value:'#93c5fd'},{name:'400',value:'#60a5fa'},{name:'500',value:'#3b82f6'},
+          {name:'600',value:'#2563eb'},{name:'700',value:'#1d4ed8'},{name:'800',value:'#1e40af'},{name:'900',value:'#1e3a8a'}
+        ]
+      },
+      neutral: {
+        name: 'Neutral',
+        shades: [
+          {name:'50',value:'#f9fafb'},{name:'100',value:'#f3f4f6'},{name:'200',value:'#e5e7eb'},
+          {name:'300',value:'#d1d5db'},{name:'400',value:'#9ca3af'},{name:'500',value:'#6b7280'},
+          {name:'600',value:'#4b5563'},{name:'700',value:'#374151'},{name:'800',value:'#1f2937'},{name:'900',value:'#111827'}
+        ]
+      },
+      success: {
+        name: 'Success',
+        shades: [
+          {name:'50',value:'#f0fdf4'},{name:'100',value:'#dcfce7'},{name:'200',value:'#bbf7d0'},
+          {name:'300',value:'#86efac'},{name:'400',value:'#4ade80'},{name:'500',value:'#22c55e'},
+          {name:'600',value:'#16a34a'},{name:'700',value:'#15803d'},{name:'800',value:'#166534'},{name:'900',value:'#14532d'}
+        ]
+      },
+      danger: {
+        name: 'Danger',
+        shades: [
+          {name:'50',value:'#fef2f2'},{name:'100',value:'#fee2e2'},{name:'200',value:'#fecaca'},
+          {name:'300',value:'#fca5a5'},{name:'400',value:'#f87171'},{name:'500',value:'#ef4444'},
+          {name:'600',value:'#dc2626'},{name:'700',value:'#b91c1c'},{name:'800',value:'#991b1b'},{name:'900',value:'#7f1d1d'}
+        ]
+      },
+      warning: {
+        name: 'Warning',
+        shades: [
+          {name:'50',value:'#fffbeb'},{name:'100',value:'#fef3c7'},{name:'200',value:'#fde68a'},
+          {name:'300',value:'#fcd34d'},{name:'400',value:'#fbbf24'},{name:'500',value:'#f59e0b'},
+          {name:'600',value:'#d97706'},{name:'700',value:'#b45309'},{name:'800',value:'#92400e'},{name:'900',value:'#78350f'}
+        ]
+      }
+    },
+    typography: [
+      {name:'Display',size:48,weight:800,lineHeight:1.1,letterSpacing:-0.02,family:'Inter, system-ui, sans-serif'},
+      {name:'H1',size:36,weight:700,lineHeight:1.2,letterSpacing:-0.015,family:'Inter, system-ui, sans-serif'},
+      {name:'H2',size:30,weight:700,lineHeight:1.25,letterSpacing:-0.01,family:'Inter, system-ui, sans-serif'},
+      {name:'H3',size:24,weight:600,lineHeight:1.3,letterSpacing:-0.005,family:'Inter, system-ui, sans-serif'},
+      {name:'H4',size:20,weight:600,lineHeight:1.35,letterSpacing:0,family:'Inter, system-ui, sans-serif'},
+      {name:'Body LG',size:18,weight:400,lineHeight:1.6,letterSpacing:0,family:'Inter, system-ui, sans-serif'},
+      {name:'Body',size:16,weight:400,lineHeight:1.5,letterSpacing:0,family:'Inter, system-ui, sans-serif'},
+      {name:'Body SM',size:14,weight:400,lineHeight:1.5,letterSpacing:0,family:'Inter, system-ui, sans-serif'},
+      {name:'Caption',size:12,weight:500,lineHeight:1.4,letterSpacing:0.01,family:'Inter, system-ui, sans-serif'},
+      {name:'Overline',size:11,weight:700,lineHeight:1.4,letterSpacing:0.08,family:'Inter, system-ui, sans-serif'}
+    ],
+    spacing: [
+      {name:'0',value:0},{name:'px',value:1},{name:'0.5',value:2},{name:'1',value:4},
+      {name:'1.5',value:6},{name:'2',value:8},{name:'2.5',value:10},{name:'3',value:12},
+      {name:'4',value:16},{name:'5',value:20},{name:'6',value:24},{name:'8',value:32},
+      {name:'10',value:40},{name:'12',value:48},{name:'16',value:64},{name:'20',value:80},
+      {name:'24',value:96}
+    ],
+    shadows: [
+      {name:'xs',value:'0 1px 2px 0 rgba(0,0,0,0.05)'},
+      {name:'sm',value:'0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)'},
+      {name:'md',value:'0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)'},
+      {name:'lg',value:'0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)'},
+      {name:'xl',value:'0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)'},
+      {name:'2xl',value:'0 25px 50px -12px rgba(0,0,0,0.25)'},
+      {name:'inner',value:'inset 0 2px 4px 0 rgba(0,0,0,0.05)'}
+    ],
+    radii: [
+      {name:'none',value:0},{name:'sm',value:2},{name:'default',value:4},
+      {name:'md',value:6},{name:'lg',value:8},{name:'xl',value:12},
+      {name:'2xl',value:16},{name:'3xl',value:24},{name:'full',value:9999}
+    ],
+    breakpoints: [
+      {name:'xs',value:0,label:'Mobile S'},
+      {name:'sm',value:640,label:'Mobile L'},
+      {name:'md',value:768,label:'Tablet'},
+      {name:'lg',value:1024,label:'Laptop'},
+      {name:'xl',value:1280,label:'Desktop'},
+      {name:'2xl',value:1536,label:'Wide'}
+    ]
+  };
+}
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultState(); }
+  catch { return defaultState(); }
+}
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+// ─── Utility ───
+function hexToRgb(hex) {
+  hex = hex.replace('#','');
+  if(hex.length===3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  const n = parseInt(hex,16);
+  return [(n>>16)&255,(n>>8)&255,n&255];
+}
+function luminance(r,g,b) {
+  const [rs,gs,bs] = [r,g,b].map(c => { c /= 255; return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); });
+  return 0.2126*rs + 0.7152*gs + 0.0722*bs;
+}
+function contrastRatio(hex1, hex2) {
+  const [r1,g1,b1] = hexToRgb(hex1);
+  const [r2,g2,b2] = hexToRgb(hex2);
+  const l1 = luminance(r1,g1,b1), l2 = luminance(r2,g2,b2);
+  const lighter = Math.max(l1,l2), darker = Math.min(l1,l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+function isLight(hex) {
+  const [r,g,b] = hexToRgb(hex);
+  return luminance(r,g,b) > 0.179;
+}
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => toast('Copied!')).catch(() => {});
+}
+
+// ─── Navigation ───
+function renderNav() {
+  const nav = document.getElementById('nav');
+  const sections = {
+    'Tokens': views.slice(0,6),
+    'Preview': views.slice(6,7),
+    'Output': views.slice(7)
+  };
+  nav.innerHTML = Object.entries(sections).map(([title, items]) => `
+    <div class="nav-section">
+      <div class="nav-section-title">${title}</div>
+      ${items.map(v => `
+        <div class="nav-item ${currentView===v.id?'active':''}" onclick="switchView('${v.id}')">
+          <span class="icon">${v.icon}</span>${v.label}
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function switchView(id) {
+  currentView = id;
+  editingColor = null;
+  const v = views.find(x=>x.id===id);
+  document.getElementById('topbar-title').textContent = v ? v.label : id;
+  renderNav();
+  renderContent();
+}
+
+// ─── Render Content ───
+function renderContent() {
+  const el = document.getElementById('content');
+  switch(currentView) {
+    case 'colors': el.innerHTML = renderColors(); break;
+    case 'typography': el.innerHTML = renderTypography(); break;
+    case 'spacing': el.innerHTML = renderSpacing(); break;
+    case 'shadows': el.innerHTML = renderShadows(); break;
+    case 'radii': el.innerHTML = renderRadii(); break;
+    case 'breakpoints': el.innerHTML = renderBreakpoints(); break;
+    case 'components': el.innerHTML = renderComponents(); break;
+    case 'export': el.innerHTML = renderExport(); break;
+    case 'dashboard': el.innerHTML = renderDashboard(); break;
+  }
+}
+
+// ─── Colors ───
+function renderColors() {
+  const palettes = Object.entries(state.colors);
+  let html = '';
+  for (const [key, pal] of palettes) {
+    html += `
+      <div class="palette-group">
+        <div class="palette-group-header">
+          <span class="palette-group-title">${pal.name}</span>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-ghost btn-sm" onclick="addShade('${key}')">+ Shade</button>
+            <button class="btn btn-ghost btn-sm" onclick="autoGenPalette('${key}')">🪄 Auto-gen</button>
+            <button class="btn btn-ghost btn-sm" onclick="renamePalette('${key}')">✏️</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deletePalette('${key}')">×</button>
+          </div>
+        </div>
+        <div class="color-row">
+          ${pal.shades.map((s, i) => `
+            <div class="color-swatch ${isLight(s.value)?'light':'dark'}" style="background:${s.value}" onclick="editColor('${key}',${i})">
+              <div class="name">${s.name}</div>
+              <div class="hex">${s.value}</div>
+            </div>
+          `).join('')}
+        </div>
+        ${editingColor && editingColor.palette===key ? renderColorEditor(key, editingColor.index) : ''}
+      </div>
+    `;
+  }
+  html += `<button class="btn btn-ghost" onclick="addPalette()" style="margin-top:8px">+ Add Palette</button>`;
+  return html;
+}
+
+function renderColorEditor(palKey, idx) {
+  const shade = state.colors[palKey].shades[idx];
+  const cWhite = contrastRatio(shade.value, '#ffffff').toFixed(2);
+  const cBlack = contrastRatio(shade.value, '#000000').toFixed(2);
+  const wcagWhite = cWhite >= 4.5;
+  const wcagBlack = cBlack >= 4.5;
+  const wcagWhiteLg = cWhite >= 3;
+  const wcagBlackLg = cBlack >= 3;
+  return `
+    <div class="color-editor">
+      <div class="color-editor-grid">
+        <div class="color-preview" style="background:${shade.value}"></div>
+        <div class="color-fields">
+          <div class="row">
+            <div style="flex:1"><label>Name</label><input value="${shade.name}" onchange="updateShade('${palKey}',${idx},'name',this.value)" style="width:100%"></div>
+            <div style="flex:1"><label>Hex</label>
+              <div class="row">
+                <input type="color" value="${shade.value}" onchange="updateShade('${palKey}',${idx},'value',this.value)">
+                <input value="${shade.value}" onchange="updateShade('${palKey}',${idx},'value',this.value)" style="flex:1">
+              </div>
+            </div>
+          </div>
+          <div>
+            <label>WCAG Contrast</label>
+            <div class="row" style="margin-top:4px">
+              <span style="font-size:12px">vs White: ${cWhite}</span>
+              <span class="contrast-badge ${wcagWhite?'pass':'fail'}">AA ${wcagWhite?'✓':'✗'}</span>
+              <span class="contrast-badge ${wcagWhiteLg?'pass':'fail'}">AA Lg ${wcagWhiteLg?'✓':'✗'}</span>
+            </div>
+            <div class="row" style="margin-top:4px">
+              <span style="font-size:12px">vs Black: ${cBlack}</span>
+              <span class="contrast-badge ${wcagBlack?'pass':'fail'}">AA ${wcagBlack?'✓':'✗'}</span>
+              <span class="contrast-badge ${wcagBlackLg?'pass':'fail'}">AA Lg ${wcagBlackLg?'✓':'✗'}</span>
+            </div>
+          </div>
+          <div class="row" style="gap:4px;margin-top:4px">
+            <button class="btn btn-ghost btn-sm" onclick="copyText('${shade.value}')">Copy Hex</button>
+            <button class="btn btn-ghost btn-sm" onclick="copyText('rgb(${hexToRgb(shade.value).join(',')})')">Copy RGB</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteShade('${palKey}',${idx})">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function editColor(pal, idx) {
+  if (editingColor && editingColor.palette===pal && editingColor.index===idx) { editingColor = null; }
+  else { editingColor = {palette:pal, index:idx}; }
+  renderContent();
+}
+
+function updateShade(pal, idx, field, val) {
+  state.colors[pal].shades[idx][field] = val;
+  save(); renderContent();
+}
+
+function addShade(pal) {
+  const shades = state.colors[pal].shades;
+  const n = shades.length;
+  state.colors[pal].shades.push({name: String((n+1)*100), value: '#888888'});
+  save(); renderContent();
+}
+
+function deleteShade(pal, idx) {
+  state.colors[pal].shades.splice(idx, 1);
+  editingColor = null; save(); renderContent();
+}
+
+function addPalette() {
+  const name = prompt('Palette name:');
+  if (!name) return;
+  const key = name.toLowerCase().replace(/\s+/g,'-');
+  state.colors[key] = {name, shades: [
+    {name:'500', value:'#6366f1'}
+  ]};
+  save(); renderContent();
+}
+
+function renamePalette(key) {
+  const name = prompt('New name:', state.colors[key].name);
+  if (!name) return;
+  state.colors[key].name = name;
+  save(); renderContent();
+}
+
+function deletePalette(key) {
+  if (!confirm(`Delete "${state.colors[key].name}" palette?`)) return;
+  delete state.colors[key];
+  save(); renderContent();
+}
+
+// Auto-generate palette from a base color (500)
+function autoGenPalette(key) {
+  const base = prompt('Enter base hex color (e.g. #3b82f6):', state.colors[key].shades.find(s=>s.name==='500')?.value || '#3b82f6');
+  if (!base || !base.match(/^#[0-9a-fA-F]{6}$/)) return;
+  const [r,g,b] = hexToRgb(base);
+  const shades = [];
+  const factors = [
+    {name:'50',l:0.95},{name:'100',l:0.9},{name:'200',l:0.8},{name:'300',l:0.65},
+    {name:'400',l:0.45},{name:'500',l:0},{name:'600',l:-0.15},{name:'700',l:-0.3},
+    {name:'800',l:-0.45},{name:'900',l:-0.6}
+  ];
+  for (const f of factors) {
+    let nr,ng,nb;
+    if (f.l > 0) {
+      nr = Math.round(r + (255-r)*f.l);
+      ng = Math.round(g + (255-g)*f.l);
+      nb = Math.round(b + (255-b)*f.l);
+    } else {
+      const d = Math.abs(f.l);
+      nr = Math.round(r * (1-d));
+      ng = Math.round(g * (1-d));
+      nb = Math.round(b * (1-d));
+    }
+    nr = Math.min(255,Math.max(0,nr));
+    ng = Math.min(255,Math.max(0,ng));
+    nb = Math.min(255,Math.max(0,nb));
+    shades.push({name:f.name, value:'#'+[nr,ng,nb].map(x=>x.toString(16).padStart(2,'0')).join('')});
+  }
+  state.colors[key].shades = shades;
+  save(); renderContent();
+  toast('Palette generated from ' + base);
+}
+
+// ─── Typography ───
+function renderTypography() {
+  let html = '<div class="system-grid">';
+  state.typography.forEach((t, i) => {
+    const ls = t.letterSpacing ? `${t.letterSpacing}em` : 'normal';
+    html += `
+      <div class="type-scale-item">
+        <div class="type-meta">
+          <div class="label">${t.name}</div>
+          <div class="specs">${t.size}px / ${t.weight} / ${t.lineHeight}</div>
+          <div class="specs">${ls} tracking</div>
+        </div>
+        <div class="type-preview" style="font-size:${Math.min(t.size,48)}px;font-weight:${t.weight};line-height:${t.lineHeight};letter-spacing:${ls};font-family:${t.family}">
+          The quick brown fox jumps over the lazy dog
+        </div>
+        <div class="type-actions">
+          <button class="btn btn-ghost btn-sm" onclick="editType(${i})">✏️</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteType(${i})">×</button>
+        </div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  html += `<button class="btn btn-ghost" onclick="addType()" style="margin-top:12px">+ Add Type Scale</button>`;
+  return html;
+}
+
+function editType(idx) {
+  const t = state.typography[idx];
+  const name = prompt('Name:', t.name); if(!name) return;
+  const size = prompt('Size (px):', t.size); if(!size) return;
+  const weight = prompt('Weight:', t.weight); if(!weight) return;
+  const lh = prompt('Line height:', t.lineHeight); if(!lh) return;
+  const ls = prompt('Letter spacing (em, 0 for none):', t.letterSpacing);
+  const fam = prompt('Font family:', t.family); if(!fam) return;
+  state.typography[idx] = {name, size:+size, weight:+weight, lineHeight:+lh, letterSpacing:ls!==null?+ls:0, family:fam};
+  save(); renderContent();
+}
+
+function addType() {
+  state.typography.push({name:'New Style', size:16, weight:400, lineHeight:1.5, letterSpacing:0, family:'Inter, system-ui, sans-serif'});
+  save(); renderContent();
+}
+
+function deleteType(idx) {
+  state.typography.splice(idx, 1);
+  save(); renderContent();
+}
+
+// ─── Spacing ───
+function renderSpacing() {
+  const maxVal = Math.max(...state.spacing.map(s=>s.value), 1);
+  let html = '<div>';
+  state.spacing.forEach((s, i) => {
+    const pct = (s.value / maxVal * 100);
+    html += `
+      <div class="spacing-item">
+        <div class="spacing-label">${s.name}</div>
+        <div class="spacing-value">${s.value}px</div>
+        <div class="spacing-visual"><div class="spacing-bar" style="width:${Math.max(pct,0.5)}%"></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="editSpacing(${i})">✏️</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="state.spacing.splice(${i},1);save();renderContent()">×</button>
+      </div>
+    `;
+  });
+  html += '</div>';
+  html += `<button class="btn btn-ghost" onclick="addSpacing()" style="margin-top:12px">+ Add Spacing</button>`;
+  return html;
+}
+
+function editSpacing(idx) {
+  const s = state.spacing[idx];
+  const name = prompt('Name:', s.name); if(!name) return;
+  const value = prompt('Value (px):', s.value); if(!value) return;
+  state.spacing[idx] = {name, value:+value};
+  save(); renderContent();
+}
+
+function addSpacing() {
+  state.spacing.push({name:'new', value:0});
+  save(); renderContent();
+}
+
+// ─── Shadows ───
+function renderShadows() {
+  let html = '<div class="system-grid">';
+  state.shadows.forEach((s, i) => {
+    html += `
+      <div class="shadow-card">
+        <div class="shadow-preview-box" style="box-shadow:${s.value}"></div>
+        <div class="shadow-info">
+          <div class="label">${s.name}</div>
+          <div class="value">${s.value}</div>
+        </div>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" onclick="copyText(\`${s.value.replace(/`/g,'')}\`)">Copy</button>
+          <button class="btn btn-ghost btn-sm" onclick="editShadow(${i})">✏️</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="state.shadows.splice(${i},1);save();renderContent()">×</button>
+        </div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  html += `<button class="btn btn-ghost" onclick="addShadow()" style="margin-top:12px">+ Add Shadow</button>`;
+  return html;
+}
+
+function editShadow(idx) {
+  const s = state.shadows[idx];
+  const name = prompt('Name:', s.name); if(!name) return;
+  const value = prompt('Box shadow CSS:', s.value); if(!value) return;
+  state.shadows[idx] = {name, value};
+  save(); renderContent();
+}
+
+function addShadow() {
+  state.shadows.push({name:'new', value:'0 2px 8px rgba(0,0,0,0.1)'});
+  save(); renderContent();
+}
+
+// ─── Radii ───
+function renderRadii() {
+  let html = '<div class="radius-grid">';
+  state.radii.forEach((r, i) => {
+    const rv = r.value >= 9999 ? '50%' : r.value+'px';
+    html += `
+      <div class="radius-card" onclick="editRadius(${i})">
+        <div class="radius-preview" style="border-radius:${rv}"></div>
+        <div class="radius-label">${r.name}</div>
+        <div class="radius-value">${r.value}px</div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  html += `<button class="btn btn-ghost" onclick="addRadius()" style="margin-top:12px">+ Add Radius</button>`;
+  return html;
+}
+
+function editRadius(idx) {
+  const r = state.radii[idx];
+  const name = prompt('Name:', r.name); if(!name) return;
+  const value = prompt('Value (px):', r.value); if(!value) return;
+  state.radii[idx] = {name, value:+value};
+  save(); renderContent();
+}
+
+function addRadius() {
+  state.radii.push({name:'new', value:8});
+  save(); renderContent();
+}
+
+// ─── Breakpoints ───
+function renderBreakpoints() {
+  const maxVal = Math.max(...state.breakpoints.map(b=>b.value), 1);
+  let html = '<div>';
+  state.breakpoints.forEach((b, i) => {
+    const pct = (b.value / 1920 * 100);
+    html += `
+      <div class="bp-item">
+        <div class="bp-label">${b.name}</div>
+        <div class="bp-value">${b.value}px</div>
+        <div class="bp-visual">
+          <div class="bp-bar" style="width:${Math.max(pct,1)}%"></div>
+        </div>
+        <span style="font-size:11px;color:var(--text3);width:70px">${b.label||''}</span>
+        <button class="btn btn-ghost btn-sm" onclick="editBP(${i})">✏️</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="state.breakpoints.splice(${i},1);save();renderContent()">×</button>
+      </div>
+    `;
+  });
+  html += '</div>';
+  html += `<button class="btn btn-ghost" onclick="addBP()" style="margin-top:12px">+ Add Breakpoint</button>`;
+  return html;
+}
+
+function editBP(idx) {
+  const b = state.breakpoints[idx];
+  const name = prompt('Name:', b.name); if(!name) return;
+  const value = prompt('Value (px):', b.value); if(!value) return;
+  const label = prompt('Label:', b.label||'');
+  state.breakpoints[idx] = {name, value:+value, label:label||''};
+  save(); renderContent();
+}
+
+function addBP() {
+  state.breakpoints.push({name:'new', value:0, label:''});
+  save(); renderContent();
+}
+
+// ─── Components Preview ───
+function renderComponents() {
+  const p = state.colors.primary?.shades || [];
+  const primary500 = p.find(s=>s.name==='500')?.value || '#3b82f6';
+  const primary600 = p.find(s=>s.name==='600')?.value || '#2563eb';
+  const primary100 = p.find(s=>s.name==='100')?.value || '#dbeafe';
+  const neutral50 = state.colors.neutral?.shades.find(s=>s.name==='50')?.value || '#f9fafb';
+  const neutral200 = state.colors.neutral?.shades.find(s=>s.name==='200')?.value || '#e5e7eb';
+  const neutral800 = state.colors.neutral?.shades.find(s=>s.name==='800')?.value || '#1f2937';
+  const success500 = state.colors.success?.shades.find(s=>s.name==='500')?.value || '#22c55e';
+  const danger500 = state.colors.danger?.shades.find(s=>s.name==='500')?.value || '#ef4444';
+  const warning500 = state.colors.warning?.shades.find(s=>s.name==='500')?.value || '#f59e0b';
+  const bodyFont = state.typography.find(t=>t.name==='Body')?.family || 'Inter, system-ui, sans-serif';
+  const rad = state.radii.find(r=>r.name==='md')?.value || 6;
+  const radFull = state.radii.find(r=>r.name==='full')?.value || 9999;
+  const shadow = state.shadows.find(s=>s.name==='md')?.value || '0 4px 6px -1px rgba(0,0,0,0.1)';
+
+  return `
+    <div style="background:${neutral50};padding:32px;border-radius:${rad}px;font-family:${bodyFont}">
+      <div style="margin-bottom:24px">
+        <h3 style="font-size:13px;font-weight:600;margin-bottom:12px;color:${neutral800}">Buttons</h3>
+        <div class="component-row">
+          <div class="preview-btn" style="background:${primary500};color:#fff;border-radius:${rad}px;box-shadow:${shadow}">Primary</div>
+          <div class="preview-btn" style="background:transparent;color:${primary500};border:1px solid ${primary500};border-radius:${rad}px">Outline</div>
+          <div class="preview-btn" style="background:${primary100};color:${primary600};border-radius:${rad}px">Ghost</div>
+          <div class="preview-btn" style="background:${success500};color:#fff;border-radius:${rad}px">Success</div>
+          <div class="preview-btn" style="background:${danger500};color:#fff;border-radius:${rad}px">Danger</div>
+          <div class="preview-btn" style="background:${warning500};color:#fff;border-radius:${rad}px">Warning</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <h3 style="font-size:13px;font-weight:600;margin-bottom:12px;color:${neutral800}">Inputs</h3>
+        <div class="component-row">
+          <div class="preview-input" style="border:1px solid ${neutral200};border-radius:${rad}px;color:${neutral800};background:#fff">Text input</div>
+          <div class="preview-input" style="border:2px solid ${primary500};border-radius:${rad}px;color:${neutral800};background:#fff">Focused</div>
+          <div class="preview-input" style="border:1px solid ${danger500};border-radius:${rad}px;color:${neutral800};background:#fff">Error</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <h3 style="font-size:13px;font-weight:600;margin-bottom:12px;color:${neutral800}">Badges</h3>
+        <div class="component-row">
+          <span class="preview-badge" style="background:${primary100};color:${primary600}">Default</span>
+          <span class="preview-badge" style="background:rgba(34,197,94,.1);color:${success500}">Success</span>
+          <span class="preview-badge" style="background:rgba(239,68,68,.1);color:${danger500}">Danger</span>
+          <span class="preview-badge" style="background:rgba(245,158,11,.1);color:${warning500}">Warning</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <h3 style="font-size:13px;font-weight:600;margin-bottom:12px;color:${neutral800}">Cards</h3>
+        <div class="component-row">
+          <div style="background:#fff;border:1px solid ${neutral200};border-radius:${rad}px;padding:20px;width:280px;box-shadow:${shadow}">
+            <h4 style="font-size:16px;margin-bottom:8px;color:${neutral800}">Card Title</h4>
+            <p style="font-size:13px;color:${neutral800};opacity:.7">Card content with your design tokens applied. This shows how your system looks in practice.</p>
+            <div style="margin-top:12px;display:flex;gap:8px">
+              <span class="preview-badge" style="background:${primary100};color:${primary600}">Tag 1</span>
+              <span class="preview-badge" style="background:rgba(34,197,94,.1);color:${success500}">Tag 2</span>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid ${neutral200};border-radius:${rad}px;padding:20px;width:280px;box-shadow:${state.shadows.find(s=>s.name==='lg')?.value || shadow}">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+              <div class="preview-avatar" style="background:${primary500};border-radius:${radFull}px">AJ</div>
+              <div><div style="font-weight:600;color:${neutral800}">Aman Jha</div><div style="font-size:12px;color:${neutral800};opacity:.6">Head of Product</div></div>
+            </div>
+            <p style="font-size:13px;color:${neutral800};opacity:.7">10 years building product. The track record to prove it.</p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size:13px;font-weight:600;margin-bottom:12px;color:${neutral800}">Avatars</h3>
+        <div class="component-row">
+          ${['#3b82f6','#22c55e','#ef4444','#f59e0b','#8b5cf6','#ec4899'].map((c,i) =>
+            `<div class="preview-avatar" style="background:${i < Object.keys(state.colors).length ? Object.values(state.colors)[i]?.shades.find(s=>s.name==='500')?.value || c : c};width:48px;height:48px;border-radius:${radFull}px;font-size:16px">${'AJPRSM'[i]}</div>`
+          ).join('')}
+        </div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:var(--text3);margin-top:12px">💡 Components auto-update when you change tokens. This preview uses your Primary, Neutral, Success, Danger, Warning palettes + typography + radii + shadows.</p>
+  `;
+}
+
+// ─── Export ───
+function renderExport() {
+  const formats = ['css','tailwind','scss','json','figma'];
+  let html = `<div class="export-tabs">`;
+  formats.forEach(f => {
+    html += `<button class="export-tab ${exportFormat===f?'active':''}" onclick="exportFormat='${f}';renderContent()">${f.toUpperCase()}</button>`;
+  });
+  html += `</div>`;
+
+  let code = '';
+  switch(exportFormat) {
+    case 'css': code = generateCSS(); break;
+    case 'tailwind': code = generateTailwind(); break;
+    case 'scss': code = generateSCSS(); break;
+    case 'json': code = generateTokenJSON(); break;
+    case 'figma': code = generateFigmaTokens(); break;
+  }
+
+  html += `<div class="export-code"><button class="copy-btn btn btn-primary btn-sm" onclick="copyText(document.querySelector('.export-code pre').textContent)">Copy</button><pre>${escHtml(code)}</pre></div>`;
+  return html;
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function generateCSS() {
+  let css = '/* Design Token Studio — CSS Custom Properties */\n:root {\n';
+  // Colors
+  css += '  /* Colors */\n';
+  for (const [key, pal] of Object.entries(state.colors)) {
+    pal.shades.forEach(s => {
+      css += `  --color-${key}-${s.name}: ${s.value};\n`;
+    });
+  }
+  // Typography
+  css += '\n  /* Typography */\n';
+  state.typography.forEach(t => {
+    const slug = t.name.toLowerCase().replace(/\s+/g,'-');
+    css += `  --font-size-${slug}: ${t.size}px;\n`;
+    css += `  --font-weight-${slug}: ${t.weight};\n`;
+    css += `  --line-height-${slug}: ${t.lineHeight};\n`;
+    css += `  --letter-spacing-${slug}: ${t.letterSpacing}em;\n`;
+  });
+  // Spacing
+  css += '\n  /* Spacing */\n';
+  state.spacing.forEach(s => {
+    css += `  --space-${s.name}: ${s.value}px;\n`;
+  });
+  // Shadows
+  css += '\n  /* Shadows */\n';
+  state.shadows.forEach(s => {
+    css += `  --shadow-${s.name}: ${s.value};\n`;
+  });
+  // Radii
+  css += '\n  /* Border Radius */\n';
+  state.radii.forEach(r => {
+    css += `  --radius-${r.name}: ${r.value >= 9999 ? '9999px' : r.value+'px'};\n`;
+  });
+  // Breakpoints as comment (can't be CSS vars in media queries)
+  css += '\n  /* Breakpoints (reference — use in media queries) */\n';
+  state.breakpoints.forEach(b => {
+    css += `  /* --breakpoint-${b.name}: ${b.value}px; ${b.label||''} */\n`;
+  });
+  css += '}\n';
+  return css;
+}
+
+function generateTailwind() {
+  let tw = `// Design Token Studio — Tailwind Config\n/** @type {import('tailwindcss').Config} */\nmodule.exports = {\n  theme: {\n    extend: {\n`;
+  // Colors
+  tw += '      colors: {\n';
+  for (const [key, pal] of Object.entries(state.colors)) {
+    tw += `        '${key}': {\n`;
+    pal.shades.forEach(s => {
+      tw += `          '${s.name}': '${s.value}',\n`;
+    });
+    tw += '        },\n';
+  }
+  tw += '      },\n';
+  // Font size
+  tw += '      fontSize: {\n';
+  state.typography.forEach(t => {
+    const slug = t.name.toLowerCase().replace(/\s+/g,'-');
+    tw += `        '${slug}': ['${t.size}px', { lineHeight: '${t.lineHeight}', fontWeight: '${t.weight}', letterSpacing: '${t.letterSpacing}em' }],\n`;
+  });
+  tw += '      },\n';
+  // Spacing
+  tw += '      spacing: {\n';
+  state.spacing.forEach(s => {
+    tw += `        '${s.name}': '${s.value}px',\n`;
+  });
+  tw += '      },\n';
+  // Box shadow
+  tw += '      boxShadow: {\n';
+  state.shadows.forEach(s => {
+    tw += `        '${s.name}': '${s.value}',\n`;
+  });
+  tw += '      },\n';
+  // Border radius
+  tw += '      borderRadius: {\n';
+  state.radii.forEach(r => {
+    tw += `        '${r.name}': '${r.value >= 9999 ? '9999px' : r.value+'px'}',\n`;
+  });
+  tw += '      },\n';
+  // Screens
+  tw += '      screens: {\n';
+  state.breakpoints.filter(b=>b.value>0).forEach(b => {
+    tw += `        '${b.name}': '${b.value}px',\n`;
+  });
+  tw += '      },\n';
+  tw += '    },\n  },\n};\n';
+  return tw;
+}
+
+function generateSCSS() {
+  let scss = '// Design Token Studio — SCSS Variables\n\n';
+  scss += '// Colors\n';
+  for (const [key, pal] of Object.entries(state.colors)) {
+    pal.shades.forEach(s => {
+      scss += `$color-${key}-${s.name}: ${s.value};\n`;
+    });
+  }
+  scss += '\n// Typography\n';
+  state.typography.forEach(t => {
+    const slug = t.name.toLowerCase().replace(/\s+/g,'-');
+    scss += `$font-size-${slug}: ${t.size}px;\n$font-weight-${slug}: ${t.weight};\n$line-height-${slug}: ${t.lineHeight};\n$letter-spacing-${slug}: ${t.letterSpacing}em;\n`;
+  });
+  scss += '\n// Spacing\n';
+  state.spacing.forEach(s => { scss += `$space-${s.name}: ${s.value}px;\n`; });
+  scss += '\n// Shadows\n';
+  state.shadows.forEach(s => { scss += `$shadow-${s.name}: ${s.value};\n`; });
+  scss += '\n// Border Radius\n';
+  state.radii.forEach(r => { scss += `$radius-${r.name}: ${r.value >= 9999 ? '9999px' : r.value+'px'};\n`; });
+  scss += '\n// Breakpoints\n';
+  state.breakpoints.forEach(b => { scss += `$breakpoint-${b.name}: ${b.value}px;\n`; });
+  scss += '\n// Breakpoint mixin\n@mixin respond-to($bp) {\n  @media (min-width: $bp) { @content; }\n}\n';
+  return scss;
+}
+
+function generateTokenJSON() {
+  const tokens = {
+    colors: {},
+    typography: {},
+    spacing: {},
+    shadows: {},
+    borderRadius: {},
+    breakpoints: {}
+  };
+  for (const [key, pal] of Object.entries(state.colors)) {
+    tokens.colors[key] = {};
+    pal.shades.forEach(s => { tokens.colors[key][s.name] = {value: s.value, type: 'color'}; });
+  }
+  state.typography.forEach(t => {
+    const slug = t.name.toLowerCase().replace(/\s+/g,'-');
+    tokens.typography[slug] = {value: {fontSize: t.size+'px', fontWeight: t.weight, lineHeight: t.lineHeight, letterSpacing: t.letterSpacing+'em', fontFamily: t.family}, type: 'typography'};
+  });
+  state.spacing.forEach(s => { tokens.spacing[s.name] = {value: s.value+'px', type: 'spacing'}; });
+  state.shadows.forEach(s => { tokens.shadows[s.name] = {value: s.value, type: 'boxShadow'}; });
+  state.radii.forEach(r => { tokens.borderRadius[r.name] = {value: (r.value >= 9999 ? '9999px' : r.value+'px'), type: 'borderRadius'}; });
+  state.breakpoints.forEach(b => { tokens.breakpoints[b.name] = {value: b.value+'px', type: 'dimension', description: b.label||''}; });
+  return JSON.stringify(tokens, null, 2);
+}
+
+function generateFigmaTokens() {
+  // Figma Tokens plugin compatible format
+  const tokens = { global: {} };
+  for (const [key, pal] of Object.entries(state.colors)) {
+    pal.shades.forEach(s => {
+      tokens.global[`color-${key}-${s.name}`] = {value: s.value, type: 'color'};
+    });
+  }
+  state.typography.forEach(t => {
+    const slug = t.name.toLowerCase().replace(/\s+/g,'-');
+    tokens.global[`fontSize-${slug}`] = {value: t.size.toString(), type: 'fontSizes'};
+    tokens.global[`fontWeight-${slug}`] = {value: t.weight.toString(), type: 'fontWeights'};
+    tokens.global[`lineHeight-${slug}`] = {value: t.lineHeight.toString(), type: 'lineHeights'};
+  });
+  state.spacing.forEach(s => { tokens.global[`space-${s.name}`] = {value: s.value.toString(), type: 'spacing'}; });
+  state.shadows.forEach(s => { tokens.global[`shadow-${s.name}`] = {value: s.value, type: 'boxShadow'}; });
+  state.radii.forEach(r => { tokens.global[`radius-${r.name}`] = {value: (r.value >= 9999 ? '9999' : r.value.toString()), type: 'borderRadius'}; });
+  return JSON.stringify(tokens, null, 2);
+}
+
+// ─── Dashboard ───
+function renderDashboard() {
+  const totalColors = Object.values(state.colors).reduce((a,p)=>a+p.shades.length, 0);
+  const totalPalettes = Object.keys(state.colors).length;
+  const totalType = state.typography.length;
+  const totalSpacing = state.spacing.length;
+  const totalShadows = state.shadows.length;
+  const totalRadii = state.radii.length;
+  const totalBP = state.breakpoints.length;
+  const totalTokens = totalColors + totalType*4 + totalSpacing + totalShadows + totalRadii + totalBP;
+
+  // Contrast check
+  let passCount = 0, failCount = 0;
+  for (const pal of Object.values(state.colors)) {
+    for (const s of pal.shades) {
+      const cW = contrastRatio(s.value, '#ffffff');
+      const cB = contrastRatio(s.value, '#000000');
+      if (cW >= 4.5 || cB >= 4.5) passCount++; else failCount++;
+    }
+  }
+
+  let html = `
+    <div class="dash-grid">
+      <div class="stat-card"><div class="num">${totalTokens}</div><div class="label">Total Tokens</div></div>
+      <div class="stat-card"><div class="num" style="color:var(--accent)">${totalColors}</div><div class="label">Color Swatches (${totalPalettes} palettes)</div></div>
+      <div class="stat-card"><div class="num" style="color:var(--purple)">${totalType}</div><div class="label">Type Scales</div></div>
+      <div class="stat-card"><div class="num" style="color:var(--green)">${totalSpacing + totalShadows + totalRadii}</div><div class="label">Spacing + Shadow + Radii</div></div>
+      <div class="stat-card"><div class="num" style="color:var(--green)">${passCount}</div><div class="label">WCAG AA Pass</div></div>
+      <div class="stat-card"><div class="num" style="color:var(--red)">${failCount}</div><div class="label">WCAG AA Fail</div></div>
+    </div>
+
+    <h3 style="font-size:14px;font-weight:600;margin:24px 0 12px">All Color Palettes</h3>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
+      ${Object.entries(state.colors).map(([key, pal]) => `
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="width:80px;font-size:13px;font-weight:600">${pal.name}</span>
+          <div style="display:flex;gap:2px;flex:1;border-radius:4px;overflow:hidden;height:32px">
+            ${pal.shades.map(s => `<div style="flex:1;background:${s.value}" title="${s.name}: ${s.value}"></div>`).join('')}
+          </div>
+          <span style="font-size:11px;color:var(--text3)">${pal.shades.length} shades</span>
+        </div>
+      `).join('')}
+    </div>
+
+    <h3 style="font-size:14px;font-weight:600;margin:24px 0 12px">Type Scale Preview</h3>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:24px">
+      ${state.typography.map(t => `
+        <div style="font-size:${Math.min(t.size,40)}px;font-weight:${t.weight};line-height:${t.lineHeight};letter-spacing:${t.letterSpacing}em;font-family:${t.family};margin-bottom:4px;opacity:.8">
+          ${t.name} — ${t.size}px
+        </div>
+      `).join('')}
+    </div>
+
+    <h3 style="font-size:14px;font-weight:600;margin:24px 0 12px">System Name</h3>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input value="${state.name}" onchange="state.name=this.value;save()" style="width:300px;padding:8px 12px">
+      <button class="btn btn-ghost btn-sm" onclick="if(confirm('Reset to defaults?')){localStorage.removeItem('${STORAGE_KEY}');state=defaultState();save();renderContent();renderNav()}" style="color:var(--red)">Reset All</button>
+    </div>
+  `;
+  return html;
+}
+
+// ─── Import/Export ───
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${state.name.toLowerCase().replace(/\s+/g,'-')}-tokens.json`;
+  a.click();
+  toast('Exported JSON');
+}
+
+function importData() {
+  const input = document.getElementById('file-input');
+  input.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.colors || data.typography) {
+          state = {...defaultState(), ...data};
+          save(); renderContent(); renderNav();
+          toast('Imported!');
+        } else { toast('Invalid format'); }
+      } catch { toast('Parse error'); }
+    };
+    reader.readAsText(file);
+    input.value = '';
+  };
+  input.click();
+}
+
+// ─── Help ───
+function showHelp() { document.getElementById('help-overlay').classList.remove('hidden'); }
+function hideHelp() { document.getElementById('help-overlay').classList.add('hidden'); }
+
+// ─── Keyboard ───
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  const helpOpen = !document.getElementById('help-overlay').classList.contains('hidden');
+
+  if (e.key === 'Escape') {
+    if (helpOpen) { hideHelp(); return; }
+    if (editingColor) { editingColor = null; renderContent(); return; }
+  }
+  if (helpOpen) return;
+
+  const viewKeys = {'1':'colors','2':'typography','3':'spacing','4':'shadows','5':'radii','6':'breakpoints','7':'components','8':'export'};
+  if (viewKeys[e.key]) { switchView(viewKeys[e.key]); e.preventDefault(); return; }
+  if (e.key === 'e' || e.key === 'E') { switchView('export'); e.preventDefault(); return; }
+  if (e.key === 'd' || e.key === 'D') { switchView('dashboard'); e.preventDefault(); return; }
+  if (e.key === 'i' || e.key === 'I') { importData(); e.preventDefault(); return; }
+  if (e.key === '?' || e.key === '/') { showHelp(); e.preventDefault(); return; }
+  if (e.key === 'n' || e.key === 'N') {
+    e.preventDefault();
+    switch(currentView) {
+      case 'colors': addPalette(); break;
+      case 'typography': addType(); break;
+      case 'spacing': addSpacing(); break;
+      case 'shadows': addShadow(); break;
+      case 'radii': addRadius(); break;
+      case 'breakpoints': addBP(); break;
+    }
+  }
+});
+
+// ─── Init ───
+renderNav();
+renderContent();
+</script>
+</body>
+</html>
