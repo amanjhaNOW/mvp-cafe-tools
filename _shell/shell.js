@@ -187,9 +187,11 @@
     }).join('');
 
     wrap.innerHTML = `<div class="welcome">
-      <h2>👋 Welcome to your workspace</h2>
-      <p>50 free tools for founders, PMs, and builders. Pick one to start.</p>
-      <div class="welcome__grid">${cards}</div>
+      <div class="welcome__inner">
+        <h2>👋 Welcome to your workspace</h2>
+        <p>50 free tools for founders, PMs, and builders. All connected. Pick one to start.</p>
+        <div class="welcome__grid">${cards}</div>
+      </div>
     </div>`;
   }
 
