@@ -758,7 +758,9 @@ pre{padding:20px;font-family:'SF Mono',Consolas,monospace;font-size:13px;line-he
 <div class="card-header"><h1>${esc(s.title)}</h1><span class="lang">${s.language}</span></div>
 <pre>${highlighted}</pre>
 <div class="meta"><span>📦 Snippet Vault</span>${s.tags.length?`<span>🏷 ${s.tags.join(', ')}</span>`:''}<span>${new Date(s.created).toLocaleDateString()}</span></div>
-</div></body></html>`;
+</div><!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body></html>`;
   const blob = new Blob([html],{type:'text/html'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1666,7 +1668,7 @@ body {
   const theme = localStorage.getItem('theme') || 
     (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
   document.documentElement.dataset.theme = theme;
-</script> */`
+<\/script> */`
     },
   ];
   

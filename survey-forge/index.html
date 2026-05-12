@@ -1114,6 +1114,8 @@ const key='survey_responses_'+btoa(title).slice(0,20);const existing=JSON.parse(
 document.getElementById('survey').innerHTML='<div class="thanks"><div class="icon">🎉</div><h2>Thank you!</h2><p>Your response has been recorded.</p></div>';}
 render();
 <\\/script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
 </body>
 </html>`;
   const blob = new Blob([html.replace('<\\/script>','</' + 'script>')], { type: 'text/html' });
