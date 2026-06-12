@@ -1,5 +1,5 @@
 /**
- * MVPC Shell — connected workspace for 50 overnight builds.
+ * MVPC Shell — connected workspace for 80 overnight builds.
  * Manages sidebar nav, iframe loading, workspace storage, cross-tool flows.
  */
 (function() {
@@ -20,6 +20,12 @@
     { slug: 'launch-pad', name: 'Launch Pad', emoji: '🚀', cluster: 'build' },
     { slug: 'ship-log', name: 'Ship Log', emoji: '🚢', cluster: 'build' },
     { slug: 'changelog', name: 'Changelog', emoji: '📜', cluster: 'build' },
+    { slug: 'timeline-forge', name: 'Timeline Forge', emoji: '📆', cluster: 'build' },
+    { slug: 'workflow-forge', name: 'Workflow Forge', emoji: '🔁', cluster: 'build' },
+    { slug: 'architecture-forge', name: 'Architecture Forge', emoji: '🏗️', cluster: 'build' },
+    { slug: 'state-machine', name: 'State Machine', emoji: '🔀', cluster: 'build' },
+    { slug: 'flag-studio', name: 'Flag Studio', emoji: '🚩', cluster: 'build' },
+    { slug: 'api-doc-studio', name: 'API Doc Studio', emoji: '📖', cluster: 'build' },
     // 💼 Career Loop
     { slug: 'job-pipeline', name: 'Job Pipeline', emoji: '💼', cluster: 'career' },
     { slug: 'interview-ace', name: 'Interview Ace', emoji: '🎤', cluster: 'career' },
@@ -28,6 +34,7 @@
     { slug: 'decision-journal', name: 'Decision Journal', emoji: '📓', cluster: 'career' },
     { slug: 'case-study-forge', name: 'Case Study Forge', emoji: '📚', cluster: 'career' },
     { slug: 'terminal-portfolio', name: 'Terminal Portfolio', emoji: '⌨️', cluster: 'career' },
+    { slug: 'resume-forge', name: 'Resume Forge', emoji: '📄', cluster: 'career' },
     // 📊 Run a Product
     { slug: 'metric-pulse', name: 'Metric Pulse', emoji: '📊', cluster: 'product' },
     { slug: 'feedback-board', name: 'Feedback Board', emoji: '💬', cluster: 'product' },
@@ -36,6 +43,9 @@
     { slug: 'growth-lab', name: 'Growth Lab', emoji: '📈', cluster: 'product' },
     { slug: 'competitor-radar', name: 'Competitor Radar', emoji: '🔎', cluster: 'product' },
     { slug: 'tech-radar', name: 'Tech Radar', emoji: '📡', cluster: 'product' },
+    { slug: 'chart-forge', name: 'Chart Forge', emoji: '📈', cluster: 'product' },
+    { slug: 'analytics-forge', name: 'Analytics Forge', emoji: '📉', cluster: 'product' },
+    { slug: 'seo-forge', name: 'SEO Forge', emoji: '🔍', cluster: 'product' },
     // 👥 Run a Team
     { slug: 'sprint-board', name: 'Sprint Board', emoji: '🏃', cluster: 'team', aliasOf: 'build' },
     { slug: 'retro-board', name: 'Retro Board', emoji: '🔄', cluster: 'team' },
@@ -45,12 +55,16 @@
     { slug: 'raid-log', name: 'RAID Log', emoji: '🚨', cluster: 'team' },
     { slug: 'stakeholder-map', name: 'Stakeholder Map', emoji: '🗺️', cluster: 'team' },
     { slug: 'status-beacon', name: 'Status Beacon', emoji: '🟢', cluster: 'team' },
+    { slug: 'poker-planner', name: 'Poker Planner', emoji: '♠️', cluster: 'team' },
+    { slug: 'org-chart-forge', name: 'Org Chart Forge', emoji: '🏢', cluster: 'team' },
     // 💰 Money & Pitch
     { slug: 'pricing-lab', name: 'Pricing Lab', emoji: '💰', cluster: 'money' },
     { slug: 'runway-calc', name: 'Runway Calc', emoji: '📉', cluster: 'money' },
     { slug: 'pitch-deck', name: 'Pitch Deck', emoji: '🎬', cluster: 'money' },
     { slug: 'invoice-forge', name: 'Invoice Forge', emoji: '🧾', cluster: 'money' },
     { slug: 'estimate-engine', name: 'Estimate Engine', emoji: '📐', cluster: 'money' },
+    { slug: 'budget-forge', name: 'Budget Forge', emoji: '💵', cluster: 'money' },
+    { slug: 'contract-forge', name: 'Contract Forge', emoji: '📑', cluster: 'money' },
     // 🧩 Loose / Personal
     { slug: 'focus-flow', name: 'Focus Flow', emoji: '🎧', cluster: 'personal' },
     { slug: 'habit-stack', name: 'Habit Stack', emoji: '🧱', cluster: 'personal' },
@@ -66,6 +80,23 @@
     { slug: 'dev-toolkit', name: 'Dev Toolkit', emoji: '🧰', cluster: 'personal' },
     { slug: 'api-playground', name: 'API Playground', emoji: '🛰️', cluster: 'personal' },
     { slug: 'design-tokens', name: 'Design Tokens', emoji: '🎨', cluster: 'personal' },
+    { slug: 'draft-studio', name: 'Draft Studio', emoji: '✍️', cluster: 'personal' },
+    { slug: 'qr-forge', name: 'QR Forge', emoji: '🔳', cluster: 'personal' },
+    { slug: 'gradient-studio', name: 'Gradient Studio', emoji: '🌈', cluster: 'personal' },
+    { slug: 'code-playground', name: 'Code Playground', emoji: '💻', cluster: 'personal' },
+    { slug: 'table-forge', name: 'Table Forge', emoji: '📋', cluster: 'personal' },
+    { slug: 'algo-arena', name: 'Algo Arena', emoji: '🏟️', cluster: 'personal' },
+    { slug: 'logic-gate-lab', name: 'Logic Gate Lab', emoji: '⚡', cluster: 'personal' },
+    { slug: 'data-forge', name: 'Data Forge', emoji: '🗃️', cluster: 'personal' },
+    { slug: 'stack-radar', name: 'Stack Radar', emoji: '🧮', cluster: 'personal' },
+    // Creative & Play (days 51–80 wave)
+    { slug: 'pixel-forge', name: 'Pixel Forge', emoji: '🖼️', cluster: 'creative' },
+    { slug: 'beat-lab', name: 'Beat Lab', emoji: '🥁', cluster: 'creative' },
+    { slug: 'art-lab', name: 'Art Lab', emoji: '🖌️', cluster: 'creative' },
+    { slug: 'arcade-cabinet', name: 'Arcade Cabinet', emoji: '🕹️', cluster: 'creative' },
+    { slug: 'physics-lab', name: 'Physics Lab', emoji: '🪀', cluster: 'creative' },
+    { slug: 'typing-arena', name: 'Typing Arena', emoji: '🏎️', cluster: 'creative' },
+    { slug: 'dialogue-tree', name: 'Dialogue Tree', emoji: '🗨️', cluster: 'creative' },
   ];
 
   // Deduplicate (sprint-board appears in both build and team)
@@ -84,6 +115,7 @@
     { id: 'team', label: '👥 Run a Team', desc: 'Sprints, retros, alignment' },
     { id: 'money', label: '💰 Money & Pitch', desc: 'Pricing, runway, fundraise' },
     { id: 'personal', label: '🧩 Personal & Dev', desc: 'Tools, focus, learning' },
+    { id: 'creative', label: '🎨 Creative & Play', desc: 'Make art, music, games' },
   ];
 
   // Sprint Board should show in team cluster too (cross-ref)
@@ -189,7 +221,7 @@
     wrap.innerHTML = `<div class="welcome">
       <div class="welcome__inner">
         <h2>👋 Welcome to your workspace</h2>
-        <p>50 free tools for founders, PMs, and builders. All connected. Pick one to start.</p>
+        <p>80 free tools for founders, PMs, and builders. All connected. Pick one to start.</p>
         <div class="welcome__grid">${cards}</div>
       </div>
     </div>`;

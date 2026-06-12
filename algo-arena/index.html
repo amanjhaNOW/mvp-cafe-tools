@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Algo Arena — Algorithm Visualizer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#388bfd;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff;--orange:#f0883e;--cyan:#39d2c0;--pink:#f778ba}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:none;outline:none}
+input,select{font-family:inherit;outline:none}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:20px}
+.sidebar-header p{font-size:11px;color:var(--text2);margin-top:4px}
+
+.cat-section{padding:8px 0}
+.cat-title{padding:4px 16px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--text2)}
+.algo-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px 16px;background:none;color:var(--text2);font-size:13px;text-align:left;transition:all .15s}
+.algo-btn:hover{background:var(--surface2);color:var(--text)}
+.algo-btn.active{background:var(--accent)15;color:var(--accent);border-right:2px solid var(--accent)}
+.algo-btn .emoji{font-size:16px;width:24px;text-align:center}
+.algo-btn .complexity{font-size:10px;color:var(--text2);margin-left:auto;font-family:'SF Mono',monospace}
+.algo-btn.active .complexity{color:var(--accent)}
+
+.sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--text2);text-align:center}
+.sidebar-footer kbd{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:10px;font-family:'SF Mono',monospace}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
+.toolbar-group{display:flex;align-items:center;gap:8px}
+.toolbar label{font-size:11px;color:var(--text2);font-weight:500}
+.toolbar input[type=range]{width:100px;accent-color:var(--accent)}
+.toolbar select{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px}
+.toolbar .val{font-size:12px;color:var(--accent);font-family:'SF Mono',monospace;min-width:28px}
+.tb-btn{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:500;transition:all .15s;display:flex;align-items:center;gap:6px}
+.tb-btn:hover{border-color:var(--accent);color:var(--accent)}
+.tb-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tb-btn.primary:hover{background:var(--accent2)}
+.tb-btn.danger{border-color:var(--red);color:var(--red)}
+.tb-btn.danger:hover{background:var(--red)20}
+.tb-btn:disabled{opacity:.4;cursor:not-allowed}
+.speed-label{font-size:10px;color:var(--text2)}
+
+/* Info bar */
+.info-bar{display:flex;align-items:center;gap:16px;padding:8px 20px;background:var(--surface);border-bottom:1px solid var(--border);font-size:12px}
+.info-stat{display:flex;align-items:center;gap:4px;color:var(--text2)}
+.info-stat .v{color:var(--accent);font-family:'SF Mono',monospace;font-weight:600}
+.info-desc{margin-left:auto;color:var(--text2);font-size:11px;max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Canvas area */
+.canvas-area{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;overflow:hidden;position:relative}
+#vizCanvas{width:100%;height:100%}
+
+/* Legend */
+.legend{position:absolute;bottom:16px;right:20px;display:flex;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:11px}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-dot{width:10px;height:10px;border-radius:2px}
+
+/* Algorithm description panel */
+.algo-panel{position:absolute;top:16px;right:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;max-width:320px;font-size:12px;z-index:5;display:none}
+.algo-panel.show{display:block}
+.algo-panel h3{font-size:14px;margin-bottom:6px;color:var(--accent)}
+.algo-panel p{color:var(--text2);line-height:1.5;margin-bottom:8px}
+.algo-panel .complexity-info{display:flex;gap:16px}
+.algo-panel .complexity-info span{color:var(--text2)}
+.algo-panel .complexity-info code{color:var(--green);font-family:'SF Mono',monospace;font-size:11px}
+.algo-panel .close-panel{position:absolute;top:8px;right:10px;background:none;color:var(--text2);font-size:16px}
+.algo-panel .close-panel:hover{color:var(--text)}
+
+/* Pathfinding grid */
+.grid-container{display:flex;flex-direction:column;align-items:center;gap:4px}
+.grid-row{display:flex}
+.grid-cell{width:24px;height:24px;border:1px solid var(--border);transition:background .1s}
+.grid-cell.wall{background:#444c56}
+.grid-cell.start{background:var(--green)}
+.grid-cell.end{background:var(--red)}
+.grid-cell.visited{background:var(--purple)60}
+.grid-cell.path{background:var(--yellow)}
+.grid-cell.current{background:var(--accent)}
+.grid-cell.frontier{background:var(--cyan)50}
+
+/* Tree visualization */
+.tree-svg text{fill:var(--text);font-size:12px;font-family:'SF Mono',monospace;text-anchor:middle;dominant-baseline:central}
+.tree-svg circle{stroke-width:2}
+.tree-svg line{stroke:var(--border);stroke-width:2}
+
+/* Help modal */
+.modal-overlay{position:fixed;inset:0;background:#00000080;z-index:100;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:18px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.modal .kbd-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border)15}
+.modal .kbd-row:last-child{border:none}
+.modal .kbd-row kbd{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:2px 8px;font-family:'SF Mono',monospace;font-size:11px}
+.modal .close-modal{position:absolute;top:12px;right:16px;background:none;color:var(--text2);font-size:20px}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span>⚡</span> Algo Arena</h1>
+    <p>Interactive Algorithm Visualizer</p>
+  </div>
+  <div id="algoList" style="flex:1;overflow-y:auto"></div>
+  <div class="sidebar-footer">
+    <kbd>?</kbd> Help &nbsp; <kbd>Space</kbd> Play/Pause &nbsp; <kbd>R</kbd> Reset
+  </div>
+</div>
+
+<div class="main">
+  <div class="toolbar" id="toolbar"></div>
+  <div class="info-bar" id="infoBar"></div>
+  <div class="canvas-area">
+    <canvas id="vizCanvas"></canvas>
+    <div class="legend" id="legend"></div>
+    <div class="algo-panel" id="algoPanel">
+      <button class="close-panel" onclick="document.getElementById('algoPanel').classList.remove('show')">&times;</button>
+      <h3 id="panelTitle"></h3>
+      <p id="panelDesc"></p>
+      <div class="complexity-info">
+        <span>Time: <code id="panelTime"></code></span>
+        <span>Space: <code id="panelSpace"></code></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="helpModal">
+  <div class="modal" style="position:relative">
+    <button class="close-modal" onclick="toggleHelp()">&times;</button>
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="kbd-row"><span>Play / Pause</span><kbd>Space</kbd></div>
+    <div class="kbd-row"><span>Step forward</span><kbd>→</kbd></div>
+    <div class="kbd-row"><span>Reset</span><kbd>R</kbd></div>
+    <div class="kbd-row"><span>New array / grid</span><kbd>N</kbd></div>
+    <div class="kbd-row"><span>Speed up</span><kbd>+</kbd></div>
+    <div class="kbd-row"><span>Slow down</span><kbd>-</kbd></div>
+    <div class="kbd-row"><span>Toggle info panel</span><kbd>I</kbd></div>
+    <div class="kbd-row"><span>Help</span><kbd>?</kbd></div>
+    <div class="kbd-row"><span>Close modal</span><kbd>Esc</kbd></div>
+    <h2 style="margin-top:16px">🖱️ Pathfinding Controls</h2>
+    <div class="kbd-row"><span>Place wall</span><span>Click + drag</span></div>
+    <div class="kbd-row"><span>Move start/end</span><span>Drag green/red cell</span></div>
+    <div class="kbd-row"><span>Remove wall</span><span>Right-click</span></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ALGO ARENA — Interactive Algorithm Visualizer
+// Day 59 Overnight Build — Zero dependencies, fully local
+// ============================================================
+
+const C = document.getElementById('vizCanvas');
+const ctx = C.getContext('2d');
+let W, H;
+
+// State
+let currentAlgo = 'bubble';
+let arr = [];
+let arrSize = 60;
+let speed = 50; // 1-100 → delay mapping
+let isRunning = false;
+let isPaused = false;
+let stepQueue = [];
+let stepIndex = 0;
+let animFrame = null;
+let comparisons = 0;
+let swaps = 0;
+let accesses = 0;
+let startTime = 0;
+let elapsedMs = 0;
+
+// Pathfinding state
+let grid = [];
+let gridRows = 25;
+let gridCols = 45;
+let startCell = [2, 2];
+let endCell = [22, 42];
+let isDrawingWall = false;
+let isErasing = false;
+let isDraggingStart = false;
+let isDraggingEnd = false;
+
+// Tree state
+let treeNodes = [];
+let treeSteps = [];
+
+// Colors
+const COLORS = {
+  default: '#388bfd',
+  comparing: '#f0883e',
+  swapping: '#f85149',
+  sorted: '#3fb950',
+  pivot: '#bc8cff',
+  current: '#58a6ff',
+  minimum: '#d29922',
+  selected: '#39d2c0',
+  merged: '#f778ba'
+};
+
+// ============================================================
+// Algorithm Definitions
+// ============================================================
+const ALGORITHMS = {
+  // SORTING
+  bubble: {
+    cat: 'Sorting', emoji: '🫧', name: 'Bubble Sort',
+    time: 'O(n²)', space: 'O(1)',
+    desc: 'Repeatedly steps through the list, compares adjacent elements, and swaps them if they\'re in the wrong order. Simple but inefficient for large datasets.',
+    gen: genSortSteps_bubble
+  },
+  selection: {
+    cat: 'Sorting', emoji: '👆', name: 'Selection Sort',
+    time: 'O(n²)', space: 'O(1)',
+    desc: 'Finds the minimum element from the unsorted portion and places it at the beginning. Makes O(n) swaps, fewer than bubble sort.',
+    gen: genSortSteps_selection
+  },
+  insertion: {
+    cat: 'Sorting', emoji: '📥', name: 'Insertion Sort',
+    time: 'O(n²)', space: 'O(1)',
+    desc: 'Builds the sorted array one item at a time by inserting each element into its correct position. Efficient for small or nearly sorted data.',
+    gen: genSortSteps_insertion
+  },
+  merge: {
+    cat: 'Sorting', emoji: '🔀', name: 'Merge Sort',
+    time: 'O(n log n)', space: 'O(n)',
+    desc: 'Divide-and-conquer algorithm that splits the array in half, recursively sorts each half, then merges them. Stable and guaranteed O(n log n).',
+    gen: genSortSteps_merge
+  },
+  quick: {
+    cat: 'Sorting', emoji: '⚡', name: 'Quick Sort',
+    time: 'O(n log n)', space: 'O(log n)',
+    desc: 'Picks a pivot, partitions the array so smaller elements go left and larger go right, then recursively sorts partitions. Fast in practice.',
+    gen: genSortSteps_quick
+  },
+  heap: {
+    cat: 'Sorting', emoji: '🏔️', name: 'Heap Sort',
+    time: 'O(n log n)', space: 'O(1)',
+    desc: 'Builds a max-heap from the array, then repeatedly extracts the maximum to build the sorted result. In-place and guaranteed O(n log n).',
+    gen: genSortSteps_heap
+  },
+  shell: {
+    cat: 'Sorting', emoji: '🐚', name: 'Shell Sort',
+    time: 'O(n^1.3)', space: 'O(1)',
+    desc: 'Generalization of insertion sort that compares elements far apart, progressively reducing the gap. Faster than insertion sort for large arrays.',
+    gen: genSortSteps_shell
+  },
+  counting: {
+    cat: 'Sorting', emoji: '🔢', name: 'Counting Sort',
+    time: 'O(n+k)', space: 'O(k)',
+    desc: 'Non-comparison sort that counts occurrences of each value. Efficient when the range k is not much larger than n. Stable sort.',
+    gen: genSortSteps_counting
+  },
+  // SEARCHING
+  linear: {
+    cat: 'Searching', emoji: '🔍', name: 'Linear Search',
+    time: 'O(n)', space: 'O(1)',
+    desc: 'Checks every element sequentially until the target is found or the end is reached. Simple but slow for large datasets.',
+    gen: genSearchSteps_linear
+  },
+  binary: {
+    cat: 'Searching', emoji: '🎯', name: 'Binary Search',
+    time: 'O(log n)', space: 'O(1)',
+    desc: 'Works on sorted arrays by repeatedly halving the search space. Compares the target with the middle element to decide which half to search.',
+    gen: genSearchSteps_binary
+  },
+  // PATHFINDING
+  bfs: {
+    cat: 'Pathfinding', emoji: '🌊', name: 'BFS (Breadth-First)',
+    time: 'O(V+E)', space: 'O(V)',
+    desc: 'Explores all neighbors at the current depth before moving deeper. Guarantees the shortest path in unweighted graphs. Uses a queue.',
+    gen: null, mode: 'grid'
+  },
+  dfs: {
+    cat: 'Pathfinding', emoji: '🕳️', name: 'DFS (Depth-First)',
+    time: 'O(V+E)', space: 'O(V)',
+    desc: 'Explores as far as possible along each branch before backtracking. Does NOT guarantee shortest path. Uses a stack.',
+    gen: null, mode: 'grid'
+  },
+  dijkstra: {
+    cat: 'Pathfinding', emoji: '📡', name: 'Dijkstra\'s Algorithm',
+    time: 'O(V² / V·logV)', space: 'O(V)',
+    desc: 'Finds shortest path in weighted graphs by greedily selecting the unvisited node with smallest distance. Uses a priority queue.',
+    gen: null, mode: 'grid'
+  },
+  astar: {
+    cat: 'Pathfinding', emoji: '⭐', name: 'A* Search',
+    time: 'O(E)', space: 'O(V)',
+    desc: 'Informed search using heuristic (Manhattan distance) to guide exploration toward the goal. Optimal with admissible heuristic.',
+    gen: null, mode: 'grid'
+  },
+  // TREE TRAVERSAL
+  bfs_tree: {
+    cat: 'Trees', emoji: '🌳', name: 'Level-Order (BFS)',
+    time: 'O(n)', space: 'O(n)',
+    desc: 'Visits tree nodes level by level, left to right. Uses a queue. Useful for finding the shortest path from root.',
+    gen: null, mode: 'tree'
+  },
+  inorder: {
+    cat: 'Trees', emoji: '↔️', name: 'In-Order Traversal',
+    time: 'O(n)', space: 'O(h)',
+    desc: 'Visits left subtree, then root, then right subtree. For BSTs, produces nodes in sorted (ascending) order.',
+    gen: null, mode: 'tree'
+  },
+  preorder: {
+    cat: 'Trees', emoji: '⬇️', name: 'Pre-Order Traversal',
+    time: 'O(n)', space: 'O(h)',
+    desc: 'Visits root first, then left subtree, then right subtree. Useful for copying/serializing a tree structure.',
+    gen: null, mode: 'tree'
+  },
+  postorder: {
+    cat: 'Trees', emoji: '⬆️', name: 'Post-Order Traversal',
+    time: 'O(n)', space: 'O(h)',
+    desc: 'Visits left subtree, right subtree, then root. Useful for deleting a tree or evaluating expression trees.',
+    gen: null, mode: 'tree'
+  },
+};
+
+// ============================================================
+// Sidebar
+// ============================================================
+function renderSidebar() {
+  const el = document.getElementById('algoList');
+  const cats = {};
+  for (const [k, v] of Object.entries(ALGORITHMS)) {
+    if (!cats[v.cat]) cats[v.cat] = [];
+    cats[v.cat].push({ key: k, ...v });
+  }
+  let html = '';
+  for (const [cat, algos] of Object.entries(cats)) {
+    html += `<div class="cat-section"><div class="cat-title">${cat}</div>`;
+    for (const a of algos) {
+      html += `<button class="algo-btn${a.key === currentAlgo ? ' active' : ''}" data-algo="${a.key}">
+        <span class="emoji">${a.emoji}</span>${a.name}<span class="complexity">${a.time}</span>
+      </button>`;
+    }
+    html += '</div>';
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('.algo-btn').forEach(b => {
+    b.onclick = () => selectAlgo(b.dataset.algo);
+  });
+}
+
+function selectAlgo(key) {
+  stopAnimation();
+  currentAlgo = key;
+  renderSidebar();
+  renderToolbar();
+  resetViz();
+}
+
+// ============================================================
+// Toolbar
+// ============================================================
+function renderToolbar() {
+  const a = ALGORITHMS[currentAlgo];
+  const mode = a.mode || 'sort';
+  let html = '';
+
+  if (mode === 'sort' || !a.mode) {
+    html += `
+      <div class="toolbar-group">
+        <label>Size</label>
+        <input type="range" id="sizeSlider" min="10" max="200" value="${arrSize}">
+        <span class="val" id="sizeVal">${arrSize}</span>
+      </div>`;
+  }
+
+  html += `
+    <div class="toolbar-group">
+      <label>Speed</label>
+      <input type="range" id="speedSlider" min="1" max="100" value="${speed}">
+      <span class="val" id="speedVal">${speed}</span>
+    </div>
+    <div class="toolbar-group" style="margin-left:auto">
+      <button class="tb-btn" onclick="resetViz()" title="Reset (R)">🔄 Reset</button>
+      <button class="tb-btn" onclick="generateNew()" title="New (N)">🎲 New</button>
+      <button class="tb-btn primary" id="playBtn" onclick="togglePlay()" title="Play (Space)">▶ Play</button>
+      <button class="tb-btn" id="stepBtn" onclick="stepForward()" title="Step (→)">⏭ Step</button>
+      <button class="tb-btn" onclick="toggleInfoPanel()" title="Info (I)">ℹ️</button>
+    </div>`;
+
+  document.getElementById('toolbar').innerHTML = html;
+
+  const sizeSlider = document.getElementById('sizeSlider');
+  if (sizeSlider) {
+    sizeSlider.oninput = () => {
+      arrSize = +sizeSlider.value;
+      document.getElementById('sizeVal').textContent = arrSize;
+      if (!isRunning) { generateNew(); }
+    };
+  }
+
+  document.getElementById('speedSlider').oninput = function() {
+    speed = +this.value;
+    document.getElementById('speedVal').textContent = speed;
+  };
+}
+
+function getDelay() {
+  // speed 1 = 500ms, speed 100 = 1ms
+  return Math.max(1, Math.round(500 * Math.pow(0.94, speed)));
+}
+
+// ============================================================
+// Info Bar
+// ============================================================
+function updateInfoBar() {
+  const a = ALGORITHMS[currentAlgo];
+  const mode = a.mode || 'sort';
+  let html = '';
+
+  if (mode === 'sort' || mode === undefined) {
+    html += `<div class="info-stat">Comparisons: <span class="v">${comparisons}</span></div>`;
+    html += `<div class="info-stat">Swaps: <span class="v">${swaps}</span></div>`;
+    html += `<div class="info-stat">Array Accesses: <span class="v">${accesses}</span></div>`;
+  } else if (mode === 'grid') {
+    html += `<div class="info-stat">Visited: <span class="v">${comparisons}</span></div>`;
+    html += `<div class="info-stat">Path Length: <span class="v">${swaps}</span></div>`;
+  } else if (mode === 'tree') {
+    html += `<div class="info-stat">Nodes Visited: <span class="v">${comparisons}</span></div>`;
+  }
+
+  if (isRunning) {
+    const ms = Date.now() - startTime + elapsedMs;
+    html += `<div class="info-stat">Time: <span class="v">${(ms/1000).toFixed(1)}s</span></div>`;
+  }
+
+  html += `<div class="info-stat">Steps: <span class="v">${stepIndex}/${stepQueue.length}</span></div>`;
+  html += `<div class="info-desc">${a.emoji} ${a.name} — ${a.time} time, ${a.space} space</div>`;
+
+  document.getElementById('infoBar').innerHTML = html;
+}
+
+// ============================================================
+// Canvas Resize
+// ============================================================
+function resizeCanvas() {
+  const area = C.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+  W = area.clientWidth - 40;
+  H = area.clientHeight - 40;
+  C.width = W * dpr;
+  C.height = H * dpr;
+  C.style.width = W + 'px';
+  C.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+// ============================================================
+// SORTING VISUALIZATION
+// ============================================================
+function generateArray() {
+  arr = [];
+  for (let i = 0; i < arrSize; i++) {
+    arr.push(Math.random() * 0.9 + 0.1); // 0.1 to 1.0
+  }
+}
+
+function drawSortArray(highlights = {}) {
+  ctx.clearRect(0, 0, W, H);
+  const barW = Math.max(1, (W - 20) / arr.length - 1);
+  const gap = 1;
+  const totalW = arr.length * (barW + gap);
+  const startX = (W - totalW) / 2;
+
+  for (let i = 0; i < arr.length; i++) {
+    const h = arr[i] * (H - 40);
+    const x = startX + i * (barW + gap);
+    const y = H - 20 - h;
+
+    let color = COLORS.default;
+    if (highlights.sorted && highlights.sorted.has(i)) color = COLORS.sorted;
+    if (highlights.comparing && highlights.comparing.has(i)) color = COLORS.comparing;
+    if (highlights.swapping && highlights.swapping.has(i)) color = COLORS.swapping;
+    if (highlights.pivot !== undefined && highlights.pivot === i) color = COLORS.pivot;
+    if (highlights.minimum !== undefined && highlights.minimum === i) color = COLORS.minimum;
+    if (highlights.selected && highlights.selected.has(i)) color = COLORS.selected;
+    if (highlights.merged && highlights.merged.has(i)) color = COLORS.merged;
+
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, barW, h);
+  }
+}
+
+// ============================================================
+// SEARCHING VISUALIZATION
+// ============================================================
+function drawSearchArray(highlights = {}) {
+  ctx.clearRect(0, 0, W, H);
+  const barW = Math.max(2, (W - 40) / arr.length - 2);
+  const gap = 2;
+  const totalW = arr.length * (barW + gap);
+  const startX = (W - totalW) / 2;
+
+  for (let i = 0; i < arr.length; i++) {
+    const h = arr[i] * (H - 80);
+    const x = startX + i * (barW + gap);
+    const y = H - 40 - h;
+
+    let color = COLORS.default;
+    if (highlights.eliminated && highlights.eliminated.has(i)) color = '#30363d';
+    if (highlights.range && i >= highlights.range[0] && i <= highlights.range[1]) color = COLORS.selected;
+    if (highlights.comparing && highlights.comparing.has(i)) color = COLORS.comparing;
+    if (highlights.found !== undefined && highlights.found === i) color = COLORS.sorted;
+
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, barW, h);
+
+    // Target indicator
+    if (highlights.target !== undefined && i === highlights.target) {
+      ctx.fillStyle = COLORS.swapping;
+      ctx.fillRect(x, y - 8, barW, 4);
+    }
+  }
+
+  // Target value label
+  if (highlights.targetVal !== undefined) {
+    ctx.fillStyle = '#e6edf3';
+    ctx.font = '14px SF Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Target: ${highlights.targetVal}`, W / 2, 24);
+  }
+}
+
+// ============================================================
+// SORTING ALGORITHMS (Step Generators)
+// ============================================================
+function genSortSteps_bubble() {
+  const a = [...arr];
+  const steps = [];
+  const sorted = new Set();
+  const n = a.length;
+
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = 0; j < n - i - 1; j++) {
+      steps.push({ type: 'compare', indices: [j, j + 1], arr: [...a], sorted: new Set(sorted) });
+      if (a[j] > a[j + 1]) {
+        [a[j], a[j + 1]] = [a[j + 1], a[j]];
+        steps.push({ type: 'swap', indices: [j, j + 1], arr: [...a], sorted: new Set(sorted) });
+      }
+    }
+    sorted.add(n - i - 1);
+    steps.push({ type: 'sorted', index: n - i - 1, arr: [...a], sorted: new Set(sorted) });
+  }
+  sorted.add(0);
+  steps.push({ type: 'done', arr: [...a], sorted: new Set(sorted) });
+  return steps;
+}
+
+function genSortSteps_selection() {
+  const a = [...arr];
+  const steps = [];
+  const sorted = new Set();
+  const n = a.length;
+
+  for (let i = 0; i < n - 1; i++) {
+    let minIdx = i;
+    for (let j = i + 1; j < n; j++) {
+      steps.push({ type: 'compare', indices: [minIdx, j], minimum: minIdx, arr: [...a], sorted: new Set(sorted) });
+      if (a[j] < a[minIdx]) minIdx = j;
+    }
+    if (minIdx !== i) {
+      [a[i], a[minIdx]] = [a[minIdx], a[i]];
+      steps.push({ type: 'swap', indices: [i, minIdx], arr: [...a], sorted: new Set(sorted) });
+    }
+    sorted.add(i);
+  }
+  sorted.add(n - 1);
+  steps.push({ type: 'done', arr: [...a], sorted: new Set(sorted) });
+  return steps;
+}
+
+function genSortSteps_insertion() {
+  const a = [...arr];
+  const steps = [];
+  const sorted = new Set([0]);
+
+  for (let i = 1; i < a.length; i++) {
+    let j = i;
+    steps.push({ type: 'select', index: i, arr: [...a], sorted: new Set(sorted) });
+    while (j > 0 && a[j] < a[j - 1]) {
+      steps.push({ type: 'compare', indices: [j - 1, j], arr: [...a], sorted: new Set(sorted) });
+      [a[j], a[j - 1]] = [a[j - 1], a[j]];
+      steps.push({ type: 'swap', indices: [j - 1, j], arr: [...a], sorted: new Set(sorted) });
+      j--;
+    }
+    sorted.add(i);
+  }
+  steps.push({ type: 'done', arr: [...a], sorted: new Set(Array.from({ length: a.length }, (_, i) => i)) });
+  return steps;
+}
+
+function genSortSteps_merge() {
+  const a = [...arr];
+  const steps = [];
+
+  function mergeSort(start, end) {
+    if (end - start <= 1) return;
+    const mid = Math.floor((start + end) / 2);
+    mergeSort(start, mid);
+    mergeSort(mid, end);
+    merge(start, mid, end);
+  }
+
+  function merge(start, mid, end) {
+    const left = a.slice(start, mid);
+    const right = a.slice(mid, end);
+    let i = 0, j = 0, k = start;
+    const mergedIndices = new Set();
+
+    while (i < left.length && j < right.length) {
+      steps.push({ type: 'compare', indices: [start + i, mid + j], arr: [...a], merged: new Set(mergedIndices) });
+      if (left[i] <= right[j]) {
+        a[k] = left[i]; i++;
+      } else {
+        a[k] = right[j]; j++;
+      }
+      mergedIndices.add(k);
+      steps.push({ type: 'merge', index: k, arr: [...a], merged: new Set(mergedIndices) });
+      k++;
+    }
+    while (i < left.length) {
+      a[k] = left[i]; mergedIndices.add(k);
+      steps.push({ type: 'merge', index: k, arr: [...a], merged: new Set(mergedIndices) });
+      i++; k++;
+    }
+    while (j < right.length) {
+      a[k] = right[j]; mergedIndices.add(k);
+      steps.push({ type: 'merge', index: k, arr: [...a], merged: new Set(mergedIndices) });
+      j++; k++;
+    }
+  }
+
+  mergeSort(0, a.length);
+  steps.push({ type: 'done', arr: [...a], sorted: new Set(Array.from({ length: a.length }, (_, i) => i)) });
+  return steps;
+}
+
+function genSortSteps_quick() {
+  const a = [...arr];
+  const steps = [];
+  const sorted = new Set();
+
+  function partition(low, high) {
+    const pivot = a[high];
+    let i = low - 1;
+    steps.push({ type: 'pivot', index: high, arr: [...a], sorted: new Set(sorted) });
+
+    for (let j = low; j < high; j++) {
+      steps.push({ type: 'compare', indices: [j, high], pivot: high, arr: [...a], sorted: new Set(sorted) });
+      if (a[j] < pivot) {
+        i++;
+        [a[i], a[j]] = [a[j], a[i]];
+        steps.push({ type: 'swap', indices: [i, j], pivot: high, arr: [...a], sorted: new Set(sorted) });
+      }
+    }
+    [a[i + 1], a[high]] = [a[high], a[i + 1]];
+    sorted.add(i + 1);
+    steps.push({ type: 'place', index: i + 1, arr: [...a], sorted: new Set(sorted) });
+    return i + 1;
+  }
+
+  function quickSort(low, high) {
+    if (low < high) {
+      const pi = partition(low, high);
+      quickSort(low, pi - 1);
+      quickSort(pi + 1, high);
+    } else if (low === high) {
+      sorted.add(low);
+    }
+  }
+
+  quickSort(0, a.length - 1);
+  steps.push({ type: 'done', arr: [...a], sorted: new Set(Array.from({ length: a.length }, (_, i) => i)) });
+  return steps;
+}
+
+function genSortSteps_heap() {
+  const a = [...arr];
+  const steps = [];
+  const sorted = new Set();
+  const n = a.length;
+
+  function heapify(size, i) {
+    let largest = i;
+    const l = 2 * i + 1, r = 2 * i + 2;
+    if (l < size) {
+      steps.push({ type: 'compare', indices: [largest, l], arr: [...a], sorted: new Set(sorted) });
+      if (a[l] > a[largest]) largest = l;
+    }
+    if (r < size) {
+      steps.push({ type: 'compare', indices: [largest, r], arr: [...a], sorted: new Set(sorted) });
+      if (a[r] > a[largest]) largest = r;
+    }
+    if (largest !== i) {
+      [a[i], a[largest]] = [a[largest], a[i]];
+      steps.push({ type: 'swap', indices: [i, largest], arr: [...a], sorted: new Set(sorted) });
+      heapify(size, largest);
+    }
+  }
+
+  // Build max heap
+  for (let i = Math.floor(n / 2) - 1; i >= 0; i--) heapify(n, i);
+
+  // Extract
+  for (let i = n - 1; i > 0; i--) {
+    [a[0], a[i]] = [a[i], a[0]];
+    sorted.add(i);
+    steps.push({ type: 'swap', indices: [0, i], arr: [...a], sorted: new Set(sorted) });
+    heapify(i, 0);
+  }
+  sorted.add(0);
+  steps.push({ type: 'done', arr: [...a], sorted: new Set(sorted) });
+  return steps;
+}
+
+function genSortSteps_shell() {
+  const a = [...arr];
+  const steps = [];
+  const n = a.length;
+
+  for (let gap = Math.floor(n / 2); gap > 0; gap = Math.floor(gap / 2)) {
+    for (let i = gap; i < n; i++) {
+      let j = i;
+      while (j >= gap) {
+        steps.push({ type: 'compare', indices: [j - gap, j], arr: [...a], sorted: new Set() });
+        if (a[j - gap] > a[j]) {
+          [a[j - gap], a[j]] = [a[j], a[j - gap]];
+          steps.push({ type: 'swap', indices: [j - gap, j], arr: [...a], sorted: new Set() });
+          j -= gap;
+        } else break;
+      }
+    }
+  }
+  steps.push({ type: 'done', arr: [...a], sorted: new Set(Array.from({ length: a.length }, (_, i) => i)) });
+  return steps;
+}
+
+function genSortSteps_counting() {
+  const a = [...arr];
+  const steps = [];
+  const n = a.length;
+  // Quantize to integers 1-100
+  const intArr = a.map(v => Math.round(v * 100));
+  const max = Math.max(...intArr);
+  const count = new Array(max + 1).fill(0);
+
+  for (let i = 0; i < n; i++) {
+    count[intArr[i]]++;
+    steps.push({ type: 'count', index: i, arr: a.map((v, j) => j <= i ? v : v), sorted: new Set() });
+  }
+
+  let idx = 0;
+  for (let i = 0; i <= max; i++) {
+    while (count[i] > 0) {
+      a[idx] = i / 100;
+      steps.push({ type: 'place', index: idx, arr: [...a], sorted: new Set(Array.from({ length: idx + 1 }, (_, k) => k)) });
+      idx++;
+      count[i]--;
+    }
+  }
+  steps.push({ type: 'done', arr: [...a], sorted: new Set(Array.from({ length: n }, (_, i) => i)) });
+  return steps;
+}
+
+// ============================================================
+// SEARCHING ALGORITHMS
+// ============================================================
+function genSearchSteps_linear() {
+  const a = [...arr].sort((a, b) => a - b);
+  arr = [...a]; // visual needs sorted array shown
+  const target = Math.floor(arr.length * 0.7);
+  const targetVal = a[target];
+  const steps = [];
+
+  for (let i = 0; i < a.length; i++) {
+    steps.push({ type: 'check', index: i, targetIdx: target, targetVal, arr: [...a] });
+    if (i === target) {
+      steps.push({ type: 'found', index: i, targetVal, arr: [...a] });
+      return steps;
+    }
+  }
+  steps.push({ type: 'notfound', targetVal, arr: [...a] });
+  return steps;
+}
+
+function genSearchSteps_binary() {
+  const a = [...arr].sort((a, b) => a - b);
+  arr = [...a];
+  const target = Math.floor(arr.length * 0.7);
+  const targetVal = a[target];
+  const steps = [];
+  let lo = 0, hi = a.length - 1;
+  const eliminated = new Set();
+
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    steps.push({ type: 'range', lo, hi, mid, targetIdx: target, targetVal, eliminated: new Set(eliminated), arr: [...a] });
+
+    if (a[mid] === targetVal) {
+      steps.push({ type: 'found', index: mid, targetVal, arr: [...a] });
+      return steps;
+    } else if (a[mid] < targetVal) {
+      for (let i = lo; i <= mid; i++) eliminated.add(i);
+      lo = mid + 1;
+    } else {
+      for (let i = mid; i <= hi; i++) eliminated.add(i);
+      hi = mid - 1;
+    }
+  }
+  steps.push({ type: 'notfound', targetVal, arr: [...a] });
+  return steps;
+}
+
+// ============================================================
+// PATHFINDING
+// ============================================================
+function initGrid() {
+  grid = [];
+  for (let r = 0; r < gridRows; r++) {
+    grid[r] = [];
+    for (let c = 0; c < gridCols; c++) {
+      grid[r][c] = { wall: false, visited: false, path: false, current: false, frontier: false, dist: Infinity, prev: null };
+    }
+  }
+  startCell = [2, 2];
+  endCell = [gridRows - 3, gridCols - 3];
+}
+
+function generateMaze() {
+  initGrid();
+  // Random walls ~25%
+  for (let r = 0; r < gridRows; r++) {
+    for (let c = 0; c < gridCols; c++) {
+      if ((r === startCell[0] && c === startCell[1]) || (r === endCell[0] && c === endCell[1])) continue;
+      if (Math.random() < 0.25) grid[r][c].wall = true;
+    }
+  }
+}
+
+function drawGrid() {
+  ctx.clearRect(0, 0, W, H);
+  const cellW = Math.min(Math.floor((W - 20) / gridCols), Math.floor((H - 20) / gridRows));
+  const totalW = cellW * gridCols;
+  const totalH = cellW * gridRows;
+  const ox = (W - totalW) / 2;
+  const oy = (H - totalH) / 2;
+
+  for (let r = 0; r < gridRows; r++) {
+    for (let c = 0; c < gridCols; c++) {
+      const x = ox + c * cellW;
+      const y = oy + r * cellW;
+      const cell = grid[r][c];
+
+      let color = '#161b22';
+      if (cell.wall) color = '#444c56';
+      if (cell.frontier) color = 'rgba(57,210,192,0.3)';
+      if (cell.visited) color = 'rgba(188,140,255,0.35)';
+      if (cell.path) color = '#d29922';
+      if (cell.current) color = '#58a6ff';
+      if (r === startCell[0] && c === startCell[1]) color = '#3fb950';
+      if (r === endCell[0] && c === endCell[1]) color = '#f85149';
+
+      ctx.fillStyle = color;
+      ctx.fillRect(x + 1, y + 1, cellW - 2, cellW - 2);
+    }
+  }
+
+  // Store for mouse interaction
+  C._gridInfo = { ox, oy, cellW };
+}
+
+function genPathSteps_bfs() {
+  const steps = [];
+  const visited = Array.from({ length: gridRows }, () => Array(gridCols).fill(false));
+  const prev = Array.from({ length: gridRows }, () => Array(gridCols).fill(null));
+  const queue = [startCell];
+  visited[startCell[0]][startCell[1]] = true;
+  const dirs = [[0,1],[1,0],[0,-1],[-1,0]];
+
+  while (queue.length) {
+    const [r, c] = queue.shift();
+    steps.push({ type: 'visit', r, c });
+
+    if (r === endCell[0] && c === endCell[1]) {
+      // Trace path
+      let cur = [r, c];
+      const path = [];
+      while (cur) { path.push(cur); cur = prev[cur[0]][cur[1]]; }
+      path.reverse();
+      for (const [pr, pc] of path) steps.push({ type: 'path', r: pr, c: pc });
+      return steps;
+    }
+
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < gridRows && nc >= 0 && nc < gridCols && !visited[nr][nc] && !grid[nr][nc].wall) {
+        visited[nr][nc] = true;
+        prev[nr][nc] = [r, c];
+        queue.push([nr, nc]);
+        steps.push({ type: 'frontier', r: nr, c: nc });
+      }
+    }
+  }
+  steps.push({ type: 'nopath' });
+  return steps;
+}
+
+function genPathSteps_dfs() {
+  const steps = [];
+  const visited = Array.from({ length: gridRows }, () => Array(gridCols).fill(false));
+  const prev = Array.from({ length: gridRows }, () => Array(gridCols).fill(null));
+  const stack = [startCell];
+  const dirs = [[0,1],[1,0],[0,-1],[-1,0]];
+
+  while (stack.length) {
+    const [r, c] = stack.pop();
+    if (visited[r][c]) continue;
+    visited[r][c] = true;
+    steps.push({ type: 'visit', r, c });
+
+    if (r === endCell[0] && c === endCell[1]) {
+      let cur = [r, c];
+      const path = [];
+      while (cur) { path.push(cur); cur = prev[cur[0]][cur[1]]; }
+      path.reverse();
+      for (const [pr, pc] of path) steps.push({ type: 'path', r: pr, c: pc });
+      return steps;
+    }
+
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < gridRows && nc >= 0 && nc < gridCols && !visited[nr][nc] && !grid[nr][nc].wall) {
+        if (!prev[nr][nc]) prev[nr][nc] = [r, c];
+        stack.push([nr, nc]);
+        steps.push({ type: 'frontier', r: nr, c: nc });
+      }
+    }
+  }
+  steps.push({ type: 'nopath' });
+  return steps;
+}
+
+function genPathSteps_dijkstra() {
+  const steps = [];
+  const dist = Array.from({ length: gridRows }, () => Array(gridCols).fill(Infinity));
+  const visited = Array.from({ length: gridRows }, () => Array(gridCols).fill(false));
+  const prev = Array.from({ length: gridRows }, () => Array(gridCols).fill(null));
+  dist[startCell[0]][startCell[1]] = 0;
+  const dirs = [[0,1],[1,0],[0,-1],[-1,0]];
+  // Simple priority queue via array
+  const pq = [[0, startCell[0], startCell[1]]];
+
+  while (pq.length) {
+    pq.sort((a, b) => a[0] - b[0]);
+    const [d, r, c] = pq.shift();
+    if (visited[r][c]) continue;
+    visited[r][c] = true;
+    steps.push({ type: 'visit', r, c });
+
+    if (r === endCell[0] && c === endCell[1]) {
+      let cur = [r, c];
+      const path = [];
+      while (cur) { path.push(cur); cur = prev[cur[0]][cur[1]]; }
+      path.reverse();
+      for (const [pr, pc] of path) steps.push({ type: 'path', r: pr, c: pc });
+      return steps;
+    }
+
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < gridRows && nc >= 0 && nc < gridCols && !visited[nr][nc] && !grid[nr][nc].wall) {
+        const w = 1; // uniform weight
+        if (d + w < dist[nr][nc]) {
+          dist[nr][nc] = d + w;
+          prev[nr][nc] = [r, c];
+          pq.push([d + w, nr, nc]);
+          steps.push({ type: 'frontier', r: nr, c: nc });
+        }
+      }
+    }
+  }
+  steps.push({ type: 'nopath' });
+  return steps;
+}
+
+function genPathSteps_astar() {
+  const steps = [];
+  const gScore = Array.from({ length: gridRows }, () => Array(gridCols).fill(Infinity));
+  const visited = Array.from({ length: gridRows }, () => Array(gridCols).fill(false));
+  const prev = Array.from({ length: gridRows }, () => Array(gridCols).fill(null));
+  const [sr, sc] = startCell;
+  const [er, ec] = endCell;
+  gScore[sr][sc] = 0;
+  const h = (r, c) => Math.abs(r - er) + Math.abs(c - ec);
+  const pq = [[h(sr, sc), sr, sc]];
+  const dirs = [[0,1],[1,0],[0,-1],[-1,0]];
+
+  while (pq.length) {
+    pq.sort((a, b) => a[0] - b[0]);
+    const [f, r, c] = pq.shift();
+    if (visited[r][c]) continue;
+    visited[r][c] = true;
+    steps.push({ type: 'visit', r, c });
+
+    if (r === er && c === ec) {
+      let cur = [r, c];
+      const path = [];
+      while (cur) { path.push(cur); cur = prev[cur[0]][cur[1]]; }
+      path.reverse();
+      for (const [pr, pc] of path) steps.push({ type: 'path', r: pr, c: pc });
+      return steps;
+    }
+
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < gridRows && nc >= 0 && nc < gridCols && !visited[nr][nc] && !grid[nr][nc].wall) {
+        const ng = gScore[r][c] + 1;
+        if (ng < gScore[nr][nc]) {
+          gScore[nr][nc] = ng;
+          prev[nr][nc] = [r, c];
+          pq.push([ng + h(nr, nc), nr, nc]);
+          steps.push({ type: 'frontier', r: nr, c: nc });
+        }
+      }
+    }
+  }
+  steps.push({ type: 'nopath' });
+  return steps;
+}
+
+// ============================================================
+// TREE TRAVERSAL
+// ============================================================
+function buildBST() {
+  treeNodes = [];
+  const values = [];
+  const count = 15;
+  for (let i = 0; i < count; i++) values.push(Math.floor(Math.random() * 99) + 1);
+
+  // Build BST
+  function insert(nodes, val, idx = 0) {
+    if (idx >= nodes.length || nodes[idx] === null) {
+      while (nodes.length <= idx) nodes.push(null);
+      nodes[idx] = val;
+      return;
+    }
+    if (val < nodes[idx]) insert(nodes, val, 2 * idx + 1);
+    else insert(nodes, val, 2 * idx + 2);
+  }
+
+  for (const v of values) insert(treeNodes, v);
+}
+
+function drawTree(highlights = {}) {
+  ctx.clearRect(0, 0, W, H);
+  if (!treeNodes.length) return;
+
+  // Calculate tree depth
+  let maxIdx = 0;
+  for (let i = treeNodes.length - 1; i >= 0; i--) {
+    if (treeNodes[i] !== null && treeNodes[i] !== undefined) { maxIdx = i; break; }
+  }
+  const depth = Math.floor(Math.log2(maxIdx + 1)) + 1;
+  const nodeR = Math.min(22, Math.max(14, (W / (Math.pow(2, depth))) * 0.35));
+  const levelH = Math.min(80, (H - 60) / depth);
+
+  function getPos(idx) {
+    const level = Math.floor(Math.log2(idx + 1));
+    const posInLevel = idx - (Math.pow(2, level) - 1);
+    const nodesInLevel = Math.pow(2, level);
+    const spacing = W / (nodesInLevel + 1);
+    const x = spacing * (posInLevel + 1);
+    const y = 40 + level * levelH;
+    return { x, y };
+  }
+
+  // Draw edges first
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < treeNodes.length; i++) {
+    if (treeNodes[i] == null) continue;
+    const parent = getPos(i);
+    for (const child of [2 * i + 1, 2 * i + 2]) {
+      if (child < treeNodes.length && treeNodes[child] != null) {
+        const cp = getPos(child);
+        ctx.beginPath();
+        ctx.moveTo(parent.x, parent.y + nodeR);
+        ctx.lineTo(cp.x, cp.y - nodeR);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Draw nodes
+  for (let i = 0; i < treeNodes.length; i++) {
+    if (treeNodes[i] == null) continue;
+    const { x, y } = getPos(i);
+
+    let fillColor = COLORS.default;
+    let strokeColor = '#30363d';
+    if (highlights.visited && highlights.visited.has(i)) { fillColor = COLORS.sorted; strokeColor = COLORS.sorted; }
+    if (highlights.current === i) { fillColor = COLORS.swapping; strokeColor = COLORS.swapping; }
+    if (highlights.processing === i) { fillColor = COLORS.orange; strokeColor = COLORS.orange; }
+
+    ctx.beginPath();
+    ctx.arc(x, y, nodeR, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor + '30';
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    ctx.fillStyle = '#e6edf3';
+    ctx.font = `bold ${Math.max(10, nodeR * 0.7)}px SF Mono, monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(treeNodes[i], x, y);
+  }
+
+  // Order label
+  if (highlights.order && highlights.order.length) {
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Visit order: ' + highlights.order.join(' → '), 16, H - 16);
+  }
+}
+
+function genTreeSteps_bfs() {
+  const steps = [];
+  const visited = new Set();
+  const order = [];
+  const queue = [0];
+
+  while (queue.length) {
+    const idx = queue.shift();
+    if (idx >= treeNodes.length || treeNodes[idx] == null) continue;
+    visited.add(idx);
+    order.push(treeNodes[idx]);
+    steps.push({ type: 'visit', index: idx, visited: new Set(visited), order: [...order] });
+
+    const l = 2 * idx + 1, r = 2 * idx + 2;
+    if (l < treeNodes.length && treeNodes[l] != null) queue.push(l);
+    if (r < treeNodes.length && treeNodes[r] != null) queue.push(r);
+  }
+  steps.push({ type: 'done', visited: new Set(visited), order: [...order] });
+  return steps;
+}
+
+function genTreeSteps_inorder() {
+  const steps = [];
+  const visited = new Set();
+  const order = [];
+
+  function inorder(idx) {
+    if (idx >= treeNodes.length || treeNodes[idx] == null) return;
+    steps.push({ type: 'process', index: idx, visited: new Set(visited), order: [...order] });
+    inorder(2 * idx + 1);
+    visited.add(idx);
+    order.push(treeNodes[idx]);
+    steps.push({ type: 'visit', index: idx, visited: new Set(visited), order: [...order] });
+    inorder(2 * idx + 2);
+  }
+  inorder(0);
+  steps.push({ type: 'done', visited: new Set(visited), order: [...order] });
+  return steps;
+}
+
+function genTreeSteps_preorder() {
+  const steps = [];
+  const visited = new Set();
+  const order = [];
+
+  function preorder(idx) {
+    if (idx >= treeNodes.length || treeNodes[idx] == null) return;
+    visited.add(idx);
+    order.push(treeNodes[idx]);
+    steps.push({ type: 'visit', index: idx, visited: new Set(visited), order: [...order] });
+    preorder(2 * idx + 1);
+    preorder(2 * idx + 2);
+  }
+  preorder(0);
+  steps.push({ type: 'done', visited: new Set(visited), order: [...order] });
+  return steps;
+}
+
+function genTreeSteps_postorder() {
+  const steps = [];
+  const visited = new Set();
+  const order = [];
+
+  function postorder(idx) {
+    if (idx >= treeNodes.length || treeNodes[idx] == null) return;
+    steps.push({ type: 'process', index: idx, visited: new Set(visited), order: [...order] });
+    postorder(2 * idx + 1);
+    postorder(2 * idx + 2);
+    visited.add(idx);
+    order.push(treeNodes[idx]);
+    steps.push({ type: 'visit', index: idx, visited: new Set(visited), order: [...order] });
+  }
+  postorder(0);
+  steps.push({ type: 'done', visited: new Set(visited), order: [...order] });
+  return steps;
+}
+
+// ============================================================
+// Visualization Engine
+// ============================================================
+function resetViz() {
+  stopAnimation();
+  const a = ALGORITHMS[currentAlgo];
+  const mode = a.mode || 'sort';
+  comparisons = 0; swaps = 0; accesses = 0;
+  stepIndex = 0; stepQueue = [];
+  elapsedMs = 0;
+
+  if (mode === 'grid') {
+    if (!grid.length) generateMaze();
+    else {
+      // Clear visited/path but keep walls
+      for (let r = 0; r < gridRows; r++)
+        for (let c = 0; c < gridCols; c++) {
+          grid[r][c].visited = false; grid[r][c].path = false;
+          grid[r][c].current = false; grid[r][c].frontier = false;
+        }
+    }
+    drawGrid();
+  } else if (mode === 'tree') {
+    if (!treeNodes.length) buildBST();
+    drawTree();
+  } else {
+    if (!arr.length) generateArray();
+    if (a.cat === 'Searching') drawSearchArray();
+    else drawSortArray();
+  }
+
+  updateInfoBar();
+  updateLegend();
+  updatePlayBtn();
+}
+
+function generateNew() {
+  stopAnimation();
+  const a = ALGORITHMS[currentAlgo];
+  const mode = a.mode || 'sort';
+
+  if (mode === 'grid') { generateMaze(); }
+  else if (mode === 'tree') { buildBST(); }
+  else { generateArray(); }
+
+  resetViz();
+}
+
+function generateSteps() {
+  const a = ALGORITHMS[currentAlgo];
+  const mode = a.mode || 'sort';
+
+  if (a.gen) return a.gen();
+
+  if (mode === 'grid') {
+    const fn = { bfs: genPathSteps_bfs, dfs: genPathSteps_dfs, dijkstra: genPathSteps_dijkstra, astar: genPathSteps_astar };
+    return fn[currentAlgo]();
+  }
+
+  if (mode === 'tree') {
+    const fn = { bfs_tree: genTreeSteps_bfs, inorder: genTreeSteps_inorder, preorder: genTreeSteps_preorder, postorder: genTreeSteps_postorder };
+    return fn[currentAlgo]();
+  }
+
+  return [];
+}
+
+function applyStep(step) {
+  const a = ALGORITHMS[currentAlgo];
+  const mode = a.mode || 'sort';
+
+  if (mode === 'grid') {
+    if (step.type === 'visit') {
+      grid[step.r][step.c].visited = true;
+      grid[step.r][step.c].frontier = false;
+      grid[step.r][step.c].current = true;
+      // Un-current previous
+      comparisons++;
+    }
+    if (step.type === 'frontier') {
+      if (!grid[step.r][step.c].visited) grid[step.r][step.c].frontier = true;
+    }
+    if (step.type === 'path') {
+      grid[step.r][step.c].path = true;
+      swaps++;
+    }
+    // Clear all 'current' except this step
+    for (let r = 0; r < gridRows; r++)
+      for (let c = 0; c < gridCols; c++) grid[r][c].current = false;
+    if (step.type === 'visit') grid[step.r][step.c].current = true;
+    drawGrid();
+  } else if (mode === 'tree') {
+    const hl = { visited: step.visited || new Set(), order: step.order || [] };
+    if (step.type === 'visit') { hl.current = step.index; comparisons++; }
+    if (step.type === 'process') hl.processing = step.index;
+    drawTree(hl);
+  } else if (a.cat === 'Searching') {
+    // Search visualization
+    const hl = {};
+    if (step.targetVal !== undefined) hl.targetVal = step.targetVal;
+    if (step.type === 'check') {
+      hl.comparing = new Set([step.index]);
+      hl.target = step.targetIdx;
+      comparisons++;
+    }
+    if (step.type === 'range') {
+      hl.range = [step.lo, step.hi];
+      hl.comparing = new Set([step.mid]);
+      hl.eliminated = step.eliminated;
+      hl.target = step.targetIdx;
+      comparisons++;
+    }
+    if (step.type === 'found') {
+      hl.found = step.index;
+      swaps = 1; // found
+    }
+    if (step.type === 'notfound') {
+      swaps = 0;
+    }
+    drawSearchArray(hl);
+  } else {
+    // Sorting
+    if (step.arr) arr = [...step.arr];
+    const hl = { sorted: step.sorted || new Set() };
+    if (step.type === 'compare') { hl.comparing = new Set(step.indices); comparisons++; accesses += 2; }
+    if (step.type === 'swap') { hl.swapping = new Set(step.indices); swaps++; accesses += 4; }
+    if (step.type === 'merge') { hl.merged = step.merged; accesses += 2; }
+    if (step.type === 'pivot' || step.pivot !== undefined) hl.pivot = step.pivot ?? step.index;
+    if (step.type === 'select') hl.selected = new Set([step.index]);
+    if (step.minimum !== undefined) hl.minimum = step.minimum;
+    if (step.type === 'place') { hl.sorted = step.sorted; accesses += 2; }
+    if (step.type === 'count') { accesses++; }
+    drawSortArray(hl);
+  }
+
+  updateInfoBar();
+}
+
+// ============================================================
+// Animation Control
+// ============================================================
+function togglePlay() {
+  if (isRunning) {
+    if (isPaused) {
+      isPaused = false;
+      startTime = Date.now();
+      runAnimation();
+    } else {
+      isPaused = true;
+      elapsedMs += Date.now() - startTime;
+      if (animFrame) cancelAnimationFrame(animFrame);
+    }
+  } else {
+    if (stepQueue.length === 0 || stepIndex >= stepQueue.length) {
+      resetViz();
+      stepQueue = generateSteps();
+      stepIndex = 0;
+    }
+    isRunning = true;
+    isPaused = false;
+    startTime = Date.now();
+    elapsedMs = 0;
+    runAnimation();
+  }
+  updatePlayBtn();
+}
+
+let lastStepTime = 0;
+function runAnimation() {
+  if (!isRunning || isPaused) return;
+
+  const now = performance.now();
+  if (now - lastStepTime >= getDelay()) {
+    if (stepIndex < stepQueue.length) {
+      applyStep(stepQueue[stepIndex]);
+      stepIndex++;
+      lastStepTime = now;
+    } else {
+      stopAnimation();
+      return;
+    }
+  }
+
+  animFrame = requestAnimationFrame(runAnimation);
+}
+
+function stopAnimation() {
+  isRunning = false;
+  isPaused = false;
+  if (animFrame) cancelAnimationFrame(animFrame);
+  updatePlayBtn();
+}
+
+function stepForward() {
+  if (stepQueue.length === 0) {
+    stepQueue = generateSteps();
+    stepIndex = 0;
+  }
+  if (stepIndex < stepQueue.length) {
+    applyStep(stepQueue[stepIndex]);
+    stepIndex++;
+  }
+}
+
+function updatePlayBtn() {
+  const btn = document.getElementById('playBtn');
+  if (!btn) return;
+  if (isRunning && !isPaused) {
+    btn.textContent = '⏸ Pause';
+    btn.className = 'tb-btn danger';
+  } else {
+    btn.textContent = '▶ Play';
+    btn.className = 'tb-btn primary';
+  }
+}
+
+// ============================================================
+// Legend
+// ============================================================
+function updateLegend() {
+  const a = ALGORITHMS[currentAlgo];
+  const mode = a.mode || 'sort';
+  const el = document.getElementById('legend');
+  let items = [];
+
+  if (mode === 'grid') {
+    items = [
+      { color: '#3fb950', label: 'Start' },
+      { color: '#f85149', label: 'End' },
+      { color: '#444c56', label: 'Wall' },
+      { color: 'rgba(57,210,192,0.5)', label: 'Frontier' },
+      { color: 'rgba(188,140,255,0.5)', label: 'Visited' },
+      { color: '#d29922', label: 'Path' },
+    ];
+  } else if (mode === 'tree') {
+    items = [
+      { color: COLORS.default, label: 'Unvisited' },
+      { color: COLORS.orange, label: 'Processing' },
+      { color: COLORS.swapping, label: 'Current' },
+      { color: COLORS.sorted, label: 'Visited' },
+    ];
+  } else if (a.cat === 'Searching') {
+    items = [
+      { color: COLORS.default, label: 'Default' },
+      { color: COLORS.selected, label: 'Active Range' },
+      { color: COLORS.comparing, label: 'Checking' },
+      { color: '#30363d', label: 'Eliminated' },
+      { color: COLORS.sorted, label: 'Found' },
+    ];
+  } else {
+    items = [
+      { color: COLORS.default, label: 'Default' },
+      { color: COLORS.comparing, label: 'Comparing' },
+      { color: COLORS.swapping, label: 'Swapping' },
+      { color: COLORS.sorted, label: 'Sorted' },
+    ];
+    if (currentAlgo === 'quick') items.push({ color: COLORS.pivot, label: 'Pivot' });
+    if (currentAlgo === 'selection') items.push({ color: COLORS.minimum, label: 'Min' });
+    if (currentAlgo === 'merge') items.push({ color: COLORS.merged, label: 'Merged' });
+  }
+
+  el.innerHTML = items.map(i => `<div class="legend-item"><div class="legend-dot" style="background:${i.color}"></div>${i.label}</div>`).join('');
+}
+
+// ============================================================
+// Info Panel
+// ============================================================
+function toggleInfoPanel() {
+  const p = document.getElementById('algoPanel');
+  const a = ALGORITHMS[currentAlgo];
+  if (p.classList.contains('show')) {
+    p.classList.remove('show');
+  } else {
+    document.getElementById('panelTitle').textContent = a.emoji + ' ' + a.name;
+    document.getElementById('panelDesc').textContent = a.desc;
+    document.getElementById('panelTime').textContent = a.time;
+    document.getElementById('panelSpace').textContent = a.space;
+    p.classList.add('show');
+  }
+}
+
+function toggleHelp() {
+  document.getElementById('helpModal').classList.toggle('show');
+}
+
+// ============================================================
+// Grid Mouse Interaction
+// ============================================================
+C.addEventListener('mousedown', (e) => {
+  const a = ALGORITHMS[currentAlgo];
+  if ((a.mode || '') !== 'grid' || isRunning) return;
+  const info = C._gridInfo;
+  if (!info) return;
+
+  const rect = C.getBoundingClientRect();
+  const mx = e.clientX - rect.left - info.ox;
+  const my = e.clientY - rect.top - info.oy;
+  const c = Math.floor(mx / info.cellW);
+  const r = Math.floor(my / info.cellW);
+  if (r < 0 || r >= gridRows || c < 0 || c >= gridCols) return;
+
+  if (r === startCell[0] && c === startCell[1]) { isDraggingStart = true; return; }
+  if (r === endCell[0] && c === endCell[1]) { isDraggingEnd = true; return; }
+
+  if (e.button === 2) { isErasing = true; grid[r][c].wall = false; }
+  else { isDrawingWall = true; grid[r][c].wall = !grid[r][c].wall; }
+  drawGrid();
+});
+
+C.addEventListener('mousemove', (e) => {
+  const a = ALGORITHMS[currentAlgo];
+  if ((a.mode || '') !== 'grid') return;
+  if (!isDrawingWall && !isErasing && !isDraggingStart && !isDraggingEnd) return;
+  const info = C._gridInfo;
+  if (!info) return;
+
+  const rect = C.getBoundingClientRect();
+  const mx = e.clientX - rect.left - info.ox;
+  const my = e.clientY - rect.top - info.oy;
+  const c = Math.floor(mx / info.cellW);
+  const r = Math.floor(my / info.cellW);
+  if (r < 0 || r >= gridRows || c < 0 || c >= gridCols) return;
+  if (r === startCell[0] && c === startCell[1] && !isDraggingStart) return;
+  if (r === endCell[0] && c === endCell[1] && !isDraggingEnd) return;
+
+  if (isDraggingStart) { startCell = [r, c]; grid[r][c].wall = false; }
+  else if (isDraggingEnd) { endCell = [r, c]; grid[r][c].wall = false; }
+  else if (isDrawingWall) grid[r][c].wall = true;
+  else if (isErasing) grid[r][c].wall = false;
+
+  drawGrid();
+});
+
+C.addEventListener('mouseup', () => {
+  isDrawingWall = false; isErasing = false; isDraggingStart = false; isDraggingEnd = false;
+});
+
+C.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// ============================================================
+// Keyboard
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+  const key = e.key;
+  if (key === ' ') { e.preventDefault(); togglePlay(); }
+  if (key === 'ArrowRight') { e.preventDefault(); stepForward(); }
+  if (key === 'r' || key === 'R') resetViz();
+  if (key === 'n' || key === 'N') generateNew();
+  if (key === 'i' || key === 'I') toggleInfoPanel();
+  if (key === '?' || (e.shiftKey && key === '/')) toggleHelp();
+  if (key === 'Escape') {
+    document.getElementById('helpModal').classList.remove('show');
+    document.getElementById('algoPanel').classList.remove('show');
+  }
+  if (key === '+' || key === '=') {
+    speed = Math.min(100, speed + 5);
+    const s = document.getElementById('speedSlider');
+    if (s) { s.value = speed; document.getElementById('speedVal').textContent = speed; }
+  }
+  if (key === '-') {
+    speed = Math.max(1, speed - 5);
+    const s = document.getElementById('speedSlider');
+    if (s) { s.value = speed; document.getElementById('speedVal').textContent = speed; }
+  }
+});
+
+// ============================================================
+// Init
+// ============================================================
+window.addEventListener('resize', () => { resizeCanvas(); resetViz(); });
+
+function init() {
+  resizeCanvas();
+  renderSidebar();
+  renderToolbar();
+  generateNew();
+}
+
+init();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

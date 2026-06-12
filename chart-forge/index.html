@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chart Forge — Data Visualization Builder</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--bg4:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#3fb950;--red:#f85149;--orange:#d29922;--purple:#bc8cff;--pink:#f778ba;--border:#30363d;--radius:8px;--shadow:0 2px 8px rgba(0,0,0,.3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+button{cursor:pointer;border:none;font-family:inherit;font-size:13px}
+input,select,textarea{font-family:inherit;font-size:13px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.sb{width:260px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sb-hd{padding:16px;border-bottom:1px solid var(--border)}
+.sb-hd h1{font-size:16px;display:flex;align-items:center;gap:8px}
+.sb-hd h1 span{font-size:20px}
+.sb-search{width:100%;margin-top:10px;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text)}
+.sb-list{flex:1;overflow-y:auto;padding:8px}
+.sb-item{padding:10px 12px;border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:2px;transition:background .15s}
+.sb-item:hover{background:var(--bg3)}
+.sb-item.active{background:var(--bg3);border-left:3px solid var(--accent)}
+.sb-item .type-icon{font-size:18px}
+.sb-item .info{flex:1;min-width:0}
+.sb-item .info .name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-item .info .meta{font-size:11px;color:var(--text2)}
+.sb-item .del{opacity:0;color:var(--text2);background:none;padding:4px;border-radius:4px;font-size:14px}
+.sb-item:hover .del{opacity:1}
+.sb-item .del:hover{color:var(--red);background:var(--bg)}
+.sb-btn{margin:8px;padding:10px;background:var(--accent);color:#fff;border-radius:var(--radius);font-weight:600;text-align:center}
+.sb-btn:hover{opacity:.9}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap}
+.toolbar .tab{padding:6px 14px;border-radius:var(--radius);color:var(--text2);background:none;font-weight:500}
+.toolbar .tab:hover{background:var(--bg3);color:var(--text)}
+.toolbar .tab.active{background:var(--bg3);color:var(--accent)}
+.toolbar .sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+.toolbar .tb-btn{padding:6px 12px;border-radius:var(--radius);color:var(--text2);background:none}
+.toolbar .tb-btn:hover{background:var(--bg3);color:var(--text)}
+.content{flex:1;overflow-y:auto;padding:20px}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text2)}
+.empty-state .icon{font-size:64px;margin-bottom:16px}
+.empty-state h2{font-size:20px;color:var(--text);margin-bottom:8px}
+.empty-state p{font-size:14px;max-width:400px;text-align:center;line-height:1.6}
+/* Chart Type Picker */
+.chart-types{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:20px}
+.ct-card{padding:12px 8px;background:var(--bg2);border:2px solid var(--border);border-radius:var(--radius);text-align:center;cursor:pointer;transition:all .15s}
+.ct-card:hover{border-color:var(--text2)}
+.ct-card.sel{border-color:var(--accent);background:rgba(88,166,255,.1)}
+.ct-card .ct-icon{font-size:28px;margin-bottom:4px}
+.ct-card .ct-name{font-size:11px;color:var(--text2)}
+/* Data Editor */
+.data-editor{margin-bottom:20px}
+.de-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.de-header h3{font-size:14px;font-weight:600}
+.de-actions{display:flex;gap:6px}
+.de-actions button{padding:4px 10px;border-radius:4px;background:var(--bg3);color:var(--text2);font-size:12px}
+.de-actions button:hover{color:var(--text);background:var(--bg4)}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{background:var(--bg3);padding:6px 8px;text-align:left;font-weight:600;border:1px solid var(--border);font-size:12px}
+.data-table td{padding:2px;border:1px solid var(--border)}
+.data-table td input{width:100%;border:none;background:transparent;padding:5px 6px;color:var(--text)}
+.data-table td input:focus{background:var(--bg3)}
+.data-table .row-num{color:var(--text2);text-align:center;width:30px;background:var(--bg2);font-size:11px;padding:0 4px}
+.data-table .del-row{width:28px;text-align:center;background:var(--bg2);cursor:pointer;color:var(--text2)}
+.data-table .del-row:hover{color:var(--red)}
+/* Settings Panel */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.setting{display:flex;flex-direction:column;gap:4px}
+.setting label{font-size:12px;color:var(--text2);font-weight:500}
+.setting input[type=color]{width:40px;height:28px;padding:0;border:none;cursor:pointer;background:none}
+.color-row{display:flex;gap:4px;flex-wrap:wrap}
+.color-swatch{width:24px;height:24px;border-radius:4px;cursor:pointer;border:2px solid transparent}
+.color-swatch.sel{border-color:#fff}
+.color-swatch:hover{opacity:.8}
+/* Chart Canvas */
+.chart-canvas{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;min-height:420px;position:relative;display:flex;align-items:center;justify-content:center}
+.chart-canvas svg{max-width:100%}
+/* Dashboard */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:20px}
+.dash-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.dash-card h4{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.dash-card .val{font-size:28px;font-weight:700}
+.dash-card .sub{font-size:12px;color:var(--text2);margin-top:4px}
+/* Templates */
+.tmpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.tmpl-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all .15s}
+.tmpl-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.tmpl-card .tmpl-icon{font-size:32px;margin-bottom:8px}
+.tmpl-card h4{font-size:14px;margin-bottom:4px}
+.tmpl-card p{font-size:12px;color:var(--text2);line-height:1.4}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;min-width:400px;max-width:90vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal h3{font-size:16px;margin-bottom:16px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.modal-actions button{padding:8px 16px;border-radius:var(--radius)}
+.btn-primary{background:var(--accent);color:#fff;font-weight:600}
+.btn-primary:hover{opacity:.9}
+.btn-cancel{background:var(--bg3);color:var(--text2)}
+.btn-cancel:hover{color:var(--text)}
+.btn-danger{background:var(--red);color:#fff;font-weight:600}
+.btn-danger:hover{opacity:.9}
+/* Export */
+.export-opts{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.export-opt{padding:12px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;text-align:center;transition:all .15s}
+.export-opt:hover{border-color:var(--accent)}
+.export-opt .exp-icon{font-size:24px;margin-bottom:4px}
+.export-opt .exp-name{font-size:13px;font-weight:600}
+.export-opt .exp-desc{font-size:11px;color:var(--text2)}
+/* Kbd */
+.kbd-grid{display:grid;grid-template-columns:120px 1fr;gap:8px;font-size:13px}
+.kbd-grid kbd{background:var(--bg3);padding:2px 6px;border-radius:3px;font-family:monospace;font-size:12px}
+/* Legend in chart */
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+.chart-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
+.chart-legend-item .dot{width:10px;height:10px;border-radius:2px}
+/* Chart area specific */
+.chart-title{font-size:18px;font-weight:700;fill:var(--text);text-anchor:middle}
+.chart-subtitle{font-size:12px;fill:var(--text2);text-anchor:middle}
+.axis-label{font-size:11px;fill:var(--text2)}
+.axis-line{stroke:var(--border);stroke-width:1}
+.grid-line{stroke:var(--border);stroke-width:.5;opacity:.4}
+.tick-label{font-size:10px;fill:var(--text2)}
+/* Toggle */
+.toggle-row{display:flex;align-items:center;gap:8px}
+.toggle{width:36px;height:20px;border-radius:10px;background:var(--bg4);cursor:pointer;position:relative;transition:background .2s}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .2s}
+.toggle.on::after{left:18px}
+/* Import textarea */
+.import-area{width:100%;min-height:150px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px;color:var(--text);font-family:monospace;font-size:12px;resize:vertical}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--text2)}
+</style>
+</head>
+<body>
+<div class="sb">
+ <div class="sb-hd">
+  <h1><span>📊</span> Chart Forge</h1>
+  <input class="sb-search" placeholder="Search charts... (/)" id="search">
+ </div>
+ <div class="sb-list" id="sbList"></div>
+ <button class="sb-btn" onclick="newChart()">+ New Chart</button>
+</div>
+<div class="main">
+ <div class="toolbar" id="toolbar"></div>
+ <div class="content" id="content"></div>
+</div>
+<div id="modalRoot"></div>
+<script>
+const PALETTES = {
+ vibrant:['#58a6ff','#3fb950','#f85149','#d29922','#bc8cff','#f778ba','#79c0ff','#56d364','#ff7b72','#e3b341'],
+ pastel:['#a8d8ea','#aa96da','#fcbad3','#ffffd2','#b5eaea','#f3c5c5','#c9cba3','#ffe1a8','#e2c2c6','#bee5bf'],
+ bold:['#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff','#5f27cd','#01a3a4','#f368e0','#ee5a24','#006266'],
+ earth:['#8d6e63','#a1887f','#bcaaa4','#795548','#d7ccc8','#4e342e','#efebe9','#6d4c41','#3e2723','#be9e8f'],
+ mono:['#e6edf3','#c9d1d9','#b1bac4','#8b949e','#6e7681','#484f58','#30363d','#21262d','#161b22','#0d1117']
+};
+const CHART_TYPES=[
+ {id:'bar',name:'Bar',icon:'📊',cat:'comparison'},
+ {id:'hbar',name:'Horizontal Bar',icon:'📈',cat:'comparison'},
+ {id:'line',name:'Line',icon:'📉',cat:'trend'},
+ {id:'area',name:'Area',icon:'🏔️',cat:'trend'},
+ {id:'pie',name:'Pie',icon:'🥧',cat:'composition'},
+ {id:'donut',name:'Donut',icon:'🍩',cat:'composition'},
+ {id:'scatter',name:'Scatter',icon:'✨',cat:'correlation'},
+ {id:'radar',name:'Radar',icon:'🕸️',cat:'comparison'},
+ {id:'funnel',name:'Funnel',icon:'🔻',cat:'flow'},
+ {id:'gauge',name:'Gauge',icon:'🎯',cat:'metric'},
+ {id:'waterfall',name:'Waterfall',icon:'🌊',cat:'composition'},
+ {id:'treemap',name:'Treemap',icon:'🗂️',cat:'composition'}
+];
+const TEMPLATES=[
+ {name:'SaaS Metrics Dashboard',icon:'🚀',desc:'MRR, churn, LTV/CAC for a SaaS product',type:'bar',
+  labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+  datasets:[{name:'MRR ($)',values:[2400,3100,3800,4200,5100,5800,6400,7200,8100,9200,10400,11800]}],
+  title:'UTMStamp MRR Growth 2026',subtitle:'Monthly Recurring Revenue'},
+ {name:'Conversion Funnel',icon:'🔻',desc:'Website visitor to paid customer funnel',type:'funnel',
+  labels:['Visitors','Signups','Activated','Trial→Paid','Retained 90d'],
+  datasets:[{name:'Users',values:[50000,4200,2100,680,520]}],
+  title:'UTMStamp Conversion Funnel',subtitle:'May 2026'},
+ {name:'Feature Usage Breakdown',icon:'🥧',desc:'Which features users engage with most',type:'pie',
+  labels:['Signature Builder','Click Analytics','Campaign Manager','Team Deploy','Template Gallery','Integrations'],
+  datasets:[{name:'Sessions',values:[3400,2800,1900,1500,1200,600]}],
+  title:'Feature Usage Distribution',subtitle:'Last 30 Days'},
+ {name:'Sprint Velocity',icon:'📊',desc:'Story points committed vs completed',type:'bar',
+  labels:['Sprint 1','Sprint 2','Sprint 3','Sprint 4','Sprint 5','Sprint 6'],
+  datasets:[{name:'Committed',values:[34,40,38,42,45,40]},{name:'Completed',values:[28,36,38,40,42,38]}],
+  title:'Sprint Velocity Tracker',subtitle:'Q2 2026'},
+ {name:'User Growth',icon:'📉',desc:'Monthly active users over time',type:'area',
+  labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+  datasets:[{name:'MAU',values:[120,340,680,1200,2100,3400,4800,6200,8400,11000,14200,18500]}],
+  title:'UTMStamp User Growth',subtitle:'2026 Projection'},
+ {name:'Team Health Radar',icon:'🕸️',desc:'Squad health check across dimensions',type:'radar',
+  labels:['Speed','Quality','Fun','Learning','Support','Mission','Autonomy','Collaboration'],
+  datasets:[{name:'Q1 2026',values:[3.2,4.1,3.8,4.5,3.0,4.2,3.9,4.0]},{name:'Q2 2026',values:[4.0,4.3,4.2,4.1,3.8,4.5,4.2,4.4]}],
+  title:'Team Health Radar',subtitle:'Quarter over Quarter'},
+ {name:'Revenue Waterfall',icon:'🌊',desc:'Revenue build-up by source',type:'waterfall',
+  labels:['Starting ARR','New Sales','Expansion','Churn','Downgrades','Net New','Ending ARR'],
+  datasets:[{name:'Revenue ($K)',values:[240,85,42,-28,-12,87,327]}],
+  title:'ARR Waterfall Q2',subtitle:'Revenue Movement'},
+ {name:'Skill Assessment',icon:'🎯',desc:'Product leadership skill gauge',type:'gauge',
+  labels:['Product Strategy'],
+  datasets:[{name:'Score',values:[82]}],
+  title:'PM Skill Score',subtitle:'Self Assessment'},
+ {name:'Traffic Sources',icon:'🗂️',desc:'Where users come from by category',type:'treemap',
+  labels:['Organic Search','Direct','LinkedIn','Twitter','Product Hunt','Referral','Email','Paid Ads'],
+  datasets:[{name:'Visits',values:[8400,4200,3100,2800,2200,1800,1400,900]}],
+  title:'Traffic Sources',subtitle:'Last 30 Days'},
+ {name:'Scatter: Time vs Impact',icon:'✨',desc:'Effort vs business impact of features',type:'scatter',
+  labels:['Sig Builder','Click Track','Campaign Mgr','Team Deploy','Templates','Integrations','Video Sig','G-Suite Push','Analytics V2','A/B Test'],
+  datasets:[{name:'Features',values:[[3,9],[2,8],[5,7],[4,6],[1,5],[8,9],[6,4],[7,8],[4,7],[3,5]]}],
+  title:'Effort vs Impact Matrix',subtitle:'UTMStamp Feature Prioritization'}
+];
+
+let charts=JSON.parse(localStorage.getItem('cf_charts')||'[]');
+let activeId=null, activeView='chart';
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function save(){localStorage.setItem('cf_charts',JSON.stringify(charts))}
+
+function newChart(tmpl){
+ const c={id:uid(),name:tmpl?tmpl.name:'Untitled Chart',type:tmpl?tmpl.type:'bar',
+  labels:tmpl?[...tmpl.labels]:['Category 1','Category 2','Category 3','Category 4','Category 5'],
+  datasets:tmpl?tmpl.datasets.map(d=>({name:d.name,values:[...d.values.map(v=>Array.isArray(v)?[...v]:v)]})):[{name:'Series 1',values:[42,28,35,50,22]}],
+  title:tmpl?tmpl.title:'My Chart',subtitle:tmpl?tmpl.subtitle:'',
+  palette:'vibrant',showLegend:true,showGrid:true,showValues:true,
+  width:700,height:400,created:Date.now()};
+ charts.unshift(c);save();activeId=c.id;activeView='chart';render();
+}
+
+function deleteChart(id,e){
+ e&&e.stopPropagation();
+ if(!confirm('Delete this chart?'))return;
+ charts=charts.filter(c=>c.id!==id);save();
+ if(activeId===id)activeId=charts[0]?.id||null;
+ render();
+}
+
+function getActive(){return charts.find(c=>c.id===activeId)}
+
+function render(){
+ renderSidebar();renderToolbar();renderContent();
+}
+
+function renderSidebar(){
+ const q=$('#search').value.toLowerCase();
+ const list=$('#sbList');
+ const filtered=charts.filter(c=>c.name.toLowerCase().includes(q)||c.type.includes(q));
+ list.innerHTML=filtered.map(c=>{
+  const t=CHART_TYPES.find(ct=>ct.id===c.type);
+  return `<div class="sb-item ${c.id===activeId?'active':''}" onclick="activeId='${c.id}';activeView='chart';render()">
+   <div class="type-icon">${t?t.icon:'📊'}</div>
+   <div class="info"><div class="name">${esc(c.name)}</div><div class="meta">${t?t.name:c.type} · ${c.datasets.length} series</div></div>
+   <button class="del" onclick="deleteChart('${c.id}',event)" title="Delete">✕</button>
+  </div>`;
+ }).join('');
+}
+
+function renderToolbar(){
+ const tb=$('#toolbar');
+ if(!activeId){tb.innerHTML='';return;}
+ const views=[['chart','📊 Chart'],['data','📝 Data'],['style','🎨 Style'],['export','📤 Export']];
+ tb.innerHTML=views.map(([v,l])=>`<button class="tab ${activeView===v?'active':''}" onclick="activeView='${v}';render()">${l}</button>`).join('')+
+  `<div class="sep"></div>
+   <button class="tb-btn" onclick="duplicateChart()" title="Duplicate">📋 Duplicate</button>
+   <button class="tb-btn" onclick="activeId=null;activeView='templates';render()" title="Templates">📁 Templates</button>
+   <button class="tb-btn" onclick="activeId=null;activeView='dashboard';render()" title="Dashboard">📈 Dashboard</button>
+   <button class="tb-btn" onclick="showHelp()" title="Help">❓</button>`;
+}
+
+function renderContent(){
+ const el=$('#content');
+ if(!activeId&&activeView==='templates')return renderTemplates(el);
+ if(!activeId&&activeView==='dashboard')return renderDashboard(el);
+ if(!activeId){
+  if(charts.length===0){
+   el.innerHTML=`<div class="empty-state"><div class="icon">📊</div><h2>Chart Forge</h2><p>Create beautiful data visualizations. Click <b>+ New Chart</b> or start from a template.</p>
+   <div style="display:flex;gap:8px;margin-top:16px"><button class="btn-primary" style="padding:10px 20px;border-radius:var(--radius)" onclick="newChart()">+ New Chart</button>
+   <button class="btn-cancel" style="padding:10px 20px;border-radius:var(--radius)" onclick="activeView='templates';render()">📁 Templates</button></div></div>`;
+  } else {
+   el.innerHTML=`<div class="empty-state"><div class="icon">👈</div><h2>Select a chart</h2><p>Pick a chart from the sidebar or create a new one.</p></div>`;
+  }
+  if(!activeId)$('#toolbar').innerHTML=`<button class="tab ${activeView==='templates'?'active':''}" onclick="activeView='templates';render()">📁 Templates</button>
+   <button class="tab ${activeView==='dashboard'?'active':''}" onclick="activeView='dashboard';render()">📈 Dashboard</button>
+   <div class="sep"></div><button class="tb-btn" onclick="showImport()">📥 Import</button><button class="tb-btn" onclick="exportAll()">📤 Export All</button><button class="tb-btn" onclick="showHelp()">❓</button>`;
+  return;
+ }
+ const c=getActive();if(!c)return;
+ switch(activeView){
+  case 'chart':renderChartView(el,c);break;
+  case 'data':renderDataView(el,c);break;
+  case 'style':renderStyleView(el,c);break;
+  case 'export':renderExportView(el,c);break;
+ }
+}
+
+// ─── Chart Rendering ───
+function renderChartView(el,c){
+ el.innerHTML=`<div class="chart-canvas" id="chartCanvas"></div>`;
+ const canvas=$('#chartCanvas');
+ const svg=buildChart(c);
+ canvas.innerHTML=svg;
+}
+
+function buildChart(c,exportMode){
+ const W=c.width||700,H=c.height||400;
+ const pal=PALETTES[c.palette||'vibrant'];
+ const bg=exportMode?'#161b22':'transparent';
+ let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">`;
+ if(exportMode)svg+=`<rect width="${W}" height="${H}" fill="${bg}" rx="8"/>`;
+ // Title
+ let titleY=30;
+ if(c.title){svg+=`<text x="${W/2}" y="${titleY}" class="chart-title" style="font-size:18px;font-weight:700;fill:#e6edf3;text-anchor:middle">${esc(c.title)}</text>`;titleY+=20;}
+ if(c.subtitle){svg+=`<text x="${W/2}" y="${titleY}" style="font-size:12px;fill:#8b949e;text-anchor:middle">${esc(c.subtitle)}</text>`;titleY+=10;}
+ const top=titleY+10,bot=H-40,left=60,right=W-30;
+ const cw=right-left,ch=bot-top;
+
+ switch(c.type){
+  case 'bar':svg+=drawBar(c,pal,left,top,cw,ch,bot,W);break;
+  case 'hbar':svg+=drawHBar(c,pal,left,top,cw,ch,bot,W,right);break;
+  case 'line':svg+=drawLine(c,pal,left,top,cw,ch,bot,false);break;
+  case 'area':svg+=drawLine(c,pal,left,top,cw,ch,bot,true);break;
+  case 'pie':svg+=drawPie(c,pal,W,H,top,false);break;
+  case 'donut':svg+=drawPie(c,pal,W,H,top,true);break;
+  case 'scatter':svg+=drawScatter(c,pal,left,top,cw,ch,bot);break;
+  case 'radar':svg+=drawRadar(c,pal,W,H,top);break;
+  case 'funnel':svg+=drawFunnel(c,pal,left,top,cw,ch,W);break;
+  case 'gauge':svg+=drawGauge(c,pal,W,H,top);break;
+  case 'waterfall':svg+=drawWaterfall(c,pal,left,top,cw,ch,bot,W);break;
+  case 'treemap':svg+=drawTreemap(c,pal,left,top,cw,ch);break;
+ }
+ // Legend
+ if(c.showLegend&&c.datasets.length>1){
+  const ly=H-15;
+  let lx=W/2-(c.datasets.length*60);
+  c.datasets.forEach((d,i)=>{
+   svg+=`<rect x="${lx}" y="${ly-8}" width="10" height="10" rx="2" fill="${pal[i%pal.length]}"/>`;
+   svg+=`<text x="${lx+14}" y="${ly}" style="font-size:11px;fill:#8b949e">${esc(d.name)}</text>`;
+   lx+=d.name.length*7+30;
+  });
+ }
+ svg+=`</svg>`;return svg;
+}
+
+function drawBar(c,pal,L,T,cw,ch,bot,W){
+ let s='';const n=c.labels.length,ds=c.datasets.length;
+ const allVals=c.datasets.flatMap(d=>d.values);
+ const maxV=Math.max(...allVals,1);const minV=Math.min(0,...allVals);
+ const range=maxV-minV||1;
+ const gw=cw/n,bw=gw*0.7/ds,pad=gw*0.15;
+ // Grid
+ if(c.showGrid)for(let i=0;i<=5;i++){const y=T+ch*(1-i/5);s+=`<line x1="${L}" y1="${y}" x2="${L+cw}" y2="${y}" style="stroke:#30363d;stroke-width:.5;opacity:.4"/>`;}
+ // Y axis labels
+ for(let i=0;i<=5;i++){const v=minV+(range*i/5);const y=T+ch*(1-i/5);s+=`<text x="${L-8}" y="${y+4}" style="font-size:10px;fill:#8b949e;text-anchor:end">${fmtNum(v)}</text>`;}
+ // Bars
+ c.datasets.forEach((d,di)=>{
+  d.values.forEach((v,vi)=>{
+   const x=L+vi*gw+pad+di*bw;
+   const h=Math.abs(v-Math.min(0,minV))/range*ch;
+   const y=v>=0?bot-h:bot-Math.abs(minV)/range*ch;
+   const barH=v>=0?h:Math.abs(v)/range*ch;
+   s+=`<rect x="${x}" y="${v>=0?bot-Math.abs(v-Math.min(0,minV))/range*ch:bot-Math.abs(minV)/range*ch}" width="${bw}" height="${barH}" rx="3" fill="${pal[di%pal.length]}" opacity=".85">
+    <animate attributeName="height" from="0" to="${barH}" dur="0.4s" fill="freeze"/>
+    <animate attributeName="y" from="${bot}" to="${v>=0?bot-Math.abs(v-Math.min(0,minV))/range*ch:bot-Math.abs(minV)/range*ch}" dur="0.4s" fill="freeze"/>
+   </rect>`;
+   if(c.showValues)s+=`<text x="${x+bw/2}" y="${(v>=0?bot-Math.abs(v-Math.min(0,minV))/range*ch:bot-Math.abs(minV)/range*ch)-4}" style="font-size:10px;fill:#e6edf3;text-anchor:middle">${fmtNum(v)}</text>`;
+  });
+ });
+ // X labels
+ c.labels.forEach((l,i)=>{const x=L+i*gw+gw/2;s+=`<text x="${x}" y="${bot+16}" style="font-size:10px;fill:#8b949e;text-anchor:middle">${esc(l)}</text>`;});
+ // Axes
+ s+=`<line x1="${L}" y1="${T}" x2="${L}" y2="${bot}" style="stroke:#30363d;stroke-width:1"/>`;
+ s+=`<line x1="${L}" y1="${bot}" x2="${L+cw}" y2="${bot}" style="stroke:#30363d;stroke-width:1"/>`;
+ return s;
+}
+
+function drawHBar(c,pal,L,T,cw,ch,bot,W,R){
+ let s='';const n=c.labels.length,ds=c.datasets.length;
+ const allVals=c.datasets.flatMap(d=>d.values);
+ const maxV=Math.max(...allVals,1);
+ const gh=ch/n,bh=gh*0.7/ds,pad=gh*0.15;
+ const labelW=80;const barL=L+labelW;const barW=cw-labelW;
+ if(c.showGrid)for(let i=0;i<=5;i++){const x=barL+barW*i/5;s+=`<line x1="${x}" y1="${T}" x2="${x}" y2="${bot}" style="stroke:#30363d;stroke-width:.5;opacity:.4"/>`;s+=`<text x="${x}" y="${bot+14}" style="font-size:10px;fill:#8b949e;text-anchor:middle">${fmtNum(maxV*i/5)}</text>`;}
+ c.datasets.forEach((d,di)=>{d.values.forEach((v,vi)=>{
+  const y=T+vi*gh+pad+di*bh;const w=v/maxV*barW;
+  s+=`<rect x="${barL}" y="${y}" width="${w}" height="${bh}" rx="3" fill="${pal[di%pal.length]}" opacity=".85"/>`;
+  if(c.showValues)s+=`<text x="${barL+w+6}" y="${y+bh/2+4}" style="font-size:10px;fill:#e6edf3">${fmtNum(v)}</text>`;
+ });});
+ c.labels.forEach((l,i)=>{s+=`<text x="${barL-6}" y="${T+i*gh+gh/2+4}" style="font-size:10px;fill:#8b949e;text-anchor:end">${esc(l.length>12?l.slice(0,12)+'…':l)}</text>`;});
+ return s;
+}
+
+function drawLine(c,pal,L,T,cw,ch,bot,fill){
+ let s='';const n=c.labels.length;
+ const allVals=c.datasets.flatMap(d=>d.values);
+ const maxV=Math.max(...allVals,1)*1.1;const minV=Math.min(0,...allVals);
+ const range=maxV-minV||1;
+ if(c.showGrid)for(let i=0;i<=5;i++){const y=T+ch*(1-i/5);s+=`<line x1="${L}" y1="${y}" x2="${L+cw}" y2="${y}" style="stroke:#30363d;stroke-width:.5;opacity:.4"/>`;s+=`<text x="${L-8}" y="${y+4}" style="font-size:10px;fill:#8b949e;text-anchor:end">${fmtNum(minV+range*i/5)}</text>`;}
+ c.datasets.forEach((d,di)=>{
+  const pts=d.values.map((v,i)=>[L+i*(cw/(n-1||1)),(bot-((v-minV)/range)*ch)]);
+  const path=pts.map((p,i)=>i===0?`M${p[0]},${p[1]}`:`L${p[0]},${p[1]}`).join(' ');
+  if(fill){
+   s+=`<path d="${path} L${pts[pts.length-1][0]},${bot} L${pts[0][0]},${bot} Z" fill="${pal[di%pal.length]}" opacity=".2"/>`;
+  }
+  s+=`<path d="${path}" fill="none" stroke="${pal[di%pal.length]}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  pts.forEach(p=>{s+=`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${pal[di%pal.length]}" stroke="#161b22" stroke-width="2"/>`;});
+  if(c.showValues)pts.forEach((p,i)=>{s+=`<text x="${p[0]}" y="${p[1]-10}" style="font-size:10px;fill:#e6edf3;text-anchor:middle">${fmtNum(d.values[i])}</text>`;});
+ });
+ c.labels.forEach((l,i)=>{const x=L+i*(cw/(n-1||1));s+=`<text x="${x}" y="${bot+16}" style="font-size:10px;fill:#8b949e;text-anchor:middle">${esc(l)}</text>`;});
+ s+=`<line x1="${L}" y1="${T}" x2="${L}" y2="${bot}" style="stroke:#30363d;stroke-width:1"/>`;
+ s+=`<line x1="${L}" y1="${bot}" x2="${L+cw}" y2="${bot}" style="stroke:#30363d;stroke-width:1"/>`;
+ return s;
+}
+
+function drawPie(c,pal,W,H,T,donut){
+ let s='';const d=c.datasets[0];if(!d)return s;
+ const total=d.values.reduce((a,b)=>a+Math.abs(b),0)||1;
+ const cx=W/2,cy=T+(H-T)/2,r=Math.min(W/2-60,(H-T)/2-30);
+ const ir=donut?r*0.55:0;
+ let angle=-Math.PI/2;
+ d.values.forEach((v,i)=>{
+  const pct=Math.abs(v)/total;const a1=angle;const a2=angle+pct*Math.PI*2;
+  const large=pct>0.5?1:0;
+  const x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1);
+  const x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
+  const ix1=cx+ir*Math.cos(a1),iy1=cy+ir*Math.sin(a1);
+  const ix2=cx+ir*Math.cos(a2),iy2=cy+ir*Math.sin(a2);
+  if(donut){
+   s+=`<path d="M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} L${ix2},${iy2} A${ir},${ir} 0 ${large} 0 ${ix1},${iy1} Z" fill="${pal[i%pal.length]}" stroke="#161b22" stroke-width="2"/>`;
+  } else {
+   s+=`<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z" fill="${pal[i%pal.length]}" stroke="#161b22" stroke-width="2"/>`;
+  }
+  // Label
+  const mid=a1+pct*Math.PI;const lr=r+20;
+  const lx=cx+lr*Math.cos(mid),ly=cy+lr*Math.sin(mid);
+  if(pct>0.04)s+=`<text x="${lx}" y="${ly}" style="font-size:10px;fill:#e6edf3;text-anchor:middle">${esc(c.labels[i]||'')} ${(pct*100).toFixed(1)}%</text>`;
+  angle=a2;
+ });
+ if(donut){s+=`<text x="${cx}" y="${cy-6}" style="font-size:22px;font-weight:700;fill:#e6edf3;text-anchor:middle">${fmtNum(total)}</text>`;
+  s+=`<text x="${cx}" y="${cy+12}" style="font-size:11px;fill:#8b949e;text-anchor:middle">Total</text>`;}
+ return s;
+}
+
+function drawScatter(c,pal,L,T,cw,ch,bot){
+ let s='';const d=c.datasets[0];if(!d)return s;
+ const pts=d.values.filter(v=>Array.isArray(v));if(!pts.length)return s;
+ const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+ const xMin=Math.min(...xs)*0.8,xMax=Math.max(...xs)*1.2,yMin=Math.min(...ys)*0.8,yMax=Math.max(...ys)*1.2;
+ const xR=xMax-xMin||1,yR=yMax-yMin||1;
+ if(c.showGrid){for(let i=0;i<=5;i++){const x=L+cw*i/5,y=T+ch*(1-i/5);
+  s+=`<line x1="${x}" y1="${T}" x2="${x}" y2="${bot}" style="stroke:#30363d;stroke-width:.5;opacity:.3"/>`;
+  s+=`<line x1="${L}" y1="${y}" x2="${L+cw}" y2="${y}" style="stroke:#30363d;stroke-width:.5;opacity:.3"/>`;
+  s+=`<text x="${x}" y="${bot+14}" style="font-size:10px;fill:#8b949e;text-anchor:middle">${(xMin+xR*i/5).toFixed(1)}</text>`;
+  s+=`<text x="${L-8}" y="${y+4}" style="font-size:10px;fill:#8b949e;text-anchor:end">${(yMin+yR*i/5).toFixed(1)}</text>`;
+ }}
+ pts.forEach((p,i)=>{
+  const x=L+(p[0]-xMin)/xR*cw,y=bot-(p[1]-yMin)/yR*ch;
+  s+=`<circle cx="${x}" cy="${y}" r="6" fill="${pal[i%pal.length]}" opacity=".8" stroke="#161b22" stroke-width="2"/>`;
+  if(c.labels[i]&&c.showValues)s+=`<text x="${x}" y="${y-10}" style="font-size:9px;fill:#8b949e;text-anchor:middle">${esc(c.labels[i])}</text>`;
+ });
+ s+=`<line x1="${L}" y1="${T}" x2="${L}" y2="${bot}" style="stroke:#30363d"/>`;
+ s+=`<line x1="${L}" y1="${bot}" x2="${L+cw}" y2="${bot}" style="stroke:#30363d"/>`;
+ return s;
+}
+
+function drawRadar(c,pal,W,H,T){
+ let s='';const n=c.labels.length;if(n<3)return s;
+ const cx=W/2,cy=T+(H-T-20)/2,r=Math.min(W/2-80,(H-T-20)/2-20);
+ const angles=c.labels.map((_,i)=>-Math.PI/2+i*2*Math.PI/n);
+ // Grid
+ for(let ring=1;ring<=5;ring++){
+  const rr=r*ring/5;
+  const pts=angles.map(a=>`${cx+rr*Math.cos(a)},${cy+rr*Math.sin(a)}`).join(' ');
+  s+=`<polygon points="${pts}" fill="none" stroke="#30363d" stroke-width=".5"/>`;
+ }
+ angles.forEach((a,i)=>{
+  s+=`<line x1="${cx}" y1="${cy}" x2="${cx+r*Math.cos(a)}" y2="${cy+r*Math.sin(a)}" style="stroke:#30363d;stroke-width:.5"/>`;
+  const lx=cx+(r+18)*Math.cos(a),ly=cy+(r+18)*Math.sin(a);
+  s+=`<text x="${lx}" y="${ly+4}" style="font-size:10px;fill:#8b949e;text-anchor:middle">${esc(c.labels[i])}</text>`;
+ });
+ const allVals=c.datasets.flatMap(d=>d.values);
+ const maxV=Math.max(...allVals,1);
+ c.datasets.forEach((d,di)=>{
+  const pts=d.values.map((v,i)=>{const rr=v/maxV*r;return `${cx+rr*Math.cos(angles[i])},${cy+rr*Math.sin(angles[i])}`;}).join(' ');
+  s+=`<polygon points="${pts}" fill="${pal[di%pal.length]}" fill-opacity=".15" stroke="${pal[di%pal.length]}" stroke-width="2"/>`;
+  d.values.forEach((v,i)=>{const rr=v/maxV*r;s+=`<circle cx="${cx+rr*Math.cos(angles[i])}" cy="${cy+rr*Math.sin(angles[i])}" r="3.5" fill="${pal[di%pal.length]}" stroke="#161b22" stroke-width="2"/>`;});
+ });
+ return s;
+}
+
+function drawFunnel(c,pal,L,T,cw,ch,W){
+ let s='';const d=c.datasets[0];if(!d)return s;
+ const n=d.values.length;const maxV=Math.max(...d.values,1);
+ const stepH=ch/n;const cx=W/2;
+ d.values.forEach((v,i)=>{
+  const w1=i===0?cw*0.9:(d.values[i-1]/maxV)*cw*0.9;
+  const w2=(v/maxV)*cw*0.9;
+  const y=T+i*stepH;
+  s+=`<path d="M${cx-w1/2},${y} L${cx+w1/2},${y} L${cx+w2/2},${y+stepH} L${cx-w2/2},${y+stepH} Z" fill="${pal[i%pal.length]}" opacity=".85" stroke="#161b22" stroke-width="1"/>`;
+  s+=`<text x="${cx}" y="${y+stepH/2+4}" style="font-size:12px;fill:#fff;text-anchor:middle;font-weight:600">${esc(c.labels[i]||'')} — ${fmtNum(v)}</text>`;
+  if(i>0){const pct=(v/d.values[i-1]*100).toFixed(1);s+=`<text x="${cx+w1/2+16}" y="${y+6}" style="font-size:10px;fill:#8b949e">${pct}%</text>`;}
+ });
+ return s;
+}
+
+function drawGauge(c,pal,W,H,T){
+ let s='';const d=c.datasets[0];if(!d)return s;
+ const val=Math.min(100,Math.max(0,d.values[0]||0));
+ const cx=W/2,cy=T+(H-T)*0.6,r=Math.min(W/2-40,(H-T)*0.5-10);
+ // Background arc
+ const startA=Math.PI*0.8,endA=Math.PI*0.2;
+ const totalA=(2*Math.PI-startA+endA);
+ s+=`<path d="${descArc(cx,cy,r,startA,2*Math.PI+endA)}" fill="none" stroke="#30363d" stroke-width="20" stroke-linecap="round"/>`;
+ // Value arc
+ const valA=startA+totalA*(val/100);
+ const color=val>=80?'#3fb950':val>=50?'#d29922':'#f85149';
+ s+=`<path d="${descArc(cx,cy,r,startA,valA)}" fill="none" stroke="${color}" stroke-width="20" stroke-linecap="round"/>`;
+ // Ticks
+ for(let i=0;i<=10;i++){const a=startA+totalA*i/10;const x1=cx+(r+16)*Math.cos(a),y1=cy-(r+16)*Math.sin(a);
+  s+=`<text x="${x1}" y="${y1+4}" style="font-size:9px;fill:#8b949e;text-anchor:middle">${i*10}</text>`;
+ }
+ s+=`<text x="${cx}" y="${cy-10}" style="font-size:36px;font-weight:700;fill:#e6edf3;text-anchor:middle">${val}</text>`;
+ s+=`<text x="${cx}" y="${cy+14}" style="font-size:13px;fill:#8b949e;text-anchor:middle">${esc(c.labels[0]||'Score')}</text>`;
+ return s;
+}
+function descArc(cx,cy,r,startA,endA){
+ const x1=cx+r*Math.cos(startA),y1=cy-r*Math.sin(startA);
+ const x2=cx+r*Math.cos(endA),y2=cy-r*Math.sin(endA);
+ const large=(endA-startA>Math.PI)?1:0;
+ return `M${x1},${y1} A${r},${r} 0 ${large} 0 ${x2},${y2}`;
+}
+
+function drawWaterfall(c,pal,L,T,cw,ch,bot,W){
+ let s='';const d=c.datasets[0];if(!d)return s;
+ const vals=d.values;const n=vals.length;
+ // Calculate running totals
+ let running=[],cum=0;
+ vals.forEach((v,i)=>{
+  if(i===0||i===n-1){running.push({start:0,end:v,val:v,total:true});}
+  else{const start=cum;running.push({start,end:cum+v,val:v,total:false});}
+  if(i<n-1)cum=running[i].total?vals[i]:cum+v;
+ });
+ const allY=running.flatMap(r=>[r.start,r.end]);
+ const maxV=Math.max(...allY)*1.15;const minV=Math.min(0,...allY);
+ const range=maxV-minV||1;
+ const gw=cw/n,bw=gw*0.6;
+ const yOf=v=>bot-((v-minV)/range)*ch;
+ if(c.showGrid)for(let i=0;i<=5;i++){const y=T+ch*(1-i/5);s+=`<line x1="${L}" y1="${y}" x2="${L+cw}" y2="${y}" style="stroke:#30363d;stroke-width:.5;opacity:.4"/>`;s+=`<text x="${L-8}" y="${y+4}" style="font-size:10px;fill:#8b949e;text-anchor:end">${fmtNum(minV+range*i/5)}</text>`;}
+ running.forEach((r,i)=>{
+  const x=L+i*gw+(gw-bw)/2;
+  const y1=yOf(Math.max(r.start,r.end)),y2=yOf(Math.min(r.start,r.end));
+  const color=r.total?pal[0]:(r.val>=0?'#3fb950':'#f85149');
+  s+=`<rect x="${x}" y="${y1}" width="${bw}" height="${Math.max(y2-y1,2)}" rx="2" fill="${color}" opacity=".85"/>`;
+  if(c.showValues)s+=`<text x="${x+bw/2}" y="${y1-5}" style="font-size:10px;fill:#e6edf3;text-anchor:middle">${r.val>=0?'+':''}${fmtNum(r.val)}</text>`;
+  // Connector
+  if(i<n-1&&!running[i+1].total){const nx=L+(i+1)*gw+(gw-bw)/2;const cy=yOf(r.total?r.end:r.end);s+=`<line x1="${x+bw}" y1="${cy}" x2="${nx}" y2="${cy}" style="stroke:#8b949e;stroke-width:1;stroke-dasharray:3,3"/>`;}
+ });
+ c.labels.forEach((l,i)=>{s+=`<text x="${L+i*gw+gw/2}" y="${bot+16}" style="font-size:10px;fill:#8b949e;text-anchor:middle">${esc(l.length>10?l.slice(0,10)+'…':l)}</text>`;});
+ s+=`<line x1="${L}" y1="${T}" x2="${L}" y2="${bot}" style="stroke:#30363d"/>`;
+ s+=`<line x1="${L}" y1="${bot}" x2="${L+cw}" y2="${bot}" style="stroke:#30363d"/>`;
+ return s;
+}
+
+function drawTreemap(c,pal,L,T,cw,ch){
+ let s='';const d=c.datasets[0];if(!d)return s;
+ const items=d.values.map((v,i)=>({label:c.labels[i]||`Item ${i+1}`,value:Math.abs(v),idx:i})).sort((a,b)=>b.value-a.value);
+ const total=items.reduce((a,b)=>a+b.value,0)||1;
+ // Simple squarified treemap - slice and dice
+ function layout(items,x,y,w,h,vertical){
+  if(items.length===0)return;
+  if(items.length===1){
+   s+=`<rect x="${x+1}" y="${y+1}" width="${w-2}" height="${h-2}" rx="4" fill="${pal[items[0].idx%pal.length]}" opacity=".8"/>`;
+   if(w>40&&h>30){
+    s+=`<text x="${x+w/2}" y="${y+h/2-4}" style="font-size:${Math.min(12,w/8)}px;fill:#fff;text-anchor:middle;font-weight:600">${esc(items[0].label)}</text>`;
+    s+=`<text x="${x+w/2}" y="${y+h/2+12}" style="font-size:${Math.min(10,w/10)}px;fill:rgba(255,255,255,.7);text-anchor:middle">${fmtNum(items[0].value)}</text>`;
+   }
+   return;
+  }
+  const sub=items.reduce((a,b)=>a+b.value,0);
+  const mid=Math.ceil(items.length/2);
+  const left=items.slice(0,mid),right=items.slice(mid);
+  const leftSum=left.reduce((a,b)=>a+b.value,0);
+  const ratio=leftSum/sub;
+  if(vertical){
+   layout(left,x,y,w*ratio,h,!vertical);
+   layout(right,x+w*ratio,y,w*(1-ratio),h,!vertical);
+  }else{
+   layout(left,x,y,w,h*ratio,!vertical);
+   layout(right,x,y+h*ratio,w,h*(1-ratio),!vertical);
+  }
+ }
+ layout(items,L,T,cw,ch,cw>ch);
+ return s;
+}
+
+function fmtNum(n){
+ if(typeof n!=='number')return String(n);
+ if(Math.abs(n)>=1e6)return (n/1e6).toFixed(1)+'M';
+ if(Math.abs(n)>=1e3)return (n/1e3).toFixed(1)+'K';
+ return Number.isInteger(n)?String(n):n.toFixed(1);
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ─── Data Editor ───
+function renderDataView(el,c){
+ const isScatter=c.type==='scatter';
+ let html=`<div class="de-header"><h3>Chart Data</h3><div class="de-actions">
+  <button onclick="addRow()">+ Row</button>
+  <button onclick="addSeries()">+ Series</button>
+  <button onclick="showCSVImport()">📋 Paste CSV</button>
+  <button onclick="showJSONData()">{ } JSON</button>
+ </div></div>`;
+ // Chart name
+ html+=`<div class="settings-grid" style="margin-bottom:16px"><div class="setting"><label>Chart Name</label><input value="${esc(c.name)}" onchange="getActive().name=this.value;save();renderSidebar()"></div>
+ <div class="setting"><label>Chart Type</label><select onchange="getActive().type=this.value;save();render()">${CHART_TYPES.map(t=>`<option value="${t.id}" ${t.id===c.type?'selected':''}>${t.icon} ${t.name}</option>`).join('')}</select></div></div>`;
+ // Table
+ html+=`<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>#</th><th style="min-width:100px">Label</th>`;
+ c.datasets.forEach((d,di)=>{html+=`<th style="min-width:80px"><input value="${esc(d.name)}" style="font-weight:600;width:100%;border:none;background:transparent;color:var(--text);padding:0" onchange="getActive().datasets[${di}].name=this.value;save()"> ${c.datasets.length>1?`<span style="cursor:pointer;color:var(--text2);font-size:11px" onclick="removeSeries(${di})">✕</span>`:''}</th>`;});
+ html+=`</tr></thead><tbody>`;
+ const maxRows=Math.max(c.labels.length,...c.datasets.map(d=>d.values.length));
+ for(let i=0;i<maxRows;i++){
+  html+=`<tr><td class="row-num">${i+1}</td>`;
+  html+=`<td><input value="${esc(c.labels[i]||'')}" onchange="updLabel(${i},this.value)"></td>`;
+  c.datasets.forEach((d,di)=>{
+   const v=d.values[i];
+   const val=isScatter&&Array.isArray(v)?v.join(','):v??'';
+   html+=`<td><input value="${val}" onchange="updVal(${di},${i},this.value)" placeholder="${isScatter?'x,y':'0'}"></td>`;
+  });
+  html+=`<td class="del-row" onclick="delRow(${i})">✕</td></tr>`;
+ }
+ html+=`</tbody></table></div>`;
+ el.innerHTML=html;
+}
+
+function updLabel(i,v){const c=getActive();c.labels[i]=v;save();}
+function updVal(di,ri,v){
+ const c=getActive();
+ if(c.type==='scatter'&&v.includes(',')){
+  const parts=v.split(',').map(Number);
+  c.datasets[di].values[ri]=parts;
+ }else{
+  c.datasets[di].values[ri]=parseFloat(v)||0;
+ }
+ save();
+}
+function addRow(){const c=getActive();c.labels.push(`Item ${c.labels.length+1}`);c.datasets.forEach(d=>d.values.push(0));save();renderContent();}
+function delRow(i){const c=getActive();c.labels.splice(i,1);c.datasets.forEach(d=>d.values.splice(i,1));save();renderContent();}
+function addSeries(){const c=getActive();c.datasets.push({name:`Series ${c.datasets.length+1}`,values:c.labels.map(()=>0)});save();renderContent();}
+function removeSeries(di){const c=getActive();if(c.datasets.length<=1)return;c.datasets.splice(di,1);save();renderContent();}
+
+// ─── Style Editor ───
+function renderStyleView(el,c){
+ let html=`<h3 style="margin-bottom:16px">Chart Style</h3>`;
+ // Title/subtitle
+ html+=`<div class="settings-grid"><div class="setting"><label>Title</label><input value="${esc(c.title)}" onchange="getActive().title=this.value;save()"></div>
+  <div class="setting"><label>Subtitle</label><input value="${esc(c.subtitle||'')}" onchange="getActive().subtitle=this.value;save()"></div>
+  <div class="setting"><label>Width</label><input type="number" value="${c.width}" min="300" max="1400" onchange="getActive().width=+this.value;save()"></div>
+  <div class="setting"><label>Height</label><input type="number" value="${c.height}" min="200" max="900" onchange="getActive().height=+this.value;save()"></div></div>`;
+ // Chart type
+ html+=`<h4 style="margin:20px 0 10px;font-size:13px;color:var(--text2)">Chart Type</h4><div class="chart-types">`;
+ CHART_TYPES.forEach(t=>{html+=`<div class="ct-card ${t.id===c.type?'sel':''}" onclick="getActive().type='${t.id}';save();render()"><div class="ct-icon">${t.icon}</div><div class="ct-name">${t.name}</div></div>`;});
+ html+=`</div>`;
+ // Palette
+ html+=`<h4 style="margin:20px 0 10px;font-size:13px;color:var(--text2)">Color Palette</h4><div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">`;
+ Object.entries(PALETTES).forEach(([name,colors])=>{
+  html+=`<div style="cursor:pointer;padding:8px;border:2px solid ${c.palette===name?'var(--accent)':'var(--border)'};border-radius:var(--radius);background:var(--bg)" onclick="getActive().palette='${name}';save();render()">
+   <div style="display:flex;gap:2px;margin-bottom:4px">${colors.slice(0,6).map(col=>`<div style="width:14px;height:14px;border-radius:2px;background:${col}"></div>`).join('')}</div>
+   <div style="font-size:11px;color:var(--text2);text-transform:capitalize">${name}</div></div>`;
+ });
+ html+=`</div>`;
+ // Toggles
+ html+=`<h4 style="margin:20px 0 10px;font-size:13px;color:var(--text2)">Display Options</h4>`;
+ html+=toggle('Show Legend',c.showLegend,'getActive().showLegend=!getActive().showLegend;save();render()');
+ html+=toggle('Show Grid Lines',c.showGrid,'getActive().showGrid=!getActive().showGrid;save();render()');
+ html+=toggle('Show Values',c.showValues,'getActive().showValues=!getActive().showValues;save();render()');
+ el.innerHTML=html;
+}
+
+function toggle(label,on,onclick){
+ return `<div class="toggle-row" style="margin-bottom:10px"><div class="toggle ${on?'on':''}" onclick="${onclick}"></div><span style="font-size:13px">${label}</span></div>`;
+}
+
+// ─── Export ───
+function renderExportView(el,c){
+ el.innerHTML=`<h3 style="margin-bottom:16px">Export Chart</h3>
+  <div class="export-opts">
+   <div class="export-opt" onclick="exportSVG()"><div class="exp-icon">🖼️</div><div class="exp-name">SVG</div><div class="exp-desc">Vector, editable</div></div>
+   <div class="export-opt" onclick="exportPNG()"><div class="exp-icon">📸</div><div class="exp-name">PNG</div><div class="exp-desc">Raster image</div></div>
+   <div class="export-opt" onclick="exportPNG(2)"><div class="exp-icon">📸</div><div class="exp-name">PNG @2x</div><div class="exp-desc">High-res raster</div></div>
+   <div class="export-opt" onclick="copySVG()"><div class="exp-icon">📋</div><div class="exp-name">Copy SVG</div><div class="exp-desc">To clipboard</div></div>
+   <div class="export-opt" onclick="exportJSON()"><div class="exp-icon">{ }</div><div class="exp-name">JSON</div><div class="exp-desc">Chart data</div></div>
+  </div>
+  <h4 style="margin:20px 0 10px;font-size:13px;color:var(--text2)">Preview</h4>
+  <div class="chart-canvas" style="background:#0d1117;padding:20px">${buildChart(c,true)}</div>`;
+}
+
+function exportSVG(){
+ const c=getActive();if(!c)return;
+ const svg=buildChart(c,true);
+ dl(svg,'text/svg+xml',`${c.name.replace(/\s+/g,'-').toLowerCase()}.svg`);
+}
+function exportPNG(scale=1){
+ const c=getActive();if(!c)return;
+ const svg=buildChart(c,true);
+ const canvas=document.createElement('canvas');
+ canvas.width=c.width*scale;canvas.height=c.height*scale;
+ const ctx=canvas.getContext('2d');
+ const img=new Image();
+ img.onload=()=>{ctx.drawImage(img,0,0,canvas.width,canvas.height);
+  canvas.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`${c.name.replace(/\s+/g,'-').toLowerCase()}${scale>1?'@2x':''}.png`;a.click();URL.revokeObjectURL(u);},'image/png');};
+ img.src='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svg)));
+}
+function copySVG(){
+ const c=getActive();if(!c)return;
+ navigator.clipboard.writeText(buildChart(c,true)).then(()=>alert('SVG copied to clipboard!'));
+}
+function exportJSON(){
+ const c=getActive();if(!c)return;
+ dl(JSON.stringify(c,null,2),'application/json',`${c.name.replace(/\s+/g,'-').toLowerCase()}.json`);
+}
+function exportAll(){dl(JSON.stringify(charts,null,2),'application/json','chart-forge-all.json');}
+function dl(data,type,name){const b=new Blob([data],{type});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
+
+function duplicateChart(){
+ const c=getActive();if(!c)return;
+ const dup={...JSON.parse(JSON.stringify(c)),id:uid(),name:c.name+' (copy)',created:Date.now()};
+ charts.unshift(dup);save();activeId=dup.id;render();
+}
+
+// ─── Templates ───
+function renderTemplates(el){
+ el.innerHTML=`<h3 style="margin-bottom:16px">Start from a Template</h3>
+  <div class="tmpl-grid">${TEMPLATES.map((t,i)=>`<div class="tmpl-card" onclick="newChart(TEMPLATES[${i}])">
+   <div class="tmpl-icon">${t.icon}</div><h4>${t.name}</h4><p>${t.desc}</p>
+   <div style="font-size:11px;color:var(--accent);margin-top:8px">${CHART_TYPES.find(ct=>ct.id===t.type)?.icon||''} ${CHART_TYPES.find(ct=>ct.id===t.type)?.name||t.type}</div>
+  </div>`).join('')}</div>`;
+}
+
+// ─── Dashboard ───
+function renderDashboard(el){
+ const types={};charts.forEach(c=>{types[c.type]=(types[c.type]||0)+1;});
+ el.innerHTML=`<h3 style="margin-bottom:16px">Dashboard</h3>
+  <div class="dash-grid">
+   <div class="dash-card"><h4>Total Charts</h4><div class="val">${charts.length}</div></div>
+   <div class="dash-card"><h4>Chart Types Used</h4><div class="val">${Object.keys(types).length}</div><div class="sub">of ${CHART_TYPES.length} available</div></div>
+   <div class="dash-card"><h4>Total Data Points</h4><div class="val">${charts.reduce((a,c)=>a+c.datasets.reduce((b,d)=>b+d.values.length,0),0)}</div></div>
+   <div class="dash-card"><h4>Total Series</h4><div class="val">${charts.reduce((a,c)=>a+c.datasets.length,0)}</div></div>
+  </div>
+  <h4 style="margin:20px 0 10px;font-size:13px;color:var(--text2)">Charts by Type</h4>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">${Object.entries(types).map(([t,n])=>{const ct=CHART_TYPES.find(c=>c.id===t);return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;font-size:13px">${ct?ct.icon:''} ${ct?ct.name:t}: <b>${n}</b></div>`;}).join('')}</div>
+  <h4 style="margin:20px 0 10px;font-size:13px;color:var(--text2)">All Charts</h4>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px">${charts.map(c=>{
+   const mini={...c,width:320,height:200,showValues:false,title:'',subtitle:''};
+   return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer" onclick="activeId='${c.id}';activeView='chart';render()">
+    <div style="margin-bottom:8px;font-size:13px;font-weight:600">${esc(c.name)}</div>
+    <div style="overflow:hidden;border-radius:4px">${buildChart(mini)}</div>
+   </div>`;
+  }).join('')}</div>`;
+}
+
+// ─── Modals ───
+function showCSVImport(){
+ const root=$('#modalRoot');
+ root.innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">
+  <h3>Import CSV Data</h3>
+  <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Paste CSV with headers. First column = labels, rest = series.</p>
+  <textarea class="import-area" id="csvInput" placeholder="Label,Series 1,Series 2\nJan,100,80\nFeb,120,95\nMar,140,110"></textarea>
+  <div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="importCSV()">Import</button></div>
+ </div></div>`;
+}
+
+function importCSV(){
+ const raw=$('#csvInput').value.trim();if(!raw)return;
+ const lines=raw.split('\n').map(l=>l.split(/[,\t]/).map(s=>s.trim()));
+ if(lines.length<2)return alert('Need at least header + 1 data row');
+ const headers=lines[0];const data=lines.slice(1);
+ const c=getActive();
+ c.labels=data.map(r=>r[0]||'');
+ c.datasets=headers.slice(1).map((h,i)=>({name:h,values:data.map(r=>parseFloat(r[i+1])||0)}));
+ save();closeModal();render();
+}
+
+function showJSONData(){
+ const c=getActive();
+ const root=$('#modalRoot');
+ root.innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal" style="min-width:500px">
+  <h3>Chart Data (JSON)</h3>
+  <textarea class="import-area" id="jsonInput" style="min-height:250px">${JSON.stringify({labels:c.labels,datasets:c.datasets},null,2)}</textarea>
+  <div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="applyJSONData()">Apply</button></div>
+ </div></div>`;
+}
+
+function applyJSONData(){
+ try{
+  const d=JSON.parse($('#jsonInput').value);
+  const c=getActive();
+  if(d.labels)c.labels=d.labels;
+  if(d.datasets)c.datasets=d.datasets;
+  save();closeModal();render();
+ }catch(e){alert('Invalid JSON: '+e.message);}
+}
+
+function showImport(){
+ const root=$('#modalRoot');
+ root.innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal" style="min-width:500px">
+  <h3>Import Charts</h3>
+  <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Paste JSON export (single chart or array of charts)</p>
+  <textarea class="import-area" id="importInput" style="min-height:200px"></textarea>
+  <div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="doImport()">Import</button></div>
+ </div></div>`;
+}
+
+function doImport(){
+ try{
+  let d=JSON.parse($('#importInput').value);
+  if(!Array.isArray(d))d=[d];
+  d.forEach(c=>{c.id=uid();c.created=Date.now();charts.unshift(c);});
+  save();closeModal();render();
+ }catch(e){alert('Invalid JSON: '+e.message);}
+}
+
+function showHelp(){
+ const root=$('#modalRoot');
+ root.innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal" style="max-width:500px">
+  <h3>⌨️ Keyboard Shortcuts</h3>
+  <div class="kbd-grid" style="margin:16px 0">
+   <div><kbd>N</kbd></div><div>New chart</div>
+   <div><kbd>/</kbd></div><div>Search charts</div>
+   <div><kbd>1</kbd></div><div>Chart view</div>
+   <div><kbd>2</kbd></div><div>Data editor</div>
+   <div><kbd>3</kbd></div><div>Style settings</div>
+   <div><kbd>4</kbd></div><div>Export</div>
+   <div><kbd>D</kbd></div><div>Dashboard</div>
+   <div><kbd>T</kbd></div><div>Templates</div>
+   <div><kbd>⌘D</kbd></div><div>Duplicate chart</div>
+   <div><kbd>E</kbd></div><div>Export all (JSON)</div>
+   <div><kbd>I</kbd></div><div>Import</div>
+   <div><kbd>?</kbd></div><div>This help</div>
+   <div><kbd>Esc</kbd></div><div>Close modal</div>
+  </div>
+  <h4 style="margin:12px 0 8px;font-size:13px">12 Chart Types</h4>
+  <div style="display:flex;flex-wrap:wrap;gap:6px">${CHART_TYPES.map(t=>`<span style="background:var(--bg3);padding:3px 8px;border-radius:4px;font-size:12px">${t.icon} ${t.name}</span>`).join('')}</div>
+  <div class="modal-actions"><button class="btn-primary" onclick="closeModal()">Got it</button></div>
+ </div></div>`;
+}
+
+function closeModal(){$('#modalRoot').innerHTML='';}
+
+// ─── Keyboard ───
+document.addEventListener('keydown',e=>{
+ if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT'){
+  if(e.key==='Escape'){e.target.blur();return;}
+  return;
+ }
+ if(e.key==='Escape'){closeModal();return;}
+ if(e.key==='?'){showHelp();e.preventDefault();return;}
+ if(e.key==='/'){e.preventDefault();$('#search').focus();return;}
+ if(e.key==='n'||e.key==='N'){newChart();return;}
+ if(e.key==='d'||e.key==='D'){if(e.metaKey||e.ctrlKey){e.preventDefault();duplicateChart();}else{activeId=null;activeView='dashboard';render();}return;}
+ if(e.key==='t'||e.key==='T'){activeId=null;activeView='templates';render();return;}
+ if(e.key==='e'||e.key==='E'){exportAll();return;}
+ if(e.key==='i'||e.key==='I'){showImport();return;}
+ if(activeId){
+  if(e.key==='1'){activeView='chart';render();}
+  if(e.key==='2'){activeView='data';render();}
+  if(e.key==='3'){activeView='style';render();}
+  if(e.key==='4'){activeView='export';render();}
+ }
+});
+
+$('#search').addEventListener('input',renderSidebar);
+
+// ─── Init ───
+if(charts.length===0){
+ // Seed with demo charts from templates
+ [0,1,2,4,5,7].forEach(i=>newChart(TEMPLATES[i]));
+}
+if(charts.length&&!activeId)activeId=charts[0].id;
+render();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

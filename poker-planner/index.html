@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poker Planner — Planning Poker & Story Point Estimator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--surface3:#21283b;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--text3:#6e7681;--accent:#58a6ff;--accent2:#1f6feb;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff;--orange:#f0883e;--pink:#f778ba;--cyan:#76e3ea;--radius:8px;--shadow:0 2px 8px rgba(0,0,0,.3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:var(--text)}
+input,select,textarea{font-family:inherit;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-size:14px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+::placeholder{color:var(--text3)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:16px;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:20px}
+.sidebar-search{width:100%;margin-top:10px;padding:6px 10px;font-size:13px}
+.sidebar-list{flex:1;overflow-y:auto;padding:8px}
+.sidebar-item{padding:10px 12px;border-radius:var(--radius);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:2px;transition:.15s}
+.sidebar-item:hover{background:var(--surface2)}
+.sidebar-item.active{background:var(--accent2);color:white}
+.sidebar-item .badge{font-size:11px;padding:2px 6px;border-radius:10px;background:var(--surface3);color:var(--text2);margin-left:auto}
+.sidebar-item.active .badge{background:rgba(255,255,255,.2);color:white}
+.sidebar-actions{padding:12px;border-top:1px solid var(--border);display:flex;gap:6px}
+.sidebar-actions button{flex:1;padding:8px;background:var(--accent2);color:white;border-radius:var(--radius);font-size:13px;font-weight:500}
+.sidebar-actions button:hover{background:var(--accent)}
+
+/* Nav */
+.nav{display:flex;gap:2px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
+.nav button{padding:8px 16px;border-radius:var(--radius);font-size:13px;color:var(--text2);transition:.15s}
+.nav button:hover{color:var(--text);background:var(--surface2)}
+.nav button.active{background:var(--accent2);color:white}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.card h3{font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+
+/* Poker Cards */
+.poker-deck{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:20px 0}
+.poker-card{width:80px;height:110px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;cursor:pointer;transition:.2s;border:2px solid var(--border);background:var(--surface2);position:relative;user-select:none}
+.poker-card:hover{transform:translateY(-8px);border-color:var(--accent);box-shadow:0 8px 20px rgba(88,166,255,.2)}
+.poker-card.selected{border-color:var(--green);background:rgba(63,185,80,.15);transform:translateY(-12px);box-shadow:0 12px 24px rgba(63,185,80,.3)}
+.poker-card.selected::after{content:'✓';position:absolute;top:4px;right:6px;font-size:12px;color:var(--green)}
+.poker-card.disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.poker-card .suit{position:absolute;bottom:6px;right:8px;font-size:10px;color:var(--text3)}
+
+/* Story */
+.story-header{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.story-title{font-size:20px;font-weight:600;flex:1;min-width:200px}
+.story-meta{display:flex;gap:8px;align-items:center}
+.status-badge{padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600}
+.status-pending{background:rgba(210,153,34,.15);color:var(--yellow)}
+.status-voting{background:rgba(88,166,255,.15);color:var(--accent)}
+.status-revealed{background:rgba(188,140,255,.15);color:var(--purple)}
+.status-estimated{background:rgba(63,185,80,.15);color:var(--green)}
+.status-skipped{background:rgba(139,148,158,.15);color:var(--text2)}
+
+/* Voting area */
+.voting-area{text-align:center;padding:20px 0}
+.voting-prompt{font-size:16px;color:var(--text2);margin-bottom:8px}
+.voting-description{font-size:14px;color:var(--text3);margin-bottom:20px;max-width:600px;margin-left:auto;margin-right:auto}
+
+/* Team votes */
+.votes-grid{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;padding:20px 0}
+.vote-card{width:100px;text-align:center}
+.vote-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;margin:0 auto 8px;color:white;transition:.3s}
+.vote-name{font-size:12px;color:var(--text2);margin-bottom:4px}
+.vote-value{font-size:13px;font-weight:600;min-height:20px}
+.vote-hidden{width:40px;height:55px;border-radius:8px;background:var(--accent2);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:16px;transition:.3s}
+.vote-hidden.voted{background:var(--green);animation:pulse .5s}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.vote-hidden.empty{background:var(--surface3);border:2px dashed var(--border)}
+
+/* Results */
+.results{margin-top:20px}
+.results-bar{display:flex;gap:8px;align-items:flex-end;justify-content:center;height:120px;padding:0 20px;margin-bottom:16px}
+.result-col{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:50px}
+.result-bar{width:40px;border-radius:4px 4px 0 0;background:var(--accent);transition:.5s;min-height:4px}
+.result-label{font-size:13px;font-weight:600}
+.result-count{font-size:11px;color:var(--text2)}
+.consensus-badge{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;font-size:14px;font-weight:600;margin:12px auto}
+.consensus-perfect{background:rgba(63,185,80,.15);color:var(--green)}
+.consensus-near{background:rgba(88,166,255,.15);color:var(--accent)}
+.consensus-divergent{background:rgba(248,81,73,.15);color:var(--red)}
+
+/* Action buttons */
+.btn{padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;transition:.15s}
+.btn-primary{background:var(--accent2);color:white}.btn-primary:hover{background:var(--accent)}
+.btn-success{background:rgba(63,185,80,.2);color:var(--green);border:1px solid rgba(63,185,80,.3)}.btn-success:hover{background:rgba(63,185,80,.3)}
+.btn-danger{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.2)}.btn-danger:hover{background:rgba(248,81,73,.25)}
+.btn-outline{border:1px solid var(--border);color:var(--text2)}.btn-outline:hover{border-color:var(--accent);color:var(--text)}
+.btn-group{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+
+/* Stories list */
+.stories-table{width:100%;border-collapse:collapse}
+.stories-table th{text-align:left;padding:10px 12px;font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.stories-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:14px}
+.stories-table tr:hover td{background:var(--surface2)}
+.stories-table .points{font-weight:700;font-size:16px;color:var(--accent)}
+.stories-table .points.none{color:var(--text3);font-weight:400;font-size:13px}
+
+/* Team */
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.team-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;position:relative}
+.team-card .avatar{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;margin:0 auto 10px;color:white}
+.team-card .name{font-size:14px;font-weight:600;margin-bottom:4px}
+.team-card .role{font-size:12px;color:var(--text2)}
+.team-card .stats{display:flex;gap:12px;justify-content:center;margin-top:10px;font-size:11px;color:var(--text3)}
+.team-card .delete{position:absolute;top:8px;right:8px;font-size:14px;color:var(--text3);opacity:0;transition:.15s}
+.team-card:hover .delete{opacity:1}
+.team-card .delete:hover{color:var(--red)}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-value{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-label{font-size:12px;color:var(--text2);margin-top:4px}
+
+/* Chart */
+.chart-bar{display:flex;align-items:flex-end;gap:8px;height:140px;padding:0 4px}
+.chart-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.chart-fill{width:100%;border-radius:4px 4px 0 0;min-height:2px;transition:.3s}
+.chart-label{font-size:10px;color:var(--text3);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.chart-val{font-size:11px;font-weight:600}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:18px;margin-bottom:16px}
+.modal label{display:block;font-size:13px;color:var(--text2);margin-bottom:4px;margin-top:12px}
+.modal input,.modal select,.modal textarea{width:100%}
+.modal textarea{min-height:80px;resize:vertical}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* Timer */
+.timer{display:flex;align-items:center;gap:8px;justify-content:center;margin:12px 0}
+.timer-display{font-size:32px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent)}
+.timer-btn{width:32px;height:32px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px}
+.timer-btn:hover{border-color:var(--accent)}
+
+/* Summary */
+.session-summary{max-width:700px;margin:0 auto}
+.summary-story{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.summary-story:last-child{border:none}
+.summary-points{width:48px;height:48px;border-radius:50%;background:var(--accent2);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0}
+.summary-points.skipped{background:var(--surface3);color:var(--text3)}
+.summary-info{flex:1}
+.summary-info h4{font-size:14px;margin-bottom:2px}
+.summary-info p{font-size:12px;color:var(--text2)}
+
+/* Velocity chart */
+.velocity-section{margin-top:20px}
+
+/* Help */
+.help-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.help-key{display:flex;align-items:center;gap:8px;padding:6px 0}
+.help-key kbd{background:var(--surface3);padding:2px 8px;border-radius:4px;font-size:12px;font-family:monospace;border:1px solid var(--border)}
+.help-key span{font-size:13px;color:var(--text2)}
+
+.hidden{display:none !important}
+
+/* Empty state */
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty h3{font-size:18px;color:var(--text2);margin-bottom:8px}
+.empty p{font-size:14px;margin-bottom:20px}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span>🃏</span> Poker Planner</h1>
+    <input class="sidebar-search" id="sessionSearch" placeholder="Search sessions... (/)" />
+  </div>
+  <div class="sidebar-list" id="sessionList"></div>
+  <div class="sidebar-actions">
+    <button onclick="newSession()">+ New Session</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="nav" id="navTabs">
+    <button data-view="poker" class="active" onclick="switchView('poker')">🃏 Poker</button>
+    <button data-view="stories" onclick="switchView('stories')">📋 Stories</button>
+    <button data-view="team" onclick="switchView('team')">👥 Team</button>
+    <button data-view="dashboard" onclick="switchView('dashboard')">📊 Dashboard</button>
+    <button data-view="history" onclick="switchView('history')">📜 History</button>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<div class="modal-overlay hidden" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+const CARDS = ['0','½','1','2','3','5','8','13','21','34','?','☕'];
+const CARD_VALUES = {'0':0,'½':0.5,'1':1,'2':2,'3':3,'5':5,'8':8,'13':13,'21':21,'34':34};
+const COLORS = ['#f85149','#58a6ff','#3fb950','#d29922','#bc8cff','#f0883e','#f778ba','#76e3ea','#da3633','#388bfd'];
+const ROLES = ['PM','Dev','Designer','QA','Lead','Architect','Analyst','Intern','Manager','Stakeholder'];
+
+let state = {sessions:[], currentSession:null, currentView:'poker', timer:0, timerRunning:false, timerInterval:null};
+const LS_KEY = 'poker-planner-v1';
+
+function save(){localStorage.setItem(LS_KEY,JSON.stringify(state.sessions))}
+function load(){try{state.sessions=JSON.parse(localStorage.getItem(LS_KEY))||[];if(!state.sessions.length)seedData()}catch(e){seedData()}}
+
+function getSession(){return state.sessions.find(s=>s.id===state.currentSession)}
+function getCurrentStory(){const s=getSession();if(!s)return null;return s.stories.find(st=>st.id===s.currentStoryId)}
+
+function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+
+function newSession(){
+  showModal('New Session',`
+    <label>Session Name</label>
+    <input id="mName" placeholder="Sprint Planning #15" autofocus />
+    <label>Deck Type</label>
+    <select id="mDeck">
+      <option value="fibonacci">Fibonacci (0,1,2,3,5,8,13,21,34)</option>
+      <option value="tshirt">T-Shirt (XS,S,M,L,XL,XXL)</option>
+      <option value="powers">Powers of 2 (1,2,4,8,16,32)</option>
+      <option value="simple">Simple (1,2,3,4,5)</option>
+    </select>
+    <label>Time Limit per Story (seconds, 0 = no limit)</label>
+    <input id="mTimer" type="number" value="120" min="0" step="30" />
+  `,()=>{
+    const name=document.getElementById('mName').value.trim()||'Untitled Session';
+    const deck=document.getElementById('mDeck').value;
+    const timer=parseInt(document.getElementById('mTimer').value)||0;
+    const session={id:genId(),name,deck,timerLimit:timer,stories:[],team:[],currentStoryId:null,createdAt:new Date().toISOString(),completedAt:null};
+    // Copy team from last session if exists
+    if(state.sessions.length){
+      const last=state.sessions[state.sessions.length-1];
+      session.team=last.team.map(m=>({...m,id:genId()}));
+    }
+    state.sessions.push(session);
+    state.currentSession=session.id;
+    save();renderSidebar();render();
+  });
+}
+
+function getDeckCards(deck){
+  switch(deck){
+    case 'tshirt':return ['XS','S','M','L','XL','XXL','?','☕'];
+    case 'powers':return ['1','2','4','8','16','32','?','☕'];
+    case 'simple':return ['1','2','3','4','5','?','☕'];
+    default:return CARDS;
+  }
+}
+
+function getDeckValues(deck){
+  switch(deck){
+    case 'tshirt':return {'XS':1,'S':2,'M':4,'L':8,'XL':16,'XXL':32};
+    case 'powers':return {'1':1,'2':2,'4':4,'8':8,'16':16,'32':32};
+    case 'simple':return {'1':1,'2':2,'3':3,'4':4,'5':5};
+    default:return CARD_VALUES;
+  }
+}
+
+function renderSidebar(){
+  const q=(document.getElementById('sessionSearch').value||'').toLowerCase();
+  const list=document.getElementById('sessionList');
+  const filtered=state.sessions.filter(s=>s.name.toLowerCase().includes(q));
+  list.innerHTML=filtered.map(s=>{
+    const done=s.stories.filter(st=>st.status==='estimated').length;
+    const total=s.stories.length;
+    return `<div class="sidebar-item${s.id===state.currentSession?' active':''}" onclick="selectSession('${s.id}')">
+      <span>🃏</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.name)}</span>
+      <span class="badge">${done}/${total}</span>
+    </div>`;
+  }).join('');
+}
+
+function selectSession(id){
+  state.currentSession=id;
+  stopTimer();
+  renderSidebar();render();
+}
+
+function switchView(v){
+  state.currentView=v;
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+  render();
+}
+
+function render(){
+  const s=getSession();
+  if(!s){document.getElementById('content').innerHTML='<div class="empty"><h3>🃏 Planning Poker</h3><p>Create a session to start estimating stories with your team.</p><button class="btn btn-primary" onclick="newSession()">+ New Session</button></div>';return}
+  switch(state.currentView){
+    case 'poker':renderPoker(s);break;
+    case 'stories':renderStories(s);break;
+    case 'team':renderTeam(s);break;
+    case 'dashboard':renderDashboard(s);break;
+    case 'history':renderHistory(s);break;
+  }
+}
+
+function renderPoker(s){
+  const story=getCurrentStory();
+  const c=document.getElementById('content');
+  if(!story){
+    // No current story — show story selector
+    const pending=s.stories.filter(st=>st.status==='pending');
+    c.innerHTML=`<div class="card">
+      <h3>🃏 ${esc(s.name)}</h3>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <span class="status-badge status-voting">${s.stories.filter(st=>st.status==='estimated').length} estimated</span>
+        <span class="status-badge status-pending">${pending.length} remaining</span>
+        <span class="status-badge status-revealed">${s.team.length} voters</span>
+      </div>
+      ${pending.length?`
+        <p style="color:var(--text2);margin-bottom:16px">Select a story to estimate:</p>
+        ${pending.map(st=>`<div style="padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:.15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'" onclick="startVoting('${st.id}')">
+          <span style="font-size:18px">📝</span>
+          <div style="flex:1"><div style="font-weight:600">${esc(st.title)}</div>${st.description?`<div style="font-size:12px;color:var(--text3);margin-top:2px">${esc(st.description).slice(0,100)}</div>`:''}</div>
+          <button class="btn btn-primary" style="font-size:12px">Estimate →</button>
+        </div>`).join('')}
+      `:`
+        <div class="empty" style="padding:30px"><h3>🎉 All Stories Estimated!</h3><p>Great job! Check the Dashboard for a summary.</p>
+        <button class="btn btn-primary" onclick="switchView('dashboard')">View Dashboard</button></div>
+      `}
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-outline" onclick="addStoryModal()">+ Add Story</button>
+      <button class="btn btn-outline" onclick="importStoriesModal()">📥 Import Stories</button>
+      ${s.team.length===0?'<button class="btn btn-success" onclick="addMemberModal()">👤 Add Team Member</button>':''}
+    </div>`;
+    return;
+  }
+
+  const revealed=story.status==='revealed'||story.status==='estimated';
+  const allVoted=s.team.length>0&&s.team.every(m=>story.votes[m.id]!==undefined);
+  const cards=getDeckCards(s.deck);
+  const values=getDeckValues(s.deck);
+  const myVote=story.votes['facilitator'];
+
+  c.innerHTML=`
+    <div class="card">
+      <div class="story-header">
+        <div class="story-title">${esc(story.title)}</div>
+        <div class="story-meta">
+          <span class="status-badge status-${story.status}">${story.status}</span>
+          ${story.finalPoints!=null?`<span style="font-size:20px;font-weight:700;color:var(--accent)">${story.finalPoints} pts</span>`:''}
+        </div>
+      </div>
+      ${story.description?`<p style="color:var(--text2);font-size:14px;margin-bottom:16px">${esc(story.description)}</p>`:''}
+      
+      ${s.timerLimit>0?`<div class="timer">
+        <span class="timer-display">${formatTime(state.timer)}</span>
+        <button class="timer-btn" onclick="toggleTimer()" title="${state.timerRunning?'Pause':'Start'}">${state.timerRunning?'⏸':'▶'}</button>
+        <button class="timer-btn" onclick="resetTimer()" title="Reset">↺</button>
+      </div>`:''}
+
+      ${!revealed?`
+        <div class="voting-area">
+          <div class="voting-prompt">Pick your estimate</div>
+          <div class="poker-deck">
+            ${cards.map(c=>`<div class="poker-card${myVote===c?' selected':''}" onclick="castVote('facilitator','${c}')">${c}</div>`).join('')}
+          </div>
+        </div>
+        
+        <div style="text-align:center;margin:12px 0">
+          <p style="font-size:13px;color:var(--text3);margin-bottom:8px">${Object.keys(story.votes).length} of ${s.team.length+1} voted</p>
+        </div>
+
+        <div class="votes-grid">
+          <div class="vote-card">
+            <div class="vote-hidden${story.votes['facilitator']?' voted':' empty'}">${story.votes['facilitator']?'✓':'?'}</div>
+            <div class="vote-name">You (Facilitator)</div>
+          </div>
+          ${s.team.map(m=>`<div class="vote-card">
+            <div class="vote-hidden${story.votes[m.id]?' voted':' empty'}">${story.votes[m.id]?'✓':'?'}</div>
+            <div class="vote-name">${esc(m.name)}</div>
+            ${!story.votes[m.id]?`<button class="btn btn-outline" style="font-size:11px;padding:2px 8px;margin-top:4px" onclick="simulateVote('${m.id}')">Vote</button>`:''}
+          </div>`).join('')}
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="revealVotes()" ${Object.keys(story.votes).length===0?'disabled style="opacity:.5"':''}>🔮 Reveal Votes</button>
+          <button class="btn btn-outline" onclick="autoVoteAll()">🤖 Auto-Vote Remaining</button>
+        </div>
+      `:`
+        ${renderResults(s,story)}
+        <div class="btn-group">
+          ${story.status==='revealed'?`
+            <button class="btn btn-success" onclick="acceptEstimate()">✅ Accept Consensus</button>
+            <button class="btn btn-outline" onclick="setCustomPoints()">✏️ Set Points</button>
+            <button class="btn btn-danger" onclick="reVote()">🔄 Re-Vote</button>
+          `:`
+            <button class="btn btn-primary" onclick="nextStory()">Next Story →</button>
+          `}
+          <button class="btn btn-outline" onclick="skipStory()">⏭ Skip</button>
+        </div>
+      `}
+    </div>`;
+}
+
+function renderResults(s,story){
+  const values=getDeckValues(s.deck);
+  const votes=story.votes;
+  const voteEntries=Object.entries(votes);
+  const numericVotes=voteEntries.filter(([,v])=>values[v]!=null).map(([,v])=>values[v]);
+  
+  // Distribution
+  const dist={};
+  voteEntries.forEach(([,v])=>{dist[v]=(dist[v]||0)+1});
+  const maxCount=Math.max(...Object.values(dist));
+  
+  // Stats
+  const avg=numericVotes.length?numericVotes.reduce((a,b)=>a+b,0)/numericVotes.length:0;
+  const median=numericVotes.length?numericVotes.sort((a,b)=>a-b)[Math.floor(numericVotes.length/2)]:0;
+  const min=numericVotes.length?Math.min(...numericVotes):0;
+  const max=numericVotes.length?Math.max(...numericVotes):0;
+  const spread=max-min;
+  
+  // Consensus
+  const uniqueNumeric=new Set(numericVotes);
+  let consensusType,consensusText;
+  if(uniqueNumeric.size<=1){consensusType='perfect';consensusText='🎯 Perfect Consensus!'}
+  else if(spread<=2){consensusType='near';consensusText='👍 Near Consensus'}
+  else{consensusType='divergent';consensusText='⚠️ Divergent — Discuss!'}
+
+  // Suggested point
+  const deckCards=getDeckCards(s.deck).filter(c=>values[c]!=null).map(c=>({card:c,val:values[c]}));
+  const closest=deckCards.reduce((best,cur)=>Math.abs(cur.val-avg)<Math.abs(best.val-avg)?cur:best);
+  
+  return `
+    <div class="results">
+      <div class="consensus-badge consensus-${consensusType}">${consensusText}</div>
+      
+      <div class="results-bar">
+        ${Object.entries(dist).map(([val,count])=>`
+          <div class="result-col">
+            <div class="result-count">${count}×</div>
+            <div class="result-bar" style="height:${(count/maxCount)*100}px;background:${count===maxCount?'var(--green)':'var(--accent)'}"></div>
+            <div class="result-label">${val}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin:16px 0">
+        <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:var(--accent)">${avg.toFixed(1)}</div><div style="font-size:11px;color:var(--text3)">Average</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:var(--green)">${median}</div><div style="font-size:11px;color:var(--text3)">Median</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:var(--yellow)">${spread}</div><div style="font-size:11px;color:var(--text3)">Spread</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:var(--purple)">${closest.card}</div><div style="font-size:11px;color:var(--text3)">Suggested</div></div>
+      </div>
+
+      <div class="votes-grid">
+        <div class="vote-card">
+          <div class="vote-avatar" style="background:var(--accent2)">F</div>
+          <div class="vote-name">You</div>
+          <div class="vote-value" style="color:var(--accent)">${votes['facilitator']||'—'}</div>
+        </div>
+        ${s.team.map(m=>`<div class="vote-card">
+          <div class="vote-avatar" style="background:${m.color}">${m.name[0]}</div>
+          <div class="vote-name">${esc(m.name)}</div>
+          <div class="vote-value" style="color:${votes[m.id]===Object.entries(dist).sort((a,b)=>b[1]-a[1])[0]?.[0]?'var(--green)':'var(--text)'}">${votes[m.id]||'—'}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderStories(s){
+  const c=document.getElementById('content');
+  c.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="font-size:18px">📋 Stories (${s.stories.length})</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" onclick="importStoriesModal()">📥 Import</button>
+        <button class="btn btn-primary" onclick="addStoryModal()">+ Add Story</button>
+      </div>
+    </div>
+    ${s.stories.length?`
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="stories-table">
+          <thead><tr><th style="width:30px">#</th><th>Title</th><th>Status</th><th>Points</th><th>Rounds</th><th style="width:80px"></th></tr></thead>
+          <tbody>
+            ${s.stories.map((st,i)=>`<tr>
+              <td style="color:var(--text3)">${i+1}</td>
+              <td><div style="font-weight:500">${esc(st.title)}</div>${st.description?`<div style="font-size:12px;color:var(--text3)">${esc(st.description).slice(0,80)}</div>`:''}</td>
+              <td><span class="status-badge status-${st.status}">${st.status}</span></td>
+              <td class="points${st.finalPoints==null?' none':''}">${st.finalPoints!=null?st.finalPoints:'—'}</td>
+              <td style="color:var(--text2)">${st.rounds||0}</td>
+              <td style="text-align:right">
+                <button style="color:var(--text3);font-size:14px;margin-right:4px" onclick="editStoryModal('${st.id}')" title="Edit">✏️</button>
+                <button style="color:var(--text3);font-size:14px" onclick="deleteStory('${st.id}')" title="Delete">🗑</button>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:12px;color:var(--text2);font-size:13px">
+        <span>Total: <strong style="color:var(--accent)">${s.stories.reduce((a,st)=>a+(st.finalPoints||0),0)} pts</strong></span>
+        <span>Estimated: <strong style="color:var(--green)">${s.stories.filter(st=>st.status==='estimated').length}</strong></span>
+        <span>Remaining: <strong style="color:var(--yellow)">${s.stories.filter(st=>st.status==='pending').length}</strong></span>
+      </div>
+    `:'<div class="empty"><h3>No Stories Yet</h3><p>Add stories to start estimating.</p><button class="btn btn-primary" onclick="addStoryModal()">+ Add Story</button></div>'}`;
+}
+
+function renderTeam(s){
+  const c=document.getElementById('content');
+  const memberStats=(m)=>{
+    let voted=0,total=0;
+    s.stories.forEach(st=>{if(st.votes[m.id]!=null)voted++;if(st.status!=='pending')total++});
+    return {voted,total};
+  };
+  c.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="font-size:18px">👥 Team (${s.team.length} members)</h2>
+      <button class="btn btn-primary" onclick="addMemberModal()">+ Add Member</button>
+    </div>
+    ${s.team.length?`
+      <div class="team-grid">
+        ${s.team.map(m=>{
+          const st=memberStats(m);
+          return `<div class="team-card">
+            <button class="delete" onclick="deleteMember('${m.id}')">✕</button>
+            <div class="avatar" style="background:${m.color}">${m.name[0].toUpperCase()}</div>
+            <div class="name">${esc(m.name)}</div>
+            <div class="role">${esc(m.role)}</div>
+            <div class="stats">
+              <span>Voted: ${st.voted}/${st.total}</span>
+            </div>
+          </div>`}).join('')}
+      </div>
+      <div class="card" style="margin-top:20px">
+        <h3>Quick Add Team</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Paste names (one per line) to bulk-add team members.</p>
+        <textarea id="bulkNames" placeholder="Alice&#10;Bob&#10;Charlie" style="width:100%;min-height:80px"></textarea>
+        <button class="btn btn-primary" style="margin-top:8px" onclick="bulkAddMembers()">Add All</button>
+      </div>
+    `:'<div class="empty"><h3>No Team Members</h3><p>Add your team to start planning poker.</p><button class="btn btn-primary" onclick="addMemberModal()">+ Add Member</button></div>'}`;
+}
+
+function renderDashboard(s){
+  const c=document.getElementById('content');
+  const estimated=s.stories.filter(st=>st.status==='estimated');
+  const totalPts=estimated.reduce((a,st)=>a+(st.finalPoints||0),0);
+  const avgPts=estimated.length?totalPts/estimated.length:0;
+  const totalRounds=s.stories.reduce((a,st)=>a+(st.rounds||0),0);
+  const values=getDeckValues(s.deck);
+
+  // Point distribution
+  const ptDist={};
+  estimated.forEach(st=>{const p=st.finalPoints;ptDist[p]=(ptDist[p]||0)+1});
+  const maxPtCount=Math.max(1,...Object.values(ptDist));
+
+  // Consensus stats
+  let perfectCount=0,nearCount=0,divergentCount=0;
+  s.stories.filter(st=>st.status==='estimated'||st.status==='revealed').forEach(st=>{
+    const numVotes=Object.values(st.votes).filter(v=>values[v]!=null).map(v=>values[v]);
+    if(!numVotes.length)return;
+    const unique=new Set(numVotes);
+    const spread=Math.max(...numVotes)-Math.min(...numVotes);
+    if(unique.size<=1)perfectCount++;
+    else if(spread<=2)nearCount++;
+    else divergentCount++;
+  });
+
+  c.innerHTML=`
+    <h2 style="font-size:18px;margin-bottom:16px">📊 ${esc(s.name)} — Dashboard</h2>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value">${s.stories.length}</div><div class="stat-label">Total Stories</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--green)">${estimated.length}</div><div class="stat-label">Estimated</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--yellow)">${s.stories.filter(st=>st.status==='pending').length}</div><div class="stat-label">Remaining</div></div>
+      <div class="stat-card"><div class="stat-value">${totalPts}</div><div class="stat-label">Total Points</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--purple)">${avgPts.toFixed(1)}</div><div class="stat-label">Avg Points</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--orange)">${totalRounds}</div><div class="stat-label">Total Rounds</div></div>
+    </div>
+
+    ${estimated.length?`
+    <div class="card">
+      <h3>📊 Point Distribution</h3>
+      <div class="chart-bar">
+        ${Object.entries(ptDist).sort((a,b)=>parseFloat(a[0])-parseFloat(b[0])).map(([pt,count])=>`
+          <div class="chart-col">
+            <div class="chart-val">${count}</div>
+            <div class="chart-fill" style="height:${(count/maxPtCount)*100}%;background:var(--accent)"></div>
+            <div class="chart-label">${pt} pts</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`:''}
+
+    <div class="card">
+      <h3>🎯 Consensus Quality</h3>
+      <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;padding:12px 0">
+        <div style="text-align:center"><div style="font-size:28px;font-weight:700;color:var(--green)">${perfectCount}</div><div style="font-size:12px;color:var(--text2)">Perfect</div></div>
+        <div style="text-align:center"><div style="font-size:28px;font-weight:700;color:var(--accent)">${nearCount}</div><div style="font-size:12px;color:var(--text2)">Near</div></div>
+        <div style="text-align:center"><div style="font-size:28px;font-weight:700;color:var(--red)">${divergentCount}</div><div style="font-size:12px;color:var(--text2)">Divergent</div></div>
+      </div>
+    </div>
+
+    ${estimated.length?`
+    <div class="card">
+      <h3>📋 Estimation Summary</h3>
+      <div class="session-summary">
+        ${estimated.map(st=>`
+          <div class="summary-story">
+            <div class="summary-points">${st.finalPoints}</div>
+            <div class="summary-info">
+              <h4>${esc(st.title)}</h4>
+              <p>${st.rounds||1} round${(st.rounds||1)>1?'s':''} • ${Object.keys(st.votes).length} votes</p>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`:''}
+
+    <div class="btn-group">
+      <button class="btn btn-outline" onclick="exportSession()">📤 Export JSON</button>
+      <button class="btn btn-outline" onclick="exportCSV()">📊 Export CSV</button>
+      <button class="btn btn-outline" onclick="exportMarkdown()">📝 Copy Markdown</button>
+    </div>`;
+}
+
+function renderHistory(s){
+  const c=document.getElementById('content');
+  c.innerHTML=`
+    <h2 style="font-size:18px;margin-bottom:16px">📜 All Sessions</h2>
+    ${state.sessions.map(sess=>{
+      const est=sess.stories.filter(st=>st.status==='estimated');
+      const totalPts=est.reduce((a,st)=>a+(st.finalPoints||0),0);
+      return `<div class="card" style="cursor:pointer" onclick="selectSession('${sess.id}');switchView('dashboard')">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <h3 style="margin:0">${esc(sess.name)}</h3>
+            <p style="font-size:12px;color:var(--text3);margin-top:4px">${new Date(sess.createdAt).toLocaleDateString()} • ${sess.deck} deck</p>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:20px;font-weight:700;color:var(--accent)">${totalPts} pts</div>
+            <div style="font-size:12px;color:var(--text2)">${est.length}/${sess.stories.length} stories</div>
+          </div>
+        </div>
+        <button class="btn btn-danger" style="margin-top:8px;font-size:11px" onclick="event.stopPropagation();deleteSession('${sess.id}')">Delete</button>
+      </div>`;
+    }).join('')}
+    <div class="btn-group">
+      <button class="btn btn-outline" onclick="importSessionModal()">📥 Import Session</button>
+      <button class="btn btn-outline" onclick="exportAll()">📤 Export All</button>
+    </div>`;
+}
+
+// Voting
+function castVote(memberId,card){
+  const story=getCurrentStory();
+  if(!story||story.status==='revealed'||story.status==='estimated')return;
+  if(story.votes[memberId]===card)delete story.votes[memberId];
+  else story.votes[memberId]=card;
+  save();render();
+}
+
+function simulateVote(memberId){
+  const s=getSession();if(!s)return;
+  const story=getCurrentStory();if(!story)return;
+  const cards=getDeckCards(s.deck).filter(c=>c!=='?'&&c!=='☕');
+  // Weighted toward middle values
+  const weights=cards.map((_,i)=>{const mid=cards.length/2;return Math.max(1,5-Math.abs(i-mid))});
+  const totalW=weights.reduce((a,b)=>a+b,0);
+  let r=Math.random()*totalW,pick=cards[0];
+  for(let i=0;i<cards.length;i++){r-=weights[i];if(r<=0){pick=cards[i];break}}
+  story.votes[memberId]=pick;
+  save();render();
+}
+
+function autoVoteAll(){
+  const s=getSession();if(!s)return;
+  const story=getCurrentStory();if(!story)return;
+  s.team.forEach(m=>{if(!story.votes[m.id])simulateVoteFor(s,story,m.id)});
+  if(!story.votes['facilitator']){
+    const cards=getDeckCards(s.deck).filter(c=>c!=='?'&&c!=='☕');
+    story.votes['facilitator']=cards[Math.floor(Math.random()*cards.length)];
+  }
+  save();render();
+}
+
+function simulateVoteFor(s,story,memberId){
+  const cards=getDeckCards(s.deck).filter(c=>c!=='?'&&c!=='☕');
+  // If facilitator voted, cluster around that
+  const facVote=story.votes['facilitator'];
+  const values=getDeckValues(s.deck);
+  if(facVote&&values[facVote]!=null){
+    const facIdx=cards.indexOf(facVote);
+    if(facIdx>=0){
+      const offset=Math.floor(Math.random()*3)-1; // -1, 0, or 1
+      const idx=Math.max(0,Math.min(cards.length-1,facIdx+offset));
+      story.votes[memberId]=cards[idx];
+      return;
+    }
+  }
+  story.votes[memberId]=cards[Math.floor(Math.random()*cards.length)];
+}
+
+function revealVotes(){
+  const story=getCurrentStory();if(!story)return;
+  story.status='revealed';
+  story.rounds=(story.rounds||0)+1;
+  stopTimer();
+  save();render();
+}
+
+function acceptEstimate(){
+  const s=getSession();if(!s)return;
+  const story=getCurrentStory();if(!story)return;
+  const values=getDeckValues(s.deck);
+  const numericVotes=Object.values(story.votes).filter(v=>values[v]!=null).map(v=>values[v]);
+  if(numericVotes.length){
+    const avg=numericVotes.reduce((a,b)=>a+b,0)/numericVotes.length;
+    const deckCards=getDeckCards(s.deck).filter(c=>values[c]!=null).map(c=>({card:c,val:values[c]}));
+    const closest=deckCards.reduce((best,cur)=>Math.abs(cur.val-avg)<Math.abs(best.val-avg)?cur:best);
+    story.finalPoints=closest.val;
+  } else {
+    story.finalPoints=0;
+  }
+  story.status='estimated';
+  save();render();
+}
+
+function setCustomPoints(){
+  const story=getCurrentStory();if(!story)return;
+  const s=getSession();
+  const cards=getDeckCards(s.deck);
+  const values=getDeckValues(s.deck);
+  const opts=cards.filter(c=>values[c]!=null).map(c=>`<option value="${values[c]}">${c} (${values[c]})</option>`).join('');
+  showModal('Set Points',`
+    <label>Select Points</label>
+    <select id="mPoints">${opts}</select>
+  `,()=>{
+    story.finalPoints=parseFloat(document.getElementById('mPoints').value);
+    story.status='estimated';
+    save();render();
+  });
+}
+
+function reVote(){
+  const story=getCurrentStory();if(!story)return;
+  story.votes={};
+  story.status='voting';
+  resetTimer();
+  save();render();
+}
+
+function skipStory(){
+  const s=getSession();if(!s)return;
+  const story=getCurrentStory();if(!story)return;
+  story.status='skipped';
+  s.currentStoryId=null;
+  stopTimer();
+  save();render();
+}
+
+function nextStory(){
+  const s=getSession();if(!s)return;
+  s.currentStoryId=null;
+  stopTimer();
+  save();render();
+}
+
+function startVoting(storyId){
+  const s=getSession();if(!s)return;
+  s.currentStoryId=storyId;
+  const story=s.stories.find(st=>st.id===storyId);
+  if(story)story.status='voting';
+  state.timer=s.timerLimit;
+  state.timerRunning=false;
+  save();render();
+}
+
+// Timer
+function toggleTimer(){
+  if(state.timerRunning)stopTimer();
+  else startTimer();
+}
+
+function startTimer(){
+  if(state.timer<=0)return;
+  state.timerRunning=true;
+  state.timerInterval=setInterval(()=>{
+    state.timer--;
+    if(state.timer<=0){stopTimer();revealVotes()}
+    render();
+  },1000);
+}
+
+function stopTimer(){
+  state.timerRunning=false;
+  clearInterval(state.timerInterval);
+}
+
+function resetTimer(){
+  const s=getSession();
+  stopTimer();
+  state.timer=s?s.timerLimit:0;
+  render();
+}
+
+function formatTime(sec){
+  const m=Math.floor(sec/60);
+  const s=sec%60;
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+// Story CRUD
+function addStoryModal(){
+  showModal('Add Story',`
+    <label>Title</label>
+    <input id="mTitle" placeholder="As a user, I want to..." autofocus />
+    <label>Description (optional)</label>
+    <textarea id="mDesc" placeholder="Acceptance criteria, notes..."></textarea>
+    <label>Priority</label>
+    <select id="mPriority">
+      <option value="medium">Medium</option>
+      <option value="high">High</option>
+      <option value="low">Low</option>
+      <option value="critical">Critical</option>
+    </select>
+  `,()=>{
+    const s=getSession();if(!s)return;
+    const title=document.getElementById('mTitle').value.trim();
+    if(!title)return;
+    s.stories.push({
+      id:genId(),title,
+      description:document.getElementById('mDesc').value.trim(),
+      priority:document.getElementById('mPriority').value,
+      status:'pending',votes:{},finalPoints:null,rounds:0,
+      createdAt:new Date().toISOString()
+    });
+    save();render();renderSidebar();
+  });
+}
+
+function editStoryModal(id){
+  const s=getSession();if(!s)return;
+  const story=s.stories.find(st=>st.id===id);if(!story)return;
+  showModal('Edit Story',`
+    <label>Title</label>
+    <input id="mTitle" value="${esc(story.title)}" />
+    <label>Description</label>
+    <textarea id="mDesc">${esc(story.description||'')}</textarea>
+    <label>Priority</label>
+    <select id="mPriority">
+      ${['critical','high','medium','low'].map(p=>`<option value="${p}"${story.priority===p?' selected':''}>${p}</option>`).join('')}
+    </select>
+  `,()=>{
+    story.title=document.getElementById('mTitle').value.trim()||story.title;
+    story.description=document.getElementById('mDesc').value.trim();
+    story.priority=document.getElementById('mPriority').value;
+    save();render();
+  });
+}
+
+function deleteStory(id){
+  const s=getSession();if(!s)return;
+  if(!confirm('Delete this story?'))return;
+  s.stories=s.stories.filter(st=>st.id!==id);
+  if(s.currentStoryId===id)s.currentStoryId=null;
+  save();render();renderSidebar();
+}
+
+function importStoriesModal(){
+  showModal('Import Stories',`
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Paste story titles, one per line. Optional: add description after a | separator.</p>
+    <textarea id="mImport" placeholder="User login flow&#10;Dashboard redesign | Update charts and filters&#10;API pagination | Add cursor-based pagination" style="min-height:150px"></textarea>
+  `,()=>{
+    const s=getSession();if(!s)return;
+    const lines=document.getElementById('mImport').value.split('\n').filter(l=>l.trim());
+    lines.forEach(line=>{
+      const [title,...descParts]=line.split('|');
+      s.stories.push({
+        id:genId(),title:title.trim(),
+        description:descParts.join('|').trim(),
+        priority:'medium',status:'pending',votes:{},finalPoints:null,rounds:0,
+        createdAt:new Date().toISOString()
+      });
+    });
+    save();render();renderSidebar();
+  });
+}
+
+// Team CRUD
+function addMemberModal(){
+  const color=COLORS[Math.floor(Math.random()*COLORS.length)];
+  showModal('Add Team Member',`
+    <label>Name</label>
+    <input id="mName" placeholder="Alice" autofocus />
+    <label>Role</label>
+    <select id="mRole">${ROLES.map(r=>`<option>${r}</option>`).join('')}</select>
+  `,()=>{
+    const s=getSession();if(!s)return;
+    const name=document.getElementById('mName').value.trim();
+    if(!name)return;
+    s.team.push({id:genId(),name,role:document.getElementById('mRole').value,color});
+    save();render();
+  });
+}
+
+function deleteMember(id){
+  const s=getSession();if(!s)return;
+  s.team=s.team.filter(m=>m.id!==id);
+  save();render();
+}
+
+function bulkAddMembers(){
+  const s=getSession();if(!s)return;
+  const names=document.getElementById('bulkNames').value.split('\n').map(n=>n.trim()).filter(Boolean);
+  names.forEach((name,i)=>{
+    s.team.push({id:genId(),name,role:'Dev',color:COLORS[(s.team.length+i)%COLORS.length]});
+  });
+  save();render();
+}
+
+// Session management
+function deleteSession(id){
+  if(!confirm('Delete this session?'))return;
+  state.sessions=state.sessions.filter(s=>s.id!==id);
+  if(state.currentSession===id)state.currentSession=state.sessions[0]?.id||null;
+  save();renderSidebar();render();
+}
+
+// Export
+function exportSession(){
+  const s=getSession();if(!s)return;
+  downloadJSON(`poker-${s.name.replace(/\s+/g,'-')}.json`,s);
+}
+
+function exportAll(){
+  downloadJSON('poker-planner-all.json',state.sessions);
+}
+
+function exportCSV(){
+  const s=getSession();if(!s)return;
+  const rows=[['#','Title','Status','Points','Rounds','Priority','Description']];
+  s.stories.forEach((st,i)=>{
+    rows.push([i+1,`"${st.title}"`,st.status,st.finalPoints??'',st.rounds||0,st.priority||'',`"${(st.description||'').replace(/"/g,'""')}"`]);
+  });
+  rows.push([]);
+  rows.push(['Total Points',s.stories.reduce((a,st)=>a+(st.finalPoints||0),0)]);
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${s.name.replace(/\s+/g,'-')}.csv`;a.click();
+}
+
+function exportMarkdown(){
+  const s=getSession();if(!s)return;
+  const estimated=s.stories.filter(st=>st.status==='estimated');
+  let md=`# ${s.name}\n\n`;
+  md+=`**Date:** ${new Date(s.createdAt).toLocaleDateString()}\n`;
+  md+=`**Deck:** ${s.deck}\n`;
+  md+=`**Team:** ${s.team.map(m=>m.name).join(', ')||'Solo'}\n\n`;
+  md+=`## Stories\n\n`;
+  md+=`| # | Story | Points | Rounds |\n|---|-------|--------|--------|\n`;
+  s.stories.forEach((st,i)=>{
+    md+=`| ${i+1} | ${st.title} | ${st.finalPoints??'—'} | ${st.rounds||0} |\n`;
+  });
+  md+=`\n**Total: ${estimated.reduce((a,st)=>a+(st.finalPoints||0),0)} points** (${estimated.length} stories)\n`;
+  navigator.clipboard.writeText(md).then(()=>alert('Markdown copied!'));
+}
+
+function importSessionModal(){
+  showModal('Import Session',`
+    <label>Paste JSON</label>
+    <textarea id="mJSON" placeholder='Paste exported session JSON...' style="min-height:150px;font-family:monospace;font-size:12px"></textarea>
+  `,()=>{
+    try{
+      const data=JSON.parse(document.getElementById('mJSON').value);
+      if(Array.isArray(data)){data.forEach(s=>{s.id=genId();state.sessions.push(s)})}
+      else{data.id=genId();state.sessions.push(data)}
+      save();renderSidebar();render();
+    }catch(e){alert('Invalid JSON')}
+  });
+}
+
+function downloadJSON(name,data){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+}
+
+// Modal
+function showModal(title,body,onSave){
+  const overlay=document.getElementById('modalOverlay');
+  const content=document.getElementById('modalContent');
+  content.innerHTML=`<h2>${title}</h2>${body}<div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="modalSave">Save</button></div>`;
+  overlay.classList.remove('hidden');
+  document.getElementById('modalSave').onclick=()=>{onSave();closeModal()};
+  setTimeout(()=>{const inp=content.querySelector('input[autofocus],input:first-of-type');if(inp)inp.focus()},50);
+}
+
+function closeModal(){document.getElementById('modalOverlay').classList.add('hidden')}
+
+function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// Seed data
+function seedData(){
+  const team=[
+    {id:genId(),name:'Priya',role:'Dev',color:COLORS[0]},
+    {id:genId(),name:'Rahul',role:'Dev',color:COLORS[1]},
+    {id:genId(),name:'Neha',role:'Designer',color:COLORS[2]},
+    {id:genId(),name:'Ankit',role:'QA',color:COLORS[3]},
+    {id:genId(),name:'Meera',role:'Lead',color:COLORS[4]},
+  ];
+
+  const stories=[
+    {id:genId(),title:'Google Workspace auto-push integration',description:'Auto-deploy signatures to all Google Workspace users without manual setup. Core v2 feature.',priority:'critical',status:'estimated',votes:{},finalPoints:13,rounds:2,createdAt:'2026-05-30T10:00:00Z'},
+    {id:genId(),title:'Video signature support',description:'Allow users to embed short video loops in email signatures.',priority:'high',status:'estimated',votes:{},finalPoints:8,rounds:1,createdAt:'2026-05-30T10:05:00Z'},
+    {id:genId(),title:'Click heatmap visualization',description:'Show click patterns on signature elements as a heatmap overlay.',priority:'medium',status:'estimated',votes:{},finalPoints:5,rounds:1,createdAt:'2026-05-30T10:10:00Z'},
+    {id:genId(),title:'Team admin panel v2',description:'Bulk signature deployment, role-based access, audit log.',priority:'high',status:'estimated',votes:{},finalPoints:8,rounds:1,createdAt:'2026-05-30T10:15:00Z'},
+    {id:genId(),title:'AI-generated signature suggestions',description:'Use AI to suggest signature layouts based on role and brand.',priority:'medium',status:'estimated',votes:{},finalPoints:5,rounds:2,createdAt:'2026-05-30T10:20:00Z'},
+    {id:genId(),title:'Outlook add-in',description:'Native Outlook integration for signature management.',priority:'high',status:'pending',votes:{},finalPoints:null,rounds:0,createdAt:'2026-05-30T10:25:00Z'},
+    {id:genId(),title:'Custom domain tracking links',description:'Allow branded tracking domains instead of utmstamp.com.',priority:'medium',status:'pending',votes:{},finalPoints:null,rounds:0,createdAt:'2026-05-30T10:30:00Z'},
+    {id:genId(),title:'Signature A/B testing',description:'Split test different signature designs and measure CTR.',priority:'medium',status:'pending',votes:{},finalPoints:null,rounds:0,createdAt:'2026-05-30T10:35:00Z'},
+    {id:genId(),title:'Campaign banner scheduler',description:'Schedule rotating banner campaigns in signatures with start/end dates.',priority:'low',status:'pending',votes:{},finalPoints:null,rounds:0,createdAt:'2026-05-30T10:40:00Z'},
+    {id:genId(),title:'SAML SSO support',description:'Enterprise SSO integration for team accounts.',priority:'low',status:'pending',votes:{},finalPoints:null,rounds:0,createdAt:'2026-05-30T10:45:00Z'},
+    {id:genId(),title:'Mobile signature editor',description:'Responsive editor for creating signatures on mobile devices.',priority:'medium',status:'pending',votes:{},finalPoints:null,rounds:0,createdAt:'2026-05-30T10:50:00Z'},
+    {id:genId(),title:'Webhook notifications',description:'Send webhook events on signature clicks, installs, and campaign changes.',priority:'low',status:'pending',votes:{},finalPoints:null,rounds:0,createdAt:'2026-05-30T10:55:00Z'},
+  ];
+
+  // Fill votes for estimated stories
+  stories.filter(st=>st.status==='estimated').forEach(st=>{
+    const cards=CARDS.filter(c=>CARD_VALUES[c]!=null);
+    const targetVal=st.finalPoints;
+    const targetCard=cards.find(c=>CARD_VALUES[c]===targetVal)||'5';
+    const targetIdx=cards.indexOf(targetCard);
+    st.votes['facilitator']=targetCard;
+    team.forEach(m=>{
+      const offset=Math.floor(Math.random()*3)-1;
+      const idx=Math.max(0,Math.min(cards.length-1,targetIdx+offset));
+      st.votes[m.id]=cards[idx];
+    });
+  });
+
+  const session={
+    id:genId(),name:'UTMStamp Sprint #15',deck:'fibonacci',timerLimit:120,
+    stories,team,currentStoryId:null,
+    createdAt:'2026-05-30T09:00:00Z',completedAt:null
+  };
+
+  const session2={
+    id:genId(),name:'UTMStamp Sprint #14',deck:'fibonacci',timerLimit:90,
+    stories:[
+      {id:genId(),title:'Signature template gallery',description:'Pre-built templates users can customize.',priority:'high',status:'estimated',votes:{},finalPoints:5,rounds:1,createdAt:'2026-05-23T10:00:00Z'},
+      {id:genId(),title:'Click analytics dashboard',description:'Charts and filters for signature click data.',priority:'critical',status:'estimated',votes:{},finalPoints:8,rounds:1,createdAt:'2026-05-23T10:05:00Z'},
+      {id:genId(),title:'Team invitation flow',description:'Email invite + onboarding for team members.',priority:'high',status:'estimated',votes:{},finalPoints:3,rounds:1,createdAt:'2026-05-23T10:10:00Z'},
+      {id:genId(),title:'CSV contact import',description:'Import contacts for signature deployment tracking.',priority:'medium',status:'estimated',votes:{},finalPoints:3,rounds:1,createdAt:'2026-05-23T10:15:00Z'},
+      {id:genId(),title:'Dark mode signatures',description:'Signatures that adapt to dark mode email clients.',priority:'low',status:'estimated',votes:{},finalPoints:2,rounds:1,createdAt:'2026-05-23T10:20:00Z'},
+    ],
+    team:team.map(m=>({...m,id:genId()})),
+    currentStoryId:null,
+    createdAt:'2026-05-23T09:00:00Z',completedAt:'2026-05-23T11:00:00Z'
+  };
+
+  state.sessions=[session2,session];
+  state.currentSession=session.id;
+  save();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(document.querySelector('.modal-overlay:not(.hidden)')){
+    if(e.key==='Escape')closeModal();
+    if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();document.getElementById('modalSave')?.click()}
+    return;
+  }
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT'){
+    if(e.key==='Escape')e.target.blur();
+    return;
+  }
+  if(e.key==='/'){e.preventDefault();document.getElementById('sessionSearch').focus()}
+  else if(e.key==='n'||e.key==='N'){e.preventDefault();if(e.shiftKey)newSession();else addStoryModal()}
+  else if(e.key==='1')switchView('poker');
+  else if(e.key==='2')switchView('stories');
+  else if(e.key==='3')switchView('team');
+  else if(e.key==='4')switchView('dashboard');
+  else if(e.key==='5')switchView('history');
+  else if(e.key==='e'||e.key==='E'){e.preventDefault();exportSession()}
+  else if(e.key==='m'||e.key==='M'){e.preventDefault();addMemberModal()}
+  else if(e.key===' '){e.preventDefault();const story=getCurrentStory();if(story&&(story.status==='revealed'))acceptEstimate();else if(story&&story.status==='voting')revealVotes()}
+  else if(e.key==='Escape')nextStory();
+  else if(e.key==='?'){e.preventDefault();showHelp()}
+});
+
+function showHelp(){
+  showModal('⌨️ Keyboard Shortcuts',`
+    <div class="help-grid">
+      <div class="help-key"><kbd>/</kbd><span>Search sessions</span></div>
+      <div class="help-key"><kbd>N</kbd><span>Add story</span></div>
+      <div class="help-key"><kbd>⇧N</kbd><span>New session</span></div>
+      <div class="help-key"><kbd>M</kbd><span>Add member</span></div>
+      <div class="help-key"><kbd>1-5</kbd><span>Switch views</span></div>
+      <div class="help-key"><kbd>Space</kbd><span>Reveal / Accept</span></div>
+      <div class="help-key"><kbd>E</kbd><span>Export JSON</span></div>
+      <div class="help-key"><kbd>Esc</kbd><span>Next story / Close</span></div>
+      <div class="help-key"><kbd>⌘↵</kbd><span>Save modal</span></div>
+      <div class="help-key"><kbd>?</kbd><span>This help</span></div>
+    </div>
+  `,closeModal);
+}
+
+document.getElementById('sessionSearch').addEventListener('input',renderSidebar);
+
+// Init
+load();
+renderSidebar();
+render();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

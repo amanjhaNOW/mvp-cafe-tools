@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stack Radar — Tech Stack Auditor & Cost Tracker</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#21262d;--surface3:#30363d;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--text3:#6e7681;--accent:#58a6ff;--accent2:#388bfd;--green:#3fb950;--yellow:#d29922;--red:#f85149;--orange:#d18616;--purple:#bc8cff;--pink:#f778ba;--cyan:#76e3ea;--radius:8px;--shadow:0 2px 8px rgba(0,0,0,.3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:var(--text)}
+input,textarea,select{font-family:inherit;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:14px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:20px}
+.sidebar-search{padding:8px 12px}
+.sidebar-search input{width:100%;padding:6px 10px;font-size:13px}
+.sidebar-section{padding:8px 12px}
+.sidebar-section h3{font-size:11px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;letter-spacing:.5px}
+.stack-list{flex:1;overflow-y:auto;padding:4px 8px}
+.stack-item{padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:2px;transition:background .15s}
+.stack-item:hover{background:var(--surface2)}
+.stack-item.active{background:var(--accent);color:#fff}
+.stack-item .emoji{font-size:16px}
+.stack-item .name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stack-item .count{font-size:11px;color:var(--text3);background:var(--surface3);padding:1px 6px;border-radius:10px}
+.stack-item.active .count{background:rgba(255,255,255,.2);color:#fff}
+.sidebar-bottom{padding:12px;border-top:1px solid var(--border);display:flex;gap:6px}
+.sidebar-bottom button{flex:1;padding:6px;border-radius:6px;font-size:12px;background:var(--surface2);transition:background .15s}
+.sidebar-bottom button:hover{background:var(--surface3)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);gap:8px;flex-shrink:0}
+.topbar .stack-name{font-size:18px;font-weight:600;flex:1}
+.tab-bar{display:flex;gap:2px;background:var(--surface2);padding:3px;border-radius:8px}
+.tab-btn{padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text2);transition:all .15s}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{background:var(--accent);color:#fff}
+.content{flex:1;overflow-y:auto;padding:20px}
+
+/* Cards */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:border-color .15s}
+.card:hover{border-color:var(--accent)}
+.card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.card-header .icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.card-header .info{flex:1;min-width:0}
+.card-header .info h3{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-header .info .type{font-size:11px;color:var(--text3)}
+.card-actions{display:flex;gap:4px}
+.card-actions button{padding:4px 8px;border-radius:4px;font-size:12px;color:var(--text2)}
+.card-actions button:hover{background:var(--surface2);color:var(--text)}
+.card-body{display:flex;flex-direction:column;gap:8px}
+.card-row{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.card-row .label{color:var(--text2)}
+.card-row .value{font-weight:500}
+.card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.tag{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.tag-cat{background:rgba(88,166,255,.15);color:var(--accent)}
+.tag-license{background:rgba(63,185,80,.15);color:var(--green)}
+.tag-risk-low{background:rgba(63,185,80,.15);color:var(--green)}
+.tag-risk-med{background:rgba(210,153,34,.15);color:var(--yellow)}
+.tag-risk-high{background:rgba(248,81,73,.15);color:var(--red)}
+.tag-risk-crit{background:rgba(248,81,73,.25);color:var(--red);font-weight:700}
+.tag-status{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.status-active{background:rgba(63,185,80,.15);color:var(--green)}
+.status-degraded{background:rgba(210,153,34,.15);color:var(--yellow)}
+.status-down{background:rgba(248,81,73,.15);color:var(--red)}
+.status-evaluating{background:rgba(188,140,255,.15);color:var(--purple)}
+.status-deprecated{background:rgba(110,118,129,.2);color:var(--text3)}
+
+/* Cost bar */
+.cost-bar{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-top:4px}
+.cost-bar-fill{height:100%;border-radius:4px;transition:width .3s}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-card .label{font-size:12px;color:var(--text2);margin-bottom:4px}
+.stat-card .value{font-size:24px;font-weight:700}
+.stat-card .sub{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* Charts */
+.chart-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.chart-section h3{font-size:14px;font-weight:600;margin-bottom:16px}
+.bar-chart{display:flex;flex-direction:column;gap:8px}
+.bar-row{display:flex;align-items:center;gap:10px}
+.bar-label{width:120px;font-size:12px;color:var(--text2);text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:24px;background:var(--surface2);border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:600;color:#fff;min-width:fit-content;transition:width .5s}
+.bar-amount{width:80px;font-size:12px;text-align:right;font-weight:500;flex-shrink:0}
+
+/* Risk matrix */
+.risk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.risk-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.risk-card h4{font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.risk-meter{display:flex;gap:2px;margin:8px 0}
+.risk-meter .seg{height:6px;flex:1;border-radius:3px;background:var(--surface3)}
+.risk-meter .seg.filled{background:var(--green)}
+.risk-meter.med .seg.filled{background:var(--yellow)}
+.risk-meter.high .seg.filled{background:var(--orange)}
+.risk-meter.crit .seg.filled{background:var(--red)}
+.risk-factors{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.risk-factor{font-size:11px;color:var(--text2);background:var(--surface2);padding:2px 8px;border-radius:10px}
+.risk-factor.warn{color:var(--yellow);background:rgba(210,153,34,.1)}
+.risk-factor.danger{color:var(--red);background:rgba(248,81,73,.1)}
+
+/* License table */
+.license-table{width:100%;border-collapse:collapse}
+.license-table th,.license-table td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);font-size:13px}
+.license-table th{color:var(--text2);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.license-table tr:hover td{background:var(--surface)}
+.license-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.lic-open{background:rgba(63,185,80,.15);color:var(--green)}
+.lic-commercial{background:rgba(210,153,34,.15);color:var(--yellow)}
+.lic-proprietary{background:rgba(248,81,73,.15);color:var(--red)}
+.lic-free{background:rgba(118,227,234,.15);color:var(--cyan)}
+
+/* Alternatives */
+.alt-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.alt-chip{font-size:11px;background:var(--surface3);padding:2px 8px;border-radius:10px;color:var(--text2)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.show{opacity:1;pointer-events:auto}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:560px;max-height:85vh;overflow-y:auto;padding:24px;box-shadow:var(--shadow)}
+.modal h2{font-size:18px;font-weight:600;margin-bottom:16px}
+.modal-row{margin-bottom:14px}
+.modal-row label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+.modal-row input,.modal-row select,.modal-row textarea{width:100%}
+.modal-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.btn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{background:var(--surface2);color:var(--text)}
+.btn-secondary:hover{background:var(--surface3)}
+.btn-danger{background:rgba(248,81,73,.15);color:var(--red)}
+.btn-danger:hover{background:rgba(248,81,73,.25)}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* Alternatives editor */
+.alt-editor{display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:32px;padding:4px;background:var(--surface2);border:1px solid var(--border);border-radius:6px}
+.alt-editor .alt-tag{display:flex;align-items:center;gap:4px;background:var(--surface3);padding:2px 8px;border-radius:10px;font-size:12px}
+.alt-editor .alt-tag button{font-size:14px;color:var(--text3);padding:0 2px}
+.alt-editor input{border:none;background:transparent;flex:1;min-width:80px;padding:4px;font-size:13px}
+
+/* Empty state */
+.empty{text-align:center;padding:60px 20px;color:var(--text2)}
+.empty .icon{font-size:48px;margin-bottom:12px}
+.empty h3{font-size:16px;color:var(--text);margin-bottom:8px}
+.empty p{font-size:13px;max-width:300px;margin:0 auto}
+
+/* Category filters */
+.filter-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.filter-chip{padding:4px 12px;border-radius:14px;font-size:12px;background:var(--surface2);color:var(--text2);cursor:pointer;transition:all .15s;border:1px solid transparent}
+.filter-chip:hover{border-color:var(--border)}
+.filter-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Top bar add button */
+.add-btn{padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;background:var(--accent);color:#fff;display:flex;align-items:center;gap:6px;transition:background .15s}
+.add-btn:hover{background:var(--accent2)}
+
+/* Cost summary */
+.cost-summary{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.cost-pill{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 20px;text-align:center}
+.cost-pill .amount{font-size:20px;font-weight:700}
+.cost-pill .period{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* Donut */
+.donut-container{display:flex;align-items:center;gap:24px;justify-content:center;flex-wrap:wrap}
+.donut-legend{display:flex;flex-direction:column;gap:6px}
+.donut-legend-item{display:flex;align-items:center;gap:8px;font-size:13px}
+.donut-legend-item .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* Help */
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .2s}
+.help-overlay.show{opacity:1;pointer-events:auto}
+.help-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:480px;width:90%}
+.help-box h2{margin-bottom:16px;font-size:18px}
+.help-box .shortcut{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.help-box .shortcut:last-child{border-bottom:none}
+.help-box kbd{background:var(--surface2);padding:2px 8px;border-radius:4px;font-size:12px;font-family:monospace;border:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span>📡</span> Stack Radar</h1>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" id="sideSearch" placeholder="Search stacks..." oninput="filterSidebar()">
+  </div>
+  <div class="stack-list" id="stackList"></div>
+  <div class="sidebar-bottom">
+    <button onclick="newStack()" title="New Stack (N)">+ Stack</button>
+    <button onclick="exportAll()" title="Export (E)">📥 Export</button>
+    <button onclick="importAll()" title="Import (I)">📤 Import</button>
+    <button onclick="showHelp()" title="Help (?)">?</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="stack-name" id="stackName">Select a Stack</div>
+    <button class="add-btn" onclick="openToolModal()" id="addToolBtn" style="display:none">+ Add Tool</button>
+    <div class="tab-bar" id="tabBar" style="display:none">
+      <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">Overview</button>
+      <button class="tab-btn" data-tab="costs" onclick="switchTab('costs')">💰 Costs</button>
+      <button class="tab-btn" data-tab="risks" onclick="switchTab('risks')">⚠️ Risks</button>
+      <button class="tab-btn" data-tab="licenses" onclick="switchTab('licenses')">📜 Licenses</button>
+      <button class="tab-btn" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
+    </div>
+  </div>
+  <div class="content" id="content">
+    <div class="empty"><div class="icon">📡</div><h3>Welcome to Stack Radar</h3><p>Create a stack to start tracking your tech dependencies, costs, and risks.</p></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modal" onclick="event.stopPropagation()"></div>
+</div>
+
+<div class="help-overlay" id="helpOverlay" onclick="closeHelp()">
+  <div class="help-box" onclick="event.stopPropagation()">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="shortcut"><span>New tool</span><kbd>N</kbd></div>
+    <div class="shortcut"><span>New stack</span><kbd>⇧N</kbd></div>
+    <div class="shortcut"><span>Search</span><kbd>/</kbd></div>
+    <div class="shortcut"><span>Overview</span><kbd>1</kbd></div>
+    <div class="shortcut"><span>Costs</span><kbd>2</kbd></div>
+    <div class="shortcut"><span>Risks</span><kbd>3</kbd></div>
+    <div class="shortcut"><span>Licenses</span><kbd>4</kbd></div>
+    <div class="shortcut"><span>Dashboard</span><kbd>5</kbd></div>
+    <div class="shortcut"><span>Export</span><kbd>E</kbd></div>
+    <div class="shortcut"><span>Import</span><kbd>I</kbd></div>
+    <div class="shortcut"><span>Help</span><kbd>?</kbd></div>
+    <div class="shortcut"><span>Close</span><kbd>Esc</kbd></div>
+  </div>
+</div>
+
+<input type="file" id="importFile" style="display:none" accept=".json" onchange="handleImport(event)">
+
+<script>
+// ─── Data ───
+const CATEGORIES = ['Frontend','Backend','Database','Auth','Analytics','Payments','Infrastructure','DevOps','Monitoring','Email','CDN','Design','AI/ML','Testing','Storage','Security','Communication'];
+const CAT_COLORS = {'Frontend':'#58a6ff','Backend':'#3fb950','Database':'#d29922','Auth':'#f85149','Analytics':'#bc8cff','Payments':'#f778ba','Infrastructure':'#d18616','DevOps':'#76e3ea','Monitoring':'#da7756','Email':'#7ee787','CDN':'#79c0ff','Design':'#e3b341','AI/ML':'#a371f7','Testing':'#9e6a03','Storage':'#768390','Security':'#f47067','Communication':'#57ab5a'};
+const TYPES = ['SaaS','Library','Framework','API','Infrastructure','Internal','Open Source'];
+const STATUSES = ['Active','Degraded','Down','Evaluating','Deprecated'];
+const LICENSES = ['MIT','Apache 2.0','GPL v3','BSD 3-Clause','ISC','MPL 2.0','Commercial','Proprietary','Free Tier','AGPL','SSPL','Unlicense','Custom'];
+const CURRENCIES = ['USD','INR','EUR','GBP'];
+const LOCK_IN_LEVELS = ['None','Low','Medium','High','Critical'];
+
+let stacks = [];
+let activeStackId = null;
+let activeTab = 'overview';
+let activeCatFilter = 'All';
+
+const KEY = 'stack-radar-data';
+function save(){ localStorage.setItem(KEY, JSON.stringify(stacks)) }
+function load(){ try { stacks = JSON.parse(localStorage.getItem(KEY)) || []; } catch(e){ stacks = []; } }
+
+// ─── Init ───
+load();
+if(!stacks.length) seedData();
+renderSidebar();
+if(stacks.length){ selectStack(stacks[0].id); }
+
+// ─── Stack CRUD ───
+function newStack(){
+  const name = prompt('Stack name:', 'My Stack');
+  if(!name) return;
+  const stack = { id: uid(), name, emoji: '📦', tools: [], createdAt: new Date().toISOString() };
+  stacks.push(stack);
+  save(); renderSidebar(); selectStack(stack.id);
+}
+
+function deleteStack(id){
+  if(!confirm('Delete this stack and all its tools?')) return;
+  stacks = stacks.filter(s => s.id !== id);
+  save(); renderSidebar();
+  if(activeStackId === id){ activeStackId = null; stacks.length ? selectStack(stacks[0].id) : renderContent(); }
+}
+
+function selectStack(id){
+  activeStackId = id;
+  activeCatFilter = 'All';
+  const s = getStack();
+  document.getElementById('stackName').textContent = s ? `${s.emoji} ${s.name}` : 'Select a Stack';
+  document.getElementById('tabBar').style.display = s ? 'flex' : 'none';
+  document.getElementById('addToolBtn').style.display = s ? 'flex' : 'none';
+  renderSidebar(); renderContent();
+}
+
+function getStack(){ return stacks.find(s => s.id === activeStackId) }
+function getTools(){ const s = getStack(); return s ? s.tools : []; }
+
+// ─── Tool CRUD ───
+function addTool(tool){
+  const s = getStack(); if(!s) return;
+  s.tools.push({ id: uid(), ...tool, createdAt: new Date().toISOString() });
+  save(); renderContent();
+}
+
+function updateTool(id, data){
+  const s = getStack(); if(!s) return;
+  const t = s.tools.find(t => t.id === id); if(!t) return;
+  Object.assign(t, data);
+  save(); renderContent();
+}
+
+function deleteTool(id){
+  const s = getStack(); if(!s) return;
+  s.tools = s.tools.filter(t => t.id !== id);
+  save(); renderContent();
+}
+
+// ─── Render ───
+function renderSidebar(){
+  const q = document.getElementById('sideSearch').value.toLowerCase();
+  const list = document.getElementById('stackList');
+  list.innerHTML = stacks.filter(s => !q || s.name.toLowerCase().includes(q)).map(s => `
+    <div class="stack-item ${s.id===activeStackId?'active':''}" onclick="selectStack('${s.id}')" ondblclick="editStackName('${s.id}')">
+      <span class="emoji">${s.emoji}</span>
+      <span class="name">${esc(s.name)}</span>
+      <span class="count">${s.tools.length}</span>
+    </div>
+  `).join('');
+}
+
+function filterSidebar(){ renderSidebar(); }
+
+function editStackName(id){
+  const s = stacks.find(x => x.id === id); if(!s) return;
+  const name = prompt('Rename stack:', s.name);
+  if(name){ s.name = name; save(); renderSidebar(); if(activeStackId===id) selectStack(id); }
+}
+
+function renderContent(){
+  const s = getStack();
+  if(!s){ document.getElementById('content').innerHTML = '<div class="empty"><div class="icon">📡</div><h3>Welcome to Stack Radar</h3><p>Create a stack to start tracking your tech dependencies, costs, and risks.</p></div>'; return; }
+  switch(activeTab){
+    case 'overview': renderOverview(); break;
+    case 'costs': renderCosts(); break;
+    case 'risks': renderRisks(); break;
+    case 'licenses': renderLicenses(); break;
+    case 'dashboard': renderDashboard(); break;
+  }
+}
+
+function switchTab(tab){
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  renderContent();
+}
+
+// ─── Overview ───
+function renderOverview(){
+  const tools = getTools();
+  const el = document.getElementById('content');
+  if(!tools.length){ el.innerHTML = '<div class="empty"><div class="icon">🔧</div><h3>No tools yet</h3><p>Add your first tool to start tracking your stack.</p></div>'; return; }
+
+  const cats = ['All', ...new Set(tools.map(t => t.category))].sort((a,b) => a==='All'?-1:b==='All'?1:a.localeCompare(b));
+  const filtered = activeCatFilter === 'All' ? tools : tools.filter(t => t.category === activeCatFilter);
+  const maxCost = Math.max(...tools.map(t => t.monthlyCost || 0), 1);
+
+  el.innerHTML = `
+    <div class="filter-bar">${cats.map(c => `<button class="filter-chip ${c===activeCatFilter?'active':''}" onclick="activeCatFilter='${c}';renderContent()">${c}${c!=='All'?' ('+tools.filter(t=>t.category===c).length+')':' ('+tools.length+')'}</button>`).join('')}</div>
+    <div class="card-grid">${filtered.map(t => {
+      const risk = calcRisk(t);
+      const riskClass = risk<=25?'low':risk<=50?'med':risk<=75?'high':'crit';
+      const costPct = maxCost>0 ? ((t.monthlyCost||0)/maxCost*100) : 0;
+      return `<div class="card">
+        <div class="card-header">
+          <div class="icon" style="background:${CAT_COLORS[t.category]||'var(--surface3)'}20;color:${CAT_COLORS[t.category]||'var(--text2)'}">${catEmoji(t.category)}</div>
+          <div class="info"><h3>${esc(t.name)}</h3><div class="type">${esc(t.type)} · ${esc(t.category)}</div></div>
+          <div class="card-actions">
+            <button onclick="openToolModal('${t.id}')" title="Edit">✏️</button>
+            <button onclick="if(confirm('Delete?'))deleteTool('${t.id}')" title="Delete">🗑</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="card-row"><span class="label">Status</span><span class="tag-status status-${t.status.toLowerCase()}">${t.status}</span></div>
+          <div class="card-row"><span class="label">Cost</span><span class="value">${t.monthlyCost?formatCurrency(t.monthlyCost,t.currency)+'/mo':'Free'}</span></div>
+          ${t.monthlyCost ? `<div class="cost-bar"><div class="cost-bar-fill" style="width:${costPct}%;background:${CAT_COLORS[t.category]||'var(--accent)'}"></div></div>` : ''}
+          <div class="card-row"><span class="label">Lock-in</span><span>${t.lockIn||'None'}</span></div>
+          <div class="card-row"><span class="label">Risk</span><span class="tag tag-risk-${riskClass}">${risk}/100</span></div>
+          ${t.license ? `<div class="card-row"><span class="label">License</span><span class="tag tag-license">${esc(t.license)}</span></div>` : ''}
+          ${t.alternatives&&t.alternatives.length ? `<div class="card-row"><span class="label">Alternatives</span></div><div class="alt-list">${t.alternatives.map(a=>`<span class="alt-chip">${esc(a)}</span>`).join('')}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('')}</div>
+  `;
+}
+
+// ─── Costs ───
+function renderCosts(){
+  const tools = getTools();
+  const el = document.getElementById('content');
+  const monthly = tools.reduce((s,t) => s + (t.monthlyCost||0), 0);
+  const annual = monthly * 12;
+  const currency = tools.find(t=>t.currency)?.currency || 'USD';
+
+  // By category
+  const byCat = {};
+  tools.forEach(t => { if(t.monthlyCost){ byCat[t.category] = (byCat[t.category]||0) + t.monthlyCost; }});
+  const catEntries = Object.entries(byCat).sort((a,b) => b[1]-a[1]);
+  const maxCat = catEntries.length ? catEntries[0][1] : 1;
+
+  // Top 5 expensive
+  const top5 = [...tools].filter(t=>t.monthlyCost).sort((a,b)=>b.monthlyCost-a.monthlyCost).slice(0,5);
+  const maxTop = top5.length ? top5[0].monthlyCost : 1;
+
+  // Free vs paid
+  const free = tools.filter(t => !t.monthlyCost).length;
+  const paid = tools.length - free;
+
+  el.innerHTML = `
+    <div class="cost-summary">
+      <div class="cost-pill"><div class="amount" style="color:var(--accent)">${formatCurrency(monthly,currency)}</div><div class="period">Monthly burn</div></div>
+      <div class="cost-pill"><div class="amount" style="color:var(--green)">${formatCurrency(annual,currency)}</div><div class="period">Annual burn</div></div>
+      <div class="cost-pill"><div class="amount">${paid}</div><div class="period">Paid tools</div></div>
+      <div class="cost-pill"><div class="amount">${free}</div><div class="period">Free tools</div></div>
+    </div>
+    <div class="chart-section">
+      <h3>Cost by Category</h3>
+      <div class="bar-chart">${catEntries.map(([cat,amt]) => `
+        <div class="bar-row">
+          <div class="bar-label">${cat}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${amt/maxCat*100}%;background:${CAT_COLORS[cat]||'var(--accent)'}">${formatCurrency(amt,currency)}</div></div>
+        </div>
+      `).join('')}</div>
+      ${!catEntries.length ? '<p style="color:var(--text3);font-size:13px;text-align:center;padding:20px">No costs tracked yet</p>' : ''}
+    </div>
+    <div class="chart-section">
+      <h3>Top 5 Most Expensive</h3>
+      <div class="bar-chart">${top5.map(t => `
+        <div class="bar-row">
+          <div class="bar-label">${esc(t.name)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${t.monthlyCost/maxTop*100}%;background:${CAT_COLORS[t.category]||'var(--accent)'}">${formatCurrency(t.monthlyCost,t.currency)}/mo</div></div>
+        </div>
+      `).join('')}</div>
+      ${!top5.length ? '<p style="color:var(--text3);font-size:13px;text-align:center;padding:20px">No paid tools yet</p>' : ''}
+    </div>
+    <div class="chart-section">
+      <h3>Cost Distribution (Donut)</h3>
+      <div class="donut-container">
+        ${renderDonut(catEntries.map(([c,a]) => ({label:c,value:a,color:CAT_COLORS[c]||'var(--accent)'})), 120)}
+        <div class="donut-legend">${catEntries.slice(0,8).map(([c,a]) => `<div class="donut-legend-item"><div class="dot" style="background:${CAT_COLORS[c]||'var(--accent)'}"></div>${c}: ${formatCurrency(a,currency)}/mo</div>`).join('')}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Risks ───
+function renderRisks(){
+  const tools = getTools();
+  const el = document.getElementById('content');
+  const scored = tools.map(t => ({...t, risk: calcRisk(t)})).sort((a,b) => b.risk - a.risk);
+  const critical = scored.filter(t => t.risk > 75);
+  const high = scored.filter(t => t.risk > 50 && t.risk <= 75);
+  const med = scored.filter(t => t.risk > 25 && t.risk <= 50);
+  const low = scored.filter(t => t.risk <= 25);
+
+  el.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">Critical Risk</div><div class="value" style="color:var(--red)">${critical.length}</div></div>
+      <div class="stat-card"><div class="label">High Risk</div><div class="value" style="color:var(--orange)">${high.length}</div></div>
+      <div class="stat-card"><div class="label">Medium Risk</div><div class="value" style="color:var(--yellow)">${med.length}</div></div>
+      <div class="stat-card"><div class="label">Low Risk</div><div class="value" style="color:var(--green)">${low.length}</div></div>
+      <div class="stat-card"><div class="label">No Alternatives</div><div class="value" style="color:var(--red)">${tools.filter(t=>!t.alternatives||!t.alternatives.length).length}</div></div>
+      <div class="stat-card"><div class="label">Avg Risk Score</div><div class="value">${scored.length?Math.round(scored.reduce((s,t)=>s+t.risk,0)/scored.length):0}</div></div>
+    </div>
+    <div class="risk-grid">${scored.map(t => {
+      const riskClass = t.risk<=25?'low':t.risk<=50?'med':t.risk<=75?'high':'crit';
+      const factors = getRiskFactors(t);
+      const segs = 10;
+      const filled = Math.round(t.risk/100*segs);
+      return `<div class="risk-card">
+        <h4>${catEmoji(t.category)} ${esc(t.name)} <span class="tag tag-risk-${riskClass}">${t.risk}/100</span></h4>
+        <div class="risk-meter ${riskClass}">${Array(segs).fill(0).map((_,i)=>`<div class="seg ${i<filled?'filled':''}"></div>`).join('')}</div>
+        <div style="font-size:12px;color:var(--text2);margin:4px 0">Lock-in: ${t.lockIn||'None'} · Status: ${t.status} · Alternatives: ${t.alternatives?.length||0}</div>
+        <div class="risk-factors">${factors.map(f=>`<span class="risk-factor ${f.level}">${f.text}</span>`).join('')}</div>
+      </div>`;
+    }).join('')}</div>
+  `;
+}
+
+// ─── Licenses ───
+function renderLicenses(){
+  const tools = getTools();
+  const el = document.getElementById('content');
+
+  // License distribution
+  const byLic = {};
+  tools.forEach(t => { const l = t.license || 'Unspecified'; byLic[l] = (byLic[l]||0)+1; });
+  const licEntries = Object.entries(byLic).sort((a,b) => b[1]-a[1]);
+
+  const openSrc = ['MIT','Apache 2.0','GPL v3','BSD 3-Clause','ISC','MPL 2.0','AGPL','Unlicense'];
+  const openCount = tools.filter(t => openSrc.includes(t.license)).length;
+  const commercialCount = tools.filter(t => t.license==='Commercial'||t.license==='Proprietary'||t.license==='SSPL').length;
+  const freeCount = tools.filter(t => t.license==='Free Tier').length;
+
+  el.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">Open Source</div><div class="value" style="color:var(--green)">${openCount}</div></div>
+      <div class="stat-card"><div class="label">Commercial</div><div class="value" style="color:var(--yellow)">${commercialCount}</div></div>
+      <div class="stat-card"><div class="label">Free Tier</div><div class="value" style="color:var(--cyan)">${freeCount}</div></div>
+      <div class="stat-card"><div class="label">Total Tools</div><div class="value">${tools.length}</div></div>
+    </div>
+    <div class="chart-section">
+      <h3>License Distribution</h3>
+      <div class="donut-container">
+        ${renderDonut(licEntries.map(([l,c],i) => ({label:l,value:c,color:licColor(l)})), 110)}
+        <div class="donut-legend">${licEntries.map(([l,c]) => `<div class="donut-legend-item"><div class="dot" style="background:${licColor(l)}"></div>${l}: ${c}</div>`).join('')}</div>
+      </div>
+    </div>
+    <div class="chart-section">
+      <h3>All Tools by License</h3>
+      <table class="license-table">
+        <thead><tr><th>Tool</th><th>Category</th><th>Type</th><th>License</th><th>Cost</th><th>Status</th></tr></thead>
+        <tbody>${tools.sort((a,b)=>(a.license||'').localeCompare(b.license||'')).map(t => `
+          <tr>
+            <td><strong>${esc(t.name)}</strong></td>
+            <td><span class="tag tag-cat">${t.category}</span></td>
+            <td style="color:var(--text2)">${t.type}</td>
+            <td><span class="license-badge ${licBadgeClass(t.license)}">${t.license||'—'}</span></td>
+            <td>${t.monthlyCost?formatCurrency(t.monthlyCost,t.currency)+'/mo':'Free'}</td>
+            <td><span class="tag-status status-${t.status.toLowerCase()}">${t.status}</span></td>
+          </tr>
+        `).join('')}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ─── Dashboard ───
+function renderDashboard(){
+  const tools = getTools();
+  const el = document.getElementById('content');
+  const monthly = tools.reduce((s,t) => s + (t.monthlyCost||0), 0);
+  const currency = tools.find(t=>t.currency)?.currency || 'USD';
+  const avgRisk = tools.length ? Math.round(tools.reduce((s,t) => s + calcRisk(t), 0) / tools.length) : 0;
+  const critRisk = tools.filter(t => calcRisk(t) > 75).length;
+  const noAlts = tools.filter(t => !t.alternatives?.length).length;
+
+  // By type
+  const byType = {};
+  tools.forEach(t => { byType[t.type] = (byType[t.type]||0)+1; });
+  const typeEntries = Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+  const maxType = typeEntries.length ? typeEntries[0][1] : 1;
+  const typeColors = {'SaaS':'#58a6ff','Library':'#3fb950','Framework':'#bc8cff','API':'#f778ba','Infrastructure':'#d29922','Internal':'#76e3ea','Open Source':'#7ee787'};
+
+  // By status
+  const byStatus = {};
+  tools.forEach(t => { byStatus[t.status] = (byStatus[t.status]||0)+1; });
+  const statusEntries = Object.entries(byStatus).sort((a,b)=>b[1]-a[1]);
+  const statusColors = {'Active':'#3fb950','Degraded':'#d29922','Down':'#f85149','Evaluating':'#bc8cff','Deprecated':'#6e7681'};
+
+  // By category
+  const byCat = {};
+  tools.forEach(t => { byCat[t.category] = (byCat[t.category]||0)+1; });
+  const catEntries = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const maxCatCount = catEntries.length ? catEntries[0][1] : 1;
+
+  el.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">Total Tools</div><div class="value">${tools.length}</div></div>
+      <div class="stat-card"><div class="label">Monthly Burn</div><div class="value" style="color:var(--accent)">${formatCurrency(monthly,currency)}</div><div class="sub">${formatCurrency(monthly*12,currency)}/yr</div></div>
+      <div class="stat-card"><div class="label">Avg Risk Score</div><div class="value" style="color:${avgRisk>50?'var(--red)':avgRisk>25?'var(--yellow)':'var(--green)'}">${avgRisk}</div></div>
+      <div class="stat-card"><div class="label">Critical Risks</div><div class="value" style="color:var(--red)">${critRisk}</div></div>
+      <div class="stat-card"><div class="label">No Alternatives</div><div class="value" style="color:var(--orange)">${noAlts}</div></div>
+      <div class="stat-card"><div class="label">Categories</div><div class="value">${Object.keys(byCat).length}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="chart-section">
+        <h3>By Type</h3>
+        <div class="bar-chart">${typeEntries.map(([type,cnt]) => `
+          <div class="bar-row"><div class="bar-label">${type}</div><div class="bar-track"><div class="bar-fill" style="width:${cnt/maxType*100}%;background:${typeColors[type]||'var(--accent)'}">${cnt}</div></div></div>
+        `).join('')}</div>
+      </div>
+      <div class="chart-section">
+        <h3>By Status</h3>
+        <div class="donut-container">
+          ${renderDonut(statusEntries.map(([s,c]) => ({label:s,value:c,color:statusColors[s]||'var(--text3)'})), 90)}
+          <div class="donut-legend">${statusEntries.map(([s,c]) => `<div class="donut-legend-item"><div class="dot" style="background:${statusColors[s]||'var(--text3)'}"></div>${s}: ${c}</div>`).join('')}</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-section">
+      <h3>By Category</h3>
+      <div class="bar-chart">${catEntries.map(([cat,cnt]) => `
+        <div class="bar-row"><div class="bar-label">${cat}</div><div class="bar-track"><div class="bar-fill" style="width:${cnt/maxCatCount*100}%;background:${CAT_COLORS[cat]||'var(--accent)'}">${cnt}</div></div><div class="bar-amount">${cnt} tool${cnt>1?'s':''}</div></div>
+      `).join('')}</div>
+    </div>
+  `;
+}
+
+// ─── Tool Modal ───
+function openToolModal(editId){
+  const s = getStack(); if(!s) return;
+  const t = editId ? s.tools.find(x => x.id === editId) : null;
+  const isEdit = !!t;
+
+  document.getElementById('modal').innerHTML = `
+    <h2>${isEdit ? 'Edit' : 'Add'} Tool</h2>
+    <div class="modal-row"><label>Name *</label><input id="mName" value="${esc(t?.name||'')}" placeholder="e.g. Supabase, React, Stripe"></div>
+    <div class="modal-row-2">
+      <div class="modal-row"><label>Category</label><select id="mCat">${CATEGORIES.map(c=>`<option ${t?.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="modal-row"><label>Type</label><select id="mType">${TYPES.map(tp=>`<option ${t?.type===tp?'selected':''}>${tp}</option>`).join('')}</select></div>
+    </div>
+    <div class="modal-row-3">
+      <div class="modal-row"><label>Status</label><select id="mStatus">${STATUSES.map(s=>`<option ${t?.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="modal-row"><label>Monthly Cost</label><input id="mCost" type="number" step="0.01" min="0" value="${t?.monthlyCost||''}" placeholder="0 = free"></div>
+      <div class="modal-row"><label>Currency</label><select id="mCurrency">${CURRENCIES.map(c=>`<option ${(t?.currency||'USD')===c?'selected':''}>${c}</option>`).join('')}</select></div>
+    </div>
+    <div class="modal-row-2">
+      <div class="modal-row"><label>License</label><select id="mLicense"><option value="">—</option>${LICENSES.map(l=>`<option ${t?.license===l?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="modal-row"><label>Lock-in Level</label><select id="mLockIn">${LOCK_IN_LEVELS.map(l=>`<option ${(t?.lockIn||'None')===l?'selected':''}>${l}</option>`).join('')}</select></div>
+    </div>
+    <div class="modal-row"><label>URL</label><input id="mUrl" value="${esc(t?.url||'')}" placeholder="https://..."></div>
+    <div class="modal-row"><label>Description</label><textarea id="mDesc" rows="2">${esc(t?.description||'')}</textarea></div>
+    <div class="modal-row"><label>Alternatives (Enter to add)</label>
+      <div class="alt-editor" id="altEditor">
+        ${(t?.alternatives||[]).map(a=>`<span class="alt-tag">${esc(a)}<button onclick="this.parentElement.remove()">×</button></span>`).join('')}
+        <input id="mAltInput" placeholder="Type & press Enter" onkeydown="if(event.key==='Enter'){event.preventDefault();addAlt()}">
+      </div>
+    </div>
+    <div class="modal-row"><label>Renewal Date</label><input id="mRenewal" type="date" value="${t?.renewalDate||''}"></div>
+    <div class="modal-row"><label>Notes</label><textarea id="mNotes" rows="2">${esc(t?.notes||'')}</textarea></div>
+    <div class="modal-footer">
+      ${isEdit ? `<button class="btn btn-danger" onclick="deleteTool('${t.id}');closeModal()">Delete</button>` : ''}
+      <div style="flex:1"></div>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTool('${editId||''}')">${isEdit?'Update':'Add Tool'}</button>
+    </div>
+  `;
+  openModal();
+  document.getElementById('mName').focus();
+}
+
+function addAlt(){
+  const input = document.getElementById('mAltInput');
+  const val = input.value.trim();
+  if(!val) return;
+  const tag = document.createElement('span');
+  tag.className = 'alt-tag';
+  tag.innerHTML = `${esc(val)}<button onclick="this.parentElement.remove()">×</button>`;
+  input.parentElement.insertBefore(tag, input);
+  input.value = '';
+}
+
+function saveTool(editId){
+  const name = document.getElementById('mName').value.trim();
+  if(!name) return alert('Name is required');
+  const alts = [...document.querySelectorAll('#altEditor .alt-tag')].map(el => el.textContent.replace('×','').trim());
+  const data = {
+    name,
+    category: document.getElementById('mCat').value,
+    type: document.getElementById('mType').value,
+    status: document.getElementById('mStatus').value,
+    monthlyCost: parseFloat(document.getElementById('mCost').value) || 0,
+    currency: document.getElementById('mCurrency').value,
+    license: document.getElementById('mLicense').value,
+    lockIn: document.getElementById('mLockIn').value,
+    url: document.getElementById('mUrl').value.trim(),
+    description: document.getElementById('mDesc').value.trim(),
+    alternatives: alts,
+    renewalDate: document.getElementById('mRenewal').value,
+    notes: document.getElementById('mNotes').value.trim()
+  };
+  if(editId) updateTool(editId, data);
+  else addTool(data);
+  closeModal();
+}
+
+// ─── Modal helpers ───
+function openModal(){ document.getElementById('modalOverlay').classList.add('show') }
+function closeModal(e){ if(e && e.target !== e.currentTarget) return; document.getElementById('modalOverlay').classList.remove('show') }
+function showHelp(){ document.getElementById('helpOverlay').classList.add('show') }
+function closeHelp(){ document.getElementById('helpOverlay').classList.remove('show') }
+
+// ─── Risk calc ───
+function calcRisk(t){
+  let score = 0;
+  // Lock-in (0-30)
+  const lockInScore = {'None':0,'Low':8,'Medium':16,'High':24,'Critical':30};
+  score += lockInScore[t.lockIn] || 0;
+  // No alternatives (0-25)
+  if(!t.alternatives || t.alternatives.length === 0) score += 25;
+  else if(t.alternatives.length === 1) score += 12;
+  else if(t.alternatives.length === 2) score += 5;
+  // Status (0-20)
+  if(t.status === 'Down') score += 20;
+  else if(t.status === 'Degraded') score += 12;
+  else if(t.status === 'Deprecated') score += 15;
+  // Cost dependency (0-15)
+  if(t.monthlyCost > 500) score += 15;
+  else if(t.monthlyCost > 200) score += 10;
+  else if(t.monthlyCost > 50) score += 5;
+  // License risk (0-10)
+  if(t.license === 'Proprietary' || t.license === 'SSPL') score += 10;
+  else if(t.license === 'GPL v3' || t.license === 'AGPL') score += 6;
+  else if(t.license === 'Commercial') score += 3;
+  return Math.min(score, 100);
+}
+
+function getRiskFactors(t){
+  const f = [];
+  if(t.lockIn === 'Critical' || t.lockIn === 'High') f.push({text:`${t.lockIn} lock-in`,level:'danger'});
+  else if(t.lockIn === 'Medium') f.push({text:'Medium lock-in',level:'warn'});
+  if(!t.alternatives?.length) f.push({text:'No alternatives',level:'danger'});
+  else if(t.alternatives.length === 1) f.push({text:'Only 1 alternative',level:'warn'});
+  if(t.status === 'Down') f.push({text:'Currently down',level:'danger'});
+  else if(t.status === 'Degraded') f.push({text:'Degraded',level:'warn'});
+  else if(t.status === 'Deprecated') f.push({text:'Deprecated',level:'danger'});
+  if(t.monthlyCost > 200) f.push({text:`High cost: ${formatCurrency(t.monthlyCost,t.currency)}/mo`,level:'warn'});
+  if(t.license === 'Proprietary' || t.license === 'SSPL') f.push({text:'Restrictive license',level:'warn'});
+  if(!f.length) f.push({text:'Low risk ✓',level:''});
+  return f;
+}
+
+// ─── Helpers ───
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8) }
+function esc(s){ if(!s) return ''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function formatCurrency(amt, cur='USD'){
+  const symbols = {USD:'$',INR:'₹',EUR:'€',GBP:'£'};
+  const sym = symbols[cur] || cur+' ';
+  return sym + amt.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+function catEmoji(c){
+  const m={'Frontend':'⚛️','Backend':'⚙️','Database':'🗄️','Auth':'🔐','Analytics':'📊','Payments':'💳','Infrastructure':'☁️','DevOps':'🔧','Monitoring':'👁️','Email':'📧','CDN':'🌐','Design':'🎨','AI/ML':'🤖','Testing':'🧪','Storage':'💾','Security':'🛡️','Communication':'💬'};
+  return m[c]||'📦';
+}
+function licColor(l){
+  const open = ['MIT','Apache 2.0','BSD 3-Clause','ISC','MPL 2.0','Unlicense'];
+  const restrictive = ['GPL v3','AGPL','SSPL'];
+  if(open.includes(l)) return '#3fb950';
+  if(restrictive.includes(l)) return '#d29922';
+  if(l==='Commercial'||l==='Proprietary') return '#f85149';
+  if(l==='Free Tier') return '#76e3ea';
+  return '#8b949e';
+}
+function licBadgeClass(l){
+  const open = ['MIT','Apache 2.0','BSD 3-Clause','ISC','MPL 2.0','Unlicense'];
+  if(open.includes(l)) return 'lic-open';
+  if(l==='Free Tier') return 'lic-free';
+  if(l==='Commercial') return 'lic-commercial';
+  if(l==='Proprietary'||l==='SSPL') return 'lic-proprietary';
+  return 'lic-commercial';
+}
+
+function renderDonut(data, r=100){
+  if(!data.length) return '<svg width="'+(r*2)+'" height="'+(r*2)+'"></svg>';
+  const total = data.reduce((s,d) => s + d.value, 0);
+  if(!total) return '';
+  const cx=r, cy=r, R=r*0.8, innerR=r*0.5;
+  let paths = '', angle = -Math.PI/2;
+  data.forEach(d => {
+    const sweep = (d.value/total) * Math.PI * 2;
+    const x1 = cx + R * Math.cos(angle), y1 = cy + R * Math.sin(angle);
+    const x2 = cx + R * Math.cos(angle+sweep), y2 = cy + R * Math.sin(angle+sweep);
+    const ix1 = cx + innerR * Math.cos(angle+sweep), iy1 = cy + innerR * Math.sin(angle+sweep);
+    const ix2 = cx + innerR * Math.cos(angle), iy2 = cy + innerR * Math.sin(angle);
+    const large = sweep > Math.PI ? 1 : 0;
+    paths += `<path d="M${x1},${y1} A${R},${R} 0 ${large} 1 ${x2},${y2} L${ix1},${iy1} A${innerR},${innerR} 0 ${large} 0 ${ix2},${iy2} Z" fill="${d.color}" opacity="0.85"/>`;
+    angle += sweep;
+  });
+  return `<svg width="${r*2}" height="${r*2}" viewBox="0 0 ${r*2} ${r*2}">${paths}<text x="${cx}" y="${cy-4}" text-anchor="middle" fill="var(--text)" font-size="18" font-weight="700">${total}</text><text x="${cx}" y="${cy+12}" text-anchor="middle" fill="var(--text2)" font-size="10">total</text></svg>`;
+}
+
+// ─── Import/Export ───
+function exportAll(){
+  const json = JSON.stringify(stacks, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'stack-radar-export.json';
+  a.click();
+}
+function importAll(){ document.getElementById('importFile').click() }
+function handleImport(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if(Array.isArray(data)){ stacks = data; save(); renderSidebar(); if(stacks.length) selectStack(stacks[0].id); }
+    } catch(err){ alert('Invalid JSON'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ─── Keyboard ───
+document.addEventListener('keydown', e => {
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') {
+    if(e.key==='Escape'){ e.target.blur(); closeModal(); closeHelp(); }
+    return;
+  }
+  if(e.key==='Escape'){ closeModal(); closeHelp(); return; }
+  if(e.key==='/'){e.preventDefault();document.getElementById('sideSearch').focus();return}
+  if(e.key==='?'){e.preventDefault();showHelp();return}
+  if(e.key==='n'&&!e.shiftKey){e.preventDefault();openToolModal();return}
+  if(e.key==='N'&&e.shiftKey){e.preventDefault();newStack();return}
+  if(e.key==='e'){e.preventDefault();exportAll();return}
+  if(e.key==='i'){e.preventDefault();importAll();return}
+  if(e.key==='1'){switchTab('overview')}
+  if(e.key==='2'){switchTab('costs')}
+  if(e.key==='3'){switchTab('risks')}
+  if(e.key==='4'){switchTab('licenses')}
+  if(e.key==='5'){switchTab('dashboard')}
+});
+
+// ─── Seed Data ───
+function seedData(){
+  stacks = [{
+    id: uid(), name: 'UTMStamp', emoji: '✉️', createdAt: new Date().toISOString(),
+    tools: [
+      {id:uid(),name:'Next.js',category:'Frontend',type:'Framework',status:'Active',monthlyCost:0,currency:'USD',license:'MIT',lockIn:'Medium',url:'https://nextjs.org',description:'React framework for the main web app',alternatives:['Remix','Nuxt.js','SvelteKit'],renewalDate:'',notes:'v14 with App Router',createdAt:new Date().toISOString()},
+      {id:uid(),name:'React',category:'Frontend',type:'Library',status:'Active',monthlyCost:0,currency:'USD',license:'MIT',lockIn:'Medium',url:'https://react.dev',description:'UI library',alternatives:['Vue.js','Svelte','Solid.js'],renewalDate:'',notes:'',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Tailwind CSS',category:'Frontend',type:'Library',status:'Active',monthlyCost:0,currency:'USD',license:'MIT',lockIn:'Low',url:'https://tailwindcss.com',description:'Utility-first CSS framework',alternatives:['Bootstrap','Chakra UI','Panda CSS'],renewalDate:'',notes:'v3',createdAt:new Date().toISOString()},
+      {id:uid(),name:'TypeScript',category:'Frontend',type:'Library',status:'Active',monthlyCost:0,currency:'USD',license:'Apache 2.0',lockIn:'Medium',url:'https://typescriptlang.org',description:'Type-safe JavaScript',alternatives:['Flow','JSDoc types'],renewalDate:'',notes:'',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Supabase',category:'Database',type:'SaaS',status:'Active',monthlyCost:25,currency:'USD',license:'Apache 2.0',lockIn:'Medium',url:'https://supabase.com',description:'PostgreSQL database + auth + realtime + storage',alternatives:['Firebase','PlanetScale','Neon'],renewalDate:'2026-06-15',notes:'Pro plan, PostgreSQL under the hood so migration feasible',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Vercel',category:'Infrastructure',type:'SaaS',status:'Active',monthlyCost:20,currency:'USD',license:'Commercial',lockIn:'High',url:'https://vercel.com',description:'Hosting & edge functions for Next.js',alternatives:['Netlify','Railway','Fly.io','AWS Amplify'],renewalDate:'2026-07-01',notes:'Pro plan. Tight Next.js integration = lock-in risk',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Stripe',category:'Payments',type:'SaaS',status:'Active',monthlyCost:0,currency:'USD',license:'Commercial',lockIn:'High',url:'https://stripe.com',description:'Payment processing & subscription billing',alternatives:['Razorpay','Paddle','LemonSqueezy'],renewalDate:'',notes:'2.9% + 30¢ per transaction. Webhook-driven architecture',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Resend',category:'Email',type:'SaaS',status:'Active',monthlyCost:0,currency:'USD',license:'Commercial',lockIn:'Low',url:'https://resend.com',description:'Transactional email delivery',alternatives:['Postmark','SendGrid','AWS SES','Mailgun'],renewalDate:'',notes:'Free tier covers current volume',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Posthog',category:'Analytics',type:'SaaS',status:'Active',monthlyCost:0,currency:'USD',license:'MIT',lockIn:'Low',url:'https://posthog.com',description:'Product analytics, feature flags, session replay',alternatives:['Mixpanel','Amplitude','Plausible'],renewalDate:'',notes:'Self-hostable, generous free tier (1M events/mo)',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Clerk',category:'Auth',type:'SaaS',status:'Active',monthlyCost:0,currency:'USD',license:'Commercial',lockIn:'High',url:'https://clerk.com',description:'Authentication & user management',alternatives:['Auth0','NextAuth.js','Supabase Auth','Lucia'],renewalDate:'',notes:'Free tier. Deep component integration = lock-in',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Upstash Redis',category:'Database',type:'SaaS',status:'Active',monthlyCost:0,currency:'USD',license:'Commercial',lockIn:'Low',url:'https://upstash.com',description:'Serverless Redis for rate limiting & caching',alternatives:['Redis Cloud','Momento','DynamoDB'],renewalDate:'',notes:'Pay-per-request, very cheap at current scale',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Cloudflare',category:'CDN',type:'SaaS',status:'Active',monthlyCost:0,currency:'USD',license:'Commercial',lockIn:'Low',url:'https://cloudflare.com',description:'CDN, DNS, DDoS protection',alternatives:['Fastly','AWS CloudFront','BunnyCDN'],renewalDate:'',notes:'Free plan sufficient',createdAt:new Date().toISOString()},
+      {id:uid(),name:'GitHub',category:'DevOps',type:'SaaS',status:'Active',monthlyCost:0,currency:'USD',license:'Commercial',lockIn:'Medium',url:'https://github.com',description:'Source control, CI/CD, project management',alternatives:['GitLab','Bitbucket','Gitea'],renewalDate:'',notes:'Free tier, GitHub Actions for CI',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Sentry',category:'Monitoring',type:'SaaS',status:'Active',monthlyCost:0,currency:'USD',license:'MIT',lockIn:'Low',url:'https://sentry.io',description:'Error tracking & performance monitoring',alternatives:['Bugsnag','LogRocket','Datadog'],renewalDate:'',notes:'Free developer plan',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Cursor',category:'DevOps',type:'SaaS',status:'Active',monthlyCost:20,currency:'USD',license:'Commercial',lockIn:'None',url:'https://cursor.com',description:'AI-powered code editor',alternatives:['VS Code + Copilot','Windsurf','Zed'],renewalDate:'',notes:'Pro plan. Can switch to VS Code anytime — same extensions',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Zustand',category:'Frontend',type:'Library',status:'Active',monthlyCost:0,currency:'USD',license:'MIT',lockIn:'Low',url:'https://github.com/pmndrs/zustand',description:'Lightweight state management',alternatives:['Redux Toolkit','Jotai','Valtio','Recoil'],renewalDate:'',notes:'',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Zod',category:'Backend',type:'Library',status:'Active',monthlyCost:0,currency:'USD',license:'MIT',lockIn:'Low',url:'https://zod.dev',description:'TypeScript-first schema validation',alternatives:['Yup','Valibot','ArkType'],renewalDate:'',notes:'Used in API routes + forms',createdAt:new Date().toISOString()},
+    ]
+  },{
+    id: uid(), name: 'SaaS Starter Kit', emoji: '🚀', createdAt: new Date().toISOString(),
+    tools: [
+      {id:uid(),name:'AWS',category:'Infrastructure',type:'Infrastructure',status:'Active',monthlyCost:150,currency:'USD',license:'Commercial',lockIn:'Critical',url:'https://aws.amazon.com',description:'EC2, S3, RDS, Lambda, SQS, CloudWatch',alternatives:['GCP','Azure','DigitalOcean'],renewalDate:'',notes:'Multi-service dependency. Migration would be 3-6 months',createdAt:new Date().toISOString()},
+      {id:uid(),name:'PostgreSQL',category:'Database',type:'Open Source',status:'Active',monthlyCost:0,currency:'USD',license:'BSD 3-Clause',lockIn:'None',url:'https://postgresql.org',description:'Primary relational database',alternatives:['MySQL','CockroachDB','YugabyteDB'],renewalDate:'',notes:'Via RDS. Zero lock-in — standard SQL',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Redis',category:'Database',type:'Open Source',status:'Active',monthlyCost:0,currency:'USD',license:'BSD 3-Clause',lockIn:'Low',url:'https://redis.io',description:'Caching, sessions, rate limiting, queues',alternatives:['Memcached','KeyDB','Dragonfly'],renewalDate:'',notes:'Via ElastiCache',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Docker',category:'DevOps',type:'Open Source',status:'Active',monthlyCost:0,currency:'USD',license:'Apache 2.0',lockIn:'Low',url:'https://docker.com',description:'Container runtime',alternatives:['Podman','containerd','nerdctl'],renewalDate:'',notes:'',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Terraform',category:'DevOps',type:'Open Source',status:'Active',monthlyCost:0,currency:'USD',license:'MPL 2.0',lockIn:'Medium',url:'https://terraform.io',description:'Infrastructure as Code',alternatives:['Pulumi','CDK','OpenTofu'],renewalDate:'',notes:'Now BSL — consider OpenTofu',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Datadog',category:'Monitoring',type:'SaaS',status:'Active',monthlyCost:75,currency:'USD',license:'Commercial',lockIn:'High',url:'https://datadoghq.com',description:'APM, logs, metrics, dashboards',alternatives:['Grafana Cloud','New Relic','Elastic APM'],renewalDate:'2026-09-01',notes:'Expensive but comprehensive. Custom dashboards are the lock-in',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Auth0',category:'Auth',type:'SaaS',status:'Active',monthlyCost:35,currency:'USD',license:'Commercial',lockIn:'High',url:'https://auth0.com',description:'Identity & access management, SSO, MFA',alternatives:['Clerk','Keycloak','FusionAuth','Ory'],renewalDate:'2026-08-15',notes:'Enterprise plan for SSO. User migration requires careful planning',createdAt:new Date().toISOString()},
+      {id:uid(),name:'Twilio',category:'Communication',type:'SaaS',status:'Active',monthlyCost:50,currency:'USD',license:'Commercial',lockIn:'Medium',url:'https://twilio.com',description:'SMS, voice, email (SendGrid)',alternatives:['MessageBird','Vonage','AWS SNS+SES'],renewalDate:'',notes:'Usage-based pricing. SendGrid for email included',createdAt:new Date().toISOString()},
+    ]
+  }];
+  save();
+}
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

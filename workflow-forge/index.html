@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workflow Forge — Visual Automation Builder</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--surface3:#21283b;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--text3:#484f58;--accent:#58a6ff;--accent2:#388bfd;--green:#3fb950;--red:#f85149;--yellow:#d29922;--orange:#db6d28;--purple:#bc8cff;--pink:#f778ba;--cyan:#39d2c0;--trigger:#3fb950;--condition:#d29922;--action:#58a6ff;--transform:#bc8cff;--delay:#db6d28;--loop:#f778ba;--end:#f85149;--radius:8px;--shadow:0 2px 8px rgba(0,0,0,.3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:var(--text)}
+input,textarea,select{font-family:inherit;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 10px;outline:none;font-size:13px}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical}
+/* Layout */
+.app{display:flex;flex:1;overflow:hidden}
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:12px;border-bottom:1px solid var(--border)}
+.sidebar-header h2{font-size:14px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.sidebar-search{width:100%;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px}
+.sidebar-list{flex:1;overflow-y:auto;padding:4px}
+.sidebar-item{padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;margin:2px 0}
+.sidebar-item:hover{background:var(--surface2)}
+.sidebar-item.active{background:var(--accent);color:#fff}
+.sidebar-item .node-count{margin-left:auto;font-size:11px;color:var(--text2);background:var(--surface3);padding:1px 6px;border-radius:10px}
+.sidebar-item.active .node-count{background:rgba(255,255,255,.2);color:#fff}
+.sidebar-actions{padding:8px 12px;border-top:1px solid var(--border);display:flex;gap:6px}
+.sidebar-actions button{flex:1;padding:6px;background:var(--accent);color:#fff;border-radius:4px;font-size:12px;font-weight:500}
+.sidebar-actions button:hover{background:var(--accent2)}
+.sidebar-actions button.danger{background:var(--red)}
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.toolbar .sep{width:1px;height:24px;background:var(--border);margin:0 4px}
+.btn{padding:5px 12px;border-radius:4px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.btn:hover{background:var(--surface3)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent2)}
+.btn.active{background:var(--surface3);outline:1px solid var(--accent)}
+.btn-icon{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:14px}
+.btn-icon:hover{background:var(--surface3)}
+.view-tabs{display:flex;gap:2px;background:var(--surface2);border-radius:6px;padding:2px}
+.view-tab{padding:4px 12px;border-radius:4px;font-size:12px;color:var(--text2);cursor:pointer}
+.view-tab:hover{color:var(--text)}
+.view-tab.active{background:var(--surface);color:var(--text);font-weight:500}
+/* Canvas */
+.canvas-wrap{flex:1;position:relative;overflow:hidden;background:var(--bg)}
+.canvas-bg{position:absolute;inset:0}
+.canvas-svg{position:absolute;inset:0;pointer-events:none}
+.canvas-svg line,.canvas-svg path{pointer-events:stroke}
+.canvas-nodes{position:absolute;inset:0}
+/* Grid */
+.grid-pattern{fill:none;stroke:var(--border);stroke-width:0.5;opacity:0.3}
+/* Node */
+.wf-node{position:absolute;min-width:180px;background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);cursor:grab;user-select:none;box-shadow:var(--shadow);transition:box-shadow .15s}
+.wf-node:hover{box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.wf-node.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent),var(--shadow)}
+.wf-node.dragging{opacity:.8;cursor:grabbing;z-index:100}
+.node-header{padding:8px 12px;border-radius:6px 6px 0 0;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.node-type-badge{font-size:16px}
+.node-body{padding:8px 12px;font-size:12px;color:var(--text2)}
+.node-body .field{margin-bottom:4px}
+.node-body .field-label{color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.node-body .field-value{color:var(--text)}
+/* Ports */
+.node-ports{display:flex;justify-content:space-between;padding:0 6px}
+.port{width:12px;height:12px;border-radius:50%;background:var(--border);border:2px solid var(--surface);cursor:crosshair;position:relative;z-index:5;transition:transform .1s,background .1s}
+.port:hover{transform:scale(1.4);background:var(--accent)}
+.port-in{margin-top:-7px}
+.port-out{margin-bottom:-7px}
+.port.connected{background:var(--accent)}
+/* Connection lines */
+.connection{stroke-width:2;fill:none;cursor:pointer;transition:stroke .15s}
+.connection:hover{stroke-width:3}
+.connection-label{font-size:10px;fill:var(--text2);pointer-events:none}
+.connection-arrow{fill:var(--text2)}
+/* Node type colors */
+.wf-node[data-type="trigger"] .node-header{background:rgba(63,185,80,.15);color:var(--trigger)}
+.wf-node[data-type="trigger"]{border-color:rgba(63,185,80,.3)}
+.wf-node[data-type="condition"] .node-header{background:rgba(210,153,34,.15);color:var(--condition)}
+.wf-node[data-type="condition"]{border-color:rgba(210,153,34,.3)}
+.wf-node[data-type="action"] .node-header{background:rgba(88,166,255,.15);color:var(--action)}
+.wf-node[data-type="action"]{border-color:rgba(88,166,255,.3)}
+.wf-node[data-type="transform"] .node-header{background:rgba(188,140,255,.15);color:var(--transform)}
+.wf-node[data-type="transform"]{border-color:rgba(188,140,255,.3)}
+.wf-node[data-type="delay"] .node-header{background:rgba(219,109,40,.15);color:var(--delay)}
+.wf-node[data-type="delay"]{border-color:rgba(219,109,40,.3)}
+.wf-node[data-type="loop"] .node-header{background:rgba(247,120,186,.15);color:var(--loop)}
+.wf-node[data-type="loop"]{border-color:rgba(247,120,186,.3)}
+.wf-node[data-type="end"] .node-header{background:rgba(248,81,73,.15);color:var(--end)}
+.wf-node[data-type="end"]{border-color:rgba(248,81,73,.3)}
+/* Palette panel */
+.palette{position:absolute;top:8px;right:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px;width:200px;box-shadow:var(--shadow);z-index:50;display:none}
+.palette.open{display:block}
+.palette h3{font-size:12px;color:var(--text2);margin-bottom:8px;padding:0 4px}
+.palette-item{padding:6px 8px;border-radius:4px;font-size:12px;cursor:grab;display:flex;align-items:center;gap:8px;margin:2px 0}
+.palette-item:hover{background:var(--surface2)}
+.palette-item .dot{width:8px;height:8px;border-radius:50%}
+/* Properties panel */
+.props-panel{width:300px;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;display:none;flex-shrink:0}
+.props-panel.open{display:flex;flex-direction:column}
+.props-header{padding:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:between}
+.props-header h3{font-size:14px;flex:1}
+.props-body{padding:12px;flex:1;overflow-y:auto}
+.props-field{margin-bottom:12px}
+.props-field label{display:block;font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.props-field input,.props-field textarea,.props-field select{width:100%}
+.props-field textarea{min-height:60px}
+/* Views */
+.view{display:none;flex:1;overflow:auto}
+.view.active{display:flex;flex-direction:column}
+/* List view */
+.list-view{padding:16px}
+.list-table{width:100%;border-collapse:collapse}
+.list-table th{text-align:left;padding:8px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);border-bottom:1px solid var(--border)}
+.list-table td{padding:8px 12px;font-size:13px;border-bottom:1px solid var(--border)}
+.list-table tr:hover td{background:var(--surface2)}
+.type-badge{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.type-badge[data-type="trigger"]{background:rgba(63,185,80,.15);color:var(--trigger)}
+.type-badge[data-type="condition"]{background:rgba(210,153,34,.15);color:var(--condition)}
+.type-badge[data-type="action"]{background:rgba(88,166,255,.15);color:var(--action)}
+.type-badge[data-type="transform"]{background:rgba(188,140,255,.15);color:var(--transform)}
+.type-badge[data-type="delay"]{background:rgba(219,109,40,.15);color:var(--delay)}
+.type-badge[data-type="loop"]{background:rgba(247,120,186,.15);color:var(--loop)}
+.type-badge[data-type="end"]{background:rgba(248,81,73,.15);color:var(--end)}
+/* Dashboard */
+.dashboard{padding:20px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-card .stat-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.stat-card .stat-value{font-size:28px;font-weight:700;margin-top:4px}
+.stat-card .stat-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.chart-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.chart-section h3{font-size:14px;margin-bottom:12px}
+.bar-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12px}
+.bar-label{width:100px;text-align:right;color:var(--text2);flex-shrink:0}
+.bar-track{flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:10px;color:#fff;font-weight:600;min-width:24px;transition:width .3s}
+.bar-count{width:40px;text-align:right;font-size:12px;color:var(--text2);flex-shrink:0}
+/* Templates */
+.templates-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:20px}
+.template-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:border-color .15s}
+.template-card:hover{border-color:var(--accent)}
+.template-card h3{font-size:15px;margin-bottom:4px}
+.template-card .desc{font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5}
+.template-card .meta{display:flex;gap:12px;font-size:11px;color:var(--text3)}
+.template-card .meta span{display:flex;align-items:center;gap:4px}
+/* Export view */
+.export-view{padding:20px}
+.export-tabs{display:flex;gap:4px;margin-bottom:12px}
+.export-tab{padding:6px 16px;border-radius:4px;font-size:12px;cursor:pointer;color:var(--text2);background:var(--surface)}
+.export-tab:hover{color:var(--text)}
+.export-tab.active{background:var(--accent);color:#fff}
+.code-block{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:'SF Mono',Consolas,monospace;font-size:12px;line-height:1.6;overflow:auto;max-height:500px;white-space:pre;tab-size:2;position:relative}
+.code-block .copy-btn{position:absolute;top:8px;right:8px;padding:4px 10px;background:var(--surface3);border-radius:4px;font-size:11px;cursor:pointer;color:var(--text2)}
+.code-block .copy-btn:hover{background:var(--accent);color:#fff}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;width:440px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.modal h2{font-size:16px;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.modal-actions button{padding:6px 16px;border-radius:4px;font-size:13px;font-weight:500}
+.modal-actions .save{background:var(--accent);color:#fff}
+.modal-actions .cancel{background:var(--surface2);color:var(--text2)}
+/* Zoom controls */
+.zoom-controls{position:absolute;bottom:12px;right:12px;display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px;z-index:20}
+.zoom-controls button{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:13px;color:var(--text2)}
+.zoom-controls button:hover{background:var(--surface2);color:var(--text)}
+.zoom-controls .zoom-label{font-size:11px;display:flex;align-items:center;padding:0 6px;color:var(--text2)}
+/* Mini map */
+.minimap{position:absolute;bottom:12px;left:12px;width:160px;height:100px;background:var(--surface);border:1px solid var(--border);border-radius:6px;z-index:20;overflow:hidden;opacity:.7}
+.minimap:hover{opacity:1}
+.minimap canvas{width:100%;height:100%}
+/* Help */
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:none;align-items:center;justify-content:center}
+.help-overlay.open{display:flex}
+.help-content{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:520px;max-height:80vh;overflow-y:auto}
+.help-content h2{margin-bottom:16px}
+.kb-row{display:flex;align-items:center;padding:4px 0;font-size:13px}
+.kb-key{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:11px;font-family:monospace;min-width:50px;text-align:center;margin-right:12px}
+.kb-desc{color:var(--text2)}
+.scrollbar::-webkit-scrollbar{width:6px}
+.scrollbar::-webkit-scrollbar-track{background:transparent}
+.scrollbar::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+/* Responsive */
+@media(max-width:768px){.sidebar{width:200px}.props-panel{width:240px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>⚡ Workflow Forge</h2>
+      <input class="sidebar-search" placeholder="Search workflows... (/)" id="sideSearch">
+    </div>
+    <div class="sidebar-list scrollbar" id="sideList"></div>
+    <div class="sidebar-actions">
+      <button onclick="newWorkflow()">+ New</button>
+      <button onclick="importJSON()" style="background:var(--surface2);color:var(--text2)">Import</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="toolbar">
+      <div class="view-tabs">
+        <div class="view-tab active" data-view="canvas" onclick="switchView('canvas')">🎨 Canvas</div>
+        <div class="view-tab" data-view="list" onclick="switchView('list')">📋 List</div>
+        <div class="view-tab" data-view="dashboard" onclick="switchView('dashboard')">📊 Dashboard</div>
+        <div class="view-tab" data-view="templates" onclick="switchView('templates')">📦 Templates</div>
+        <div class="view-tab" data-view="export" onclick="switchView('export')">💾 Export</div>
+      </div>
+      <div class="sep"></div>
+      <button class="btn" onclick="togglePalette()" id="paletteBtn">+ Add Node</button>
+      <button class="btn" onclick="autoLayout()">⊞ Layout</button>
+      <button class="btn" onclick="fitView()">⊡ Fit</button>
+      <div class="sep"></div>
+      <button class="btn" onclick="undo()">↩</button>
+      <button class="btn" onclick="redo()">↪</button>
+      <div class="sep"></div>
+      <button class="btn" onclick="exportJSON()">Export</button>
+      <button class="btn" onclick="showHelp()">?</button>
+    </div>
+    <!-- Canvas View -->
+    <div class="view active" id="view-canvas" style="position:relative;flex:1;overflow:hidden">
+      <div class="canvas-wrap" id="canvasWrap">
+        <svg class="canvas-bg" id="canvasBg"></svg>
+        <svg class="canvas-svg" id="canvasSvg"></svg>
+        <div class="canvas-nodes" id="canvasNodes"></div>
+        <!-- Palette -->
+        <div class="palette" id="palette">
+          <h3>Add Node</h3>
+          <div class="palette-item" draggable="true" data-type="trigger"><div class="dot" style="background:var(--trigger)"></div>⚡ Trigger</div>
+          <div class="palette-item" draggable="true" data-type="condition"><div class="dot" style="background:var(--condition)"></div>🔀 Condition</div>
+          <div class="palette-item" draggable="true" data-type="action"><div class="dot" style="background:var(--action)"></div>▶ Action</div>
+          <div class="palette-item" draggable="true" data-type="transform"><div class="dot" style="background:var(--transform)"></div>🔄 Transform</div>
+          <div class="palette-item" draggable="true" data-type="delay"><div class="dot" style="background:var(--delay)"></div>⏱ Delay</div>
+          <div class="palette-item" draggable="true" data-type="loop"><div class="dot" style="background:var(--loop)"></div>🔁 Loop</div>
+          <div class="palette-item" draggable="true" data-type="end"><div class="dot" style="background:var(--end)"></div>🛑 End</div>
+        </div>
+        <!-- Zoom controls -->
+        <div class="zoom-controls">
+          <button onclick="zoomBy(-.15)">−</button>
+          <span class="zoom-label" id="zoomLabel">100%</span>
+          <button onclick="zoomBy(.15)">+</button>
+          <button onclick="fitView()">⊡</button>
+        </div>
+      </div>
+    </div>
+    <!-- List View -->
+    <div class="view" id="view-list"><div class="list-view" id="listContent"></div></div>
+    <!-- Dashboard View -->
+    <div class="view" id="view-dashboard"><div class="dashboard scrollbar" id="dashContent"></div></div>
+    <!-- Templates View -->
+    <div class="view" id="view-templates"><div class="templates-grid" id="templatesContent"></div></div>
+    <!-- Export View -->
+    <div class="view" id="view-export"><div class="export-view scrollbar" id="exportContent"></div></div>
+  </div>
+  <!-- Properties Panel -->
+  <div class="props-panel" id="propsPanel">
+    <div class="props-header"><h3 id="propsTitle">Properties</h3><button class="btn-icon" onclick="closeProps()">✕</button></div>
+    <div class="props-body scrollbar" id="propsBody"></div>
+  </div>
+</div>
+<!-- Node Modal -->
+<div class="modal-overlay" id="nodeModal">
+  <div class="modal">
+    <h2 id="modalTitle">Edit Node</h2>
+    <div id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeModal()">Cancel</button>
+      <button class="save" onclick="saveModal()">Save</button>
+    </div>
+  </div>
+</div>
+<!-- Connection Modal -->
+<div class="modal-overlay" id="connModal">
+  <div class="modal">
+    <h2>Edit Connection</h2>
+    <div id="connModalBody"></div>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeConnModal()">Cancel</button>
+      <button class="save" onclick="saveConnModal()">Save</button>
+    </div>
+  </div>
+</div>
+<!-- Help -->
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-content">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="kb-row"><span class="kb-key">N</span><span class="kb-desc">New workflow</span></div>
+    <div class="kb-row"><span class="kb-key">A</span><span class="kb-desc">Toggle node palette</span></div>
+    <div class="kb-row"><span class="kb-key">L</span><span class="kb-desc">Auto-layout</span></div>
+    <div class="kb-row"><span class="kb-key">F</span><span class="kb-desc">Fit to view</span></div>
+    <div class="kb-row"><span class="kb-key">/</span><span class="kb-desc">Search workflows</span></div>
+    <div class="kb-row"><span class="kb-key">1-5</span><span class="kb-desc">Switch views</span></div>
+    <div class="kb-row"><span class="kb-key">Del</span><span class="kb-desc">Delete selected</span></div>
+    <div class="kb-row"><span class="kb-key">⌘D</span><span class="kb-desc">Duplicate selected node</span></div>
+    <div class="kb-row"><span class="kb-key">⌘Z</span><span class="kb-desc">Undo</span></div>
+    <div class="kb-row"><span class="kb-key">⌘⇧Z</span><span class="kb-desc">Redo</span></div>
+    <div class="kb-row"><span class="kb-key">E</span><span class="kb-desc">Export JSON</span></div>
+    <div class="kb-row"><span class="kb-key">I</span><span class="kb-desc">Import JSON</span></div>
+    <div class="kb-row"><span class="kb-key">+/−</span><span class="kb-desc">Zoom in/out</span></div>
+    <div class="kb-row"><span class="kb-key">0</span><span class="kb-desc">Reset zoom</span></div>
+    <div class="kb-row"><span class="kb-key">?</span><span class="kb-desc">This help</span></div>
+    <div class="kb-row"><span class="kb-key">Esc</span><span class="kb-desc">Close modals/deselect</span></div>
+    <div class="kb-row"><span class="kb-key">⌘Enter</span><span class="kb-desc">Save in modals</span></div>
+    <br>
+    <h3>Canvas Controls</h3>
+    <div class="kb-row"><span class="kb-key">Drag</span><span class="kb-desc">Move nodes</span></div>
+    <div class="kb-row"><span class="kb-key">Click port</span><span class="kb-desc">Start connection (click another port to connect)</span></div>
+    <div class="kb-row"><span class="kb-key">Dbl-click</span><span class="kb-desc">Edit node</span></div>
+    <div class="kb-row"><span class="kb-key">Scroll</span><span class="kb-desc">Zoom</span></div>
+    <div class="kb-row"><span class="kb-key">Alt+Drag</span><span class="kb-desc">Pan canvas</span></div>
+    <div style="margin-top:16px;text-align:right"><button class="btn primary" onclick="closeHelp()">Got it</button></div>
+  </div>
+</div>
+<input type="file" id="fileInput" accept=".json" style="display:none">
+<script>
+// ─── State ────────────────────────────────────────────────────────
+const LS_KEY='workflow-forge-v1';
+let state={workflows:[],activeId:null};
+let zoom=1,panX=0,panY=0;
+let selectedNodeId=null,selectedConnId=null;
+let connectingFrom=null;
+let undoStack=[],redoStack=[];
+let isDragging=false,dragNode=null,dragOffX=0,dragOffY=0;
+let isPanning=false,panStartX=0,panStartY=0,panStartPX=0,panStartPY=0;
+let tempLine=null;
+
+const NODE_TYPES={
+  trigger:{emoji:'⚡',label:'Trigger',color:'var(--trigger)',fields:['event','source','schedule']},
+  condition:{emoji:'🔀',label:'Condition',color:'var(--condition)',fields:['expression','trueLabel','falseLabel']},
+  action:{emoji:'▶',label:'Action',color:'var(--action)',fields:['service','method','payload']},
+  transform:{emoji:'🔄',label:'Transform',color:'var(--transform)',fields:['operation','input','output']},
+  delay:{emoji:'⏱',label:'Delay',color:'var(--delay)',fields:['duration','unit']},
+  loop:{emoji:'🔁',label:'Loop',color:'var(--loop)',fields:['collection','variable','limit']},
+  end:{emoji:'🛑',label:'End',color:'var(--end)',fields:['status','message']}
+};
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function save(){localStorage.setItem(LS_KEY,JSON.stringify(state))}
+function load(){try{const d=JSON.parse(localStorage.getItem(LS_KEY));if(d&&d.workflows)state=d}catch(e){}}
+
+function getWf(){return state.workflows.find(w=>w.id===state.activeId)}
+function pushUndo(){const wf=getWf();if(!wf)return;undoStack.push(JSON.stringify({nodes:wf.nodes,connections:wf.connections}));if(undoStack.length>50)undoStack.shift();redoStack=[];save()}
+function undo(){const wf=getWf();if(!wf||!undoStack.length)return;redoStack.push(JSON.stringify({nodes:wf.nodes,connections:wf.connections}));const s=JSON.parse(undoStack.pop());wf.nodes=s.nodes;wf.connections=s.connections;save();render()}
+function redo(){const wf=getWf();if(!wf||!redoStack.length)return;undoStack.push(JSON.stringify({nodes:wf.nodes,connections:wf.connections}));const s=JSON.parse(redoStack.pop());wf.nodes=s.nodes;wf.connections=s.connections;save();render()}
+
+// ─── Workflow CRUD ────────────────────────────────────────────────
+function newWorkflow(name,nodes,connections){
+  const wf={id:uid(),name:name||'Untitled Workflow',nodes:nodes||[],connections:connections||[],created:Date.now(),updated:Date.now()};
+  state.workflows.push(wf);
+  state.activeId=wf.id;
+  undoStack=[];redoStack=[];
+  save();render();
+  return wf;
+}
+function deleteWorkflow(id){
+  if(!confirm('Delete this workflow?'))return;
+  state.workflows=state.workflows.filter(w=>w.id!==id);
+  if(state.activeId===id)state.activeId=state.workflows[0]?.id||null;
+  save();render();
+}
+function selectWorkflow(id){state.activeId=id;undoStack=[];redoStack=[];selectedNodeId=null;selectedConnId=null;save();render()}
+
+// ─── Node CRUD ────────────────────────────────────────────────────
+function addNode(type,x,y,data){
+  const wf=getWf();if(!wf)return;
+  pushUndo();
+  const nd={id:uid(),type,name:NODE_TYPES[type].label,x:x||200,y:y||200,data:data||{},notes:''};
+  wf.nodes.push(nd);wf.updated=Date.now();save();render();
+  return nd;
+}
+function deleteNode(id){
+  const wf=getWf();if(!wf)return;
+  pushUndo();
+  wf.nodes=wf.nodes.filter(n=>n.id!==id);
+  wf.connections=wf.connections.filter(c=>c.from!==id&&c.to!==id);
+  if(selectedNodeId===id)selectedNodeId=null;
+  wf.updated=Date.now();save();render();
+}
+function duplicateNode(id){
+  const wf=getWf();if(!wf)return;
+  const src=wf.nodes.find(n=>n.id===id);if(!src)return;
+  pushUndo();
+  const nd={...JSON.parse(JSON.stringify(src)),id:uid(),x:src.x+30,y:src.y+30,name:src.name+' (copy)'};
+  wf.nodes.push(nd);wf.updated=Date.now();save();render();
+}
+
+// ─── Connection CRUD ──────────────────────────────────────────────
+function addConnection(from,to,label){
+  const wf=getWf();if(!wf||from===to)return;
+  if(wf.connections.find(c=>c.from===from&&c.to===to))return;
+  pushUndo();
+  wf.connections.push({id:uid(),from,to,label:label||''});
+  wf.updated=Date.now();save();render();
+}
+function deleteConnection(id){
+  const wf=getWf();if(!wf)return;
+  pushUndo();
+  wf.connections=wf.connections.filter(c=>c.id!==id);
+  if(selectedConnId===id)selectedConnId=null;
+  wf.updated=Date.now();save();render();
+}
+
+// ─── Canvas Rendering ─────────────────────────────────────────────
+function render(){
+  renderSidebar();
+  renderCanvas();
+  renderProps();
+  const v=document.querySelector('.view.active')?.id;
+  if(v==='view-list')renderList();
+  if(v==='view-dashboard')renderDashboard();
+  if(v==='view-templates')renderTemplates();
+  if(v==='view-export')renderExport();
+}
+
+function renderSidebar(){
+  const q=document.getElementById('sideSearch').value.toLowerCase();
+  const el=document.getElementById('sideList');
+  const wfs=state.workflows.filter(w=>!q||w.name.toLowerCase().includes(q));
+  el.innerHTML=wfs.map(w=>`
+    <div class="sidebar-item${w.id===state.activeId?' active':''}" onclick="selectWorkflow('${w.id}')" ondblclick="renameWorkflow('${w.id}')">
+      <span>⚡</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(w.name)}</span>
+      <span class="node-count">${w.nodes.length}</span>
+    </div>
+  `).join('');
+}
+
+function renderCanvas(){
+  const wf=getWf();
+  const wrap=document.getElementById('canvasWrap');
+  const svg=document.getElementById('canvasSvg');
+  const nodes=document.getElementById('canvasNodes');
+  const bg=document.getElementById('canvasBg');
+  if(!wf){nodes.innerHTML='<div style="text-align:center;margin-top:200px;color:var(--text3)">No workflow selected. Create one to start.</div>';svg.innerHTML='';bg.innerHTML='';return}
+
+  // Grid
+  const gs=20*zoom;
+  bg.innerHTML=`<defs><pattern id="grid" width="${gs}" height="${gs}" patternUnits="userSpaceOnUse" patternTransform="translate(${panX%gs},${panY%gs})"><line x1="${gs}" y1="0" x2="${gs}" y2="${gs}" class="grid-pattern"/><line x1="0" y1="${gs}" x2="${gs}" y2="${gs}" class="grid-pattern"/></pattern></defs><rect width="100%" height="100%" fill="url(#grid)"/>`;
+
+  // Connections
+  let svgH='';
+  wf.connections.forEach(c=>{
+    const fn=wf.nodes.find(n=>n.id===c.from);
+    const tn=wf.nodes.find(n=>n.id===c.to);
+    if(!fn||!tn)return;
+    const x1=fn.x*zoom+panX+90*zoom, y1=fn.y*zoom+panY+70*zoom;
+    const x2=tn.x*zoom+panX+90*zoom, y2=tn.y*zoom+panY;
+    const dy=Math.abs(y2-y1)/2;
+    const sel=c.id===selectedConnId;
+    const typeColor=getComputedStyle(document.documentElement).getPropertyValue('--'+fn.type)||'var(--text2)';
+    svgH+=`<path d="M${x1},${y1} C${x1},${y1+dy} ${x2},${y2-dy} ${x2},${y2}" class="connection" stroke="${sel?'var(--accent)':typeColor.trim()}" style="pointer-events:stroke;cursor:pointer" onclick="selectConn('${c.id}')" data-id="${c.id}"/>`;
+    // Arrow
+    const angle=Math.atan2(y2-(y2-dy),x2-x2);
+    svgH+=`<polygon points="${x2},${y2} ${x2-5},${y2-8} ${x2+5},${y2-8}" fill="${sel?'var(--accent)':typeColor.trim()}"/>`;
+    if(c.label){
+      const mx=(x1+x2)/2,my=(y1+y2)/2;
+      svgH+=`<text x="${mx}" y="${my-6}" class="connection-label" text-anchor="middle">${esc(c.label)}</text>`;
+    }
+  });
+  // Temp line
+  if(tempLine){
+    svgH+=`<line x1="${tempLine.x1}" y1="${tempLine.y1}" x2="${tempLine.x2}" y2="${tempLine.y2}" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6,3"/>`;
+  }
+  svg.innerHTML=svgH;
+  svg.style.pointerEvents='all';
+
+  // Nodes
+  nodes.innerHTML=wf.nodes.map(n=>{
+    const t=NODE_TYPES[n.type];
+    const sel=n.id===selectedNodeId;
+    const left=n.x*zoom+panX, top=n.y*zoom+panY;
+    let body='';
+    if(n.type==='trigger'&&n.data.event) body+=`<div class="field"><div class="field-label">Event</div><div class="field-value">${esc(n.data.event)}</div></div>`;
+    if(n.type==='trigger'&&n.data.source) body+=`<div class="field"><div class="field-label">Source</div><div class="field-value">${esc(n.data.source)}</div></div>`;
+    if(n.type==='condition'&&n.data.expression) body+=`<div class="field"><div class="field-label">If</div><div class="field-value">${esc(n.data.expression)}</div></div>`;
+    if(n.type==='action'&&n.data.service) body+=`<div class="field"><div class="field-label">Service</div><div class="field-value">${esc(n.data.service)}</div></div>`;
+    if(n.type==='action'&&n.data.method) body+=`<div class="field"><div class="field-label">Method</div><div class="field-value">${esc(n.data.method)}</div></div>`;
+    if(n.type==='transform'&&n.data.operation) body+=`<div class="field"><div class="field-label">Op</div><div class="field-value">${esc(n.data.operation)}</div></div>`;
+    if(n.type==='delay'&&n.data.duration) body+=`<div class="field"><div class="field-label">Wait</div><div class="field-value">${esc(n.data.duration)} ${esc(n.data.unit||'sec')}</div></div>`;
+    if(n.type==='loop'&&n.data.collection) body+=`<div class="field"><div class="field-label">Each</div><div class="field-value">${esc(n.data.collection)}</div></div>`;
+    if(n.type==='end'&&n.data.status) body+=`<div class="field"><div class="field-label">Status</div><div class="field-value">${esc(n.data.status)}</div></div>`;
+    return `
+      <div class="wf-node${sel?' selected':''}" data-type="${n.type}" data-id="${n.id}" style="left:${left}px;top:${top}px;transform:scale(${zoom});transform-origin:top left" onmousedown="startDrag(event,'${n.id}')" ondblclick="editNode('${n.id}')">
+        <div class="node-ports"><div class="port port-in" data-node="${n.id}" data-dir="in" onmousedown="startConnect(event,'${n.id}','in')"></div></div>
+        <div class="node-header"><span class="node-type-badge">${t.emoji}</span>${esc(n.name)}</div>
+        ${body?`<div class="node-body">${body}</div>`:''}
+        <div class="node-ports"><div class="port port-out" data-node="${n.id}" data-dir="out" onmousedown="startConnect(event,'${n.id}','out')"></div></div>
+      </div>`;
+  }).join('');
+}
+
+function renderProps(){
+  const panel=document.getElementById('propsPanel');
+  const body=document.getElementById('propsBody');
+  const title=document.getElementById('propsTitle');
+  const wf=getWf();
+  if(!wf){panel.classList.remove('open');return}
+
+  if(selectedNodeId){
+    const n=wf.nodes.find(nd=>nd.id===selectedNodeId);
+    if(!n){panel.classList.remove('open');return}
+    panel.classList.add('open');
+    title.textContent=NODE_TYPES[n.type].emoji+' '+n.name;
+    const t=NODE_TYPES[n.type];
+    let h=`<div class="props-field"><label>Name</label><input value="${esc(n.name)}" onchange="updateNodeProp('${n.id}','name',this.value)"></div>`;
+    h+=`<div class="props-field"><label>Type</label><span class="type-badge" data-type="${n.type}">${t.label}</span></div>`;
+    t.fields.forEach(f=>{
+      const v=n.data[f]||'';
+      h+=`<div class="props-field"><label>${f}</label><input value="${esc(v)}" onchange="updateNodeData('${n.id}','${f}',this.value)"></div>`;
+    });
+    h+=`<div class="props-field"><label>Notes</label><textarea onchange="updateNodeProp('${n.id}','notes',this.value)">${esc(n.notes||'')}</textarea></div>`;
+    // Connections
+    const conns=wf.connections.filter(c=>c.from===n.id||c.to===n.id);
+    if(conns.length){
+      h+=`<label style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-top:12px">Connections (${conns.length})</label>`;
+      conns.forEach(c=>{
+        const other=c.from===n.id?wf.nodes.find(nd=>nd.id===c.to):wf.nodes.find(nd=>nd.id===c.from);
+        const dir=c.from===n.id?'→':'←';
+        h+=`<div style="font-size:12px;padding:4px 0;color:var(--text2)">${dir} ${esc(other?.name||'?')} ${c.label?'('+esc(c.label)+')':''}</div>`;
+      });
+    }
+    h+=`<div style="margin-top:16px;display:flex;gap:6px"><button class="btn" onclick="duplicateNode('${n.id}')">⎘ Duplicate</button><button class="btn" style="color:var(--red)" onclick="deleteNode('${n.id}')">🗑 Delete</button></div>`;
+    body.innerHTML=h;
+  } else if(selectedConnId){
+    const c=wf.connections.find(cn=>cn.id===selectedConnId);
+    if(!c){panel.classList.remove('open');return}
+    panel.classList.add('open');
+    const fn=wf.nodes.find(n=>n.id===c.from);
+    const tn=wf.nodes.find(n=>n.id===c.to);
+    title.textContent='Connection';
+    body.innerHTML=`
+      <div class="props-field"><label>From</label><div style="font-size:13px">${esc(fn?.name||'?')}</div></div>
+      <div class="props-field"><label>To</label><div style="font-size:13px">${esc(tn?.name||'?')}</div></div>
+      <div class="props-field"><label>Label</label><input value="${esc(c.label||'')}" onchange="updateConnLabel('${c.id}',this.value)"></div>
+      <div style="margin-top:16px"><button class="btn" style="color:var(--red)" onclick="deleteConnection('${c.id}')">🗑 Delete</button></div>
+    `;
+  } else {
+    panel.classList.remove('open');
+  }
+}
+
+function updateNodeProp(id,prop,val){const wf=getWf();if(!wf)return;pushUndo();const n=wf.nodes.find(nd=>nd.id===id);if(n){n[prop]=val;wf.updated=Date.now();save();render()}}
+function updateNodeData(id,key,val){const wf=getWf();if(!wf)return;pushUndo();const n=wf.nodes.find(nd=>nd.id===id);if(n){n.data[key]=val;wf.updated=Date.now();save();render()}}
+function updateConnLabel(id,val){const wf=getWf();if(!wf)return;pushUndo();const c=wf.connections.find(cn=>cn.id===id);if(c){c.label=val;wf.updated=Date.now();save();render()}}
+
+// ─── Drag & Drop Nodes ───────────────────────────────────────────
+function startDrag(e,id){
+  if(e.target.classList.contains('port'))return;
+  e.preventDefault();e.stopPropagation();
+  selectedNodeId=id;selectedConnId=null;
+  const wf=getWf();if(!wf)return;
+  const n=wf.nodes.find(nd=>nd.id===id);if(!n)return;
+  isDragging=true;dragNode=n;
+  dragOffX=e.clientX-n.x*zoom-panX;
+  dragOffY=e.clientY-n.y*zoom-panY;
+  render();
+}
+function onMouseMove(e){
+  if(isDragging&&dragNode){
+    dragNode.x=(e.clientX-dragOffX-panX)/zoom;
+    dragNode.y=(e.clientY-dragOffY-panY)/zoom;
+    // Snap
+    dragNode.x=Math.round(dragNode.x/20)*20;
+    dragNode.y=Math.round(dragNode.y/20)*20;
+    renderCanvas();
+    save();
+  }
+  if(isPanning){
+    panX=panStartPX+(e.clientX-panStartX);
+    panY=panStartPY+(e.clientY-panStartY);
+    renderCanvas();
+  }
+  if(connectingFrom){
+    const rect=document.getElementById('canvasWrap').getBoundingClientRect();
+    tempLine.x2=e.clientX-rect.left;
+    tempLine.y2=e.clientY-rect.top;
+    renderCanvas();
+  }
+}
+function onMouseUp(e){
+  if(isDragging){isDragging=false;dragNode=null;save()}
+  if(isPanning){isPanning=false}
+  if(connectingFrom){
+    // Check if we dropped on a port
+    const el=document.elementFromPoint(e.clientX,e.clientY);
+    if(el&&el.classList.contains('port')){
+      const toId=el.dataset.node;
+      if(toId!==connectingFrom){
+        addConnection(connectingFrom,toId);
+      }
+    }
+    connectingFrom=null;tempLine=null;renderCanvas();
+  }
+}
+
+// ─── Connection Creation ──────────────────────────────────────────
+function startConnect(e,nodeId,dir){
+  e.preventDefault();e.stopPropagation();
+  const wf=getWf();if(!wf)return;
+  const n=wf.nodes.find(nd=>nd.id===nodeId);if(!n)return;
+  connectingFrom=nodeId;
+  const rect=document.getElementById('canvasWrap').getBoundingClientRect();
+  const nx=n.x*zoom+panX+90*zoom;
+  const ny=dir==='out'?n.y*zoom+panY+70*zoom:n.y*zoom+panY;
+  tempLine={x1:nx,y1:ny,x2:e.clientX-rect.left,y2:e.clientY-rect.top};
+}
+
+// ─── Canvas Pan/Zoom ──────────────────────────────────────────────
+function onCanvasMouseDown(e){
+  if(e.target.id==='canvasSvg'||e.target.id==='canvasBg'||e.target.tagName==='rect'||e.target.tagName==='line'&&e.target.classList.contains('grid-pattern')){
+    if(e.altKey||e.button===1){
+      isPanning=true;panStartX=e.clientX;panStartY=e.clientY;panStartPX=panX;panStartPY=panY;
+    } else {
+      selectedNodeId=null;selectedConnId=null;render();
+    }
+  }
+}
+function onWheel(e){
+  e.preventDefault();
+  const rect=document.getElementById('canvasWrap').getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  const oldZ=zoom;
+  zoom=Math.max(0.2,Math.min(3,zoom-e.deltaY*0.001));
+  panX=mx-(mx-panX)*zoom/oldZ;
+  panY=my-(my-panY)*zoom/oldZ;
+  document.getElementById('zoomLabel').textContent=Math.round(zoom*100)+'%';
+  renderCanvas();
+}
+function zoomBy(d){
+  const rect=document.getElementById('canvasWrap').getBoundingClientRect();
+  const mx=rect.width/2,my=rect.height/2;
+  const oldZ=zoom;
+  zoom=Math.max(0.2,Math.min(3,zoom+d));
+  panX=mx-(mx-panX)*zoom/oldZ;
+  panY=my-(my-panY)*zoom/oldZ;
+  document.getElementById('zoomLabel').textContent=Math.round(zoom*100)+'%';
+  renderCanvas();
+}
+function fitView(){
+  const wf=getWf();if(!wf||!wf.nodes.length)return;
+  const rect=document.getElementById('canvasWrap').getBoundingClientRect();
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  wf.nodes.forEach(n=>{minX=Math.min(minX,n.x);minY=Math.min(minY,n.y);maxX=Math.max(maxX,n.x+180);maxY=Math.max(maxY,n.y+80)});
+  const w=maxX-minX+100,h=maxY-minY+100;
+  zoom=Math.min(rect.width/w,rect.height/h,1.5);
+  panX=(rect.width-w*zoom)/2-minX*zoom;
+  panY=(rect.height-h*zoom)/2-minY*zoom;
+  document.getElementById('zoomLabel').textContent=Math.round(zoom*100)+'%';
+  renderCanvas();
+}
+
+// ─── Auto Layout ──────────────────────────────────────────────────
+function autoLayout(){
+  const wf=getWf();if(!wf||!wf.nodes.length)return;
+  pushUndo();
+  // BFS from triggers/unconnected
+  const incoming=new Map();
+  wf.nodes.forEach(n=>incoming.set(n.id,[]));
+  wf.connections.forEach(c=>{if(incoming.has(c.to))incoming.get(c.to).push(c.from)});
+  const roots=wf.nodes.filter(n=>incoming.get(n.id).length===0);
+  if(!roots.length)roots.push(wf.nodes[0]);
+  const levels=new Map();
+  const queue=[...roots.map(r=>({id:r.id,level:0}))];
+  const visited=new Set();
+  while(queue.length){
+    const{id,level}=queue.shift();
+    if(visited.has(id))continue;
+    visited.add(id);
+    levels.set(id,level);
+    wf.connections.filter(c=>c.from===id).forEach(c=>{
+      if(!visited.has(c.to))queue.push({id:c.to,level:level+1});
+    });
+  }
+  // Unvisited
+  wf.nodes.forEach(n=>{if(!visited.has(n.id))levels.set(n.id,(levels.size?Math.max(...levels.values())+1:0))});
+  // Position
+  const byLevel=new Map();
+  wf.nodes.forEach(n=>{const l=levels.get(n.id)||0;if(!byLevel.has(l))byLevel.set(l,[]);byLevel.get(l).push(n)});
+  const gapX=280,gapY=140;
+  byLevel.forEach((nodes,level)=>{
+    const startY=-(nodes.length-1)*gapY/2+300;
+    nodes.forEach((n,i)=>{n.x=100+level*gapX;n.y=startY+i*gapY});
+  });
+  wf.updated=Date.now();save();render();fitView();
+}
+
+// ─── Node Edit Modal ──────────────────────────────────────────────
+let editingNodeId=null;
+function editNode(id){
+  const wf=getWf();if(!wf)return;
+  const n=wf.nodes.find(nd=>nd.id===id);if(!n)return;
+  editingNodeId=id;
+  const t=NODE_TYPES[n.type];
+  document.getElementById('modalTitle').textContent=t.emoji+' Edit '+t.label;
+  let h=`<div class="props-field"><label>Name</label><input id="mName" value="${esc(n.name)}"></div>`;
+  t.fields.forEach(f=>{
+    const v=n.data[f]||'';
+    if(f==='payload'||f==='expression'){
+      h+=`<div class="props-field"><label>${f}</label><textarea id="m_${f}">${esc(v)}</textarea></div>`;
+    } else if(f==='unit'){
+      h+=`<div class="props-field"><label>${f}</label><select id="m_${f}"><option${v==='sec'?' selected':''}>sec</option><option${v==='min'?' selected':''}>min</option><option${v==='hr'?' selected':''}>hr</option><option${v==='days'?' selected':''}>days</option></select></div>`;
+    } else if(f==='status'){
+      h+=`<div class="props-field"><label>${f}</label><select id="m_${f}"><option${v==='success'?' selected':''}>success</option><option${v==='error'?' selected':''}>error</option><option${v==='cancelled'?' selected':''}>cancelled</option></select></div>`;
+    } else {
+      h+=`<div class="props-field"><label>${f}</label><input id="m_${f}" value="${esc(v)}"></div>`;
+    }
+  });
+  h+=`<div class="props-field"><label>Notes</label><textarea id="mNotes">${esc(n.notes||'')}</textarea></div>`;
+  document.getElementById('modalBody').innerHTML=h;
+  document.getElementById('nodeModal').classList.add('open');
+  document.getElementById('mName').focus();
+}
+function saveModal(){
+  const wf=getWf();if(!wf||!editingNodeId)return;
+  const n=wf.nodes.find(nd=>nd.id===editingNodeId);if(!n)return;
+  pushUndo();
+  n.name=document.getElementById('mName').value||n.name;
+  n.notes=document.getElementById('mNotes').value;
+  const t=NODE_TYPES[n.type];
+  t.fields.forEach(f=>{const el=document.getElementById('m_'+f);if(el)n.data[f]=el.value});
+  wf.updated=Date.now();save();closeModal();render();
+}
+function closeModal(){document.getElementById('nodeModal').classList.remove('open');editingNodeId=null}
+
+// ─── Connection Edit ──────────────────────────────────────────────
+function selectConn(id){selectedConnId=id;selectedNodeId=null;render()}
+function editConn(id){
+  const wf=getWf();if(!wf)return;
+  const c=wf.connections.find(cn=>cn.id===id);if(!c)return;
+  document.getElementById('connModalBody').innerHTML=`<div class="props-field"><label>Label</label><input id="cLabel" value="${esc(c.label||'')}"></div>`;
+  document.getElementById('connModal').classList.add('open');
+  document.getElementById('connModal').dataset.id=id;
+}
+function saveConnModal(){
+  const id=document.getElementById('connModal').dataset.id;
+  const wf=getWf();if(!wf)return;
+  pushUndo();
+  const c=wf.connections.find(cn=>cn.id===id);
+  if(c)c.label=document.getElementById('cLabel').value;
+  wf.updated=Date.now();save();closeConnModal();render();
+}
+function closeConnModal(){document.getElementById('connModal').classList.remove('open')}
+
+// ─── View Switch ──────────────────────────────────────────────────
+function switchView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.view-tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v)?.classList.add('active');
+  document.querySelector(`.view-tab[data-view="${v}"]`)?.classList.add('active');
+  render();
+}
+
+// ─── List View ────────────────────────────────────────────────────
+function renderList(){
+  const wf=getWf();
+  if(!wf){document.getElementById('listContent').innerHTML='<p style="padding:20px;color:var(--text3)">No workflow selected</p>';return}
+  let h=`<h2 style="margin-bottom:16px">${esc(wf.name)} — Nodes (${wf.nodes.length})</h2>`;
+  h+=`<table class="list-table"><thead><tr><th>Name</th><th>Type</th><th>Details</th><th>Connections</th><th></th></tr></thead><tbody>`;
+  wf.nodes.forEach(n=>{
+    const t=NODE_TYPES[n.type];
+    const conns=wf.connections.filter(c=>c.from===n.id||c.to===n.id).length;
+    let detail=Object.entries(n.data).filter(([k,v])=>v).map(([k,v])=>`${k}: ${v}`).join(', ');
+    h+=`<tr><td>${t.emoji} ${esc(n.name)}</td><td><span class="type-badge" data-type="${n.type}">${t.label}</span></td><td style="color:var(--text2);font-size:12px">${esc(detail)||'—'}</td><td>${conns}</td><td><button class="btn-icon" onclick="editNode('${n.id}');switchView('canvas')">✏️</button><button class="btn-icon" onclick="deleteNode('${n.id}')" style="color:var(--red)">🗑</button></td></tr>`;
+  });
+  h+=`</tbody></table>`;
+  if(wf.connections.length){
+    h+=`<h2 style="margin:24px 0 16px">Connections (${wf.connections.length})</h2>`;
+    h+=`<table class="list-table"><thead><tr><th>From</th><th>To</th><th>Label</th><th></th></tr></thead><tbody>`;
+    wf.connections.forEach(c=>{
+      const fn=wf.nodes.find(n=>n.id===c.from);
+      const tn=wf.nodes.find(n=>n.id===c.to);
+      h+=`<tr><td>${esc(fn?.name||'?')}</td><td>${esc(tn?.name||'?')}</td><td>${esc(c.label||'—')}</td><td><button class="btn-icon" onclick="deleteConnection('${c.id}')" style="color:var(--red)">🗑</button></td></tr>`;
+    });
+    h+=`</tbody></table>`;
+  }
+  document.getElementById('listContent').innerHTML=h;
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────
+function renderDashboard(){
+  const el=document.getElementById('dashContent');
+  const allNodes=state.workflows.flatMap(w=>w.nodes);
+  const allConns=state.workflows.flatMap(w=>w.connections);
+  const typeCounts={};
+  Object.keys(NODE_TYPES).forEach(t=>typeCounts[t]=0);
+  allNodes.forEach(n=>typeCounts[n.type]=(typeCounts[n.type]||0)+1);
+  const maxTC=Math.max(1,...Object.values(typeCounts));
+
+  let h=`<h2 style="margin-bottom:16px">Dashboard</h2>`;
+  h+=`<div class="stat-grid">
+    <div class="stat-card"><div class="stat-label">Workflows</div><div class="stat-value">${state.workflows.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Total Nodes</div><div class="stat-value">${allNodes.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Total Connections</div><div class="stat-value">${allConns.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Triggers</div><div class="stat-value" style="color:var(--trigger)">${typeCounts.trigger||0}</div></div>
+    <div class="stat-card"><div class="stat-label">Actions</div><div class="stat-value" style="color:var(--action)">${typeCounts.action||0}</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Nodes/Workflow</div><div class="stat-value">${state.workflows.length?(allNodes.length/state.workflows.length).toFixed(1):0}</div></div>
+  </div>`;
+
+  h+=`<div class="chart-section"><h3>Node Types</h3>`;
+  Object.entries(typeCounts).forEach(([type,count])=>{
+    const t=NODE_TYPES[type];
+    const pct=maxTC?(count/maxTC*100):0;
+    h+=`<div class="bar-row"><span class="bar-label">${t.emoji} ${t.label}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--${type})">${count}</div></div></div>`;
+  });
+  h+=`</div>`;
+
+  h+=`<div class="chart-section"><h3>Workflows</h3>`;
+  state.workflows.forEach(w=>{
+    const maxN=Math.max(1,...state.workflows.map(x=>x.nodes.length));
+    const pct=maxN?(w.nodes.length/maxN*100):0;
+    h+=`<div class="bar-row"><span class="bar-label" style="width:160px">${esc(w.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--accent)">${w.nodes.length} nodes</div></div></div>`;
+  });
+  h+=`</div>`;
+
+  el.innerHTML=h;
+}
+
+// ─── Templates ────────────────────────────────────────────────────
+const TEMPLATES=[
+  {name:'User Signup → Welcome Email',desc:'New user registers, validate email, send welcome sequence, create in CRM, notify sales team.',nodes:[
+    {type:'trigger',name:'New Signup',x:100,y:200,data:{event:'user.created',source:'Auth Service'}},
+    {type:'condition',name:'Email Valid?',x:400,y:200,data:{expression:'email.includes("@") && !disposable'}},
+    {type:'action',name:'Send Welcome Email',x:700,y:100,data:{service:'Resend',method:'POST /emails',payload:'welcome-template'}},
+    {type:'action',name:'Create CRM Contact',x:700,y:300,data:{service:'HubSpot',method:'POST /contacts'}},
+    {type:'delay',name:'Wait 3 days',x:1000,y:100,data:{duration:'3',unit:'days'}},
+    {type:'action',name:'Send Tips Email',x:1300,y:100,data:{service:'Resend',method:'POST /emails',payload:'tips-template'}},
+    {type:'action',name:'Flag Bad Email',x:400,y:400,data:{service:'Database',method:'UPDATE users',payload:'SET flagged=true'}},
+    {type:'end',name:'Done',x:1600,y:200,data:{status:'success'}}
+  ],connections:[
+    {from:0,to:1},{from:1,to:2,label:'Yes'},{from:1,to:6,label:'No'},{from:1,to:3,label:'Yes'},{from:2,to:4},{from:4,to:5},{from:5,to:7}
+  ]},
+  {name:'Stripe Payment → Fulfillment',desc:'Payment received, verify amount, update subscription, provision access, send receipt.',nodes:[
+    {type:'trigger',name:'Payment Received',x:100,y:200,data:{event:'checkout.session.completed',source:'Stripe Webhook'}},
+    {type:'transform',name:'Extract Data',x:400,y:200,data:{operation:'Parse event payload',input:'event.data.object',output:'customer, amount, plan'}},
+    {type:'condition',name:'Plan Type?',x:700,y:200,data:{expression:'plan === "pro" || plan === "team"'}},
+    {type:'action',name:'Activate Pro',x:1000,y:100,data:{service:'Supabase',method:'UPDATE subscriptions',payload:'plan=pro, active=true'}},
+    {type:'action',name:'Activate Team',x:1000,y:300,data:{service:'Supabase',method:'UPDATE subscriptions',payload:'plan=team, active=true, seats=5'}},
+    {type:'action',name:'Send Receipt',x:1300,y:200,data:{service:'Resend',method:'POST /emails',payload:'receipt-template'}},
+    {type:'action',name:'Notify Slack',x:1300,y:400,data:{service:'Slack',method:'POST /messages',payload:'#revenue channel'}},
+    {type:'end',name:'Complete',x:1600,y:200,data:{status:'success'}}
+  ],connections:[
+    {from:0,to:1},{from:1,to:2},{from:2,to:3,label:'Pro'},{from:2,to:4,label:'Team'},{from:3,to:5},{from:4,to:5},{from:5,to:6},{from:5,to:7}
+  ]},
+  {name:'GitHub PR → Deploy',desc:'PR merged to main, run tests, build Docker image, deploy to staging, run smoke tests, promote to production.',nodes:[
+    {type:'trigger',name:'PR Merged',x:100,y:200,data:{event:'pull_request.closed',source:'GitHub Webhook'}},
+    {type:'condition',name:'Merged to main?',x:400,y:200,data:{expression:'action === "closed" && merged && base === "main"'}},
+    {type:'action',name:'Run Tests',x:700,y:200,data:{service:'GitHub Actions',method:'workflow_dispatch',payload:'test.yml'}},
+    {type:'condition',name:'Tests Pass?',x:1000,y:200,data:{expression:'conclusion === "success"'}},
+    {type:'action',name:'Build & Push Image',x:1300,y:100,data:{service:'Docker',method:'build + push',payload:'ghcr.io/repo:sha'}},
+    {type:'action',name:'Deploy Staging',x:1600,y:100,data:{service:'Vercel',method:'deploy --env staging'}},
+    {type:'delay',name:'Wait 5 min',x:1900,y:100,data:{duration:'5',unit:'min'}},
+    {type:'action',name:'Smoke Tests',x:2200,y:100,data:{service:'Playwright',method:'npx playwright test'}},
+    {type:'action',name:'Deploy Prod',x:2500,y:100,data:{service:'Vercel',method:'deploy --prod'}},
+    {type:'action',name:'Notify Failure',x:1000,y:400,data:{service:'Slack',method:'POST /messages',payload:'#alerts — tests failed'}},
+    {type:'end',name:'Done',x:2800,y:200,data:{status:'success'}}
+  ],connections:[
+    {from:0,to:1},{from:1,to:2,label:'Yes'},{from:2,to:3},{from:3,to:4,label:'Pass'},{from:3,to:9,label:'Fail'},{from:4,to:5},{from:5,to:6},{from:6,to:7},{from:7,to:8},{from:8,to:10}
+  ]},
+  {name:'Customer Churn Prevention',desc:'Detect low engagement, trigger re-engagement sequence with escalation path.',nodes:[
+    {type:'trigger',name:'Weekly Cron',x:100,y:200,data:{event:'cron',source:'Every Monday 9am',schedule:'0 9 * * 1'}},
+    {type:'action',name:'Query Inactive Users',x:400,y:200,data:{service:'Supabase',method:'SELECT users',payload:'WHERE last_login < 14 days ago'}},
+    {type:'loop',name:'For Each User',x:700,y:200,data:{collection:'inactive_users',variable:'user'}},
+    {type:'condition',name:'Paying Customer?',x:1000,y:200,data:{expression:'user.plan !== "free"'}},
+    {type:'action',name:'Send Win-Back Email',x:1300,y:100,data:{service:'Resend',method:'POST /emails',payload:'win-back-template'}},
+    {type:'action',name:'Alert CSM in Slack',x:1300,y:300,data:{service:'Slack',method:'POST /messages',payload:'#customer-success'}},
+    {type:'delay',name:'Wait 7 days',x:1600,y:200,data:{duration:'7',unit:'days'}},
+    {type:'condition',name:'Re-engaged?',x:1900,y:200,data:{expression:'user.last_login > 7 days ago'}},
+    {type:'action',name:'Send Offer',x:2200,y:300,data:{service:'Resend',method:'POST /emails',payload:'20% discount offer'}},
+    {type:'end',name:'Saved',x:2200,y:100,data:{status:'success',message:'User re-engaged'}},
+    {type:'end',name:'Lost',x:2500,y:300,data:{status:'error',message:'User churned'}}
+  ],connections:[
+    {from:0,to:1},{from:1,to:2},{from:2,to:3},{from:3,to:4,label:'Yes'},{from:3,to:5,label:'Yes (paid)'},{from:4,to:6},{from:6,to:7},{from:7,to:9,label:'Yes'},{from:7,to:8,label:'No'}
+  ]},
+  {name:'Content Publishing Pipeline',desc:'Draft approved, optimize images, schedule social posts, update newsletter, track analytics.',nodes:[
+    {type:'trigger',name:'Draft Approved',x:100,y:200,data:{event:'content.approved',source:'CMS Webhook'}},
+    {type:'transform',name:'Extract Metadata',x:400,y:200,data:{operation:'Parse frontmatter',input:'post.content',output:'title, excerpt, tags, image'}},
+    {type:'action',name:'Optimize Images',x:700,y:100,data:{service:'Cloudflare',method:'POST /images',payload:'webp, resize to 1200px'}},
+    {type:'action',name:'Publish Post',x:700,y:300,data:{service:'Next.js',method:'POST /api/revalidate',payload:'slug path'}},
+    {type:'action',name:'Tweet Thread',x:1000,y:100,data:{service:'Twitter API',method:'POST /tweets',payload:'thread from excerpt'}},
+    {type:'action',name:'LinkedIn Post',x:1000,y:300,data:{service:'LinkedIn API',method:'POST /shares',payload:'formatted post'}},
+    {type:'delay',name:'Wait 2 hours',x:1300,y:200,data:{duration:'2',unit:'hr'}},
+    {type:'action',name:'Add to Newsletter',x:1600,y:200,data:{service:'ConvertKit',method:'POST /broadcasts',payload:'weekly digest'}},
+    {type:'end',name:'Published',x:1900,y:200,data:{status:'success'}}
+  ],connections:[
+    {from:0,to:1},{from:1,to:2},{from:1,to:3},{from:2,to:4},{from:3,to:5},{from:4,to:6},{from:5,to:6},{from:6,to:7},{from:7,to:8}
+  ]},
+  {name:'UTMStamp Click Tracking Pipeline',desc:'Track click events from email signatures, process analytics, alert on anomalies, generate daily reports.',nodes:[
+    {type:'trigger',name:'Click Event',x:100,y:200,data:{event:'signature.click',source:'UTMStamp Redirect'}},
+    {type:'transform',name:'Parse UTM Params',x:400,y:200,data:{operation:'Extract UTM fields',input:'url.searchParams',output:'source, medium, campaign, content'}},
+    {type:'action',name:'Log to ClickHouse',x:700,y:200,data:{service:'ClickHouse',method:'INSERT click_events'}},
+    {type:'action',name:'Update Dashboard',x:1000,y:100,data:{service:'Supabase Realtime',method:'broadcast',payload:'dashboard channel'}},
+    {type:'condition',name:'Anomaly Detected?',x:1000,y:300,data:{expression:'clicks_per_min > threshold * 3'}},
+    {type:'action',name:'Alert Slack',x:1300,y:400,data:{service:'Slack',method:'POST /messages',payload:'#utm-alerts — spike detected'}},
+    {type:'delay',name:'Batch 24h',x:1300,y:100,data:{duration:'24',unit:'hr'}},
+    {type:'action',name:'Generate Report',x:1600,y:100,data:{service:'Report Engine',method:'generate',payload:'daily-click-summary'}},
+    {type:'action',name:'Email Report',x:1900,y:100,data:{service:'Resend',method:'POST /emails',payload:'daily-report-template'}},
+    {type:'end',name:'Done',x:2200,y:200,data:{status:'success'}}
+  ],connections:[
+    {from:0,to:1},{from:1,to:2},{from:2,to:3},{from:2,to:4},{from:4,to:5,label:'Yes'},{from:3,to:6},{from:6,to:7},{from:7,to:8},{from:8,to:9}
+  ]}
+];
+
+function renderTemplates(){
+  const el=document.getElementById('templatesContent');
+  el.innerHTML=TEMPLATES.map((t,i)=>`
+    <div class="template-card" onclick="loadTemplate(${i})">
+      <h3>${esc(t.name)}</h3>
+      <div class="desc">${esc(t.desc)}</div>
+      <div class="meta"><span>📦 ${t.nodes.length} nodes</span><span>🔗 ${t.connections.length} connections</span></div>
+    </div>
+  `).join('');
+}
+
+function loadTemplate(idx){
+  const t=TEMPLATES[idx];if(!t)return;
+  const nodes=t.nodes.map(n=>({...n,id:uid(),data:{...n.data},notes:''}));
+  const conns=t.connections.map(c=>({id:uid(),from:nodes[c.from].id,to:nodes[c.to].id,label:c.label||''}));
+  newWorkflow(t.name,nodes,conns);
+  switchView('canvas');
+  setTimeout(()=>fitView(),100);
+}
+
+// ─── Export ────────────────────────────────────────────────────────
+let exportFormat='json';
+function renderExport(){
+  const wf=getWf();
+  const el=document.getElementById('exportContent');
+  if(!wf){el.innerHTML='<p style="color:var(--text3)">No workflow selected</p>';return}
+  let h=`<h2 style="margin-bottom:16px">Export: ${esc(wf.name)}</h2>`;
+  h+=`<div class="export-tabs">
+    <div class="export-tab${exportFormat==='json'?' active':''}" onclick="exportFormat='json';renderExport()">JSON</div>
+    <div class="export-tab${exportFormat==='mermaid'?' active':''}" onclick="exportFormat='mermaid';renderExport()">Mermaid</div>
+    <div class="export-tab${exportFormat==='yaml'?' active':''}" onclick="exportFormat='yaml';renderExport()">YAML Spec</div>
+    <div class="export-tab${exportFormat==='markdown'?' active':''}" onclick="exportFormat='markdown';renderExport()">Markdown</div>
+    <div class="export-tab${exportFormat==='n8n'?' active':''}" onclick="exportFormat='n8n';renderExport()">n8n-style</div>
+  </div>`;
+
+  let code='';
+  if(exportFormat==='json'){
+    code=JSON.stringify(wf,null,2);
+  } else if(exportFormat==='mermaid'){
+    code='graph TD\n';
+    wf.nodes.forEach(n=>{
+      const shape=n.type==='condition'?`{${n.name}}`:n.type==='trigger'?`([${n.name}])`:n.type==='end'?`((${n.name}))`:`[${n.name}]`;
+      code+=`  ${n.id}${shape}\n`;
+    });
+    wf.connections.forEach(c=>{
+      code+=c.label?`  ${c.from} -->|${c.label}| ${c.to}\n`:`  ${c.from} --> ${c.to}\n`;
+    });
+  } else if(exportFormat==='yaml'){
+    code=`name: ${wf.name}\nversion: "1.0"\ncreated: ${new Date(wf.created).toISOString()}\n\nnodes:\n`;
+    wf.nodes.forEach(n=>{
+      code+=`  - id: ${n.id}\n    type: ${n.type}\n    name: "${n.name}"\n`;
+      Object.entries(n.data).forEach(([k,v])=>{if(v)code+=`    ${k}: "${v}"\n`});
+    });
+    code+=`\nconnections:\n`;
+    wf.connections.forEach(c=>{
+      code+=`  - from: ${c.from}\n    to: ${c.to}\n`;
+      if(c.label)code+=`    label: "${c.label}"\n`;
+    });
+  } else if(exportFormat==='markdown'){
+    code=`# ${wf.name}\n\n## Nodes\n\n`;
+    code+=`| # | Name | Type | Details |\n|---|------|------|--------|\n`;
+    wf.nodes.forEach((n,i)=>{
+      const t=NODE_TYPES[n.type];
+      const detail=Object.entries(n.data).filter(([k,v])=>v).map(([k,v])=>`${k}: ${v}`).join(', ');
+      code+=`| ${i+1} | ${t.emoji} ${n.name} | ${t.label} | ${detail||'—'} |\n`;
+    });
+    code+=`\n## Flow\n\n`;
+    wf.connections.forEach(c=>{
+      const fn=wf.nodes.find(n=>n.id===c.from);
+      const tn=wf.nodes.find(n=>n.id===c.to);
+      code+=`- ${fn?.name||'?'} → ${tn?.name||'?'}${c.label?' ('+c.label+')':''}\n`;
+    });
+  } else if(exportFormat==='n8n'){
+    const n8nNodes=wf.nodes.map((n,i)=>({
+      id:n.id,name:n.name,type:`n8n-nodes-base.${n.type==='trigger'?'webhook':n.type==='condition'?'if':n.type==='action'?'httpRequest':n.type==='transform'?'set':n.type==='delay'?'wait':n.type==='loop'?'splitInBatches':'noOp'}`,
+      position:[n.x,n.y],
+      parameters:n.data
+    }));
+    const n8nConns={};
+    wf.connections.forEach(c=>{
+      if(!n8nConns[c.from])n8nConns[c.from]={main:[[]]};
+      n8nConns[c.from].main[0].push({node:c.to,type:'main',index:0});
+    });
+    code=JSON.stringify({name:wf.name,nodes:n8nNodes,connections:n8nConns},null,2);
+  }
+
+  h+=`<div class="code-block"><button class="copy-btn" onclick="copyCode()">Copy</button><pre id="exportCode">${esc(code)}</pre></div>`;
+  h+=`<div style="margin-top:12px;display:flex;gap:8px">
+    <button class="btn primary" onclick="downloadExport()">Download ${exportFormat.toUpperCase()}</button>
+  </div>`;
+  el.innerHTML=h;
+}
+
+function copyCode(){const t=document.getElementById('exportCode').textContent;navigator.clipboard.writeText(t)}
+function downloadExport(){
+  const wf=getWf();if(!wf)return;
+  const code=document.getElementById('exportCode').textContent;
+  const ext=exportFormat==='mermaid'?'mmd':exportFormat==='yaml'?'yaml':exportFormat==='markdown'?'md':'json';
+  const blob=new Blob([code],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${wf.name.replace(/\s+/g,'-').toLowerCase()}.${ext}`;a.click();
+}
+
+// ─── Import/Export JSON ───────────────────────────────────────────
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='workflow-forge-backup.json';a.click();
+}
+function importJSON(){document.getElementById('fileInput').click()}
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(d.workflows){
+        d.workflows.forEach(w=>{
+          if(!state.workflows.find(x=>x.id===w.id))state.workflows.push(w);
+        });
+      } else if(d.nodes){
+        // Single workflow
+        state.workflows.push(d);
+      }
+      if(!state.activeId&&state.workflows.length)state.activeId=state.workflows[0].id;
+      save();render();
+    }catch(err){alert('Invalid JSON')}
+  };
+  r.readAsText(f);e.target.value='';
+});
+
+// ─── Palette ──────────────────────────────────────────────────────
+function togglePalette(){document.getElementById('palette').classList.toggle('open')}
+document.querySelectorAll('.palette-item').forEach(el=>{
+  el.addEventListener('dragstart',e=>{e.dataTransfer.setData('nodeType',el.dataset.type)});
+  el.addEventListener('click',()=>{
+    const wf=getWf();if(!wf)return;
+    const rect=document.getElementById('canvasWrap').getBoundingClientRect();
+    addNode(el.dataset.type,(rect.width/2-panX)/zoom,(rect.height/2-panY)/zoom);
+    document.getElementById('palette').classList.remove('open');
+  });
+});
+document.getElementById('canvasWrap').addEventListener('dragover',e=>e.preventDefault());
+document.getElementById('canvasWrap').addEventListener('drop',e=>{
+  e.preventDefault();
+  const type=e.dataTransfer.getData('nodeType');
+  if(!type||!getWf())return;
+  const rect=document.getElementById('canvasWrap').getBoundingClientRect();
+  addNode(type,(e.clientX-rect.left-panX)/zoom,(e.clientY-rect.top-panY)/zoom);
+  document.getElementById('palette').classList.remove('open');
+});
+
+// ─── Rename ───────────────────────────────────────────────────────
+function renameWorkflow(id){
+  const wf=state.workflows.find(w=>w.id===id);if(!wf)return;
+  const n=prompt('Rename workflow:',wf.name);
+  if(n&&n.trim()){wf.name=n.trim();wf.updated=Date.now();save();render()}
+}
+function closeProps(){selectedNodeId=null;selectedConnId=null;render()}
+
+// ─── Keyboard ─────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  const tag=e.target.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'){
+    if(e.key==='Escape'){e.target.blur();return}
+    if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){
+      if(document.getElementById('nodeModal').classList.contains('open'))saveModal();
+      if(document.getElementById('connModal').classList.contains('open'))saveConnModal();
+      return;
+    }
+    return;
+  }
+  if(e.key==='Escape'){
+    if(document.getElementById('helpOverlay').classList.contains('open')){closeHelp();return}
+    if(document.getElementById('nodeModal').classList.contains('open')){closeModal();return}
+    if(document.getElementById('connModal').classList.contains('open')){closeConnModal();return}
+    if(document.getElementById('palette').classList.contains('open')){document.getElementById('palette').classList.remove('open');return}
+    selectedNodeId=null;selectedConnId=null;connectingFrom=null;tempLine=null;render();return;
+  }
+  if(e.key==='?'){e.preventDefault();showHelp();return}
+  if(e.key==='/'){e.preventDefault();document.getElementById('sideSearch').focus();return}
+  if(e.key==='n'||e.key==='N'){newWorkflow();return}
+  if(e.key==='a'||e.key==='A'){togglePalette();return}
+  if(e.key==='l'||e.key==='L'){autoLayout();return}
+  if(e.key==='f'||e.key==='F'){fitView();return}
+  if(e.key==='e'||e.key==='E'){exportJSON();return}
+  if(e.key==='i'){importJSON();return}
+  if(e.key==='Delete'||e.key==='Backspace'){
+    if(selectedNodeId)deleteNode(selectedNodeId);
+    else if(selectedConnId)deleteConnection(selectedConnId);
+    return;
+  }
+  if((e.metaKey||e.ctrlKey)&&e.key==='z'&&!e.shiftKey){e.preventDefault();undo();return}
+  if((e.metaKey||e.ctrlKey)&&e.key==='z'&&e.shiftKey){e.preventDefault();redo();return}
+  if((e.metaKey||e.ctrlKey)&&e.key==='d'){e.preventDefault();if(selectedNodeId)duplicateNode(selectedNodeId);return}
+  if(e.key==='='||e.key==='+'){e.preventDefault();zoomBy(.15);return}
+  if(e.key==='-'){e.preventDefault();zoomBy(-.15);return}
+  if(e.key==='0'){e.preventDefault();zoom=1;panX=0;panY=0;document.getElementById('zoomLabel').textContent='100%';renderCanvas();return}
+  if(e.key>='1'&&e.key<='5'){switchView(['canvas','list','dashboard','templates','export'][e.key-1]);return}
+});
+
+// ─── Mouse Events ─────────────────────────────────────────────────
+document.addEventListener('mousemove',onMouseMove);
+document.addEventListener('mouseup',onMouseUp);
+const cw=document.getElementById('canvasWrap');
+cw.addEventListener('mousedown',onCanvasMouseDown);
+cw.addEventListener('wheel',onWheel,{passive:false});
+
+// ─── Help ─────────────────────────────────────────────────────────
+function showHelp(){document.getElementById('helpOverlay').classList.add('open')}
+function closeHelp(){document.getElementById('helpOverlay').classList.remove('open')}
+
+// ─── Util ─────────────────────────────────────────────────────────
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// ─── Init ─────────────────────────────────────────────────────────
+load();
+if(!state.workflows.length){
+  // Seed with UTMStamp Click Tracking pipeline
+  loadTemplate(5);
+  // Also load the signup workflow
+  loadTemplate(0);
+  state.activeId=state.workflows[0].id;
+  save();
+}
+render();
+document.getElementById('sideSearch').addEventListener('input',renderSidebar);
+setTimeout(fitView,200);
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

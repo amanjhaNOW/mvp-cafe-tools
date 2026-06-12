@@ -825,9 +825,7 @@ li::before{content:'';position:absolute;left:-16px;top:12px;width:5px;height:5px
     });
     html += `</div></div>`;
   });
-  html += `</div><!-- MVPC_BRIDGE -->
-<script src="/_shell/bridge.js"></script>
-</body></html>`;
+  html += `</div></body></html>`;
 
   const blob = new Blob([html], {type:'text/html'});
   const a = document.createElement('a');
@@ -909,5 +907,7 @@ document.addEventListener('keydown', e => {
 load();
 render();
 </script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
 </body>
 </html>

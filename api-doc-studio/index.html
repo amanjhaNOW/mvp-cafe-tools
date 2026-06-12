@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Doc Studio</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--bg4:#30363d;--text:#e6edf3;--text2:#8b949e;--text3:#6e7681;--accent:#58a6ff;--accent2:#388bfd;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#bc8cff;--pink:#f778ba;--border:#30363d;--radius:8px;--shadow:0 2px 8px rgba(0,0,0,.3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;font-size:14px}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+button{cursor:pointer;font:inherit;border:none;outline:none;border-radius:var(--radius);transition:all .15s}
+input,textarea,select{font:inherit;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;outline:none;width:100%}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+
+/* Sidebar */
+.sidebar{width:280px;min-width:280px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:16px;color:var(--accent);display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:20px}
+.api-list{flex:1;overflow-y:auto;padding:8px}
+.api-item{padding:10px 12px;border-radius:var(--radius);cursor:pointer;margin-bottom:2px;display:flex;align-items:center;gap:8px;font-size:13px}
+.api-item:hover{background:var(--bg3)}
+.api-item.active{background:var(--bg3);color:var(--accent)}
+.api-item .method{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;min-width:40px;text-align:center;text-transform:uppercase}
+.api-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-get{background:#1f6feb22;color:#58a6ff}.m-post{background:#3fb95022;color:#3fb950}.m-put{background:#d2992222;color:#d29922}
+.m-patch{background:#bc8cff22;color:#bc8cff}.m-delete{background:#f8514922;color:#f85149}.m-head{background:#8b949e22;color:#8b949e}
+.m-options{background:#f778ba22;color:#f778ba}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap}
+.sidebar-footer button{padding:6px 10px;font-size:12px;background:var(--bg3);color:var(--text2)}
+.sidebar-footer button:hover{color:var(--text);background:var(--bg4)}
+.search-box{margin:8px 12px;position:relative}
+.search-box input{padding-left:28px;font-size:12px;background:var(--bg);width:100%}
+.search-box::before{content:'🔍';position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px}
+.group-header{font-size:11px;font-weight:600;color:var(--text3);padding:12px 12px 4px;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between}
+.group-header .count{background:var(--bg3);padding:1px 6px;border-radius:10px;font-size:10px}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--bg2)}
+.topbar .views{display:flex;gap:4px}
+.topbar .views button{padding:6px 14px;font-size:12px;background:transparent;color:var(--text2)}
+.topbar .views button:hover{color:var(--text)}
+.topbar .views button.active{background:var(--bg3);color:var(--accent)}
+.topbar .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.topbar .right button{padding:6px 12px;font-size:12px;background:var(--bg3);color:var(--text2)}
+.topbar .right button:hover{color:var(--text)}
+
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* Endpoint Editor */
+.endpoint-editor{max-width:900px}
+.ep-header{display:flex;gap:12px;align-items:center;margin-bottom:20px}
+.ep-header select{width:120px;font-weight:700;font-size:13px}
+.ep-header .path-input{flex:1;font-family:'SF Mono',Consolas,monospace;font-size:14px}
+.ep-section{margin-bottom:24px}
+.ep-section h3{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.ep-section h3 button{font-size:11px;padding:3px 8px;background:var(--accent);color:#fff}
+.ep-section h3 button:hover{background:var(--accent2)}
+.field-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
+.field-row input,.field-row select{font-size:12px}
+.field-row .name-col{width:160px;min-width:160px}
+.field-row .type-col{width:100px;min-width:100px}
+.field-row .desc-col{flex:1}
+.field-row .req-col{width:30px;min-width:30px;text-align:center}
+.field-row .del-col{width:24px;min-width:24px}
+.field-row .del-col button{background:none;color:var(--text3);font-size:14px;padding:2px}
+.field-row .del-col button:hover{color:var(--red)}
+.field-header{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tag{padding:3px 8px;border-radius:12px;font-size:11px;background:var(--bg3);color:var(--text2);display:flex;align-items:center;gap:4px}
+.tag .x{cursor:pointer;color:var(--text3)}
+.tag .x:hover{color:var(--red)}
+.code-block{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-family:'SF Mono',Consolas,monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;max-height:300px;overflow-y:auto}
+.resp-tab{display:flex;gap:4px;margin-bottom:8px}
+.resp-tab button{padding:4px 10px;font-size:11px;border-radius:4px;background:var(--bg3);color:var(--text2)}
+.resp-tab button.active{background:var(--accent);color:#fff}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.s2xx{background:#3fb95022;color:#3fb950}.s3xx{background:#d2992222;color:#d29922}
+.s4xx{background:#f8514922;color:#f85149}.s5xx{background:#f8514922;color:#f85149}
+
+/* Preview */
+.preview{max-width:900px}
+.preview .api-info{margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.preview .api-info h2{font-size:24px;margin-bottom:8px}
+.preview .api-info .ver{color:var(--text2);font-size:13px;margin-bottom:8px}
+.preview .api-info .base{font-family:monospace;background:var(--bg3);padding:4px 10px;border-radius:4px;font-size:13px;display:inline-block;margin-bottom:8px}
+.preview .api-info p{color:var(--text2);line-height:1.6}
+.preview .ep-block{margin-bottom:32px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.preview .ep-block .ep-head{padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;background:var(--bg2)}
+.preview .ep-block .ep-head:hover{background:var(--bg3)}
+.preview .ep-block .ep-head .method-badge{font-size:12px;font-weight:700;padding:4px 10px;border-radius:4px;min-width:60px;text-align:center;text-transform:uppercase}
+.preview .ep-block .ep-head .ep-path{font-family:monospace;font-size:14px;flex:1}
+.preview .ep-block .ep-head .ep-desc{color:var(--text2);font-size:13px}
+.preview .ep-body{padding:16px;background:var(--bg);border-top:1px solid var(--border)}
+.preview .ep-body h4{font-size:12px;font-weight:600;color:var(--text2);margin:12px 0 8px;text-transform:uppercase;letter-spacing:.5px}
+.preview .ep-body h4:first-child{margin-top:0}
+.preview .param-table{width:100%;border-collapse:collapse;font-size:13px}
+.preview .param-table th{text-align:left;font-size:11px;color:var(--text3);padding:6px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;font-weight:600}
+.preview .param-table td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.preview .param-table .pname{font-family:monospace;color:var(--accent);font-weight:600}
+.preview .param-table .ptype{color:var(--purple);font-family:monospace;font-size:12px}
+.preview .param-table .preq{color:var(--red);font-size:11px;font-weight:600}
+.preview .group-title{font-size:18px;font-weight:600;margin:24px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border);color:var(--text)}
+.preview .group-title:first-of-type{margin-top:0}
+.auth-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:24px}
+.auth-section h3{font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.auth-section p{color:var(--text2);font-size:13px;line-height:1.6}
+
+/* Try It */
+.try-panel{max-width:900px}
+.try-panel .try-url{display:flex;gap:8px;margin-bottom:16px;align-items:center}
+.try-panel .try-url .method-badge{font-size:13px;font-weight:700;padding:8px 14px;border-radius:var(--radius);min-width:70px;text-align:center}
+.try-panel .try-url input{flex:1;font-family:monospace;font-size:13px;padding:8px 12px}
+.try-panel .try-url .send-btn{padding:8px 20px;background:var(--accent);color:#fff;font-weight:600;font-size:13px}
+.try-panel .try-url .send-btn:hover{background:var(--accent2)}
+.try-section{margin-bottom:16px}
+.try-section h4{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase}
+.try-response{margin-top:20px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.try-response .resp-header{padding:10px 16px;background:var(--bg2);display:flex;align-items:center;gap:12px;font-size:13px}
+.try-response .resp-body{padding:16px;max-height:400px;overflow-y:auto}
+
+/* Dashboard */
+.dashboard{max-width:1100px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-card .val{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-card .label{font-size:12px;color:var(--text2);margin-top:4px}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.chart-card h3{font-size:13px;color:var(--text2);margin-bottom:12px}
+.bar-chart{display:flex;flex-direction:column;gap:6px}
+.bar-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.bar-row .bar-label{width:80px;min-width:80px;text-align:right;color:var(--text2)}
+.bar-row .bar-track{flex:1;height:18px;background:var(--bg);border-radius:4px;overflow:hidden}
+.bar-row .bar-fill{height:100%;border-radius:4px;transition:width .3s}
+.bar-row .bar-val{width:30px;min-width:30px;font-weight:600}
+
+/* Settings */
+.settings{max-width:700px}
+.settings .form-group{margin-bottom:16px}
+.settings .form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase}
+.settings .form-group .hint{font-size:11px;color:var(--text3);margin-top:4px}
+.auth-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.auth-type-card{padding:10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;text-align:center;font-size:12px}
+.auth-type-card:hover{border-color:var(--text3)}
+.auth-type-card.active{border-color:var(--accent);background:var(--accent)11}
+
+/* Export */
+.export-view{max-width:900px}
+.export-formats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px}
+.export-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;text-align:center}
+.export-card:hover{border-color:var(--accent)}
+.export-card .icon{font-size:28px;margin-bottom:8px}
+.export-card .title{font-weight:600;margin-bottom:4px}
+.export-card .desc{font-size:12px;color:var(--text2)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;width:500px;max-width:90vw;max-height:85vh;overflow-y:auto}
+.modal h2{font-size:16px;margin-bottom:16px}
+.modal .form-group{margin-bottom:12px}
+.modal .form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.modal .actions button{padding:8px 16px;font-size:13px}
+.modal .actions .cancel{background:var(--bg3);color:var(--text2)}
+.modal .actions .cancel:hover{color:var(--text)}
+.modal .actions .save{background:var(--accent);color:#fff}
+.modal .actions .save:hover{background:var(--accent2)}
+
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty .icon{font-size:48px;margin-bottom:16px}
+.empty h3{color:var(--text2);margin-bottom:8px}
+.empty p{font-size:13px;margin-bottom:16px}
+.empty button{padding:8px 16px;background:var(--accent);color:#fff;font-size:13px}
+.empty button:hover{background:var(--accent2)}
+
+.cb{accent-color:var(--accent)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="sidebar">
+ <div class="sidebar-header">
+  <h1><span>📘</span> API Doc Studio</h1>
+ </div>
+ <div class="search-box"><input id="search" placeholder="Search endpoints... (/)" /></div>
+ <div class="api-list" id="apiList"></div>
+ <div class="sidebar-footer">
+  <button onclick="addEndpoint()" title="New endpoint (N)">+ Endpoint</button>
+  <button onclick="addGroup()" title="New group">+ Group</button>
+  <button onclick="showSettings()" title="API Settings">⚙️ Settings</button>
+  <button onclick="showHelp()">? Help</button>
+ </div>
+</div>
+<div class="main">
+ <div class="topbar">
+  <div class="views" id="viewTabs"></div>
+  <div class="right">
+   <button onclick="duplicateEndpoint()" title="Duplicate">📋 Dup</button>
+   <button onclick="deleteEndpoint()" title="Delete" style="color:var(--red)">🗑️ Del</button>
+   <button onclick="doExport()">📤 Export</button>
+   <button onclick="doImport()">📥 Import</button>
+  </div>
+ </div>
+ <div class="content" id="content"></div>
+</div>
+<div id="modal" class="modal-overlay hidden"></div>
+<input type="file" id="fileInput" class="hidden" accept=".json" />
+
+<script>
+const VIEWS=['editor','preview','tryit','dashboard','export'];
+const VIEW_LABELS=['✏️ Editor','👁️ Preview','▶️ Try It','📊 Dashboard','📤 Export'];
+const METHODS=['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'];
+const PARAM_TYPES=['string','integer','number','boolean','array','object','uuid','email','date','datetime','file'];
+const AUTH_TYPES=['none','bearer','apiKey','basic','oauth2'];
+const STATUS_CODES=['200','201','204','301','400','401','403','404','409','422','429','500','502','503'];
+
+let state={
+ api:{name:'',version:'',baseUrl:'',description:'',auth:{type:'none',keyName:'',keyIn:'header',description:''}},
+ groups:[],
+ endpoints:[],
+ activeId:null,
+ view:'editor'
+};
+
+function init(){
+ const saved=localStorage.getItem('api-doc-studio');
+ if(saved){try{state=JSON.parse(saved)}catch(e){}}
+ if(!state.endpoints.length) seedDemo();
+ renderViewTabs();
+ renderSidebar();
+ if(state.activeId)selectEndpoint(state.activeId);
+ else if(state.endpoints.length)selectEndpoint(state.endpoints[0].id);
+ else renderContent();
+ document.getElementById('search').addEventListener('input',renderSidebar);
+ document.getElementById('fileInput').addEventListener('change',handleImport);
+ document.addEventListener('keydown',handleKeys);
+}
+
+function save(){localStorage.setItem('api-doc-studio',JSON.stringify(state))}
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+
+function seedDemo(){
+ state.api={name:'UTMStamp API',version:'2.0.0',baseUrl:'https://api.utmstamp.com/v2',description:'The UTMStamp API lets you manage email signatures, campaigns, click analytics, and team deployments programmatically. All endpoints require authentication via Bearer token.',
+  auth:{type:'bearer',keyName:'Authorization',keyIn:'header',description:'Include your API key in the Authorization header as: Bearer YOUR_API_KEY. Get your key from the UTMStamp Dashboard → Settings → API Keys.'}};
+ state.groups=[
+  {id:'sig',name:'Signatures',order:0},
+  {id:'camp',name:'Campaigns',order:1},
+  {id:'analytics',name:'Analytics',order:2},
+  {id:'team',name:'Team',order:3}
+ ];
+ state.endpoints=[
+  {id:uid(),group:'sig',method:'GET',path:'/signatures',name:'List Signatures',description:'Returns all email signatures for the authenticated organization. Supports pagination and filtering by status.',
+   params:[{name:'page',in:'query',type:'integer',required:false,description:'Page number (default: 1)'},{name:'limit',in:'query',type:'integer',required:false,description:'Items per page (default: 20, max: 100)'},{name:'status',in:'query',type:'string',required:false,description:'Filter by status: active, draft, archived'}],
+   headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'}],
+   body:'',
+   responses:[{status:'200',description:'List of signatures',body:'{\n  "data": [\n    {\n      "id": "sig_abc123",\n      "name": "Marketing Team",\n      "template_id": "tmpl_xyz",\n      "status": "active",\n      "click_count": 1247,\n      "created_at": "2026-01-15T10:30:00Z"\n    }\n  ],\n  "meta": {\n    "page": 1,\n    "limit": 20,\n    "total": 45\n  }\n}'},{status:'401',description:'Unauthorized',body:'{\n  "error": "unauthorized",\n  "message": "Invalid or missing API key"\n}'}],
+   tags:['signatures','list']},
+  {id:uid(),group:'sig',method:'POST',path:'/signatures',name:'Create Signature',description:'Create a new email signature from a template with custom field values.',
+   params:[],headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'},{name:'Content-Type',type:'string',required:true,description:'application/json'}],
+   body:'{\n  "name": "Sales Team Q2",\n  "template_id": "tmpl_xyz",\n  "fields": {\n    "full_name": "Jane Smith",\n    "title": "Account Executive",\n    "email": "jane@company.com",\n    "phone": "+1-555-0123",\n    "banner_url": "https://cdn.utmstamp.com/banners/q2-promo.png",\n    "banner_link": "https://company.com/q2-offer"\n  },\n  "campaign_id": "camp_def456"\n}',
+   responses:[{status:'201',description:'Signature created',body:'{\n  "data": {\n    "id": "sig_new789",\n    "name": "Sales Team Q2",\n    "template_id": "tmpl_xyz",\n    "status": "active",\n    "html": "<table>...</table>",\n    "created_at": "2026-05-28T01:00:00Z"\n  }\n}'},{status:'400',description:'Validation error',body:'{\n  "error": "validation_error",\n  "message": "template_id is required",\n  "fields": ["template_id"]\n}'},{status:'422',description:'Invalid template',body:'{\n  "error": "invalid_template",\n  "message": "Template tmpl_xxx not found or archived"\n}'}],
+   tags:['signatures','create']},
+  {id:uid(),group:'sig',method:'GET',path:'/signatures/{id}',name:'Get Signature',description:'Retrieve a single signature by ID, including rendered HTML and click statistics.',
+   params:[{name:'id',in:'path',type:'string',required:true,description:'Signature ID (sig_xxx)'}],
+   headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'}],body:'',
+   responses:[{status:'200',description:'Signature details',body:'{\n  "data": {\n    "id": "sig_abc123",\n    "name": "Marketing Team",\n    "template_id": "tmpl_xyz",\n    "status": "active",\n    "html": "<table>...</table>",\n    "fields": { "full_name": "John Doe", "title": "Marketing Lead" },\n    "campaign_id": "camp_def456",\n    "click_count": 1247,\n    "last_clicked_at": "2026-05-27T14:22:00Z",\n    "created_at": "2026-01-15T10:30:00Z",\n    "updated_at": "2026-05-20T09:15:00Z"\n  }\n}'},{status:'404',description:'Not found',body:'{\n  "error": "not_found",\n  "message": "Signature sig_xxx not found"\n}'}],
+   tags:['signatures','read']},
+  {id:uid(),group:'sig',method:'PUT',path:'/signatures/{id}',name:'Update Signature',description:'Update an existing signature\'s fields, campaign assignment, or status.',
+   params:[{name:'id',in:'path',type:'string',required:true,description:'Signature ID'}],
+   headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'},{name:'Content-Type',type:'string',required:true,description:'application/json'}],
+   body:'{\n  "name": "Sales Team Q2 — Updated",\n  "fields": {\n    "banner_url": "https://cdn.utmstamp.com/banners/q2-update.png"\n  },\n  "status": "active"\n}',
+   responses:[{status:'200',description:'Updated signature',body:'{\n  "data": {\n    "id": "sig_abc123",\n    "name": "Sales Team Q2 — Updated",\n    "status": "active",\n    "updated_at": "2026-05-28T01:30:00Z"\n  }\n}'}],
+   tags:['signatures','update']},
+  {id:uid(),group:'sig',method:'DELETE',path:'/signatures/{id}',name:'Delete Signature',description:'Permanently delete a signature. This action cannot be undone.',
+   params:[{name:'id',in:'path',type:'string',required:true,description:'Signature ID'}],
+   headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'}],body:'',
+   responses:[{status:'204',description:'Deleted successfully',body:''},{status:'404',description:'Not found',body:'{\n  "error": "not_found",\n  "message": "Signature not found"\n}'}],
+   tags:['signatures','delete']},
+  {id:uid(),group:'camp',method:'GET',path:'/campaigns',name:'List Campaigns',description:'List all UTM campaigns with click statistics and active signature count.',
+   params:[{name:'page',in:'query',type:'integer',required:false,description:'Page number'},{name:'status',in:'query',type:'string',required:false,description:'Filter: active, paused, ended'}],
+   headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'}],body:'',
+   responses:[{status:'200',description:'Campaign list',body:'{\n  "data": [\n    {\n      "id": "camp_def456",\n      "name": "Q2 Product Launch",\n      "utm_source": "email",\n      "utm_medium": "signature",\n      "utm_campaign": "q2-launch-2026",\n      "total_clicks": 3892,\n      "unique_clicks": 2104,\n      "signatures_count": 12,\n      "status": "active",\n      "created_at": "2026-04-01T00:00:00Z"\n    }\n  ],\n  "meta": { "page": 1, "total": 8 }\n}'}],
+   tags:['campaigns','list']},
+  {id:uid(),group:'camp',method:'POST',path:'/campaigns',name:'Create Campaign',description:'Create a new UTM campaign. UTM parameters are automatically appended to all signature banner links.',
+   params:[],
+   headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'},{name:'Content-Type',type:'string',required:true,description:'application/json'}],
+   body:'{\n  "name": "Summer Sale 2026",\n  "utm_source": "email",\n  "utm_medium": "signature",\n  "utm_campaign": "summer-sale-2026",\n  "utm_content": "banner-v1",\n  "start_date": "2026-06-01",\n  "end_date": "2026-08-31"\n}',
+   responses:[{status:'201',description:'Campaign created',body:'{\n  "data": {\n    "id": "camp_new001",\n    "name": "Summer Sale 2026",\n    "utm_source": "email",\n    "utm_medium": "signature",\n    "utm_campaign": "summer-sale-2026",\n    "status": "active",\n    "created_at": "2026-05-28T01:00:00Z"\n  }\n}'}],
+   tags:['campaigns','create']},
+  {id:uid(),group:'analytics',method:'GET',path:'/analytics/clicks',name:'Click Analytics',description:'Get aggregated click analytics with breakdown by campaign, signature, date, or geography.',
+   params:[{name:'start_date',in:'query',type:'date',required:true,description:'Start date (YYYY-MM-DD)'},{name:'end_date',in:'query',type:'date',required:true,description:'End date (YYYY-MM-DD)'},{name:'group_by',in:'query',type:'string',required:false,description:'Group by: day, week, month, campaign, signature, country'},{name:'campaign_id',in:'query',type:'string',required:false,description:'Filter by campaign ID'},{name:'signature_id',in:'query',type:'string',required:false,description:'Filter by signature ID'}],
+   headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'}],body:'',
+   responses:[{status:'200',description:'Click analytics',body:'{\n  "data": {\n    "total_clicks": 12847,\n    "unique_clicks": 6923,\n    "click_rate": 4.2,\n    "breakdown": [\n      { "date": "2026-05-27", "clicks": 342, "unique": 198 },\n      { "date": "2026-05-26", "clicks": 289, "unique": 167 },\n      { "date": "2026-05-25", "clicks": 315, "unique": 182 }\n    ],\n    "top_campaigns": [\n      { "id": "camp_def456", "name": "Q2 Launch", "clicks": 3892 }\n    ],\n    "top_countries": [\n      { "country": "US", "clicks": 5234 },\n      { "country": "IN", "clicks": 3102 },\n      { "country": "GB", "clicks": 1847 }\n    ]\n  },\n  "meta": {\n    "start_date": "2026-05-01",\n    "end_date": "2026-05-27",\n    "group_by": "day"\n  }\n}'}],
+   tags:['analytics','clicks']},
+  {id:uid(),group:'analytics',method:'GET',path:'/analytics/signatures/{id}/heatmap',name:'Signature Heatmap',description:'Get click heatmap data for a specific signature. Returns coordinates and click counts for each clickable element.',
+   params:[{name:'id',in:'path',type:'string',required:true,description:'Signature ID'},{name:'days',in:'query',type:'integer',required:false,description:'Number of days to include (default: 30)'}],
+   headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'}],body:'',
+   responses:[{status:'200',description:'Heatmap data',body:'{\n  "data": {\n    "signature_id": "sig_abc123",\n    "total_clicks": 1247,\n    "elements": [\n      { "type": "banner", "label": "Q2 Promo Banner", "clicks": 892, "percentage": 71.5 },\n      { "type": "link", "label": "Website URL", "clicks": 198, "percentage": 15.9 },\n      { "type": "social", "label": "LinkedIn", "clicks": 95, "percentage": 7.6 },\n      { "type": "social", "label": "Twitter", "clicks": 62, "percentage": 5.0 }\n    ]\n  }\n}'}],
+   tags:['analytics','heatmap']},
+  {id:uid(),group:'team',method:'GET',path:'/team/members',name:'List Team Members',description:'List all team members with their assigned signatures and deployment status.',
+   params:[{name:'department',in:'query',type:'string',required:false,description:'Filter by department'}],
+   headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'}],body:'',
+   responses:[{status:'200',description:'Team member list',body:'{\n  "data": [\n    {\n      "id": "mem_001",\n      "email": "jane@company.com",\n      "name": "Jane Smith",\n      "department": "Sales",\n      "signature_id": "sig_abc123",\n      "deployment_status": "deployed",\n      "last_synced_at": "2026-05-27T08:00:00Z"\n    }\n  ],\n  "meta": { "total": 24, "deployed": 22, "pending": 2 }\n}'}],
+   tags:['team','members']},
+  {id:uid(),group:'team',method:'POST',path:'/team/deploy',name:'Deploy Signatures',description:'Push signatures to team members\' email clients via Google Workspace or Microsoft 365 integration.',
+   params:[],
+   headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'},{name:'Content-Type',type:'string',required:true,description:'application/json'}],
+   body:'{\n  "signature_id": "sig_abc123",\n  "member_ids": ["mem_001", "mem_002", "mem_003"],\n  "deploy_to": "google_workspace",\n  "set_as_default": true\n}',
+   responses:[{status:'200',description:'Deployment initiated',body:'{\n  "data": {\n    "deployment_id": "dep_xyz789",\n    "status": "in_progress",\n    "total": 3,\n    "completed": 0,\n    "failed": 0,\n    "estimated_completion": "2026-05-28T01:05:00Z"\n  }\n}'},{status:'400',description:'Invalid deploy target',body:'{\n  "error": "invalid_deploy_target",\n  "message": "deploy_to must be google_workspace or microsoft_365"\n}'}],
+   tags:['team','deploy']},
+  {id:uid(),group:'team',method:'GET',path:'/team/deploy/{id}/status',name:'Deployment Status',description:'Check the status of a signature deployment job.',
+   params:[{name:'id',in:'path',type:'string',required:true,description:'Deployment ID (dep_xxx)'}],
+   headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'}],body:'',
+   responses:[{status:'200',description:'Deployment status',body:'{\n  "data": {\n    "deployment_id": "dep_xyz789",\n    "status": "completed",\n    "total": 3,\n    "completed": 3,\n    "failed": 0,\n    "results": [\n      { "member_id": "mem_001", "status": "success", "deployed_at": "2026-05-28T01:02:00Z" },\n      { "member_id": "mem_002", "status": "success", "deployed_at": "2026-05-28T01:02:15Z" },\n      { "member_id": "mem_003", "status": "success", "deployed_at": "2026-05-28T01:03:00Z" }\n    ]\n  }\n}'}],
+   tags:['team','deployment']}
+ ];
+ save();
+}
+
+function renderViewTabs(){
+ const c=document.getElementById('viewTabs');
+ c.innerHTML=VIEWS.map((v,i)=>`<button class="${state.view===v?'active':''}" onclick="switchView('${v}')">${VIEW_LABELS[i]}</button>`).join('');
+}
+
+function switchView(v){state.view=v;save();renderViewTabs();renderContent()}
+
+function renderSidebar(){
+ const q=(document.getElementById('search').value||'').toLowerCase();
+ const list=document.getElementById('apiList');
+ const groups=[...state.groups].sort((a,b)=>a.order-b.order);
+ const ungrouped=state.endpoints.filter(e=>!e.group||!state.groups.find(g=>g.id===e.group));
+ let html='';
+ for(const g of groups){
+  const eps=state.endpoints.filter(e=>e.group===g.id).filter(e=>!q||e.name.toLowerCase().includes(q)||e.path.toLowerCase().includes(q)||e.method.toLowerCase().includes(q));
+  if(!eps.length&&q)continue;
+  html+=`<div class="group-header">${g.name}<span class="count">${eps.length}</span></div>`;
+  for(const ep of eps) html+=epItem(ep);
+ }
+ if(ungrouped.length){
+  const eps=ungrouped.filter(e=>!q||e.name.toLowerCase().includes(q)||e.path.toLowerCase().includes(q));
+  if(eps.length){
+   html+=`<div class="group-header">Ungrouped<span class="count">${eps.length}</span></div>`;
+   for(const ep of eps) html+=epItem(ep);
+  }
+ }
+ list.innerHTML=html;
+}
+
+function epItem(ep){
+ const mc=ep.method.toLowerCase();
+ return `<div class="api-item ${ep.id===state.activeId?'active':''}" onclick="selectEndpoint('${ep.id}')"><span class="method m-${mc}">${ep.method}</span><span class="name">${ep.name||ep.path}</span></div>`;
+}
+
+function selectEndpoint(id){
+ state.activeId=id;save();
+ renderSidebar();renderContent();
+}
+
+function renderContent(){
+ const c=document.getElementById('content');
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(state.view==='preview'){renderPreview(c);return}
+ if(state.view==='dashboard'){renderDashboard(c);return}
+ if(state.view==='export'){renderExportView(c);return}
+ if(state.view==='tryit'){renderTryIt(c,ep);return}
+ if(!ep){c.innerHTML='<div class="empty"><div class="icon">📘</div><h3>No endpoint selected</h3><p>Select an endpoint from the sidebar or create a new one.</p><button onclick="addEndpoint()">+ New Endpoint</button></div>';return}
+ renderEditor(c,ep);
+}
+
+function renderEditor(c,ep){
+ const paramsByLoc=(loc)=>ep.params.filter(p=>p.in===loc);
+ const pathP=paramsByLoc('path'),queryP=paramsByLoc('query'),bodyP=paramsByLoc('body');
+ c.innerHTML=`<div class="endpoint-editor">
+  <div class="ep-header">
+   <select id="epMethod" onchange="updateEp('method',this.value)">${METHODS.map(m=>`<option value="${m}" ${ep.method===m?'selected':''}>${m}</option>`).join('')}</select>
+   <input class="path-input" id="epPath" value="${esc(ep.path)}" placeholder="/path/{id}" onchange="updateEp('path',this.value)" />
+  </div>
+  <div class="ep-section"><div class="form-group"><label style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;display:block">NAME</label><input value="${esc(ep.name)}" onchange="updateEp('name',this.value)" placeholder="Endpoint name" /></div></div>
+  <div class="ep-section"><div class="form-group"><label style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;display:block">DESCRIPTION</label><textarea onchange="updateEp('description',this.value)" placeholder="What does this endpoint do?">${esc(ep.description)}</textarea></div></div>
+  <div class="ep-section"><h3>Path Parameters <button onclick="addParam('path')">+ Add</button></h3>${renderParamTable(pathP,'path')}</div>
+  <div class="ep-section"><h3>Query Parameters <button onclick="addParam('query')">+ Add</button></h3>${renderParamTable(queryP,'query')}</div>
+  <div class="ep-section"><h3>Headers <button onclick="addHeader()">+ Add</button></h3>${renderHeaderTable(ep.headers||[])}</div>
+  ${['POST','PUT','PATCH'].includes(ep.method)?`<div class="ep-section"><h3>Request Body</h3><textarea class="code-block" style="width:100%;min-height:120px" onchange="updateEp('body',this.value)" placeholder='{"key":"value"}'>${esc(ep.body||'')}</textarea></div>`:''}
+  <div class="ep-section"><h3>Responses <button onclick="addResponse()">+ Add</button></h3>${renderResponses(ep.responses||[])}</div>
+  <div class="ep-section"><h3>Tags</h3><div class="tag-row">${(ep.tags||[]).map((t,i)=>`<span class="tag">${esc(t)}<span class="x" onclick="removeTag(${i})">×</span></span>`).join('')}</div><div style="margin-top:8px"><input placeholder="Add tag (Enter)" onkeydown="if(event.key==='Enter'){addTag(this.value);this.value='';event.preventDefault()}" style="width:200px" /></div></div>
+ </div>`;
+}
+
+function renderParamTable(params,loc){
+ if(!params.length)return '<div style="color:var(--text3);font-size:12px">No parameters</div>';
+ let html='<div class="field-row field-header"><span class="name-col">Name</span><span class="type-col">Type</span><span class="desc-col">Description</span><span class="req-col">Req</span><span class="del-col"></span></div>';
+ for(const p of params){
+  const idx=state.endpoints.find(e=>e.id===state.activeId).params.indexOf(p);
+  html+=`<div class="field-row">
+   <input class="name-col" value="${esc(p.name)}" onchange="updateParam(${idx},'name',this.value)" />
+   <select class="type-col" onchange="updateParam(${idx},'type',this.value)">${PARAM_TYPES.map(t=>`<option ${p.type===t?'selected':''}>${t}</option>`).join('')}</select>
+   <input class="desc-col" value="${esc(p.description)}" onchange="updateParam(${idx},'description',this.value)" />
+   <span class="req-col"><input type="checkbox" class="cb" ${p.required?'checked':''} onchange="updateParam(${idx},'required',this.checked)" /></span>
+   <span class="del-col"><button onclick="removeParam(${idx})">×</button></span>
+  </div>`;
+ }
+ return html;
+}
+
+function renderHeaderTable(headers){
+ if(!headers.length)return '<div style="color:var(--text3);font-size:12px">No headers</div>';
+ let html='<div class="field-row field-header"><span class="name-col">Name</span><span class="type-col">Type</span><span class="desc-col">Description</span><span class="req-col">Req</span><span class="del-col"></span></div>';
+ for(let i=0;i<headers.length;i++){
+  const h=headers[i];
+  html+=`<div class="field-row">
+   <input class="name-col" value="${esc(h.name)}" onchange="updateHeader(${i},'name',this.value)" />
+   <select class="type-col" onchange="updateHeader(${i},'type',this.value)">${PARAM_TYPES.map(t=>`<option ${h.type===t?'selected':''}>${t}</option>`).join('')}</select>
+   <input class="desc-col" value="${esc(h.description)}" onchange="updateHeader(${i},'description',this.value)" />
+   <span class="req-col"><input type="checkbox" class="cb" ${h.required?'checked':''} onchange="updateHeader(${i},'required',this.checked)" /></span>
+   <span class="del-col"><button onclick="removeHeader(${i})">×</button></span>
+  </div>`;
+ }
+ return html;
+}
+
+function renderResponses(responses){
+ if(!responses.length)return '<div style="color:var(--text3);font-size:12px">No responses defined</div>';
+ let html='';
+ for(let i=0;i<responses.length;i++){
+  const r=responses[i];
+  const sc=r.status[0];
+  const cls=sc==='2'?'s2xx':sc==='3'?'s3xx':sc==='4'?'s4xx':'s5xx';
+  html+=`<div style="margin-bottom:12px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+   <div style="padding:8px 12px;background:var(--bg2);display:flex;align-items:center;gap:8px">
+    <select style="width:80px" onchange="updateResponse(${i},'status',this.value)">${STATUS_CODES.map(s=>`<option ${r.status===s?'selected':''}>${s}</option>`).join('')}</select>
+    <input value="${esc(r.description)}" onchange="updateResponse(${i},'description',this.value)" placeholder="Description" style="flex:1" />
+    <button onclick="removeResponse(${i})" style="background:none;color:var(--text3);font-size:14px">×</button>
+   </div>
+   <textarea class="code-block" style="width:100%;border:none;border-radius:0;min-height:80px" onchange="updateResponse(${i},'body',this.value)" placeholder="Response body JSON">${esc(r.body||'')}</textarea>
+  </div>`;
+ }
+ return html;
+}
+
+function renderPreview(c){
+ const api=state.api;
+ const groups=[...state.groups].sort((a,b)=>a.order-b.order);
+ let html=`<div class="preview">
+  <div class="api-info">
+   <h2>${esc(api.name)||'Untitled API'}</h2>
+   <div class="ver">Version ${esc(api.version)||'1.0.0'}</div>
+   ${api.baseUrl?`<div class="base">${esc(api.baseUrl)}</div>`:''}
+   <p>${esc(api.description)||''}</p>
+  </div>`;
+ if(api.auth&&api.auth.type!=='none'){
+  const labels={bearer:'Bearer Token',apiKey:'API Key',basic:'Basic Auth',oauth2:'OAuth 2.0'};
+  html+=`<div class="auth-section"><h3>🔐 Authentication — ${labels[api.auth.type]||api.auth.type}</h3><p>${esc(api.auth.description||'')}</p></div>`;
+ }
+ for(const g of groups){
+  const eps=state.endpoints.filter(e=>e.group===g.id);
+  if(!eps.length)continue;
+  html+=`<div class="group-title">${esc(g.name)}</div>`;
+  for(const ep of eps) html+=previewEndpoint(ep);
+ }
+ const ungrouped=state.endpoints.filter(e=>!e.group||!state.groups.find(g=>g.id===e.group));
+ if(ungrouped.length){
+  html+=`<div class="group-title">Other</div>`;
+  for(const ep of ungrouped) html+=previewEndpoint(ep);
+ }
+ html+='</div>';
+ c.innerHTML=html;
+}
+
+function previewEndpoint(ep){
+ const mc=ep.method.toLowerCase();
+ const pathP=ep.params.filter(p=>p.in==='path');
+ const queryP=ep.params.filter(p=>p.in==='query');
+ const hasBody=['POST','PUT','PATCH'].includes(ep.method)&&ep.body;
+ const responses=ep.responses||[];
+ let body=`<div class="ep-block" id="ep-${ep.id}">
+  <div class="ep-head" onclick="this.nextElementSibling.classList.toggle('hidden')">
+   <span class="method-badge m-${mc}">${ep.method}</span>
+   <span class="ep-path">${esc(ep.path)}</span>
+   <span class="ep-desc">${esc(ep.description||'').slice(0,80)}</span>
+  </div>
+  <div class="ep-body hidden">`;
+ if(ep.description) body+=`<p style="color:var(--text2);margin-bottom:12px;line-height:1.6">${esc(ep.description)}</p>`;
+ if(pathP.length) body+=`<h4>Path Parameters</h4>${paramTable(pathP)}`;
+ if(queryP.length) body+=`<h4>Query Parameters</h4>${paramTable(queryP)}`;
+ if(ep.headers&&ep.headers.length) body+=`<h4>Headers</h4>${paramTable(ep.headers)}`;
+ if(hasBody) body+=`<h4>Request Body</h4><div class="code-block">${syntaxHL(ep.body)}</div>`;
+ if(responses.length){
+  body+=`<h4>Responses</h4>`;
+  for(const r of responses){
+   const sc=r.status[0];
+   const cls=sc==='2'?'s2xx':sc==='3'?'s3xx':sc==='4'?'s4xx':'s5xx';
+   body+=`<div style="margin-bottom:8px"><span class="status-badge ${cls}">${r.status}</span> <span style="color:var(--text2);font-size:13px">${esc(r.description)}</span>${r.body?`<div class="code-block" style="margin-top:6px">${syntaxHL(r.body)}</div>`:''}</div>`;
+  }
+ }
+ body+=`</div></div>`;
+ return body;
+}
+
+function paramTable(params){
+ let html='<table class="param-table"><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr>';
+ for(const p of params){
+  html+=`<tr><td class="pname">${esc(p.name)}</td><td class="ptype">${esc(p.type)}</td><td>${p.required?'<span class="preq">Required</span>':'<span style="color:var(--text3)">Optional</span>'}</td><td style="color:var(--text2)">${esc(p.description)}</td></tr>`;
+ }
+ return html+'</table>';
+}
+
+function syntaxHL(str){
+ if(!str)return '';
+ return esc(str).replace(/"([^"]+)"(\s*:)/g,'<span style="color:#79c0ff">"$1"</span>$2')
+  .replace(/:\s*"([^"]*)"/g,': <span style="color:#a5d6ff">"$1"</span>')
+  .replace(/:\s*(\d+\.?\d*)/g,': <span style="color:#d2a8ff">$1</span>')
+  .replace(/:\s*(true|false|null)/g,': <span style="color:#ff7b72">$1</span>');
+}
+
+function renderTryIt(c,ep){
+ if(!ep){c.innerHTML='<div class="empty"><div class="icon">▶️</div><h3>Select an endpoint to try</h3><p>Pick one from the sidebar.</p></div>';return}
+ const mc=ep.method.toLowerCase();
+ const baseUrl=state.api.baseUrl||'https://api.example.com';
+ let fullUrl=baseUrl+ep.path;
+ const pathP=ep.params.filter(p=>p.in==='path');
+ const queryP=ep.params.filter(p=>p.in==='query');
+ c.innerHTML=`<div class="try-panel">
+  <h2 style="margin-bottom:16px">${esc(ep.name)}</h2>
+  <div class="try-url">
+   <span class="method-badge m-${mc}">${ep.method}</span>
+   <input id="tryUrl" value="${esc(fullUrl)}" />
+   <button class="send-btn" onclick="sendRequest()">Send</button>
+  </div>
+  ${pathP.length?`<div class="try-section"><h4>Path Parameters</h4>${pathP.map(p=>`<div class="field-row" style="margin-bottom:4px"><label style="width:140px;font-size:12px;color:var(--text2)">${esc(p.name)} ${p.required?'<span style="color:var(--red)">*</span>':''}</label><input class="try-param" data-name="${esc(p.name)}" data-in="path" placeholder="${esc(p.description)}" style="flex:1" /></div>`).join('')}</div>`:''}
+  ${queryP.length?`<div class="try-section"><h4>Query Parameters</h4>${queryP.map(p=>`<div class="field-row" style="margin-bottom:4px"><label style="width:140px;font-size:12px;color:var(--text2)">${esc(p.name)} ${p.required?'<span style="color:var(--red)">*</span>':''}</label><input class="try-param" data-name="${esc(p.name)}" data-in="query" placeholder="${esc(p.description)}" style="flex:1" /></div>`).join('')}</div>`:''}
+  <div class="try-section"><h4>Headers</h4>
+   ${(ep.headers||[]).map(h=>`<div class="field-row" style="margin-bottom:4px"><label style="width:140px;font-size:12px;color:var(--text2)">${esc(h.name)}</label><input class="try-header" data-name="${esc(h.name)}" placeholder="${esc(h.description)}" style="flex:1" /></div>`).join('')}
+  </div>
+  ${['POST','PUT','PATCH'].includes(ep.method)?`<div class="try-section"><h4>Request Body</h4><textarea id="tryBody" class="code-block" style="width:100%;min-height:100px">${esc(ep.body||'')}</textarea></div>`:''}
+  <div class="try-section"><h4>cURL</h4><div class="code-block" id="curlPreview" style="font-size:11px"></div></div>
+  <div id="tryResponse"></div>
+ </div>`;
+ updateCurl();
+ document.querySelectorAll('.try-param,.try-header,#tryUrl,#tryBody').forEach(el=>el.addEventListener('input',updateCurl));
+}
+
+function updateCurl(){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(!ep)return;
+ let url=document.getElementById('tryUrl')?.value||'';
+ document.querySelectorAll('.try-param[data-in="path"]').forEach(el=>{if(el.value)url=url.replace(`{${el.dataset.name}}`,el.value)});
+ const qp=[];
+ document.querySelectorAll('.try-param[data-in="query"]').forEach(el=>{if(el.value)qp.push(`${el.dataset.name}=${encodeURIComponent(el.value)}`)});
+ if(qp.length)url+='?'+qp.join('&');
+ let curl=`curl -X ${ep.method} "${url}"`;
+ document.querySelectorAll('.try-header').forEach(el=>{if(el.value)curl+=` \\\n  -H "${el.dataset.name}: ${el.value}"`});
+ const body=document.getElementById('tryBody')?.value;
+ if(body)curl+=` \\\n  -d '${body}'`;
+ const el=document.getElementById('curlPreview');
+ if(el)el.textContent=curl;
+}
+
+function sendRequest(){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(!ep)return;
+ // Simulate response with first defined response
+ const resp=ep.responses&&ep.responses[0];
+ const div=document.getElementById('tryResponse');
+ if(!resp){div.innerHTML='<div style="color:var(--text3);margin-top:12px">No response defined for this endpoint.</div>';return}
+ const sc=resp.status[0];
+ const cls=sc==='2'?'s2xx':sc==='3'?'s3xx':sc==='4'?'s4xx':'s5xx';
+ div.innerHTML=`<div class="try-response">
+  <div class="resp-header"><span class="status-badge ${cls}">${resp.status} ${resp.description}</span><span style="color:var(--text3);margin-left:auto;font-size:12px">~${Math.floor(Math.random()*200+50)}ms • Simulated</span></div>
+  <div class="resp-body"><div class="code-block">${syntaxHL(resp.body)}</div></div>
+ </div>`;
+}
+
+function renderDashboard(c){
+ const eps=state.endpoints;
+ const methods={};eps.forEach(e=>{methods[e.method]=(methods[e.method]||0)+1});
+ const groups={};state.groups.forEach(g=>{groups[g.name]=eps.filter(e=>e.group===g.id).length});
+ const totalParams=eps.reduce((s,e)=>s+e.params.length,0);
+ const totalResponses=eps.reduce((s,e)=>s+(e.responses||[]).length,0);
+ const tags=new Set();eps.forEach(e=>(e.tags||[]).forEach(t=>tags.add(t)));
+ const maxM=Math.max(...Object.values(methods),1);
+ const maxG=Math.max(...Object.values(groups),1);
+ const colors={GET:'#58a6ff',POST:'#3fb950',PUT:'#d29922',PATCH:'#bc8cff',DELETE:'#f85149',HEAD:'#8b949e',OPTIONS:'#f778ba'};
+ c.innerHTML=`<div class="dashboard">
+  <h2 style="margin-bottom:16px">📊 API Overview</h2>
+  <div class="stats-grid">
+   <div class="stat-card"><div class="val">${eps.length}</div><div class="label">Endpoints</div></div>
+   <div class="stat-card"><div class="val">${state.groups.length}</div><div class="label">Groups</div></div>
+   <div class="stat-card"><div class="val">${totalParams}</div><div class="label">Parameters</div></div>
+   <div class="stat-card"><div class="val">${totalResponses}</div><div class="label">Responses</div></div>
+   <div class="stat-card"><div class="val">${tags.size}</div><div class="label">Tags</div></div>
+   <div class="stat-card"><div class="val">${state.api.auth?.type!=='none'?'✅':'❌'}</div><div class="label">Auth</div></div>
+  </div>
+  <div class="chart-row">
+   <div class="chart-card"><h3>Methods Distribution</h3><div class="bar-chart">${Object.entries(methods).sort((a,b)=>b[1]-a[1]).map(([m,n])=>`<div class="bar-row"><span class="bar-label">${m}</span><span class="bar-track"><span class="bar-fill" style="width:${n/maxM*100}%;background:${colors[m]||'#58a6ff'}"></span></span><span class="bar-val">${n}</span></div>`).join('')}</div></div>
+   <div class="chart-card"><h3>Endpoints by Group</h3><div class="bar-chart">${Object.entries(groups).map(([g,n])=>`<div class="bar-row"><span class="bar-label">${g}</span><span class="bar-track"><span class="bar-fill" style="width:${n/maxG*100}%;background:var(--accent)"></span></span><span class="bar-val">${n}</span></div>`).join('')}</div></div>
+  </div>
+  <div class="chart-card" style="margin-bottom:24px"><h3>All Endpoints</h3>
+   <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px">
+    <tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:6px 8px;color:var(--text3);font-size:11px">METHOD</th><th style="text-align:left;padding:6px 8px;color:var(--text3);font-size:11px">PATH</th><th style="text-align:left;padding:6px 8px;color:var(--text3);font-size:11px">NAME</th><th style="text-align:left;padding:6px 8px;color:var(--text3);font-size:11px">PARAMS</th><th style="text-align:left;padding:6px 8px;color:var(--text3);font-size:11px">RESPONSES</th></tr>
+    ${eps.map(e=>{const mc=e.method.toLowerCase();return `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="selectEndpoint('${e.id}');switchView('editor')"><td style="padding:6px 8px"><span class="method m-${mc}" style="font-size:10px">${e.method}</span></td><td style="padding:6px 8px;font-family:monospace;color:var(--accent)">${esc(e.path)}</td><td style="padding:6px 8px">${esc(e.name)}</td><td style="padding:6px 8px;color:var(--text2)">${e.params.length}</td><td style="padding:6px 8px;color:var(--text2)">${(e.responses||[]).length}</td></tr>`}).join('')}
+   </table>
+  </div>
+ </div>`;
+}
+
+function renderExportView(c){
+ c.innerHTML=`<div class="export-view">
+  <h2 style="margin-bottom:16px">📤 Export API Documentation</h2>
+  <div class="export-formats">
+   <div class="export-card" onclick="exportOpenAPI()"><div class="icon">📋</div><div class="title">OpenAPI 3.0</div><div class="desc">Standard API spec (JSON)</div></div>
+   <div class="export-card" onclick="exportMarkdown()"><div class="icon">📝</div><div class="title">Markdown</div><div class="desc">Documentation in Markdown</div></div>
+   <div class="export-card" onclick="exportHTML()"><div class="icon">🌐</div><div class="title">Standalone HTML</div><div class="desc">One file, host anywhere</div></div>
+   <div class="export-card" onclick="exportPostman()"><div class="icon">📮</div><div class="title">Postman Collection</div><div class="desc">Import into Postman</div></div>
+   <div class="export-card" onclick="exportJSON()"><div class="icon">💾</div><div class="title">JSON Backup</div><div class="desc">Full project backup</div></div>
+  </div>
+  <div class="chart-card"><h3>Quick Preview — OpenAPI 3.0</h3><div class="code-block" style="max-height:400px">${syntaxHL(JSON.stringify(generateOpenAPI(),null,2))}</div></div>
+ </div>`;
+}
+
+// CRUD Operations
+function addEndpoint(){
+ const ep={id:uid(),group:state.groups[0]?.id||'',method:'GET',path:'/new-endpoint',name:'New Endpoint',description:'',params:[],headers:[{name:'Authorization',type:'string',required:true,description:'Bearer YOUR_API_KEY'}],body:'',responses:[{status:'200',description:'Success',body:'{\n  "data": {}\n}'}],tags:[]};
+ state.endpoints.push(ep);state.activeId=ep.id;save();renderSidebar();renderContent();
+}
+
+function duplicateEndpoint(){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(!ep)return;
+ const dup=JSON.parse(JSON.stringify(ep));
+ dup.id=uid();dup.name+=' (copy)';
+ state.endpoints.push(dup);state.activeId=dup.id;save();renderSidebar();renderContent();
+}
+
+function deleteEndpoint(){
+ if(!state.activeId)return;
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(!confirm(`Delete "${ep?.name||ep?.path}"?`))return;
+ state.endpoints=state.endpoints.filter(e=>e.id!==state.activeId);
+ state.activeId=state.endpoints[0]?.id||null;save();renderSidebar();renderContent();
+}
+
+function updateEp(key,val){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(ep){ep[key]=val;save();renderSidebar()}
+}
+
+function addParam(loc){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(ep){ep.params.push({name:'',in:loc,type:'string',required:false,description:''});save();renderContent()}
+}
+function updateParam(idx,key,val){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(ep&&ep.params[idx]){ep.params[idx][key]=val;save()}
+}
+function removeParam(idx){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(ep){ep.params.splice(idx,1);save();renderContent()}
+}
+function addHeader(){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(ep){if(!ep.headers)ep.headers=[];ep.headers.push({name:'',type:'string',required:false,description:''});save();renderContent()}
+}
+function updateHeader(idx,key,val){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(ep&&ep.headers&&ep.headers[idx]){ep.headers[idx][key]=val;save()}
+}
+function removeHeader(idx){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(ep&&ep.headers){ep.headers.splice(idx,1);save();renderContent()}
+}
+function addResponse(){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(ep){if(!ep.responses)ep.responses=[];ep.responses.push({status:'200',description:'',body:''});save();renderContent()}
+}
+function updateResponse(idx,key,val){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(ep&&ep.responses&&ep.responses[idx]){ep.responses[idx][key]=val;save()}
+}
+function removeResponse(idx){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(ep&&ep.responses){ep.responses.splice(idx,1);save();renderContent()}
+}
+function addTag(val){
+ if(!val.trim())return;
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(ep){if(!ep.tags)ep.tags=[];if(!ep.tags.includes(val.trim()))ep.tags.push(val.trim());save();renderContent()}
+}
+function removeTag(idx){
+ const ep=state.endpoints.find(e=>e.id===state.activeId);
+ if(ep&&ep.tags){ep.tags.splice(idx,1);save();renderContent()}
+}
+function addGroup(){
+ const name=prompt('Group name:');
+ if(!name)return;
+ state.groups.push({id:uid(),name,order:state.groups.length});save();renderSidebar();
+}
+
+// Settings
+function showSettings(){
+ const api=state.api;
+ const m=document.getElementById('modal');
+ m.classList.remove('hidden');
+ m.innerHTML=`<div class="modal"><h2>⚙️ API Settings</h2>
+  <div class="form-group"><label>API Name</label><input id="sName" value="${esc(api.name)}" /></div>
+  <div class="form-group"><label>Version</label><input id="sVer" value="${esc(api.version)}" placeholder="1.0.0" /></div>
+  <div class="form-group"><label>Base URL</label><input id="sBase" value="${esc(api.baseUrl)}" placeholder="https://api.example.com/v1" /></div>
+  <div class="form-group"><label>Description</label><textarea id="sDesc">${esc(api.description)}</textarea></div>
+  <div class="form-group"><label>Authentication Type</label>
+   <div class="auth-type-grid">${AUTH_TYPES.map(t=>`<div class="auth-type-card ${api.auth?.type===t?'active':''}" onclick="selectAuthType('${t}')" id="auth-${t}">${t==='none'?'None':t==='bearer'?'Bearer Token':t==='apiKey'?'API Key':t==='basic'?'Basic Auth':'OAuth 2.0'}</div>`).join('')}</div>
+  </div>
+  <div class="form-group"><label>Auth Description</label><textarea id="sAuthDesc">${esc(api.auth?.description||'')}</textarea></div>
+  <div class="form-group"><label>Groups (one per line)</label><textarea id="sGroups">${state.groups.map(g=>g.name).join('\n')}</textarea></div>
+  <div class="actions"><button class="cancel" onclick="closeModal()">Cancel</button><button class="save" onclick="saveSettings()">Save</button></div>
+ </div>`;
+}
+
+function selectAuthType(t){
+ document.querySelectorAll('.auth-type-card').forEach(el=>el.classList.remove('active'));
+ document.getElementById('auth-'+t)?.classList.add('active');
+}
+
+function saveSettings(){
+ const authType=document.querySelector('.auth-type-card.active')?.id?.replace('auth-','')||'none';
+ state.api.name=document.getElementById('sName').value;
+ state.api.version=document.getElementById('sVer').value;
+ state.api.baseUrl=document.getElementById('sBase').value;
+ state.api.description=document.getElementById('sDesc').value;
+ if(!state.api.auth)state.api.auth={};
+ state.api.auth.type=authType;
+ state.api.auth.description=document.getElementById('sAuthDesc').value;
+ const groupNames=document.getElementById('sGroups').value.split('\n').map(s=>s.trim()).filter(Boolean);
+ const newGroups=groupNames.map((name,i)=>{
+  const existing=state.groups.find(g=>g.name===name);
+  return existing?{...existing,order:i}:{id:uid(),name,order:i};
+ });
+ state.groups=newGroups;
+ save();closeModal();renderSidebar();renderContent();
+}
+
+function closeModal(){document.getElementById('modal').classList.add('hidden')}
+
+// Export functions
+function generateOpenAPI(){
+ const api=state.api;
+ const spec={openapi:'3.0.3',info:{title:api.name||'API',version:api.version||'1.0.0',description:api.description||''},servers:[{url:api.baseUrl||'https://api.example.com'}],paths:{},components:{securitySchemes:{}}};
+ if(api.auth?.type==='bearer'){spec.components.securitySchemes.bearerAuth={type:'http',scheme:'bearer'};spec.security=[{bearerAuth:[]}]}
+ else if(api.auth?.type==='apiKey'){spec.components.securitySchemes.apiKeyAuth={type:'apiKey',in:'header',name:api.auth.keyName||'X-API-Key'};spec.security=[{apiKeyAuth:[]}]}
+ for(const ep of state.endpoints){
+  const path=ep.path;
+  if(!spec.paths[path])spec.paths[path]={};
+  const op={summary:ep.name,description:ep.description,tags:ep.tags||[],parameters:[],responses:{}};
+  for(const p of ep.params){
+   op.parameters.push({name:p.name,in:p.in,required:p.required,description:p.description,schema:{type:p.type==='integer'?'integer':p.type==='number'?'number':p.type==='boolean'?'boolean':'string'}});
+  }
+  if(['POST','PUT','PATCH'].includes(ep.method)&&ep.body){
+   try{const j=JSON.parse(ep.body);op.requestBody={required:true,content:{'application/json':{schema:{type:'object'},example:j}}}}catch(e){op.requestBody={required:true,content:{'application/json':{example:ep.body}}}}
+  }
+  for(const r of(ep.responses||[])){
+   const resp={description:r.description};
+   if(r.body){try{resp.content={'application/json':{example:JSON.parse(r.body)}}}catch(e){}}
+   op.responses[r.status]=resp;
+  }
+  spec.paths[path][ep.method.toLowerCase()]=op;
+ }
+ return spec;
+}
+
+function exportOpenAPI(){download(JSON.stringify(generateOpenAPI(),null,2),'openapi.json','application/json')}
+
+function exportMarkdown(){
+ const api=state.api;
+ let md=`# ${api.name||'API Documentation'}\n\n**Version:** ${api.version||'1.0.0'}\n**Base URL:** \`${api.baseUrl||'https://api.example.com'}\`\n\n${api.description||''}\n\n`;
+ if(api.auth?.type!=='none')md+=`## 🔐 Authentication\n\n**Type:** ${api.auth.type}\n\n${api.auth.description||''}\n\n`;
+ const groups=[...state.groups].sort((a,b)=>a.order-b.order);
+ for(const g of groups){
+  const eps=state.endpoints.filter(e=>e.group===g.id);
+  if(!eps.length)continue;
+  md+=`## ${g.name}\n\n`;
+  for(const ep of eps){
+   md+=`### ${ep.method} \`${ep.path}\`\n\n${ep.description||''}\n\n`;
+   const pp=ep.params.filter(p=>p.in==='path');
+   const qp=ep.params.filter(p=>p.in==='query');
+   if(pp.length){md+='**Path Parameters:**\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n';pp.forEach(p=>{md+=`| \`${p.name}\` | ${p.type} | ${p.required?'Yes':'No'} | ${p.description} |\n`});md+='\n'}
+   if(qp.length){md+='**Query Parameters:**\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n';qp.forEach(p=>{md+=`| \`${p.name}\` | ${p.type} | ${p.required?'Yes':'No'} | ${p.description} |\n`});md+='\n'}
+   if(ep.body)md+=`**Request Body:**\n\n\`\`\`json\n${ep.body}\n\`\`\`\n\n`;
+   for(const r of(ep.responses||[])){md+=`**${r.status}** — ${r.description}\n\n`;if(r.body)md+=`\`\`\`json\n${r.body}\n\`\`\`\n\n`}
+   md+='---\n\n';
+  }
+ }
+ download(md,(api.name||'api')+'-docs.md','text/markdown');
+}
+
+function exportHTML(){
+ // Generate a standalone HTML doc
+ const api=state.api;
+ const previewHTML=document.querySelector('.preview')?.innerHTML;
+ let html=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${esc(api.name)} — API Documentation</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;padding:40px 20px;max-width:900px;margin:0 auto;line-height:1.6}
+h2{font-size:24px;margin-bottom:8px}h4{font-size:12px;font-weight:600;color:#8b949e;margin:12px 0 8px;text-transform:uppercase;letter-spacing:.5px}p{color:#8b949e}
+.base{font-family:monospace;background:#21262d;padding:4px 10px;border-radius:4px;font-size:13px;display:inline-block;margin:8px 0}
+.api-info{margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid #30363d}.ver{color:#8b949e;font-size:13px;margin-bottom:8px}
+.auth-section{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin-bottom:24px}.auth-section h3{font-size:14px;margin-bottom:8px}
+.group-title{font-size:18px;font-weight:600;margin:24px 0 16px;padding-bottom:8px;border-bottom:1px solid #30363d}
+.ep-block{margin-bottom:16px;border:1px solid #30363d;border-radius:8px;overflow:hidden}
+.ep-head{padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;background:#161b22}.ep-head:hover{background:#21262d}
+.method-badge{font-size:12px;font-weight:700;padding:4px 10px;border-radius:4px;min-width:60px;text-align:center;text-transform:uppercase}
+.m-get{background:#1f6feb22;color:#58a6ff}.m-post{background:#3fb95022;color:#3fb950}.m-put{background:#d2992222;color:#d29922}.m-patch{background:#bc8cff22;color:#bc8cff}.m-delete{background:#f8514922;color:#f85149}
+.ep-path{font-family:monospace;font-size:14px;flex:1}.ep-desc{color:#8b949e;font-size:13px}
+.ep-body{padding:16px;background:#0d1117;border-top:1px solid #30363d}
+.code-block{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;font-family:monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-size:11px;color:#6e7681;padding:6px 8px;border-bottom:1px solid #30363d;text-transform:uppercase;font-weight:600}td{padding:6px 8px;border-bottom:1px solid #30363d;vertical-align:top}
+.pname{font-family:monospace;color:#58a6ff;font-weight:600}.ptype{color:#bc8cff;font-family:monospace;font-size:12px}.preq{color:#f85149;font-size:11px;font-weight:600}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.s2xx{background:#3fb95022;color:#3fb950}.s4xx{background:#f8514922;color:#f85149}.s5xx{background:#f8514922;color:#f85149}
+.hidden{display:none}</style></head><body>`;
+ // Rebuild preview content directly
+ html+=`<div class="api-info"><h2>${esc(api.name||'API Documentation')}</h2><div class="ver">Version ${esc(api.version||'1.0.0')}</div>`;
+ if(api.baseUrl)html+=`<div class="base">${esc(api.baseUrl)}</div>`;
+ html+=`<p>${esc(api.description||'')}</p></div>`;
+ if(api.auth?.type!=='none'){
+  const labels={bearer:'Bearer Token',apiKey:'API Key',basic:'Basic Auth',oauth2:'OAuth 2.0'};
+  html+=`<div class="auth-section"><h3>🔐 Authentication — ${labels[api.auth.type]}</h3><p>${esc(api.auth.description||'')}</p></div>`;
+ }
+ const groups=[...state.groups].sort((a,b)=>a.order-b.order);
+ for(const g of groups){
+  const eps=state.endpoints.filter(e=>e.group===g.id);
+  if(!eps.length)continue;
+  html+=`<div class="group-title">${esc(g.name)}</div>`;
+  for(const ep of eps){
+   const mc=ep.method.toLowerCase();
+   html+=`<div class="ep-block"><div class="ep-head" onclick="this.nextElementSibling.classList.toggle('hidden')"><span class="method-badge m-${mc}">${ep.method}</span><span class="ep-path">${esc(ep.path)}</span><span class="ep-desc">${esc(ep.name)}</span></div><div class="ep-body hidden">`;
+   if(ep.description)html+=`<p style="margin-bottom:12px">${esc(ep.description)}</p>`;
+   const pp=ep.params.filter(p=>p.in==='path');
+   const qp=ep.params.filter(p=>p.in==='query');
+   if(pp.length)html+=`<h4>Path Parameters</h4><table><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr>${pp.map(p=>`<tr><td class="pname">${esc(p.name)}</td><td class="ptype">${esc(p.type)}</td><td>${p.required?'<span class="preq">Required</span>':'Optional'}</td><td>${esc(p.description)}</td></tr>`).join('')}</table>`;
+   if(qp.length)html+=`<h4>Query Parameters</h4><table><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr>${qp.map(p=>`<tr><td class="pname">${esc(p.name)}</td><td class="ptype">${esc(p.type)}</td><td>${p.required?'<span class="preq">Required</span>':'Optional'}</td><td>${esc(p.description)}</td></tr>`).join('')}</table>`;
+   if(['POST','PUT','PATCH'].includes(ep.method)&&ep.body)html+=`<h4>Request Body</h4><div class="code-block">${syntaxHL(ep.body)}</div>`;
+   for(const r of(ep.responses||[])){
+    const sc=r.status[0];const cls=sc==='2'?'s2xx':sc==='4'?'s4xx':'s5xx';
+    html+=`<div style="margin:8px 0"><span class="status-badge ${cls}">${r.status}</span> ${esc(r.description)}${r.body?`<div class="code-block" style="margin-top:6px">${syntaxHL(r.body)}</div>`:''}</div>`;
+   }
+   html+=`</div></div>`;
+  }
+ }
+ html+=`<div style="text-align:center;color:#6e7681;margin-top:40px;font-size:12px">Generated by API Doc Studio</div></body></html>`;
+ download(html,(api.name||'api')+'-docs.html','text/html');
+}
+
+function exportPostman(){
+ const api=state.api;
+ const collection={info:{name:api.name||'API',schema:'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',description:api.description},item:[]};
+ const groupFolders={};
+ for(const g of state.groups)groupFolders[g.id]={name:g.name,item:[]};
+ for(const ep of state.endpoints){
+  const item={name:ep.name||ep.path,request:{method:ep.method,header:(ep.headers||[]).map(h=>({key:h.name,value:'',description:h.description})),url:{raw:(api.baseUrl||'')+ep.path,host:[(api.baseUrl||'').replace(/^https?:\/\//,'')],path:ep.path.split('/').filter(Boolean)},description:ep.description}};
+  if(['POST','PUT','PATCH'].includes(ep.method)&&ep.body){item.request.body={mode:'raw',raw:ep.body,options:{raw:{language:'json'}}}}
+  const qp=ep.params.filter(p=>p.in==='query');
+  if(qp.length)item.request.url.query=qp.map(p=>({key:p.name,value:'',description:p.description}));
+  if(ep.group&&groupFolders[ep.group])groupFolders[ep.group].item.push(item);
+  else collection.item.push(item);
+ }
+ for(const gid in groupFolders){if(groupFolders[gid].item.length)collection.item.unshift(groupFolders[gid])}
+ download(JSON.stringify(collection,null,2),(api.name||'api')+'-postman.json','application/json');
+}
+
+function exportJSON(){download(JSON.stringify(state,null,2),'api-doc-studio-backup.json','application/json')}
+
+function doExport(){switchView('export')}
+function doImport(){document.getElementById('fileInput').click()}
+
+function handleImport(e){
+ const file=e.target.files[0];if(!file)return;
+ const reader=new FileReader();
+ reader.onload=function(ev){
+  try{
+   const data=JSON.parse(ev.target.result);
+   if(data.api&&data.endpoints){
+    if(confirm('Replace current project with imported data?')){
+     state=data;save();renderSidebar();renderViewTabs();
+     if(state.endpoints.length)selectEndpoint(state.endpoints[0].id);
+     else renderContent();
+    }
+   }else alert('Invalid backup file');
+  }catch(err){alert('Failed to parse JSON')}
+ };reader.readAsText(file);
+ e.target.value='';
+}
+
+function download(content,filename,type){
+ const blob=new Blob([content],{type});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);
+}
+
+function showHelp(){
+ const m=document.getElementById('modal');m.classList.remove('hidden');
+ m.innerHTML=`<div class="modal"><h2>⌨️ Keyboard Shortcuts</h2>
+  <div style="display:grid;grid-template-columns:80px 1fr;gap:6px;font-size:13px;margin-top:12px">
+   <kbd style="background:var(--bg3);padding:2px 6px;border-radius:4px;text-align:center">N</kbd><span>New endpoint</span>
+   <kbd style="background:var(--bg3);padding:2px 6px;border-radius:4px;text-align:center">/</kbd><span>Search</span>
+   <kbd style="background:var(--bg3);padding:2px 6px;border-radius:4px;text-align:center">1-5</kbd><span>Switch views</span>
+   <kbd style="background:var(--bg3);padding:2px 6px;border-radius:4px;text-align:center">E</kbd><span>Export</span>
+   <kbd style="background:var(--bg3);padding:2px 6px;border-radius:4px;text-align:center">I</kbd><span>Import</span>
+   <kbd style="background:var(--bg3);padding:2px 6px;border-radius:4px;text-align:center">D</kbd><span>Duplicate</span>
+   <kbd style="background:var(--bg3);padding:2px 6px;border-radius:4px;text-align:center">Del</kbd><span>Delete endpoint</span>
+   <kbd style="background:var(--bg3);padding:2px 6px;border-radius:4px;text-align:center">?</kbd><span>Help</span>
+   <kbd style="background:var(--bg3);padding:2px 6px;border-radius:4px;text-align:center">Esc</kbd><span>Close modal</span>
+  </div>
+  <div class="actions" style="margin-top:20px"><button class="cancel" onclick="closeModal()">Close</button></div>
+ </div>`;
+}
+
+function handleKeys(e){
+ if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT'){
+  if(e.key==='Escape'){e.target.blur();return}
+  return;
+ }
+ if(!document.getElementById('modal').classList.contains('hidden')){
+  if(e.key==='Escape')closeModal();return;
+ }
+ if(e.key==='/'){e.preventDefault();document.getElementById('search').focus()}
+ else if(e.key==='n'||e.key==='N')addEndpoint();
+ else if(e.key==='?')showHelp();
+ else if(e.key==='d'||e.key==='D')duplicateEndpoint();
+ else if(e.key==='e'||e.key==='E'){e.preventDefault();switchView('export')}
+ else if(e.key==='i')doImport();
+ else if(e.key>='1'&&e.key<='5')switchView(VIEWS[parseInt(e.key)-1]);
+ else if(e.key==='Delete'||e.key==='Backspace')deleteEndpoint();
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+init();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

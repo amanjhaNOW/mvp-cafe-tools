@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timeline Forge — Visual Timeline & Milestone Builder</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;
+  --text:#e6edf3;--text2:#8b949e;--text3:#484f58;
+  --accent:#58a6ff;--accent2:#1f6feb;--green:#3fb950;--red:#f85149;
+  --orange:#d29922;--purple:#bc8cff;--pink:#f778ba;--cyan:#39d2c0;
+  --yellow:#e3b341;--teal:#2ea043;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:var(--text)}
+input,textarea,select{font-family:inherit;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;outline:none;font-size:14px}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical}
+::selection{background:var(--accent2);color:#fff}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* Layout */
+.sidebar{width:260px;min-width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:20px}
+.sidebar-search{padding:8px 12px}
+.sidebar-search input{width:100%;padding:6px 10px;font-size:13px}
+.sidebar-list{flex:1;overflow-y:auto;padding:4px 8px}
+.sidebar-item{padding:8px 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:2px;transition:background .15s}
+.sidebar-item:hover{background:var(--surface2)}
+.sidebar-item.active{background:var(--accent2);color:#fff}
+.sidebar-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sidebar-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-item .count{font-size:11px;color:var(--text2);background:var(--surface);padding:1px 6px;border-radius:10px}
+.sidebar-actions{padding:12px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap}
+.sidebar-actions button{padding:6px 10px;border-radius:6px;font-size:12px;background:var(--surface2);border:1px solid var(--border);flex:1;min-width:70px;text-align:center}
+.sidebar-actions button:hover{border-color:var(--accent);color:var(--accent)}
+.sidebar-actions button.primary{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.sidebar-actions button.primary:hover{background:var(--accent)}
+
+.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.toolbar{padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surface);flex-shrink:0}
+.toolbar .title{font-size:15px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toolbar .btn{padding:6px 12px;border-radius:6px;font-size:12px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;gap:4px}
+.toolbar .btn:hover{border-color:var(--accent);color:var(--accent)}
+.toolbar .btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.view-tabs{display:flex;gap:2px}
+.view-tabs .btn{border:none;padding:6px 14px;border-radius:6px;font-size:12px;color:var(--text2)}
+.view-tabs .btn:hover{color:var(--text);background:var(--surface2)}
+.view-tabs .btn.active{color:#fff;background:var(--accent2)}
+
+.content{flex:1;overflow:auto;padding:24px}
+
+/* Events list */
+.events-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.events-header h2{font-size:18px;font-weight:600}
+.add-btn{padding:8px 16px;border-radius:8px;font-size:13px;background:var(--accent2);color:#fff;font-weight:500}
+.add-btn:hover{background:var(--accent)}
+.events-grid{display:flex;flex-direction:column;gap:8px}
+.event-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;cursor:pointer;transition:border-color .15s}
+.event-card:hover{border-color:var(--accent)}
+.event-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.event-info{flex:1;min-width:0}
+.event-info .name{font-size:14px;font-weight:600;margin-bottom:2px}
+.event-info .date{font-size:12px;color:var(--text2)}
+.event-info .desc{font-size:12px;color:var(--text2);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.event-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.event-card:hover .event-actions{opacity:1}
+.event-actions button{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--surface2)}
+.event-actions button:hover{background:var(--border)}
+.event-type-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;display:inline-block;margin-left:8px}
+
+/* Visual Timeline */
+.timeline-container{position:relative;padding:20px 0}
+.timeline-controls{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.timeline-controls select,.timeline-controls input{font-size:13px;padding:6px 10px}
+.timeline-controls label{font-size:12px;color:var(--text2)}
+
+/* Vertical Timeline */
+.v-timeline{position:relative;padding:0 0 0 40px;max-width:800px;margin:0 auto}
+.v-timeline::before{content:'';position:absolute;left:19px;top:0;bottom:0;width:2px;background:var(--border)}
+.v-event{position:relative;margin-bottom:32px;animation:fadeSlide .4s ease}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.v-event .dot{position:absolute;left:-29px;top:6px;width:18px;height:18px;border-radius:50%;border:3px solid var(--bg);z-index:1;display:flex;align-items:center;justify-content:center;font-size:9px}
+.v-event .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;transition:border-color .2s,transform .2s}
+.v-event .card:hover{border-color:var(--accent);transform:translateX(4px)}
+.v-event .card .date-label{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.v-event .card .event-title{font-size:15px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.v-event .card .event-title .emoji{font-size:18px}
+.v-event .card .event-desc{font-size:13px;color:var(--text2);line-height:1.5}
+.v-event .card .event-tags{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.v-event .card .event-tags span{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text2)}
+
+/* Horizontal Timeline */
+.h-timeline-wrapper{overflow-x:auto;padding:40px 0 20px}
+.h-timeline{display:flex;align-items:flex-start;position:relative;min-width:max-content;padding:0 40px}
+.h-timeline .line{position:absolute;top:80px;left:0;right:0;height:3px;background:var(--border)}
+.h-event{display:flex;flex-direction:column;align-items:center;width:200px;flex-shrink:0;position:relative;cursor:pointer}
+.h-event .h-dot{width:16px;height:16px;border-radius:50%;border:3px solid var(--bg);margin-top:73px;z-index:1;transition:transform .2s}
+.h-event:hover .h-dot{transform:scale(1.4)}
+.h-event .h-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-top:12px;width:180px;text-align:center;transition:border-color .2s,transform .2s}
+.h-event:hover .h-card{border-color:var(--accent);transform:translateY(-4px)}
+.h-event .h-date{font-size:11px;color:var(--text2);font-weight:600;text-align:center}
+.h-event .h-title{font-size:13px;font-weight:600;margin-top:4px}
+.h-event .h-type{font-size:10px;margin-top:4px;display:inline-block;padding:1px 6px;border-radius:8px}
+
+/* Compact Timeline */
+.c-timeline{max-width:700px;margin:0 auto}
+.c-year-group{margin-bottom:24px}
+.c-year-label{font-size:20px;font-weight:800;color:var(--accent);margin-bottom:12px;padding-left:8px}
+.c-event{display:flex;align-items:flex-start;gap:12px;padding:8px 12px;border-radius:8px;transition:background .15s;cursor:pointer}
+.c-event:hover{background:var(--surface)}
+.c-event .c-date{font-size:12px;color:var(--text2);width:80px;flex-shrink:0;padding-top:2px;text-align:right}
+.c-event .c-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.c-event .c-info .c-title{font-size:14px;font-weight:600}
+.c-event .c-info .c-desc{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* Dashboard */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px}
+.stat-card .label{font-size:12px;color:var(--text2);margin-bottom:4px}
+.stat-card .value{font-size:24px;font-weight:700}
+.stat-card .sub{font-size:11px;color:var(--text2);margin-top:2px}
+.chart-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.chart-section h3{font-size:14px;font-weight:600;margin-bottom:16px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.bar-row .bar-label{font-size:12px;color:var(--text2);width:100px;text-align:right;flex-shrink:0}
+.bar-row .bar-track{flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.bar-row .bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.bar-row .bar-val{font-size:12px;color:var(--text2);width:30px;flex-shrink:0}
+.year-chart{display:flex;align-items:flex-end;gap:4px;height:120px;padding:0 8px}
+.year-bar{flex:1;min-width:20px;border-radius:4px 4px 0 0;position:relative;transition:height .4s ease;cursor:pointer}
+.year-bar:hover{opacity:.8}
+.year-bar .yb-label{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text2);white-space:nowrap}
+.year-bar .yb-val{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:600}
+
+/* Export View */
+.export-section{max-width:700px;margin:0 auto}
+.export-section h2{font-size:18px;font-weight:600;margin-bottom:16px}
+.export-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.export-btns button{padding:10px 20px;border-radius:8px;font-size:13px;background:var(--surface);border:1px solid var(--border);font-weight:500}
+.export-btns button:hover{border-color:var(--accent);color:var(--accent)}
+.export-preview{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;font-size:13px;color:var(--text2);max-height:400px;overflow:auto;white-space:pre-wrap;font-family:'SF Mono',Monaco,Consolas,monospace}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:520px;max-width:95vw;max-height:85vh;overflow-y:auto;padding:24px;animation:slideUp .2s ease}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal h2{font-size:16px;font-weight:700;margin-bottom:16px}
+.modal .field{margin-bottom:14px}
+.modal .field label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:500}
+.modal .field input,.modal .field textarea,.modal .field select{width:100%}
+.modal .field textarea{min-height:80px}
+.modal .row{display:flex;gap:12px}
+.modal .row .field{flex:1}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.modal-footer button{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:500}
+.modal-footer .cancel{background:var(--surface2);border:1px solid var(--border)}
+.modal-footer .cancel:hover{border-color:var(--text2)}
+.modal-footer .save{background:var(--accent2);color:#fff}
+.modal-footer .save:hover{background:var(--accent)}
+.modal-footer .delete{background:var(--red);color:#fff}
+.modal-footer .delete:hover{opacity:.8}
+
+/* Color picker */
+.color-grid{display:flex;gap:6px;flex-wrap:wrap}
+.color-swatch{width:28px;height:28px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:border-color .15s}
+.color-swatch:hover,.color-swatch.active{border-color:#fff}
+
+/* Emoji picker */
+.emoji-grid{display:flex;gap:4px;flex-wrap:wrap}
+.emoji-opt{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;font-size:18px;border:2px solid transparent}
+.emoji-opt:hover,.emoji-opt.active{background:var(--surface2);border-color:var(--accent)}
+
+/* Tags input */
+.tags-input{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;min-height:36px;align-items:center}
+.tags-input:focus-within{border-color:var(--accent)}
+.tags-input .tag{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--accent2);color:#fff;display:flex;align-items:center;gap:4px;cursor:pointer}
+.tags-input .tag:hover{opacity:.8}
+.tags-input input{border:none;background:none;padding:2px 4px;font-size:13px;color:var(--text);outline:none;flex:1;min-width:60px}
+
+/* Empty state */
+.empty{text-align:center;padding:60px 20px;color:var(--text2)}
+.empty .emoji{font-size:48px;margin-bottom:12px}
+.empty h3{font-size:16px;color:var(--text);margin-bottom:8px}
+.empty p{font-size:13px}
+
+/* Filter pills */
+.filter-pills{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px}
+.filter-pill{padding:4px 12px;border-radius:12px;font-size:11px;font-weight:500;background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:all .15s}
+.filter-pill:hover{border-color:var(--accent)}
+.filter-pill.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+
+.kbd{font-size:10px;padding:2px 5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;font-family:monospace;color:var(--text2)}
+</style>
+</head>
+<body>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header"><h1><span>⏳</span> Timeline Forge</h1></div>
+  <div class="sidebar-search"><input type="text" id="sidebarSearch" placeholder="Search timelines..." /></div>
+  <div class="sidebar-list" id="sidebarList"></div>
+  <div class="sidebar-actions">
+    <button class="primary" onclick="newTimeline()">+ New</button>
+    <button onclick="importJSON()">Import</button>
+    <button onclick="exportJSON()">Export</button>
+  </div>
+</div>
+<div class="main">
+  <div class="toolbar" id="toolbar">
+    <div class="title" id="toolbarTitle">Timeline Forge</div>
+    <div class="view-tabs">
+      <button class="btn active" data-view="timeline" onclick="setView('timeline')">🕐 Timeline</button>
+      <button class="btn" data-view="events" onclick="setView('events')">📋 Events</button>
+      <button class="btn" data-view="dashboard" onclick="setView('dashboard')">📊 Dashboard</button>
+      <button class="btn" data-view="export" onclick="setView('export')">📤 Export</button>
+    </div>
+    <button class="btn" onclick="showHelp()" title="Keyboard shortcuts">?</button>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<script>
+// ─── Data ───
+const TYPES = [
+  {id:'milestone',label:'Milestone',emoji:'🏁',color:'var(--accent)'},
+  {id:'launch',label:'Launch',emoji:'🚀',color:'var(--green)'},
+  {id:'feature',label:'Feature',emoji:'✨',color:'var(--purple)'},
+  {id:'hire',label:'Hire / Team',emoji:'👥',color:'var(--cyan)'},
+  {id:'funding',label:'Funding',emoji:'💰',color:'var(--yellow)'},
+  {id:'pivot',label:'Pivot',emoji:'🔄',color:'var(--orange)'},
+  {id:'award',label:'Award / Win',emoji:'🏆',color:'var(--yellow)'},
+  {id:'partnership',label:'Partnership',emoji:'🤝',color:'var(--teal)'},
+  {id:'growth',label:'Growth',emoji:'📈',color:'var(--green)'},
+  {id:'failure',label:'Failure / Lesson',emoji:'💡',color:'var(--red)'},
+  {id:'career',label:'Career Move',emoji:'💼',color:'var(--accent)'},
+  {id:'product',label:'Product',emoji:'📦',color:'var(--purple)'},
+  {id:'event',label:'Event',emoji:'📅',color:'var(--pink)'},
+  {id:'other',label:'Other',emoji:'📌',color:'var(--text2)'},
+];
+
+const COLORS = ['#58a6ff','#3fb950','#f85149','#d29922','#bc8cff','#f778ba','#39d2c0','#e3b341','#da3633','#1f6feb','#56d364','#db6d28'];
+const LAYOUTS = ['vertical','horizontal','compact'];
+
+function getType(id){return TYPES.find(t=>t.id===id)||TYPES[0]}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function fmtDate(d){if(!d)return'';const dt=new Date(d);return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+function fmtDateShort(d){if(!d)return'';const dt=new Date(d);return dt.toLocaleDateString('en-US',{month:'short',year:'numeric'})}
+
+// ─── State ───
+let state = {timelines:[],active:null,view:'timeline',layout:'vertical',filterType:null};
+const STORAGE_KEY = 'timeline-forge-data';
+
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+function load(){
+  try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY));if(d&&d.timelines){state=d;if(!state.layout)state.layout='vertical';if(!state.filterType)state.filterType=null}}catch(e){}
+  if(!state.timelines.length) seedData();
+}
+function getTimeline(){return state.timelines.find(t=>t.id===state.active)}
+function getEvents(tl){
+  if(!tl)return[];
+  let evts=[...tl.events].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if(state.filterType)evts=evts.filter(e=>e.type===state.filterType);
+  return evts;
+}
+
+// ─── Seed ───
+function seedData(){
+  state.timelines=[
+    {
+      id:uid(),name:"AJ's Product Career",color:'#58a6ff',description:'10 years of building products — from a basement startup to manufacturing OS',
+      events:[
+        {id:uid(),title:'Fortunekit Founded',date:'2015-03-01',type:'launch',description:'Started in professor\'s basement with 3 friends. No TCS. No Infosys. Pure hustle.',tags:['startup','bootstrap']},
+        {id:uid(),title:'First Client — Ulhasnagar Municipality',date:'2015-09-15',type:'milestone',description:'Garbage pickup tracking for solid waste management. 40% more garbage cleaned. Saw massive gap in telematics market.',tags:['govtech','iot']},
+        {id:uid(),title:'Custom IoT Hardware Built',date:'2016-04-01',type:'product',description:'Built RTOS-based GPS device with Chinese vendor collaboration. Significantly cheaper than Teltonika/GT06. Multi-sensor, real-time.',tags:['iot','hardware']},
+        {id:uid(),title:'Biizlo — Principal Partner & CTO',date:'2017-01-15',type:'career',description:'Hyperlocal platform for Mumbai residential societies. 4% ESOP, 7+ dev team. First CTO-as-a-Cofounder engagement.',tags:['hyperlocal','equity']},
+        {id:uid(),title:'EasyGoals — AI Finance Coach',date:'2017-08-01',type:'partnership',description:'AI/NLP personal finance chatbot with ex-HDFC Bank founders. Brainstorming + product strategy + dev partnership.',tags:['fintech','ai']},
+        {id:uid(),title:'Scaled to 20,000+ Vehicles',date:'2018-06-01',type:'growth',description:'VTS platform handling 5M+ API hits/day across 20K+ vehicles. Route replay, proactive alerts, real-time tracking.',tags:['scale','iot']},
+        {id:uid(),title:'Team Grew to 30 People',date:'2019-01-01',type:'hire',description:'Fortunekit went from 4 friends in a basement to a 30-person operation. Bootstrapped, no outside funding.',tags:['team','growth']},
+        {id:uid(),title:'ZeoAuto (YC W20)',date:'2021-03-01',type:'career',description:'10% activation lift on 500K+ download route planner. First time working with a YC company.',tags:['yc','activation']},
+        {id:uid(),title:'Ezo Books — 5K New Users',date:'2021-01-01',type:'growth',description:'5% retention boost + 5K new users in 3 months via Online Shop feature.',tags:['retention','saas']},
+        {id:uid(),title:'Joined GoMechanic',date:'2022-04-01',type:'career',description:'India\'s largest car services network. 1,000+ workshops. Wound down Fortunekit after 7 years.',tags:['transition']},
+        {id:uid(),title:'GoConnect OBD Launch',date:'2022-08-01',type:'launch',description:'Connected-car OBD line — real-time location, health, driving behavior. 10K+ users in 6 months, 20%+ MOM growth.',tags:['iot','connected-car']},
+        {id:uid(),title:'Miles Membership 50K+ Members',date:'2022-12-01',type:'growth',description:'Re-launched membership v2 with tiered pricing. 70% CAC reduction via referral motion. Anchors recurring revenue.',tags:['membership','growth']},
+        {id:uid(),title:'GoMechanic Crash',date:'2023-03-01',type:'failure',description:'Company collapsed. Joined ZYOD after the crash.',tags:['lesson']},
+        {id:uid(),title:'Joined ZYOD — Head of Product',date:'2023-04-01',type:'career',description:'$24M ARR manufacturing company. Leading Product, Tech & Design for 1,000+ brands.',tags:['manufacturing','leadership']},
+        {id:uid(),title:'QR-WMS Unlocks $1.4M Capital',date:'2023-10-01',type:'milestone',description:'50 lines of code saved $180K/year. QR-code WMS system unlocked ₹11-12 Cr blocked working capital.',tags:['impact','wms']},
+        {id:uid(),title:'Fabric Cycle Time: 23 → <7 Days',date:'2024-03-01',type:'feature',description:'70% reduction in fabric cycle time. Digital twin of manufacturing operations.',tags:['manufacturing','optimization']},
+        {id:uid(),title:'IoT: 700+ Sewing Machines',date:'2024-08-01',type:'product',description:'IoT deployment across 700+ sewing machines. IIT Delhi partnership for R&D.',tags:['iot','partnership']},
+        {id:uid(),title:'UTMStamp Shipped in 13 Days',date:'2025-11-01',type:'launch',description:'Email signatures that track clicks. Built in public with midnight café coding sessions. Free forever plan.',tags:['saas','ship-fast']},
+        {id:uid(),title:'Left ZYOD — 3 Years Complete',date:'2026-03-01',type:'career',description:'$15M revenue impact, $1.4M capital unlocked. Time for the next chapter.',tags:['transition']},
+      ]
+    },
+    {
+      id:uid(),name:'UTMStamp Product Roadmap',color:'#3fb950',description:'Key milestones in the UTMStamp journey',
+      events:[
+        {id:uid(),title:'Idea Sparked',date:'2025-10-15',type:'milestone',description:'Realized email signatures are untapped attribution goldmine. Started researching the market.',tags:['ideation']},
+        {id:uid(),title:'Development Started',date:'2025-10-20',type:'feature',description:'Day 1 of building. Chose Next.js + Supabase + Vercel stack.',tags:['dev']},
+        {id:uid(),title:'v1.0 Shipped',date:'2025-11-01',type:'launch',description:'13 days from idea to shipped product. Beautiful templates, UTM tracking, click analytics.',tags:['launch','ship-fast']},
+        {id:uid(),title:'First Users',date:'2025-11-15',type:'growth',description:'First organic signups from build-in-public content on LinkedIn/Twitter.',tags:['growth']},
+        {id:uid(),title:'Team Signatures Feature',date:'2025-12-10',type:'feature',description:'Deploy signatures across entire teams. Key differentiator vs individual tools.',tags:['feature']},
+        {id:uid(),title:'Campaign Banners',date:'2026-01-05',type:'feature',description:'Dynamic campaign banners in email signatures. Marketing teams love this.',tags:['feature','marketing']},
+        {id:uid(),title:'v2.0-beta: Video Signatures',date:'2026-03-01',type:'launch',description:'Video signatures beta launch. Unique in the market.',tags:['innovation']},
+        {id:uid(),title:'Google Workspace Auto-Push',date:'2026-05-01',type:'feature',description:'Coming soon: Auto-deploy signatures across Google Workspace. Enterprise unlock.',tags:['enterprise','roadmap']},
+      ]
+    }
+  ];
+  state.active=state.timelines[0].id;
+  save();
+}
+
+// ─── Render ───
+function render(){
+  renderSidebar();
+  renderToolbar();
+  renderContent();
+}
+
+function renderSidebar(){
+  const search=(document.getElementById('sidebarSearch').value||'').toLowerCase();
+  const list=document.getElementById('sidebarList');
+  const filtered=state.timelines.filter(t=>!search||t.name.toLowerCase().includes(search));
+  list.innerHTML=filtered.map(t=>`
+    <div class="sidebar-item ${t.id===state.active?'active':''}" onclick="selectTimeline('${t.id}')" ondblclick="editTimeline('${t.id}')">
+      <div class="dot" style="background:${t.color}"></div>
+      <div class="name">${esc(t.name)}</div>
+      <div class="count">${t.events.length}</div>
+    </div>
+  `).join('')||(search?'<div style="padding:20px;text-align:center;color:var(--text2);font-size:13px">No matches</div>':'');
+}
+
+function renderToolbar(){
+  const tl=getTimeline();
+  document.getElementById('toolbarTitle').textContent=tl?tl.name:'Timeline Forge';
+  document.querySelectorAll('.view-tabs .btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.view===state.view);
+  });
+}
+
+function renderContent(){
+  const el=document.getElementById('content');
+  const tl=getTimeline();
+  if(!tl){el.innerHTML=`<div class="empty"><div class="emoji">⏳</div><h3>No Timeline Selected</h3><p>Create a new timeline or select one from the sidebar.</p></div>`;return}
+  switch(state.view){
+    case'timeline':renderTimelineView(el,tl);break;
+    case'events':renderEventsView(el,tl);break;
+    case'dashboard':renderDashboard(el,tl);break;
+    case'export':renderExport(el,tl);break;
+  }
+}
+
+// ─── Timeline View ───
+function renderTimelineView(el,tl){
+  const events=getEvents(tl);
+  const layoutBtns=LAYOUTS.map(l=>`<button class="btn ${state.layout===l?'active':''}" onclick="setLayout('${l}')">${l==='vertical'?'↕ Vertical':l==='horizontal'?'↔ Horizontal':'≡ Compact'}</button>`).join('');
+  const typeFilters=`<div class="filter-pills">
+    <span class="filter-pill ${!state.filterType?'active':''}" onclick="filterType(null)">All</span>
+    ${TYPES.filter(t=>tl.events.some(e=>e.type===t.id)).map(t=>`<span class="filter-pill ${state.filterType===t.id?'active':''}" onclick="filterType('${t.id}')">${t.emoji} ${t.label}</span>`).join('')}
+  </div>`;
+
+  let timelineHtml='';
+  if(state.layout==='vertical')timelineHtml=renderVertical(events);
+  else if(state.layout==='horizontal')timelineHtml=renderHorizontal(events);
+  else timelineHtml=renderCompact(events);
+
+  el.innerHTML=`
+    <div class="timeline-controls">${layoutBtns}<span style="flex:1"></span><button class="add-btn" onclick="addEvent()">+ Add Event</button></div>
+    ${typeFilters}
+    ${events.length?timelineHtml:'<div class="empty"><div class="emoji">📍</div><h3>No Events Yet</h3><p>Add your first milestone to start building this timeline.</p></div>'}
+  `;
+}
+
+function renderVertical(events){
+  return `<div class="v-timeline">${events.map(e=>{
+    const t=getType(e.type);
+    return `<div class="v-event" onclick="editEvent('${e.id}')">
+      <div class="dot" style="background:${t.color}"></div>
+      <div class="card">
+        <div class="date-label">${fmtDate(e.date)}</div>
+        <div class="event-title"><span class="emoji">${t.emoji}</span>${esc(e.title)}</div>
+        ${e.description?`<div class="event-desc">${esc(e.description)}</div>`:''}
+        ${e.tags&&e.tags.length?`<div class="event-tags">${e.tags.map(tg=>`<span>${esc(tg)}</span>`).join('')}</div>`:''}
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderHorizontal(events){
+  return `<div class="h-timeline-wrapper"><div class="h-timeline"><div class="line"></div>${events.map(e=>{
+    const t=getType(e.type);
+    return `<div class="h-event" onclick="editEvent('${e.id}')">
+      <div class="h-date">${fmtDateShort(e.date)}</div>
+      <div class="h-dot" style="background:${t.color}"></div>
+      <div class="h-card">
+        <div style="font-size:18px;margin-bottom:4px">${t.emoji}</div>
+        <div class="h-title">${esc(e.title)}</div>
+        <div class="h-type" style="background:${t.color}20;color:${t.color}">${t.label}</div>
+      </div>
+    </div>`;
+  }).join('')}</div></div>`;
+}
+
+function renderCompact(events){
+  const groups={};
+  events.forEach(e=>{const y=new Date(e.date).getFullYear();if(!groups[y])groups[y]=[];groups[y].push(e)});
+  return `<div class="c-timeline">${Object.keys(groups).sort((a,b)=>a-b).map(year=>`
+    <div class="c-year-group">
+      <div class="c-year-label">${year}</div>
+      ${groups[year].map(e=>{const t=getType(e.type);return `<div class="c-event" onclick="editEvent('${e.id}')">
+        <div class="c-date">${fmtDate(e.date).replace(', '+year,'')}</div>
+        <div class="c-dot" style="background:${t.color}"></div>
+        <div class="c-info"><div class="c-title">${t.emoji} ${esc(e.title)}</div>${e.description?`<div class="c-desc">${esc(e.description)}</div>`:''}</div>
+      </div>`}).join('')}
+    </div>
+  `).join('')}</div>`;
+}
+
+// ─── Events View ───
+function renderEventsView(el,tl){
+  const events=getEvents(tl);
+  const typeFilters=`<div class="filter-pills">
+    <span class="filter-pill ${!state.filterType?'active':''}" onclick="filterType(null)">All (${tl.events.length})</span>
+    ${TYPES.filter(t=>tl.events.some(e=>e.type===t.id)).map(t=>{
+      const c=tl.events.filter(e=>e.type===t.id).length;
+      return `<span class="filter-pill ${state.filterType===t.id?'active':''}" onclick="filterType('${t.id}')">${t.emoji} ${t.label} (${c})</span>`;
+    }).join('')}
+  </div>`;
+
+  el.innerHTML=`
+    <div class="events-header"><h2>Events</h2><button class="add-btn" onclick="addEvent()">+ Add Event</button></div>
+    ${typeFilters}
+    <div class="events-grid">${events.map(e=>{
+      const t=getType(e.type);
+      return `<div class="event-card" onclick="editEvent('${e.id}')">
+        <div class="event-icon" style="background:${t.color}20">${t.emoji}</div>
+        <div class="event-info">
+          <div class="name">${esc(e.title)}<span class="event-type-badge" style="background:${t.color}20;color:${t.color}">${t.label}</span></div>
+          <div class="date">${fmtDate(e.date)}</div>
+          ${e.description?`<div class="desc">${esc(e.description)}</div>`:''}
+        </div>
+        <div class="event-actions">
+          <button onclick="event.stopPropagation();duplicateEvent('${e.id}')" title="Duplicate">📋</button>
+          <button onclick="event.stopPropagation();deleteEvent('${e.id}')" title="Delete">🗑️</button>
+        </div>
+      </div>`;
+    }).join('')}</div>
+    ${!events.length?'<div class="empty"><div class="emoji">📋</div><h3>No Events</h3><p>Add events to build your timeline.</p></div>':''}
+  `;
+}
+
+// ─── Dashboard ───
+function renderDashboard(el,tl){
+  const evts=tl.events;
+  const typeCounts={};evts.forEach(e=>{typeCounts[e.type]=(typeCounts[e.type]||0)+1});
+  const years={};evts.forEach(e=>{const y=new Date(e.date).getFullYear();years[y]=(years[y]||0)+1});
+  const sortedYears=Object.keys(years).sort();
+  const maxY=Math.max(...Object.values(years),1);
+  const allTags={};evts.forEach(e=>(e.tags||[]).forEach(t=>{allTags[t]=(allTags[t]||0)+1}));
+  const topTags=Object.entries(allTags).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxTag=topTags.length?topTags[0][1]:1;
+
+  const dates=evts.map(e=>new Date(e.date)).filter(d=>!isNaN(d));
+  const earliest=dates.length?new Date(Math.min(...dates)):null;
+  const latest=dates.length?new Date(Math.max(...dates)):null;
+  const spanYears=earliest&&latest?((latest-earliest)/(365.25*24*60*60*1000)).toFixed(1):0;
+
+  el.innerHTML=`
+    <div class="dash-grid">
+      <div class="stat-card"><div class="label">Total Events</div><div class="value">${evts.length}</div></div>
+      <div class="stat-card"><div class="label">Event Types</div><div class="value">${Object.keys(typeCounts).length}</div><div class="sub">of ${TYPES.length} types</div></div>
+      <div class="stat-card"><div class="label">Time Span</div><div class="value">${spanYears} yrs</div><div class="sub">${earliest?fmtDate(earliest):'-'} → ${latest?fmtDate(latest):'-'}</div></div>
+      <div class="stat-card"><div class="label">Tags Used</div><div class="value">${Object.keys(allTags).length}</div></div>
+    </div>
+    <div class="chart-section">
+      <h3>Events by Year</h3>
+      <div class="year-chart">${sortedYears.map(y=>`<div class="year-bar" style="height:${(years[y]/maxY)*100}%;background:${tl.color}"><div class="yb-val">${years[y]}</div><div class="yb-label">${y}</div></div>`).join('')}</div>
+      <div style="height:24px"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="chart-section">
+        <h3>Events by Type</h3>
+        ${Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]).map(([tid,c])=>{
+          const t=getType(tid);
+          return `<div class="bar-row"><div class="bar-label">${t.emoji} ${t.label}</div><div class="bar-track"><div class="bar-fill" style="width:${(c/evts.length)*100}%;background:${t.color}"></div></div><div class="bar-val">${c}</div></div>`;
+        }).join('')}
+      </div>
+      <div class="chart-section">
+        <h3>Top Tags</h3>
+        ${topTags.map(([tag,c])=>`<div class="bar-row"><div class="bar-label">#${tag}</div><div class="bar-track"><div class="bar-fill" style="width:${(c/maxTag)*100}%;background:${tl.color}"></div></div><div class="bar-val">${c}</div></div>`).join('')}
+        ${!topTags.length?'<div style="color:var(--text2);font-size:13px">No tags yet</div>':''}
+      </div>
+    </div>
+  `;
+}
+
+// ─── Export ───
+function renderExport(el,tl){
+  const evts=getEvents(tl);
+  const md=generateMarkdown(tl,evts);
+  el.innerHTML=`
+    <div class="export-section">
+      <h2>Export Timeline</h2>
+      <div class="export-btns">
+        <button onclick="copyText(generateMarkdown(getTimeline(),getEvents(getTimeline())))">📋 Copy Markdown</button>
+        <button onclick="downloadMD()">📄 Download .md</button>
+        <button onclick="downloadHTML()">🌐 Standalone HTML</button>
+        <button onclick="exportJSON()">💾 Export JSON</button>
+      </div>
+      <h3 style="font-size:14px;margin-bottom:8px;color:var(--text2)">Markdown Preview</h3>
+      <div class="export-preview">${esc(md)}</div>
+    </div>
+  `;
+}
+
+function generateMarkdown(tl,evts){
+  let md=`# ${tl.name}\n\n`;
+  if(tl.description)md+=`> ${tl.description}\n\n`;
+  const groups={};evts.forEach(e=>{const y=new Date(e.date).getFullYear();if(!groups[y])groups[y]=[];groups[y].push(e)});
+  Object.keys(groups).sort().forEach(y=>{
+    md+=`## ${y}\n\n`;
+    groups[y].forEach(e=>{
+      const t=getType(e.type);
+      md+=`### ${t.emoji} ${e.title}\n`;
+      md+=`**${fmtDate(e.date)}** · ${t.label}\n\n`;
+      if(e.description)md+=`${e.description}\n\n`;
+      if(e.tags&&e.tags.length)md+=`Tags: ${e.tags.map(t=>'`'+t+'`').join(' ')}\n\n`;
+      md+=`---\n\n`;
+    });
+  });
+  return md;
+}
+
+function generateStandaloneHTML(tl){
+  const evts=[...tl.events].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const groups={};evts.forEach(e=>{const y=new Date(e.date).getFullYear();if(!groups[y])groups[y]=[];groups[y].push(e)});
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(tl.name)} — Timeline</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;padding:40px 20px;line-height:1.6}
+.container{max-width:700px;margin:0 auto}
+h1{font-size:28px;margin-bottom:8px}
+.desc{color:#8b949e;margin-bottom:32px;font-size:15px}
+.year{font-size:22px;font-weight:800;color:${tl.color};margin:32px 0 16px;padding-left:24px}
+.timeline{position:relative;padding-left:40px}
+.timeline::before{content:'';position:absolute;left:19px;top:0;bottom:0;width:2px;background:#30363d}
+.event{position:relative;margin-bottom:28px}
+.event .dot{position:absolute;left:-29px;top:6px;width:18px;height:18px;border-radius:50%;border:3px solid #0d1117}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:16px 20px}
+.card .date{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.card .title{font-size:15px;font-weight:700;margin-bottom:4px}
+.card .body{font-size:13px;color:#8b949e}
+.tags{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.tags span{font-size:10px;padding:2px 8px;border-radius:10px;background:#1c2333;color:#8b949e}
+.footer{text-align:center;margin-top:48px;color:#484f58;font-size:12px}
+</style></head><body>
+<div class="container">
+<h1>${esc(tl.name)}</h1>
+${tl.description?`<div class="desc">${esc(tl.description)}</div>`:''}
+${Object.keys(groups).sort().map(y=>`
+<div class="year">${y}</div>
+<div class="timeline">
+${groups[y].map(e=>{const t=getType(e.type);return `<div class="event"><div class="dot" style="background:${t.color}"></div><div class="card"><div class="date">${fmtDate(e.date)}</div><div class="title">${t.emoji} ${esc(e.title)}</div>${e.description?`<div class="body">${esc(e.description)}</div>`:''}${e.tags&&e.tags.length?`<div class="tags">${e.tags.map(tg=>`<span>${esc(tg)}</span>`).join('')}</div>`:''}</div></div>`}).join('')}
+</div>`).join('')}
+<div class="footer">Built with Timeline Forge</div>
+</div></body></html>`;
+}
+
+// ─── Actions ───
+function selectTimeline(id){state.active=id;state.filterType=null;save();render()}
+function setView(v){state.view=v;save();render()}
+function setLayout(l){state.layout=l;save();render()}
+function filterType(t){state.filterType=t;save();render()}
+
+function newTimeline(){
+  showModal('New Timeline',{name:'',color:'#58a6ff',description:''},null,(data)=>{
+    const tl={id:uid(),name:data.name||'Untitled Timeline',color:data.color,description:data.description,events:[]};
+    state.timelines.push(tl);state.active=tl.id;save();render();
+  });
+}
+
+function editTimeline(id){
+  const tl=state.timelines.find(t=>t.id===id);if(!tl)return;
+  showModal('Edit Timeline',{name:tl.name,color:tl.color,description:tl.description},tl.id,(data)=>{
+    tl.name=data.name||tl.name;tl.color=data.color;tl.description=data.description;save();render();
+  },()=>{
+    if(!confirm('Delete this timeline?'))return;
+    state.timelines=state.timelines.filter(t=>t.id!==id);
+    if(state.active===id)state.active=state.timelines.length?state.timelines[0].id:null;
+    save();render();
+  });
+}
+
+function addEvent(){
+  const tl=getTimeline();if(!tl)return;
+  showEventModal('Add Event',{title:'',date:new Date().toISOString().split('T')[0],type:'milestone',description:'',tags:[]},null,(data)=>{
+    tl.events.push({id:uid(),...data});save();render();
+  });
+}
+
+function editEvent(eid){
+  const tl=getTimeline();if(!tl)return;
+  const e=tl.events.find(ev=>ev.id===eid);if(!e)return;
+  showEventModal('Edit Event',{...e},eid,(data)=>{
+    Object.assign(e,data);save();render();
+  },()=>{
+    if(!confirm('Delete this event?'))return;
+    tl.events=tl.events.filter(ev=>ev.id!==eid);save();render();
+  });
+}
+
+function deleteEvent(eid){
+  const tl=getTimeline();if(!tl)return;
+  tl.events=tl.events.filter(e=>e.id!==eid);save();render();
+}
+
+function duplicateEvent(eid){
+  const tl=getTimeline();if(!tl)return;
+  const e=tl.events.find(ev=>ev.id===eid);if(!e)return;
+  tl.events.push({...e,id:uid(),title:e.title+' (copy)'});save();render();
+}
+
+// ─── Modals ───
+function closeModal(){const m=document.querySelector('.modal-overlay');if(m)m.remove()}
+
+function showModal(title,data,editId,onSave,onDelete){
+  closeModal();
+  const div=document.createElement('div');div.className='modal-overlay';div.onclick=e=>{if(e.target===div)closeModal()};
+  div.innerHTML=`<div class="modal">
+    <h2>${title}</h2>
+    <div class="field"><label>Name</label><input id="m-name" value="${esc(data.name)}" autofocus /></div>
+    <div class="field"><label>Description</label><textarea id="m-desc">${esc(data.description||'')}</textarea></div>
+    <div class="field"><label>Color</label><div class="color-grid">${COLORS.map(c=>`<div class="color-swatch ${c===data.color?'active':''}" style="background:${c}" data-color="${c}" onclick="this.parentNode.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));this.classList.add('active')"></div>`).join('')}</div></div>
+    <div class="modal-footer">
+      ${onDelete?'<button class="delete" onclick="arguments[0].stopPropagation()">Delete</button>':''}
+      <span style="flex:1"></span>
+      <button class="cancel" onclick="">Cancel</button>
+      <button class="save">Save</button>
+    </div>
+  </div>`;
+  document.body.appendChild(div);
+  div.querySelector('.cancel').onclick=closeModal;
+  if(onDelete)div.querySelector('.delete').onclick=()=>{closeModal();onDelete()};
+  div.querySelector('.save').onclick=()=>{
+    const color=div.querySelector('.color-swatch.active')?.dataset.color||data.color;
+    onSave({name:div.querySelector('#m-name').value,description:div.querySelector('#m-desc').value,color});
+    closeModal();
+  };
+  div.querySelector('#m-name').focus();
+  div.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))div.querySelector('.save').click()});
+}
+
+function showEventModal(title,data,editId,onSave,onDelete){
+  closeModal();
+  const tags=(data.tags||[]).slice();
+  const div=document.createElement('div');div.className='modal-overlay';div.onclick=e=>{if(e.target===div)closeModal()};
+  div.innerHTML=`<div class="modal">
+    <h2>${title}</h2>
+    <div class="field"><label>Title</label><input id="m-title" value="${esc(data.title)}" autofocus /></div>
+    <div class="row">
+      <div class="field"><label>Date</label><input id="m-date" type="date" value="${data.date||''}" /></div>
+      <div class="field"><label>Type</label><select id="m-type">${TYPES.map(t=>`<option value="${t.id}" ${t.id===data.type?'selected':''}>${t.emoji} ${t.label}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>Description</label><textarea id="m-edesc">${esc(data.description||'')}</textarea></div>
+    <div class="field"><label>Tags</label>
+      <div class="tags-input" id="m-tags-container">
+        ${tags.map(t=>`<span class="tag" onclick="this.remove()">${esc(t)} ×</span>`).join('')}
+        <input id="m-tag-input" placeholder="Add tag + Enter" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      ${onDelete?'<button class="delete">Delete</button>':''}
+      <span style="flex:1"></span>
+      <button class="cancel">Cancel</button>
+      <button class="save">Save</button>
+    </div>
+  </div>`;
+  document.body.appendChild(div);
+
+  const tagInput=div.querySelector('#m-tag-input');
+  const tagContainer=div.querySelector('#m-tags-container');
+  tagInput.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&tagInput.value.trim()){
+      e.preventDefault();
+      const v=tagInput.value.trim().toLowerCase();
+      const sp=document.createElement('span');sp.className='tag';sp.textContent=v+' ×';sp.onclick=()=>sp.remove();
+      tagContainer.insertBefore(sp,tagInput);tagInput.value='';
+    }
+  });
+
+  div.querySelector('.cancel').onclick=closeModal;
+  if(onDelete)div.querySelector('.delete').onclick=()=>{closeModal();onDelete()};
+  div.querySelector('.save').onclick=()=>{
+    const tagEls=tagContainer.querySelectorAll('.tag');
+    const newTags=Array.from(tagEls).map(t=>t.textContent.replace(' ×','').trim());
+    onSave({
+      title:div.querySelector('#m-title').value,
+      date:div.querySelector('#m-date').value,
+      type:div.querySelector('#m-type').value,
+      description:div.querySelector('#m-edesc').value,
+      tags:newTags
+    });
+    closeModal();
+  };
+  div.querySelector('#m-title').focus();
+  div.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))div.querySelector('.save').click()});
+}
+
+// ─── Import/Export ───
+function exportJSON(){
+  const d=JSON.stringify(state,null,2);
+  const blob=new Blob([d],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='timeline-forge-backup.json';a.click();
+}
+
+function importJSON(){
+  const input=document.createElement('input');input.type='file';input.accept='.json';
+  input.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=ev=>{
+      try{
+        const d=JSON.parse(ev.target.result);
+        if(d.timelines){
+          d.timelines.forEach(tl=>{
+            if(!state.timelines.find(t=>t.id===tl.id)){state.timelines.push(tl)}
+          });
+          save();render();
+        }
+      }catch(err){alert('Invalid JSON')}
+    };r.readAsText(f);
+  };input.click();
+}
+
+function downloadMD(){
+  const tl=getTimeline();if(!tl)return;
+  const md=generateMarkdown(tl,getEvents(tl));
+  const blob=new Blob([md],{type:'text/markdown'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=tl.name.replace(/[^a-z0-9]/gi,'-').toLowerCase()+'.md';a.click();
+}
+
+function downloadHTML(){
+  const tl=getTimeline();if(!tl)return;
+  const html=generateStandaloneHTML(tl);
+  const blob=new Blob([html],{type:'text/html'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=tl.name.replace(/[^a-z0-9]/gi,'-').toLowerCase()+'.html';a.click();
+}
+
+function copyText(txt){navigator.clipboard.writeText(txt).then(()=>{const b=document.activeElement;if(b){const o=b.textContent;b.textContent='Copied!';setTimeout(()=>b.textContent=o,1000)}})}
+
+// ─── Help ───
+function showHelp(){
+  closeModal();
+  const div=document.createElement('div');div.className='modal-overlay';div.onclick=e=>{if(e.target===div)closeModal()};
+  div.innerHTML=`<div class="modal">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+      <span class="kbd">N</span><span>New event</span>
+      <span class="kbd">T</span><span>New timeline</span>
+      <span class="kbd">/</span><span>Search</span>
+      <span class="kbd">1-4</span><span>Switch views</span>
+      <span class="kbd">V</span><span>Vertical layout</span>
+      <span class="kbd">H</span><span>Horizontal layout</span>
+      <span class="kbd">C</span><span>Compact layout</span>
+      <span class="kbd">E</span><span>Export JSON</span>
+      <span class="kbd">I</span><span>Import JSON</span>
+      <span class="kbd">⌘Enter</span><span>Save modal</span>
+      <span class="kbd">Esc</span><span>Close modal</span>
+      <span class="kbd">?</span><span>This help</span>
+    </div>
+    <div class="modal-footer"><button class="cancel" onclick="">Close</button></div>
+  </div>`;
+  document.body.appendChild(div);
+  div.querySelector('.cancel').onclick=closeModal;
+  div.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+}
+
+// ─── Keyboard ───
+document.addEventListener('keydown',e=>{
+  if(document.querySelector('.modal-overlay'))return;
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
+  switch(e.key){
+    case'n':case'N':e.preventDefault();addEvent();break;
+    case't':case'T':e.preventDefault();newTimeline();break;
+    case'/':e.preventDefault();document.getElementById('sidebarSearch').focus();break;
+    case'1':e.preventDefault();setView('timeline');break;
+    case'2':e.preventDefault();setView('events');break;
+    case'3':e.preventDefault();setView('dashboard');break;
+    case'4':e.preventDefault();setView('export');break;
+    case'v':e.preventDefault();setLayout('vertical');break;
+    case'h':e.preventDefault();setLayout('horizontal');break;
+    case'c':e.preventDefault();setLayout('compact');break;
+    case'e':case'E':e.preventDefault();exportJSON();break;
+    case'i':case'I':e.preventDefault();importJSON();break;
+    case'?':e.preventDefault();showHelp();break;
+  }
+});
+
+document.getElementById('sidebarSearch').addEventListener('input',renderSidebar);
+
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// ─── Init ───
+load();render();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

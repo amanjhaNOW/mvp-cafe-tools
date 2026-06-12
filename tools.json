@@ -1,0 +1,647 @@
+{
+  "generatedAt": "2026-06-12T20:20:05.562Z",
+  "count": 80,
+  "baseUrl": "https://tools.mvp.cafe/",
+  "tools": [
+    {
+      "slug": "idea-validator",
+      "title": "Startup Idea Validator",
+      "tagline": "Validate Before You Build",
+      "emoji": "💡",
+      "day": 1,
+      "cluster": "build"
+    },
+    {
+      "slug": "job-pipeline",
+      "title": "Job Pipeline",
+      "tagline": "Track Your Hunt",
+      "emoji": "💼",
+      "day": 2,
+      "cluster": "career"
+    },
+    {
+      "slug": "offer-compass",
+      "title": "Offer Compass",
+      "tagline": "Job Offer Comparison Tool",
+      "emoji": "🧭",
+      "day": 3,
+      "cluster": "career"
+    },
+    {
+      "slug": "network-crm",
+      "title": "NetMap",
+      "tagline": "Networking CRM",
+      "emoji": "🤝",
+      "day": 4,
+      "cluster": "career"
+    },
+    {
+      "slug": "invoice-forge",
+      "title": "Invoice Forge",
+      "tagline": "Professional Invoice Generator",
+      "emoji": "🧾",
+      "day": 5,
+      "cluster": "money"
+    },
+    {
+      "slug": "ship-log",
+      "title": "Ship Log",
+      "tagline": "Build in Public Tracker",
+      "emoji": "🚢",
+      "day": 6,
+      "cluster": "build"
+    },
+    {
+      "slug": "content-calendar",
+      "title": "Content Planner",
+      "tagline": "Plan, Ship, Grow",
+      "emoji": "🗓️",
+      "day": 7,
+      "cluster": "personal"
+    },
+    {
+      "slug": "interview-ace",
+      "title": "Interview Ace",
+      "tagline": "PM Interview Prep & Practice",
+      "emoji": "🎤",
+      "day": 8,
+      "cluster": "career"
+    },
+    {
+      "slug": "pricing-lab",
+      "title": "Pricing Lab",
+      "tagline": "Revenue Modeling & Pricing Strategy Tool",
+      "emoji": "💰",
+      "day": 9,
+      "cluster": "money"
+    },
+    {
+      "slug": "ab-tester",
+      "title": "AB Tester",
+      "tagline": "Experiment Calculator & Tracker",
+      "emoji": "🧪",
+      "day": 10,
+      "cluster": "product"
+    },
+    {
+      "slug": "roadmap-hero",
+      "title": "Roadmap Hero",
+      "tagline": "Product Roadmap Builder",
+      "emoji": "🛤️",
+      "day": 11,
+      "cluster": "build"
+    },
+    {
+      "slug": "metric-pulse",
+      "title": "Metric Pulse",
+      "tagline": "KPI Tracker & Reporting",
+      "emoji": "📊",
+      "day": 12,
+      "cluster": "product"
+    },
+    {
+      "slug": "competitor-radar",
+      "title": "Competitor Radar",
+      "tagline": "Competitive Intelligence Tracker",
+      "emoji": "🔎",
+      "day": 13,
+      "cluster": "product"
+    },
+    {
+      "slug": "decision-journal",
+      "title": "Decision Journal",
+      "tagline": "Track, Review, Learn",
+      "emoji": "📓",
+      "day": 14,
+      "cluster": "career"
+    },
+    {
+      "slug": "case-study-forge",
+      "title": "Case Study Forge",
+      "tagline": "PM Portfolio Builder",
+      "emoji": "📚",
+      "day": 15,
+      "cluster": "career"
+    },
+    {
+      "slug": "runway-calc",
+      "title": "Runway",
+      "tagline": "Startup Financial Modeler",
+      "emoji": "📉",
+      "day": 16,
+      "cluster": "money"
+    },
+    {
+      "slug": "pitch-deck",
+      "title": "Pitch Deck",
+      "tagline": "Build & Present Decks",
+      "emoji": "🎬",
+      "day": 17,
+      "cluster": "money"
+    },
+    {
+      "slug": "feedback-board",
+      "title": "Feedback Board",
+      "tagline": "Collect & Prioritize User Feedback",
+      "emoji": "💬",
+      "day": 18,
+      "cluster": "product"
+    },
+    {
+      "slug": "retro-board",
+      "title": "Retro Board",
+      "tagline": "Sprint Retrospectives Done Right",
+      "emoji": "🔄",
+      "day": 19,
+      "cluster": "team"
+    },
+    {
+      "slug": "link-hub",
+      "title": "Link Hub",
+      "tagline": "Personal Link Page Builder",
+      "emoji": "🔗",
+      "day": 20,
+      "cluster": "personal"
+    },
+    {
+      "slug": "persona-forge",
+      "title": "Persona Forge",
+      "tagline": "User Persona & Empathy Map Builder",
+      "emoji": "🎭",
+      "day": 21,
+      "cluster": "build"
+    },
+    {
+      "slug": "changelog",
+      "title": "Changelog Studio",
+      "tagline": "Beautiful Release Notes Builder",
+      "emoji": "📜",
+      "day": 22,
+      "cluster": "build"
+    },
+    {
+      "slug": "tech-radar",
+      "title": "Tech Radar",
+      "tagline": "Technology Decision Tracker",
+      "emoji": "📡",
+      "day": 23,
+      "cluster": "product"
+    },
+    {
+      "slug": "sprint-board",
+      "title": "Sprint Board",
+      "tagline": "Scrum Sprint Planner & Velocity Tracker",
+      "emoji": "🏃",
+      "day": 24,
+      "cluster": "build"
+    },
+    {
+      "slug": "okr-forge",
+      "title": "OKR Forge",
+      "tagline": "Objectives & Key Results Tracker",
+      "emoji": "🎯",
+      "day": 25,
+      "cluster": "product"
+    },
+    {
+      "slug": "prd-forge",
+      "title": "PRD Forge",
+      "tagline": "Product Requirements Document Builder",
+      "emoji": "📝",
+      "day": 26,
+      "cluster": "build"
+    },
+    {
+      "slug": "stakeholder-map",
+      "title": "Stakeholder Map",
+      "tagline": "Manage, Align & Communicate",
+      "emoji": "🗺️",
+      "day": 27,
+      "cluster": "team"
+    },
+    {
+      "slug": "growth-lab",
+      "title": "Growth Lab",
+      "tagline": "Growth Experiment & Loop Tracker",
+      "emoji": "📈",
+      "day": 28,
+      "cluster": "product"
+    },
+    {
+      "slug": "launch-pad",
+      "title": "Launch Pad",
+      "tagline": "Product Launch Planner",
+      "emoji": "🚀",
+      "day": 29,
+      "cluster": "build"
+    },
+    {
+      "slug": "canvas-lab",
+      "title": "Canvas Lab",
+      "tagline": "Business Model Canvas Builder",
+      "emoji": "🧩",
+      "day": 30,
+      "cluster": "personal"
+    },
+    {
+      "slug": "focus-flow",
+      "title": "Focus Flow",
+      "tagline": "Deep Work Timer & Productivity Tracker",
+      "emoji": "🎧",
+      "day": 31,
+      "cluster": "personal"
+    },
+    {
+      "slug": "email-craft",
+      "title": "Email Craft",
+      "tagline": "Cold Email & Outreach Sequence Builder",
+      "emoji": "✉️",
+      "day": 32,
+      "cluster": "personal"
+    },
+    {
+      "slug": "survey-forge",
+      "title": "Survey Forge",
+      "tagline": "Beautiful Survey & Form Builder",
+      "emoji": "📊",
+      "day": 33,
+      "cluster": "personal"
+    },
+    {
+      "slug": "raid-log",
+      "title": "RAID Log",
+      "tagline": "Risks, Assumptions, Issues & Dependencies",
+      "emoji": "🚨",
+      "day": 34,
+      "cluster": "team"
+    },
+    {
+      "slug": "knowledge-garden",
+      "title": "Knowledge Garden",
+      "tagline": "Second Brain & Zettelkasten",
+      "emoji": "🌱",
+      "day": 35,
+      "cluster": "personal"
+    },
+    {
+      "slug": "habit-stack",
+      "title": "Habit Stack",
+      "tagline": "Daily Habit Tracker",
+      "emoji": "🧱",
+      "day": 36,
+      "cluster": "personal"
+    },
+    {
+      "slug": "status-beacon",
+      "title": "Status Beacon",
+      "tagline": "Product Status Page & Incident Tracker",
+      "emoji": "🟢",
+      "day": 37,
+      "cluster": "team"
+    },
+    {
+      "slug": "meeting-forge",
+      "title": "Meeting Forge",
+      "tagline": "Structured Meeting Notes & Action Tracker",
+      "emoji": "📋",
+      "day": 38,
+      "cluster": "team"
+    },
+    {
+      "slug": "postmortem-forge",
+      "title": "Postmortem Forge",
+      "tagline": "Incident Postmortem & Root Cause Analysis Builder",
+      "emoji": "🔍",
+      "day": 39,
+      "cluster": "team"
+    },
+    {
+      "slug": "mind-map",
+      "title": "Mind Map",
+      "tagline": "Visual brainstorming & idea mapping",
+      "emoji": "🧠",
+      "day": 40,
+      "cluster": "personal"
+    },
+    {
+      "slug": "wireframe-kit",
+      "title": "Wireframe Kit",
+      "tagline": "Drag & Drop Product Mockups",
+      "emoji": "✏️",
+      "day": 41,
+      "cluster": "build"
+    },
+    {
+      "slug": "schema-forge",
+      "title": "Schema Forge",
+      "tagline": "Visual Database Schema & ERD Builder",
+      "emoji": "🗄️",
+      "day": 42,
+      "cluster": "build"
+    },
+    {
+      "slug": "api-playground",
+      "title": "API Playground",
+      "tagline": "Browser-Based REST Client",
+      "emoji": "🛰️",
+      "day": 43,
+      "cluster": "personal"
+    },
+    {
+      "slug": "terminal-portfolio",
+      "title": "Terminal Portfolio",
+      "tagline": "Retro CLI-style personal site",
+      "emoji": "⌨️",
+      "day": 44,
+      "cluster": "career"
+    },
+    {
+      "slug": "dev-toolkit",
+      "title": "Dev Toolkit",
+      "tagline": "Swiss Army Knife for Developers",
+      "emoji": "🧰",
+      "day": 45,
+      "cluster": "personal"
+    },
+    {
+      "slug": "flashcard-forge",
+      "title": "Flashcard Forge",
+      "tagline": "Spaced Repetition Learning",
+      "emoji": "🃏",
+      "day": 46,
+      "cluster": "personal"
+    },
+    {
+      "slug": "estimate-engine",
+      "title": "Estimate Engine",
+      "tagline": "Project Estimation & Planning Tool",
+      "emoji": "📐",
+      "day": 47,
+      "cluster": "money"
+    },
+    {
+      "slug": "snippet-vault",
+      "title": "Snippet Vault",
+      "tagline": "Code Snippet Manager",
+      "emoji": "🧬",
+      "day": 48,
+      "cluster": "personal"
+    },
+    {
+      "slug": "design-tokens",
+      "title": "Design Token Studio",
+      "tagline": "Build & export design system tokens",
+      "emoji": "🎨",
+      "day": 49,
+      "cluster": "personal"
+    },
+    {
+      "slug": "team-pulse",
+      "title": "Team Pulse",
+      "tagline": "Squad Health Check & Mood Tracker",
+      "emoji": "💗",
+      "day": 50,
+      "cluster": "team"
+    },
+    {
+      "slug": "draft-studio",
+      "title": "Draft Studio",
+      "tagline": "Distraction-Free Writing",
+      "emoji": "✍️",
+      "day": 51,
+      "cluster": "personal"
+    },
+    {
+      "slug": "resume-forge",
+      "title": "Resume Forge",
+      "tagline": "ATS-Optimized Resume Builder",
+      "emoji": "📄",
+      "day": 52,
+      "cluster": "career"
+    },
+    {
+      "slug": "timeline-forge",
+      "title": "Timeline Forge",
+      "tagline": "Visual Timeline & Milestone Builder",
+      "emoji": "📆",
+      "day": 53,
+      "cluster": "build"
+    },
+    {
+      "slug": "pixel-forge",
+      "title": "Pixel Forge",
+      "tagline": "Browser Pixel Art Studio",
+      "emoji": "🖼️",
+      "day": 54,
+      "cluster": "creative"
+    },
+    {
+      "slug": "beat-lab",
+      "title": "Beat Lab",
+      "tagline": "Browser Drum Machine & Sequencer",
+      "emoji": "🥁",
+      "day": 55,
+      "cluster": "creative"
+    },
+    {
+      "slug": "state-machine",
+      "title": "State Machine Designer",
+      "tagline": "State Machine Designer",
+      "emoji": "🔀",
+      "day": 56,
+      "cluster": "build"
+    },
+    {
+      "slug": "chart-forge",
+      "title": "Chart Forge",
+      "tagline": "Data Visualization Builder",
+      "emoji": "📈",
+      "day": 57,
+      "cluster": "product"
+    },
+    {
+      "slug": "stack-radar",
+      "title": "Stack Radar",
+      "tagline": "Tech Stack Auditor & Cost Tracker",
+      "emoji": "🧮",
+      "day": 58,
+      "cluster": "personal"
+    },
+    {
+      "slug": "algo-arena",
+      "title": "Algo Arena",
+      "tagline": "Algorithm Visualizer",
+      "emoji": "🏟️",
+      "day": 59,
+      "cluster": "personal"
+    },
+    {
+      "slug": "budget-forge",
+      "title": "Budget Forge",
+      "tagline": "Personal Finance Tracker",
+      "emoji": "💵",
+      "day": 60,
+      "cluster": "money"
+    },
+    {
+      "slug": "flag-studio",
+      "title": "Flag Studio",
+      "tagline": "Feature Flag Manager & Rollout Planner",
+      "emoji": "🚩",
+      "day": 61,
+      "cluster": "build"
+    },
+    {
+      "slug": "architecture-forge",
+      "title": "Architecture Forge",
+      "tagline": "System Architecture Diagram Builder",
+      "emoji": "🏗️",
+      "day": 62,
+      "cluster": "build"
+    },
+    {
+      "slug": "workflow-forge",
+      "title": "Workflow Forge",
+      "tagline": "Visual Automation Builder",
+      "emoji": "🔁",
+      "day": 63,
+      "cluster": "build"
+    },
+    {
+      "slug": "dialogue-tree",
+      "title": "Dialogue Tree",
+      "tagline": "Conversation Flow Builder",
+      "emoji": "🗨️",
+      "day": 64,
+      "cluster": "creative"
+    },
+    {
+      "slug": "data-forge",
+      "title": "Data Forge",
+      "tagline": "Fake Data Generator & Dataset Builder",
+      "emoji": "🗃️",
+      "day": 65,
+      "cluster": "personal"
+    },
+    {
+      "slug": "api-doc-studio",
+      "title": "API Doc Studio",
+      "tagline": "API Doc Studio",
+      "emoji": "📖",
+      "day": 66,
+      "cluster": "build"
+    },
+    {
+      "slug": "qr-forge",
+      "title": "QR Forge",
+      "tagline": "QR Code Generator & Manager",
+      "emoji": "🔳",
+      "day": 67,
+      "cluster": "personal"
+    },
+    {
+      "slug": "seo-forge",
+      "title": "SEO Forge",
+      "tagline": "On-Page SEO Toolkit",
+      "emoji": "🔍",
+      "day": 68,
+      "cluster": "product"
+    },
+    {
+      "slug": "poker-planner",
+      "title": "Poker Planner",
+      "tagline": "Planning Poker & Story Point Estimator",
+      "emoji": "♠️",
+      "day": 69,
+      "cluster": "team"
+    },
+    {
+      "slug": "analytics-forge",
+      "title": "Analytics Forge",
+      "tagline": "Website Analytics Dashboard",
+      "emoji": "📉",
+      "day": 70,
+      "cluster": "product"
+    },
+    {
+      "slug": "arcade-cabinet",
+      "title": "Arcade Cabinet",
+      "tagline": "Retro Games Collection",
+      "emoji": "🕹️",
+      "day": 71,
+      "cluster": "creative"
+    },
+    {
+      "slug": "typing-arena",
+      "title": "Typing Arena",
+      "tagline": "Speed Typing Test & Trainer",
+      "emoji": "🏎️",
+      "day": 72,
+      "cluster": "creative"
+    },
+    {
+      "slug": "art-lab",
+      "title": "Art Lab",
+      "tagline": "Generative Art Studio",
+      "emoji": "🖌️",
+      "day": 73,
+      "cluster": "creative"
+    },
+    {
+      "slug": "contract-forge",
+      "title": "Contract Forge",
+      "tagline": "Freelance & Business Agreement Generator",
+      "emoji": "📑",
+      "day": 74,
+      "cluster": "money"
+    },
+    {
+      "slug": "physics-lab",
+      "title": "Physics Lab",
+      "tagline": "2D Physics Sandbox",
+      "emoji": "🪀",
+      "day": 75,
+      "cluster": "creative"
+    },
+    {
+      "slug": "logic-gate-lab",
+      "title": "Logic Gate Lab",
+      "tagline": "Digital Circuit Simulator",
+      "emoji": "⚡",
+      "day": 76,
+      "cluster": "personal"
+    },
+    {
+      "slug": "org-chart-forge",
+      "title": "Org Chart Forge",
+      "tagline": "Org Chart Forge",
+      "emoji": "🏢",
+      "day": 77,
+      "cluster": "team"
+    },
+    {
+      "slug": "gradient-studio",
+      "title": "Gradient Studio",
+      "tagline": "CSS Gradient Builder & Background Generator",
+      "emoji": "🌈",
+      "day": 78,
+      "cluster": "personal"
+    },
+    {
+      "slug": "code-playground",
+      "title": "Code Playground",
+      "tagline": "Browser IDE",
+      "emoji": "💻",
+      "day": 79,
+      "cluster": "personal"
+    },
+    {
+      "slug": "table-forge",
+      "title": "Table Forge",
+      "tagline": "Browser Spreadsheet",
+      "emoji": "📋",
+      "day": 80,
+      "cluster": "personal"
+    }
+  ]
+}

@@ -1092,9 +1092,7 @@ function exportPublicHTML() {
 <div style="padding:14px 18px;border-radius:10px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;background:${statusColors[overall]}15;border:1px solid ${statusColors[overall]}30;color:${statusColors[overall]};margin-bottom:24px"><span style="width:12px;height:12px;border-radius:50%;background:${statusColors[overall]}"></span>${overallLabels[overall]}</div>
 ${compsHtml}${incHtml}${pastHtml}
 <div style="text-align:center;padding:24px;font-size:12px;color:#5a5f78;border-top:1px solid rgba(255,255,255,0.06);margin-top:32px">Powered by Status Beacon &bull; Updated ${fmtDateTime(new Date())}</div>
-</div><!-- MVPC_BRIDGE -->
-<script src="/_shell/bridge.js"></script>
-</body></html>`;
+</div></body></html>`;
 
   const blob = new Blob([html],{type:'text/html'});
   const a = document.createElement('a');
@@ -1323,5 +1321,7 @@ load();
 seedData();
 render();
 </script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
 </body>
 </html>

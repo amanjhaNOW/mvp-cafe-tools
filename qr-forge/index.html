@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Forge — QR Code Generator & Manager</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#388bfd;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff;--radius:8px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:var(--text)}
+input,select,textarea{font-family:inherit;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-size:14px;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b949e'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Sidebar */
+.sidebar{width:260px;min-width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:18px;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:22px}
+.sidebar-search{padding:8px 12px}
+.sidebar-search input{font-size:13px;padding:6px 10px}
+.sidebar-list{flex:1;overflow-y:auto;padding:4px 8px}
+.sidebar-item{padding:10px 12px;border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:2px;transition:background .15s}
+.sidebar-item:hover{background:var(--surface2)}
+.sidebar-item.active{background:var(--accent);color:#fff}
+.sidebar-item .si-icon{font-size:16px;width:20px;text-align:center}
+.sidebar-item .si-label{flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-item .si-badge{font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:10px;color:var(--text2)}
+.sidebar-item.active .si-badge{background:rgba(255,255,255,.2);color:#fff}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px}
+.sidebar-footer button{flex:1;padding:8px;border-radius:var(--radius);font-size:12px;background:var(--surface2);border:1px solid var(--border);transition:all .15s}
+.sidebar-footer button:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surface)}
+.topbar .tabs{display:flex;gap:4px}
+.topbar .tab{padding:6px 14px;border-radius:var(--radius);font-size:13px;transition:all .15s;color:var(--text2)}
+.topbar .tab:hover{background:var(--surface2);color:var(--text)}
+.topbar .tab.active{background:var(--accent);color:#fff}
+.topbar .spacer{flex:1}
+.topbar .kb{font-size:11px;color:var(--text2);padding:4px 8px;border:1px solid var(--border);border-radius:4px}
+
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* Generator View */
+.gen-layout{display:grid;grid-template-columns:1fr 400px;gap:24px;max-width:1200px;margin:0 auto}
+@media(max-width:900px){.gen-layout{grid-template-columns:1fr}}
+.gen-form{display:flex;flex-direction:column;gap:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:13px;color:var(--text2);font-weight:500}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.type-btn{padding:10px 8px;border-radius:var(--radius);background:var(--surface2);border:2px solid transparent;text-align:center;transition:all .15s;font-size:12px}
+.type-btn:hover{border-color:var(--border)}
+.type-btn.active{border-color:var(--accent);background:rgba(88,166,255,.1)}
+.type-btn .tb-icon{font-size:20px;display:block;margin-bottom:4px}
+
+/* QR Preview */
+.qr-preview{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;align-items:center;gap:16px;position:sticky;top:0}
+.qr-canvas-wrap{background:#fff;border-radius:12px;padding:16px;display:inline-block}
+#qrCanvas{display:block}
+.qr-data-preview{font-size:12px;color:var(--text2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.qr-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.qr-actions button{padding:8px 16px;border-radius:var(--radius);font-size:13px;background:var(--surface2);border:1px solid var(--border);transition:all .15s;display:flex;align-items:center;gap:6px}
+.qr-actions button:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.qr-actions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.qr-actions .primary:hover{background:var(--accent2)}
+
+/* Color pickers */
+.color-row{display:flex;align-items:center;gap:12px}
+.color-pick{display:flex;align-items:center;gap:8px}
+.color-pick label{font-size:12px;color:var(--text2);min-width:80px}
+.color-swatch{width:32px;height:32px;border-radius:6px;border:2px solid var(--border);cursor:pointer;position:relative;overflow:hidden}
+.color-swatch input[type=color]{position:absolute;top:-4px;left:-4px;width:40px;height:40px;border:none;cursor:pointer;opacity:0}
+.color-hex{font-size:12px;color:var(--text2);font-family:monospace}
+
+/* Sliders */
+.slider-row{display:flex;align-items:center;gap:12px}
+.slider-row input[type=range]{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--border);border:none;padding:0}
+.slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer}
+.slider-val{font-size:13px;color:var(--text2);min-width:40px;text-align:right}
+
+/* Saved view */
+.saved-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;max-width:1200px;margin:0 auto}
+.saved-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer;transition:all .15s}
+.saved-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.saved-card canvas{border-radius:8px}
+.saved-card .sc-name{font-size:14px;font-weight:500;text-align:center}
+.saved-card .sc-type{font-size:11px;color:var(--text2);background:var(--surface2);padding:2px 8px;border-radius:10px}
+.saved-card .sc-date{font-size:11px;color:var(--text2)}
+.saved-card .sc-actions{display:flex;gap:6px}
+.saved-card .sc-actions button{padding:4px 10px;font-size:11px;border-radius:4px;background:var(--surface2);border:1px solid var(--border)}
+.saved-card .sc-actions button:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.saved-card .sc-actions .del:hover{background:var(--red);border-color:var(--red)}
+
+/* Dashboard */
+.dash-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;max-width:1200px;margin:0 auto 24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-card .stat-val{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-card .stat-label{font-size:12px;color:var(--text2);margin-top:4px}
+.dash-charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:1200px;margin:0 auto}
+@media(max-width:800px){.dash-charts{grid-template-columns:1fr}}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.chart-card h3{font-size:14px;margin-bottom:16px;color:var(--text2)}
+.chart-bar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.chart-bar .cb-label{font-size:12px;min-width:80px;color:var(--text2)}
+.chart-bar .cb-track{flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.chart-bar .cb-fill{height:100%;border-radius:4px;transition:width .3s}
+.chart-bar .cb-val{font-size:12px;min-width:30px;text-align:right;color:var(--text2)}
+
+/* Batch view */
+.batch-section{max-width:800px;margin:0 auto}
+.batch-section h2{font-size:16px;margin-bottom:16px}
+.batch-textarea{min-height:200px;font-family:'SF Mono',Monaco,Consolas,monospace;font-size:13px;line-height:1.6}
+.batch-info{font-size:12px;color:var(--text2);margin-top:8px}
+.batch-results{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:20px}
+.batch-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center}
+.batch-item canvas{border-radius:6px;margin-bottom:8px}
+.batch-item .bi-label{font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Help */
+.help-section{max-width:700px;margin:0 auto}
+.help-section h2{font-size:18px;margin-bottom:20px}
+.help-group{margin-bottom:24px}
+.help-group h3{font-size:14px;color:var(--accent);margin-bottom:12px}
+.help-row{display:flex;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.help-row:last-child{border-bottom:none}
+.help-key{background:var(--surface2);padding:3px 8px;border-radius:4px;font-size:12px;font-family:monospace;min-width:60px;text-align:center;margin-right:16px}
+.help-desc{font-size:13px;color:var(--text2)}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:10px 20px;border-radius:var(--radius);font-size:13px;z-index:999;animation:toastIn .3s ease;pointer-events:none}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Modal */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;min-width:400px;max-width:500px;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:16px;margin-bottom:16px}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.modal-btns button{padding:8px 16px;border-radius:var(--radius);font-size:13px;background:var(--surface2);border:1px solid var(--border)}
+.modal-btns button:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.modal-btns .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+
+.empty{text-align:center;padding:60px 20px;color:var(--text2)}
+.empty .em-icon{font-size:48px;margin-bottom:12px}
+.empty p{font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span>🔲</span> QR Forge</h1>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" id="sideSearch" placeholder="Search saved codes..." oninput="renderSidebar()">
+  </div>
+  <div class="sidebar-list" id="sideList"></div>
+  <div class="sidebar-footer">
+    <button onclick="switchView('generate')" title="New QR">➕ New</button>
+    <button onclick="exportAll()" title="Export">📤 Export</button>
+    <button onclick="importAll()" title="Import">📥 Import</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="tabs">
+      <button class="tab active" data-view="generate" onclick="switchView('generate')">🔲 Generate</button>
+      <button class="tab" data-view="saved" onclick="switchView('saved')">💾 Library</button>
+      <button class="tab" data-view="batch" onclick="switchView('batch')">📋 Batch</button>
+      <button class="tab" data-view="dashboard" onclick="switchView('dashboard')">📊 Dashboard</button>
+      <button class="tab" data-view="help" onclick="switchView('help')">❓ Help</button>
+    </div>
+    <div class="spacer"></div>
+    <span class="kb">? for shortcuts</span>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<div id="toastContainer"></div>
+<div id="modalContainer"></div>
+
+<script>
+// ========== QR Code Generator (Reed-Solomon + Numeric/Alphanumeric/Byte) ==========
+const QR = (function(){
+  // GF(256) with polynomial 0x11d
+  const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+  (function(){let v=1;for(let i=0;i<255;i++){EXP[i]=v;LOG[v]=i;v<<=1;if(v&256)v^=0x11d}for(let i=255;i<512;i++)EXP[i]=EXP[i-255]})();
+  function gfMul(a,b){return a&&b?EXP[LOG[a]+LOG[b]]:0}
+  function polyMul(a,b){const r=new Uint8Array(a.length+b.length-1);for(let i=0;i<a.length;i++)for(let j=0;j<b.length;j++)r[i+j]^=gfMul(a[i],b[j]);return r}
+  function genPoly(n){let g=new Uint8Array([1]);for(let i=0;i<n;i++)g=polyMul(g,new Uint8Array([1,EXP[i]]));return g}
+  function rsEncode(data,ecLen){
+    const gen=genPoly(ecLen),msg=new Uint8Array(data.length+ecLen);
+    msg.set(data);
+    for(let i=0;i<data.length;i++){const c=msg[i];if(c)for(let j=0;j<gen.length;j++)msg[i+j]^=gfMul(gen[j],c)}
+    return msg.slice(data.length)
+  }
+  // Version info tables (simplified for versions 1-40)
+  const EC_CODEWORDS_PER_BLOCK = {
+    L:[7,10,15,20,26,18,20,24,30,18,20,24,26,30,22,24,28,30,28,28,28,28,30,30,26,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+    M:[10,16,26,18,24,16,18,22,22,26,30,22,22,24,24,28,28,26,26,26,26,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28],
+    Q:[13,22,18,26,18,24,18,22,20,24,28,26,24,20,30,24,28,28,26,30,28,30,30,30,30,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+    H:[17,28,22,16,22,28,26,26,24,28,24,28,22,24,24,30,28,28,26,28,30,24,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]
+  };
+  const NUM_EC_BLOCKS = {
+    L:[1,1,1,1,1,2,2,2,2,4,4,4,4,4,6,6,6,6,7,8,8,9,9,10,12,12,12,13,14,15,16,17,18,19,19,20,21,22,24,25],
+    M:[1,1,1,2,2,4,4,4,5,5,5,8,9,9,10,10,11,13,14,16,17,17,18,20,21,23,25,26,28,29,31,33,35,37,38,40,43,45,47,49],
+    Q:[1,1,2,2,4,4,6,6,8,8,8,10,12,16,12,17,16,18,21,20,23,23,25,27,29,34,34,35,38,40,43,45,48,51,53,56,59,62,65,68],
+    H:[1,1,2,4,4,4,5,6,8,8,11,11,16,16,18,16,19,21,25,25,25,34,30,32,35,37,40,42,45,48,51,54,57,60,63,66,70,74,77,81]
+  };
+  const TOTAL_CODEWORDS = [26,44,70,100,134,172,196,242,292,346,404,466,532,581,655,733,815,901,991,1085,1156,1258,1364,1474,1588,1706,1828,1921,2051,2185,2323,2465,2611,2761,2876,3034,3196,3362,3532,3706];
+  const DATA_CAPACITY_BYTES = {};
+  ['L','M','Q','H'].forEach(ec => {
+    DATA_CAPACITY_BYTES[ec] = TOTAL_CODEWORDS.map((t,i) => {
+      const numBlocks = NUM_EC_BLOCKS[ec][i];
+      const ecPerBlock = EC_CODEWORDS_PER_BLOCK[ec][i];
+      return t - numBlocks * ecPerBlock;
+    });
+  });
+
+  const ALIGNMENT_POSITIONS = [
+    [],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],
+    [6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],
+    [6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],
+    [6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],
+    [6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],
+    [6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],
+    [6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]
+  ];
+
+  function getVersion(dataLen, ecLevel) {
+    const cap = DATA_CAPACITY_BYTES[ecLevel];
+    for (let v = 0; v < 40; v++) {
+      // Mode indicator (4 bits) + character count indicator + data
+      // For byte mode: 4 + charCountBits + dataLen*8
+      const ccBits = v < 9 ? 8 : 16;
+      const totalBits = 4 + ccBits + dataLen * 8;
+      const totalBytes = Math.ceil(totalBits / 8);
+      if (totalBytes <= cap[v]) return v + 1;
+    }
+    return -1;
+  }
+
+  function encode(text, ecLevel = 'M') {
+    const data = new TextEncoder().encode(text);
+    const version = getVersion(data.length, ecLevel);
+    if (version < 0) return null;
+    const vi = version - 1;
+    const size = version * 4 + 17;
+
+    // Encode data bits (byte mode = 0100)
+    const ccBits = version < 10 ? 8 : 16;
+    let bits = [];
+    function pushBits(val, len) { for (let i = len - 1; i >= 0; i--) bits.push((val >> i) & 1); }
+    pushBits(0b0100, 4); // Byte mode
+    pushBits(data.length, ccBits);
+    for (const b of data) pushBits(b, 8);
+
+    // Terminator + padding
+    const totalDataCW = DATA_CAPACITY_BYTES[ecLevel][vi];
+    const totalBitsNeeded = totalDataCW * 8;
+    const termLen = Math.min(4, totalBitsNeeded - bits.length);
+    for (let i = 0; i < termLen; i++) bits.push(0);
+    while (bits.length % 8) bits.push(0);
+    const pads = [0xEC, 0x11];
+    let pi = 0;
+    while (bits.length < totalBitsNeeded) { pushBits(pads[pi % 2], 8); pi++; }
+
+    // Convert to codewords
+    const codewords = [];
+    for (let i = 0; i < bits.length; i += 8) {
+      let b = 0; for (let j = 0; j < 8; j++) b = (b << 1) | (bits[i + j] || 0);
+      codewords.push(b);
+    }
+
+    // Split into blocks and add EC
+    const numBlocks = NUM_EC_BLOCKS[ecLevel][vi];
+    const ecPerBlock = EC_CODEWORDS_PER_BLOCK[ecLevel][vi];
+    const totalCW = TOTAL_CODEWORDS[vi];
+    const dataCWTotal = totalDataCW;
+    const shortBlockLen = Math.floor(dataCWTotal / numBlocks);
+    const longBlocks = dataCWTotal % numBlocks;
+    const dataBlocks = [], ecBlocks = [];
+    let offset = 0;
+    for (let b = 0; b < numBlocks; b++) {
+      const bLen = shortBlockLen + (b >= numBlocks - longBlocks ? 1 : 0);
+      const block = codewords.slice(offset, offset + bLen);
+      offset += bLen;
+      dataBlocks.push(block);
+      ecBlocks.push(Array.from(rsEncode(new Uint8Array(block), ecPerBlock)));
+    }
+
+    // Interleave
+    const result = [];
+    const maxDataLen = shortBlockLen + 1;
+    for (let i = 0; i < maxDataLen; i++)
+      for (let b = 0; b < numBlocks; b++)
+        if (i < dataBlocks[b].length) result.push(dataBlocks[b][i]);
+    for (let i = 0; i < ecPerBlock; i++)
+      for (let b = 0; b < numBlocks; b++)
+        result.push(ecBlocks[b][i]);
+
+    // Place modules
+    const modules = Array.from({ length: size }, () => new Uint8Array(size));
+    const isFunc = Array.from({ length: size }, () => new Uint8Array(size));
+
+    function setModule(r, c, v) { if (r >= 0 && r < size && c >= 0 && c < size) { modules[r][c] = v ? 1 : 0; } }
+    function setFunc(r, c) { if (r >= 0 && r < size && c >= 0 && c < size) isFunc[r][c] = 1; }
+
+    // Finder patterns
+    function drawFinder(row, col) {
+      for (let dr = -1; dr <= 7; dr++) for (let dc = -1; dc <= 7; dc++) {
+        const r = row + dr, c = col + dc;
+        if (r < 0 || r >= size || c < 0 || c >= size) continue;
+        const inOuter = dr >= 0 && dr <= 6 && dc >= 0 && dc <= 6;
+        const inInner = dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4;
+        const onBorder = dr === 0 || dr === 6 || dc === 0 || dc === 6;
+        setModule(r, c, inInner || (inOuter && onBorder) ? 1 : 0);
+        setFunc(r, c);
+      }
+    }
+    drawFinder(0, 0);
+    drawFinder(0, size - 7);
+    drawFinder(size - 7, 0);
+
+    // Alignment patterns
+    if (version >= 2) {
+      const positions = ALIGNMENT_POSITIONS[vi];
+      for (const r of positions) for (const c of positions) {
+        if ((r < 9 && c < 9) || (r < 9 && c >= size - 8) || (r >= size - 8 && c < 9)) continue;
+        for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) {
+          const val = Math.abs(dr) === 2 || Math.abs(dc) === 2 || (dr === 0 && dc === 0);
+          setModule(r + dr, c + dc, val ? 1 : 0);
+          setFunc(r + dr, c + dc);
+        }
+      }
+    }
+
+    // Timing patterns
+    for (let i = 8; i < size - 8; i++) {
+      setModule(6, i, i % 2 === 0 ? 1 : 0); setFunc(6, i);
+      setModule(i, 6, i % 2 === 0 ? 1 : 0); setFunc(i, 6);
+    }
+
+    // Dark module
+    setModule(size - 8, 8, 1); setFunc(size - 8, 8);
+
+    // Reserve format info
+    for (let i = 0; i < 15; i++) {
+      if (i < 6) { setFunc(8, i); setFunc(i, 8); }
+      else if (i < 8) { setFunc(8, i + 1); setFunc(i + 1, 8); }
+      else if (i < 9) { setFunc(8, size - 15 + i); setFunc(size - 15 + i, 8); }
+      else { setFunc(8, size - 15 + i); setFunc(size - 15 + i, 8); }
+    }
+
+    // Reserve version info
+    if (version >= 7) {
+      for (let i = 0; i < 6; i++) for (let j = 0; j < 3; j++) {
+        setFunc(i, size - 11 + j); setFunc(size - 11 + j, i);
+      }
+    }
+
+    // Place data bits
+    const allBits = [];
+    for (const cw of result) for (let i = 7; i >= 0; i--) allBits.push((cw >> i) & 1);
+    // Remainder bits
+    const rem = [0,0,7,7,7,7,7,0,0,0,0,0,0,3,3,3,3,3,3,3,4,4,4,4,4,4,4,3,3,3,3,3,3,3,0,0,0,0,0,0][vi] || 0;
+    for (let i = 0; i < rem; i++) allBits.push(0);
+
+    let bitIdx = 0;
+    for (let right = size - 1; right >= 1; right -= 2) {
+      if (right === 6) right = 5;
+      for (let vert = 0; vert < size; vert++) {
+        const upward = ((Math.floor((size - 1 - right) / 2)) % 2) === 0;
+        const row = upward ? size - 1 - vert : vert;
+        for (let j = 0; j < 2; j++) {
+          const col = right - j;
+          if (!isFunc[row][col]) {
+            if (bitIdx < allBits.length) modules[row][col] = allBits[bitIdx++];
+            else modules[row][col] = 0;
+          }
+        }
+      }
+    }
+
+    // Apply best mask
+    let bestMask = 0, bestPenalty = Infinity;
+    for (let mask = 0; mask < 8; mask++) {
+      const masked = applyMask(modules, isFunc, size, mask);
+      writeFormatInfo(masked, isFunc, size, ecLevel, mask);
+      if (version >= 7) writeVersionInfo(masked, size, version);
+      const pen = calcPenalty(masked, size);
+      if (pen < bestPenalty) { bestPenalty = pen; bestMask = mask; }
+    }
+
+    applyMaskInPlace(modules, isFunc, size, bestMask);
+    writeFormatInfo(modules, isFunc, size, ecLevel, bestMask);
+    if (version >= 7) writeVersionInfo(modules, size, version);
+
+    return { modules, size, version };
+  }
+
+  function applyMask(mods, isF, size, mask) {
+    const r = mods.map(row => new Uint8Array(row));
+    for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) {
+      if (isF[i][j]) continue;
+      if (maskFn(mask, i, j)) r[i][j] ^= 1;
+    }
+    return r;
+  }
+  function applyMaskInPlace(mods, isF, size, mask) {
+    for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) {
+      if (isF[i][j]) continue;
+      if (maskFn(mask, i, j)) mods[i][j] ^= 1;
+    }
+  }
+  function maskFn(mask, r, c) {
+    switch(mask){case 0:return(r+c)%2===0;case 1:return r%2===0;case 2:return c%3===0;case 3:return(r+c)%3===0;case 4:return(Math.floor(r/2)+Math.floor(c/3))%2===0;case 5:return(r*c)%2+(r*c)%3===0;case 6:return((r*c)%2+(r*c)%3)%2===0;case 7:return((r+c)%2+(r*c)%3)%2===0}
+  }
+
+  const FORMAT_INFO_STRINGS = {
+    L:[0x77c4,0x72f3,0x7daa,0x789d,0x662f,0x6318,0x6c41,0x6976],
+    M:[0x5412,0x5125,0x5e7c,0x5b4b,0x45f9,0x40ce,0x4f97,0x4aa0],
+    Q:[0x355f,0x3068,0x3f31,0x3a06,0x24b4,0x2183,0x2eda,0x2bed],
+    H:[0x1689,0x13be,0x1ce7,0x19d0,0x0762,0x0255,0x0d0c,0x083b]
+  };
+
+  function writeFormatInfo(mods, isF, size, ec, mask) {
+    const info = FORMAT_INFO_STRINGS[ec][mask];
+    for (let i = 0; i < 15; i++) {
+      const bit = (info >> (14 - i)) & 1;
+      // Around top-left finder
+      if (i < 6) { mods[8][i] = bit; }
+      else if (i < 8) { mods[8][i + 1] = bit; }
+      else { mods[14 - i][8] = bit; }
+      // Other copy
+      if (i < 8) { mods[size - 1 - i][8] = bit; }
+      else { mods[8][size - 15 + i] = bit; }
+    }
+  }
+
+  function writeVersionInfo(mods, size, version) {
+    if (version < 7) return;
+    const VERSION_INFO = [0,0,0,0,0,0,0x07C94,0x085BC,0x09A99,0x0A4D3,0x0BBF6,0x0C762,0x0D847,0x0E60D,0x0F928,0x10B78,0x1145D,0x12A17,0x13532,0x149A6,0x15683,0x168C9,0x177EC,0x18EC4,0x191E1,0x1AFAB,0x1B08E,0x1CC1A,0x1D33F,0x1ED75,0x1F250,0x209D5,0x216F0,0x228BA,0x2379F,0x24B0B,0x2542E,0x26A64,0x27541,0x28C69];
+    const info = VERSION_INFO[version];
+    if (!info) return;
+    for (let i = 0; i < 18; i++) {
+      const bit = (info >> i) & 1;
+      const r = Math.floor(i / 3), c = size - 11 + (i % 3);
+      mods[r][c] = bit;
+      mods[c][r] = bit;
+    }
+  }
+
+  function calcPenalty(mods, size) {
+    let penalty = 0;
+    // Rule 1: runs of same color
+    for (let r = 0; r < size; r++) {
+      let run = 1;
+      for (let c = 1; c < size; c++) {
+        if (mods[r][c] === mods[r][c-1]) { run++; }
+        else { if (run >= 5) penalty += run - 2; run = 1; }
+      }
+      if (run >= 5) penalty += run - 2;
+    }
+    for (let c = 0; c < size; c++) {
+      let run = 1;
+      for (let r = 1; r < size; r++) {
+        if (mods[r][c] === mods[r-1][c]) { run++; }
+        else { if (run >= 5) penalty += run - 2; run = 1; }
+      }
+      if (run >= 5) penalty += run - 2;
+    }
+    // Rule 2: 2x2 blocks
+    for (let r = 0; r < size - 1; r++)
+      for (let c = 0; c < size - 1; c++) {
+        const v = mods[r][c];
+        if (v === mods[r][c+1] && v === mods[r+1][c] && v === mods[r+1][c+1]) penalty += 3;
+      }
+    // Rule 4: proportion
+    let dark = 0;
+    for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) if (mods[r][c]) dark++;
+    const pct = dark * 100 / (size * size);
+    penalty += Math.floor(Math.abs(pct - 50) / 5) * 10;
+    return penalty;
+  }
+
+  return { encode };
+})();
+
+// ========== App State ==========
+let state = {
+  codes: [],
+  currentView: 'generate',
+  genType: 'url',
+  genData: {},
+  genFg: '#000000',
+  genBg: '#ffffff',
+  genSize: 256,
+  genEC: 'M',
+  genQuiet: 4,
+  editingId: null
+};
+
+const DATA_TYPES = [
+  { id: 'url', icon: '🔗', label: 'URL' },
+  { id: 'text', icon: '📝', label: 'Text' },
+  { id: 'wifi', icon: '📶', label: 'WiFi' },
+  { id: 'vcard', icon: '👤', label: 'vCard' },
+  { id: 'email', icon: '📧', label: 'Email' },
+  { id: 'phone', icon: '📞', label: 'Phone' },
+  { id: 'sms', icon: '💬', label: 'SMS' },
+  { id: 'whatsapp', icon: '💚', label: 'WhatsApp' },
+  { id: 'geo', icon: '📍', label: 'Location' },
+  { id: 'event', icon: '📅', label: 'Event' },
+  { id: 'upi', icon: '💳', label: 'UPI' },
+  { id: 'bitcoin', icon: '₿', label: 'Bitcoin' }
+];
+
+function load() {
+  try { const d = localStorage.getItem('qr-forge'); if (d) { const p = JSON.parse(d); state.codes = p.codes || []; } } catch(e) {}
+}
+function save() {
+  localStorage.setItem('qr-forge', JSON.stringify({ codes: state.codes }));
+}
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+// ========== QR Data Builders ==========
+function buildQRString(type, data) {
+  switch(type) {
+    case 'url': return data.url || 'https://example.com';
+    case 'text': return data.text || '';
+    case 'wifi': {
+      const auth = data.encryption || 'WPA';
+      const ssid = (data.ssid || '').replace(/[\\;,"]/g, c => '\\' + c);
+      const pass = (data.password || '').replace(/[\\;,"]/g, c => '\\' + c);
+      return `WIFI:T:${auth};S:${ssid};P:${pass};H:${data.hidden ? 'true' : 'false'};;`;
+    }
+    case 'vcard': {
+      let vc = 'BEGIN:VCARD\nVERSION:3.0\n';
+      if (data.name) vc += `FN:${data.name}\n`;
+      if (data.org) vc += `ORG:${data.org}\n`;
+      if (data.title) vc += `TITLE:${data.title}\n`;
+      if (data.phone) vc += `TEL:${data.phone}\n`;
+      if (data.email) vc += `EMAIL:${data.email}\n`;
+      if (data.url) vc += `URL:${data.url}\n`;
+      if (data.address) vc += `ADR:;;${data.address};;;;\n`;
+      vc += 'END:VCARD';
+      return vc;
+    }
+    case 'email': {
+      let s = `mailto:${data.to || ''}`;
+      const params = [];
+      if (data.subject) params.push(`subject=${encodeURIComponent(data.subject)}`);
+      if (data.body) params.push(`body=${encodeURIComponent(data.body)}`);
+      if (params.length) s += '?' + params.join('&');
+      return s;
+    }
+    case 'phone': return `tel:${data.number || ''}`;
+    case 'sms': {
+      let s = `smsto:${data.number || ''}`;
+      if (data.message) s += `:${data.message}`;
+      return s;
+    }
+    case 'whatsapp': return `https://wa.me/${(data.number || '').replace(/[^0-9]/g, '')}${data.message ? '?text=' + encodeURIComponent(data.message) : ''}`;
+    case 'geo': return `geo:${data.lat || 0},${data.lng || 0}`;
+    case 'event': {
+      let ev = 'BEGIN:VEVENT\n';
+      if (data.summary) ev += `SUMMARY:${data.summary}\n`;
+      if (data.start) ev += `DTSTART:${data.start.replace(/[-:]/g, '').replace('T', 'T')}\n`;
+      if (data.end) ev += `DTEND:${data.end.replace(/[-:]/g, '').replace('T', 'T')}\n`;
+      if (data.location) ev += `LOCATION:${data.location}\n`;
+      if (data.description) ev += `DESCRIPTION:${data.description}\n`;
+      ev += 'END:VEVENT';
+      return ev;
+    }
+    case 'upi': return `upi://pay?pa=${data.vpa || ''}&pn=${encodeURIComponent(data.name || '')}&am=${data.amount || ''}&cu=INR${data.note ? '&tn=' + encodeURIComponent(data.note) : ''}`;
+    case 'bitcoin': return `bitcoin:${data.address || ''}${data.amount ? '?amount=' + data.amount : ''}`;
+    default: return data.text || '';
+  }
+}
+
+function getTypeLabel(type) { return (DATA_TYPES.find(t => t.id === type) || {}).label || type; }
+
+// ========== Rendering ==========
+function renderQR(canvas, text, size, fg, bg, quiet) {
+  const qr = QR.encode(text, state.genEC);
+  if (!qr) {
+    const ctx = canvas.getContext('2d');
+    canvas.width = size; canvas.height = size;
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#f85149'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Data too large', size / 2, size / 2);
+    return false;
+  }
+  const qSize = qr.size + quiet * 2;
+  const cellSize = size / qSize;
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = fg;
+  for (let r = 0; r < qr.size; r++) {
+    for (let c = 0; c < qr.size; c++) {
+      if (qr.modules[r][c]) {
+        ctx.fillRect((c + quiet) * cellSize, (r + quiet) * cellSize, Math.ceil(cellSize), Math.ceil(cellSize));
+      }
+    }
+  }
+  return true;
+}
+
+function renderLiveQR() {
+  const canvas = document.getElementById('qrCanvas');
+  if (!canvas) return;
+  const text = buildQRString(state.genType, state.genData);
+  const preview = document.getElementById('qrDataPreview');
+  if (preview) preview.textContent = text.length > 80 ? text.slice(0, 80) + '…' : text;
+  if (!text || text.length === 0) {
+    const ctx = canvas.getContext('2d');
+    canvas.width = state.genSize; canvas.height = state.genSize;
+    ctx.fillStyle = state.genBg; ctx.fillRect(0, 0, state.genSize, state.genSize);
+    ctx.fillStyle = '#8b949e'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Enter data to generate', state.genSize / 2, state.genSize / 2);
+    return;
+  }
+  renderQR(canvas, text, state.genSize, state.genFg, state.genBg, state.genQuiet);
+}
+
+// ========== Views ==========
+function switchView(view) {
+  state.currentView = view;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+  renderContent();
+  renderSidebar();
+}
+
+function renderContent() {
+  const el = document.getElementById('content');
+  switch(state.currentView) {
+    case 'generate': el.innerHTML = renderGenerate(); setTimeout(() => { renderLiveQR(); bindGenEvents(); }, 0); break;
+    case 'saved': el.innerHTML = renderSaved(); setTimeout(renderSavedCards, 0); break;
+    case 'batch': el.innerHTML = renderBatch(); break;
+    case 'dashboard': el.innerHTML = renderDashboard(); break;
+    case 'help': el.innerHTML = renderHelp(); break;
+  }
+}
+
+function renderGenerate() {
+  const t = state.genType;
+  return `<div class="gen-layout">
+    <div class="gen-form">
+      <div class="form-group">
+        <label>Data Type</label>
+        <div class="type-grid">${DATA_TYPES.map(dt => `<button class="type-btn ${t === dt.id ? 'active' : ''}" onclick="setType('${dt.id}')"><span class="tb-icon">${dt.icon}</span>${dt.label}</button>`).join('')}</div>
+      </div>
+      <div id="typeFields">${renderTypeFields(t)}</div>
+      <div class="form-group">
+        <label>Error Correction</label>
+        <div class="form-row">
+          <select id="ecLevel" onchange="state.genEC=this.value;renderLiveQR()">
+            <option value="L" ${state.genEC==='L'?'selected':''}>Low (7%)</option>
+            <option value="M" ${state.genEC==='M'?'selected':''}>Medium (15%)</option>
+            <option value="Q" ${state.genEC==='Q'?'selected':''}>Quartile (25%)</option>
+            <option value="H" ${state.genEC==='H'?'selected':''}>High (30%)</option>
+          </select>
+          <select id="qrSizeSelect" onchange="state.genSize=+this.value;renderLiveQR()">
+            <option value="128" ${state.genSize===128?'selected':''}>128px</option>
+            <option value="256" ${state.genSize===256?'selected':''}>256px</option>
+            <option value="512" ${state.genSize===512?'selected':''}>512px</option>
+            <option value="1024" ${state.genSize===1024?'selected':''}>1024px</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Colors</label>
+        <div class="color-row">
+          <div class="color-pick">
+            <label>Foreground</label>
+            <div class="color-swatch" style="background:${state.genFg}"><input type="color" value="${state.genFg}" onchange="state.genFg=this.value;this.parentElement.style.background=this.value;renderLiveQR()"></div>
+            <span class="color-hex">${state.genFg}</span>
+          </div>
+          <div class="color-pick">
+            <label>Background</label>
+            <div class="color-swatch" style="background:${state.genBg}"><input type="color" value="${state.genBg}" onchange="state.genBg=this.value;this.parentElement.style.background=this.value;renderLiveQR()"></div>
+            <span class="color-hex">${state.genBg}</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Quiet Zone (margin)</label>
+        <div class="slider-row">
+          <input type="range" min="0" max="10" value="${state.genQuiet}" oninput="state.genQuiet=+this.value;document.getElementById('quietVal').textContent=this.value;renderLiveQR()">
+          <span class="slider-val" id="quietVal">${state.genQuiet}</span>
+        </div>
+      </div>
+    </div>
+    <div class="qr-preview">
+      <div class="qr-canvas-wrap" style="background:${state.genBg}">
+        <canvas id="qrCanvas" width="${state.genSize}" height="${state.genSize}"></canvas>
+      </div>
+      <div class="qr-data-preview" id="qrDataPreview"></div>
+      <div class="qr-actions">
+        <button class="primary" onclick="saveQR()">💾 Save</button>
+        <button onclick="downloadPNG()">📥 PNG</button>
+        <button onclick="downloadSVG()">📐 SVG</button>
+        <button onclick="copyToClipboard()">📋 Copy</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderTypeFields(type) {
+  const d = state.genData;
+  switch(type) {
+    case 'url': return `<div class="form-group"><label>URL</label><input type="url" id="f_url" value="${esc(d.url || '')}" placeholder="https://example.com" oninput="state.genData.url=this.value;renderLiveQR()"></div>`;
+    case 'text': return `<div class="form-group"><label>Text</label><textarea id="f_text" placeholder="Enter any text…" oninput="state.genData.text=this.value;renderLiveQR()">${esc(d.text || '')}</textarea></div>`;
+    case 'wifi': return `
+      <div class="form-group"><label>Network Name (SSID)</label><input id="f_ssid" value="${esc(d.ssid || '')}" placeholder="MyWiFi" oninput="state.genData.ssid=this.value;renderLiveQR()"></div>
+      <div class="form-group"><label>Password</label><input id="f_pass" value="${esc(d.password || '')}" placeholder="password" oninput="state.genData.password=this.value;renderLiveQR()"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Encryption</label><select id="f_enc" onchange="state.genData.encryption=this.value;renderLiveQR()">
+          <option value="WPA" ${d.encryption==='WPA'?'selected':''}>WPA/WPA2</option>
+          <option value="WEP" ${d.encryption==='WEP'?'selected':''}>WEP</option>
+          <option value="nopass" ${d.encryption==='nopass'?'selected':''}>None</option>
+        </select></div>
+        <div class="form-group"><label>Hidden</label><select id="f_hidden" onchange="state.genData.hidden=this.value==='true';renderLiveQR()">
+          <option value="false" ${!d.hidden?'selected':''}>No</option>
+          <option value="true" ${d.hidden?'selected':''}>Yes</option>
+        </select></div>
+      </div>`;
+    case 'vcard': return `
+      <div class="form-group"><label>Full Name</label><input id="f_name" value="${esc(d.name || '')}" placeholder="John Doe" oninput="state.genData.name=this.value;renderLiveQR()"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Organization</label><input id="f_org" value="${esc(d.org || '')}" placeholder="Acme Inc" oninput="state.genData.org=this.value;renderLiveQR()"></div>
+        <div class="form-group"><label>Title</label><input id="f_title" value="${esc(d.title || '')}" placeholder="CEO" oninput="state.genData.title=this.value;renderLiveQR()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Phone</label><input id="f_phone" value="${esc(d.phone || '')}" placeholder="+91..." oninput="state.genData.phone=this.value;renderLiveQR()"></div>
+        <div class="form-group"><label>Email</label><input id="f_email" value="${esc(d.email || '')}" placeholder="john@acme.com" oninput="state.genData.email=this.value;renderLiveQR()"></div>
+      </div>
+      <div class="form-group"><label>Website</label><input id="f_url" value="${esc(d.url || '')}" placeholder="https://acme.com" oninput="state.genData.url=this.value;renderLiveQR()"></div>
+      <div class="form-group"><label>Address</label><input id="f_addr" value="${esc(d.address || '')}" placeholder="123 Main St" oninput="state.genData.address=this.value;renderLiveQR()"></div>`;
+    case 'email': return `
+      <div class="form-group"><label>Email Address</label><input id="f_to" value="${esc(d.to || '')}" placeholder="hello@example.com" oninput="state.genData.to=this.value;renderLiveQR()"></div>
+      <div class="form-group"><label>Subject</label><input id="f_subject" value="${esc(d.subject || '')}" placeholder="Subject line" oninput="state.genData.subject=this.value;renderLiveQR()"></div>
+      <div class="form-group"><label>Body</label><textarea id="f_body" placeholder="Email body…" oninput="state.genData.body=this.value;renderLiveQR()">${esc(d.body || '')}</textarea></div>`;
+    case 'phone': return `<div class="form-group"><label>Phone Number</label><input id="f_number" value="${esc(d.number || '')}" placeholder="+919876543210" oninput="state.genData.number=this.value;renderLiveQR()"></div>`;
+    case 'sms': return `
+      <div class="form-group"><label>Phone Number</label><input id="f_number" value="${esc(d.number || '')}" placeholder="+919876543210" oninput="state.genData.number=this.value;renderLiveQR()"></div>
+      <div class="form-group"><label>Message</label><textarea id="f_message" placeholder="SMS text…" oninput="state.genData.message=this.value;renderLiveQR()">${esc(d.message || '')}</textarea></div>`;
+    case 'whatsapp': return `
+      <div class="form-group"><label>Phone Number (with country code)</label><input id="f_number" value="${esc(d.number || '')}" placeholder="919876543210" oninput="state.genData.number=this.value;renderLiveQR()"></div>
+      <div class="form-group"><label>Pre-filled Message</label><textarea id="f_message" placeholder="Hi there!" oninput="state.genData.message=this.value;renderLiveQR()">${esc(d.message || '')}</textarea></div>`;
+    case 'geo': return `
+      <div class="form-row">
+        <div class="form-group"><label>Latitude</label><input id="f_lat" type="number" step="any" value="${d.lat || ''}" placeholder="19.0760" oninput="state.genData.lat=this.value;renderLiveQR()"></div>
+        <div class="form-group"><label>Longitude</label><input id="f_lng" type="number" step="any" value="${d.lng || ''}" placeholder="72.8777" oninput="state.genData.lng=this.value;renderLiveQR()"></div>
+      </div>`;
+    case 'event': return `
+      <div class="form-group"><label>Event Name</label><input id="f_summary" value="${esc(d.summary || '')}" placeholder="Team Meeting" oninput="state.genData.summary=this.value;renderLiveQR()"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Start</label><input id="f_start" type="datetime-local" value="${d.start || ''}" oninput="state.genData.start=this.value;renderLiveQR()"></div>
+        <div class="form-group"><label>End</label><input id="f_end" type="datetime-local" value="${d.end || ''}" oninput="state.genData.end=this.value;renderLiveQR()"></div>
+      </div>
+      <div class="form-group"><label>Location</label><input id="f_location" value="${esc(d.location || '')}" placeholder="Conference Room A" oninput="state.genData.location=this.value;renderLiveQR()"></div>
+      <div class="form-group"><label>Description</label><textarea id="f_desc" placeholder="Details…" oninput="state.genData.description=this.value;renderLiveQR()">${esc(d.description || '')}</textarea></div>`;
+    case 'upi': return `
+      <div class="form-group"><label>UPI ID (VPA)</label><input id="f_vpa" value="${esc(d.vpa || '')}" placeholder="name@upi" oninput="state.genData.vpa=this.value;renderLiveQR()"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Payee Name</label><input id="f_name" value="${esc(d.name || '')}" placeholder="Aman Jha" oninput="state.genData.name=this.value;renderLiveQR()"></div>
+        <div class="form-group"><label>Amount (₹)</label><input id="f_amount" type="number" value="${d.amount || ''}" placeholder="500" oninput="state.genData.amount=this.value;renderLiveQR()"></div>
+      </div>
+      <div class="form-group"><label>Note</label><input id="f_note" value="${esc(d.note || '')}" placeholder="Payment for…" oninput="state.genData.note=this.value;renderLiveQR()"></div>`;
+    case 'bitcoin': return `
+      <div class="form-group"><label>Bitcoin Address</label><input id="f_address" value="${esc(d.address || '')}" placeholder="1A1zP1..." oninput="state.genData.address=this.value;renderLiveQR()"></div>
+      <div class="form-group"><label>Amount (BTC)</label><input id="f_amount" type="number" step="any" value="${d.amount || ''}" placeholder="0.001" oninput="state.genData.amount=this.value;renderLiveQR()"></div>`;
+    default: return '';
+  }
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function setType(type) {
+  state.genType = type;
+  state.genData = {};
+  renderContent();
+}
+
+function bindGenEvents() {}
+
+function renderSaved() {
+  const codes = getFilteredCodes();
+  if (codes.length === 0) return `<div class="empty"><div class="em-icon">💾</div><p>No saved QR codes yet. Generate one and hit Save!</p></div>`;
+  return `<div class="saved-grid">${codes.map(c => `
+    <div class="saved-card" id="card-${c.id}">
+      <canvas data-id="${c.id}" width="160" height="160"></canvas>
+      <div class="sc-name">${esc(c.name || buildQRString(c.type, c.data).slice(0, 30))}</div>
+      <span class="sc-type">${getTypeLabel(c.type)}</span>
+      <div class="sc-date">${new Date(c.created).toLocaleDateString()}</div>
+      <div class="sc-actions">
+        <button onclick="loadCode('${c.id}')">✏️</button>
+        <button onclick="downloadSavedPNG('${c.id}')">📥</button>
+        <button onclick="copySavedData('${c.id}')">📋</button>
+        <button class="del" onclick="deleteCode('${c.id}')">🗑️</button>
+      </div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function renderSavedCards() {
+  const codes = getFilteredCodes();
+  codes.forEach(c => {
+    const canvas = document.querySelector(`canvas[data-id="${c.id}"]`);
+    if (canvas) {
+      const text = buildQRString(c.type, c.data);
+      renderQR(canvas, text, 160, c.fg || '#000000', c.bg || '#ffffff', c.quiet || 4);
+    }
+  });
+}
+
+function getFilteredCodes() {
+  const q = (document.getElementById('sideSearch')?.value || '').toLowerCase();
+  return state.codes.filter(c => {
+    if (!q) return true;
+    const name = (c.name || '').toLowerCase();
+    const data = buildQRString(c.type, c.data).toLowerCase();
+    const type = c.type.toLowerCase();
+    return name.includes(q) || data.includes(q) || type.includes(q);
+  });
+}
+
+function renderBatch() {
+  return `<div class="batch-section">
+    <h2>📋 Batch Generate</h2>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:12px">Enter one URL or text per line. Each line becomes a QR code.</p>
+    <textarea class="batch-textarea" id="batchInput" placeholder="https://example.com&#10;https://google.com&#10;Hello World"></textarea>
+    <div class="batch-info">Lines detected: <span id="batchCount">0</span></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button onclick="generateBatch()" style="padding:8px 16px;border-radius:var(--radius);background:var(--accent);color:#fff;font-size:13px">⚡ Generate All</button>
+      <button onclick="downloadBatchZip()" style="padding:8px 16px;border-radius:var(--radius);background:var(--surface2);border:1px solid var(--border);font-size:13px">📦 Download All PNGs</button>
+      <button onclick="saveBatch()" style="padding:8px 16px;border-radius:var(--radius);background:var(--surface2);border:1px solid var(--border);font-size:13px">💾 Save All to Library</button>
+    </div>
+    <div class="batch-results" id="batchResults"></div>
+  </div>`;
+}
+
+function generateBatch() {
+  const input = document.getElementById('batchInput').value;
+  const lines = input.split('\n').map(l => l.trim()).filter(Boolean);
+  const container = document.getElementById('batchResults');
+  container.innerHTML = '';
+  lines.forEach((line, i) => {
+    const div = document.createElement('div');
+    div.className = 'batch-item';
+    const canvas = document.createElement('canvas');
+    renderQR(canvas, line, 160, state.genFg, state.genBg, state.genQuiet);
+    div.appendChild(canvas);
+    const label = document.createElement('div');
+    label.className = 'bi-label';
+    label.textContent = line.length > 30 ? line.slice(0, 30) + '…' : line;
+    div.appendChild(label);
+    container.appendChild(div);
+  });
+}
+
+function saveBatch() {
+  const input = document.getElementById('batchInput')?.value || '';
+  const lines = input.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return toast('No lines to save');
+  lines.forEach(line => {
+    const isUrl = /^https?:\/\//.test(line);
+    state.codes.push({
+      id: uid(), type: isUrl ? 'url' : 'text',
+      data: isUrl ? { url: line } : { text: line },
+      name: line.length > 40 ? line.slice(0, 40) + '…' : line,
+      fg: state.genFg, bg: state.genBg, ec: state.genEC, quiet: state.genQuiet,
+      created: Date.now()
+    });
+  });
+  save(); toast(`Saved ${lines.length} QR codes`);
+  renderSidebar();
+}
+
+function renderDashboard() {
+  const codes = state.codes;
+  const typeCounts = {};
+  codes.forEach(c => { typeCounts[c.type] = (typeCounts[c.type] || 0) + 1; });
+  const maxType = Math.max(...Object.values(typeCounts), 1);
+
+  const thisWeek = codes.filter(c => Date.now() - c.created < 7 * 86400000).length;
+  const thisMonth = codes.filter(c => Date.now() - c.created < 30 * 86400000).length;
+
+  return `
+    <div class="dash-stats">
+      <div class="stat-card"><div class="stat-val">${codes.length}</div><div class="stat-label">Total QR Codes</div></div>
+      <div class="stat-card"><div class="stat-val">${Object.keys(typeCounts).length}</div><div class="stat-label">Types Used</div></div>
+      <div class="stat-card"><div class="stat-val">${thisWeek}</div><div class="stat-label">This Week</div></div>
+      <div class="stat-card"><div class="stat-val">${thisMonth}</div><div class="stat-label">This Month</div></div>
+    </div>
+    <div class="dash-charts">
+      <div class="chart-card">
+        <h3>QR Codes by Type</h3>
+        ${Object.entries(typeCounts).sort((a,b) => b[1] - a[1]).map(([type, count]) => {
+          const dt = DATA_TYPES.find(d => d.id === type);
+          return `<div class="chart-bar">
+            <span class="cb-label">${dt ? dt.icon + ' ' + dt.label : type}</span>
+            <div class="cb-track"><div class="cb-fill" style="width:${count/maxType*100}%;background:var(--accent)"></div></div>
+            <span class="cb-val">${count}</span>
+          </div>`;
+        }).join('')}
+        ${codes.length === 0 ? '<p style="color:var(--text2);font-size:13px">No data yet</p>' : ''}
+      </div>
+      <div class="chart-card">
+        <h3>Recent Codes</h3>
+        ${codes.slice().sort((a,b) => b.created - a.created).slice(0, 8).map(c => `
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:16px">${(DATA_TYPES.find(d => d.id === c.type) || {}).icon || '🔲'}</span>
+            <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name || buildQRString(c.type, c.data).slice(0, 40))}</span>
+            <span style="font-size:11px;color:var(--text2)">${timeAgo(c.created)}</span>
+          </div>
+        `).join('')}
+        ${codes.length === 0 ? '<p style="color:var(--text2);font-size:13px">No codes saved yet</p>' : ''}
+      </div>
+    </div>`;
+}
+
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
+
+function renderHelp() {
+  return `<div class="help-section">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="help-group"><h3>Navigation</h3>
+      <div class="help-row"><span class="help-key">1</span><span class="help-desc">Generate view</span></div>
+      <div class="help-row"><span class="help-key">2</span><span class="help-desc">Library view</span></div>
+      <div class="help-row"><span class="help-key">3</span><span class="help-desc">Batch view</span></div>
+      <div class="help-row"><span class="help-key">4</span><span class="help-desc">Dashboard</span></div>
+      <div class="help-row"><span class="help-key">/</span><span class="help-desc">Focus search</span></div>
+      <div class="help-row"><span class="help-key">?</span><span class="help-desc">Help</span></div>
+      <div class="help-row"><span class="help-key">Esc</span><span class="help-desc">Close modal</span></div>
+    </div>
+    <div class="help-group"><h3>Actions</h3>
+      <div class="help-row"><span class="help-key">N</span><span class="help-desc">New QR code</span></div>
+      <div class="help-row"><span class="help-key">S</span><span class="help-desc">Save current QR</span></div>
+      <div class="help-row"><span class="help-key">D</span><span class="help-desc">Download PNG</span></div>
+      <div class="help-row"><span class="help-key">E</span><span class="help-desc">Export all</span></div>
+      <div class="help-row"><span class="help-key">I</span><span class="help-desc">Import</span></div>
+    </div>
+    <div class="help-group"><h3>Data Types</h3>
+      ${DATA_TYPES.map(dt => `<div class="help-row"><span class="help-key" style="min-width:40px">${dt.icon}</span><span class="help-desc"><strong>${dt.label}</strong> — ${getTypeDescription(dt.id)}</span></div>`).join('')}
+    </div>
+    <div class="help-group"><h3>Tips</h3>
+      <div class="help-row"><span class="help-desc">• Higher error correction = more resilient but bigger QR codes</span></div>
+      <div class="help-row"><span class="help-desc">• Quiet zone (margin) helps scanners detect the code edges</span></div>
+      <div class="help-row"><span class="help-desc">• Use high contrast colors for best scan reliability</span></div>
+      <div class="help-row"><span class="help-desc">• WiFi QR codes let guests connect without typing passwords</span></div>
+      <div class="help-row"><span class="help-desc">• UPI QR codes work with any Indian payment app (GPay, PhonePe, Paytm)</span></div>
+      <div class="help-row"><span class="help-desc">• vCard QR codes auto-save contact info to phones</span></div>
+    </div>
+  </div>`;
+}
+
+function getTypeDescription(type) {
+  const descs = {
+    url: 'Direct link — opens in browser',
+    text: 'Plain text — displays on scan',
+    wifi: 'Auto-connect to WiFi network',
+    vcard: 'Save contact to phone',
+    email: 'Pre-filled email compose',
+    phone: 'Tap to dial number',
+    sms: 'Pre-filled SMS message',
+    whatsapp: 'Open WhatsApp chat with message',
+    geo: 'Pin on map (lat/long)',
+    event: 'Add calendar event (iCal)',
+    upi: 'UPI payment request (India)',
+    bitcoin: 'Bitcoin payment address'
+  };
+  return descs[type] || '';
+}
+
+// ========== Sidebar ==========
+function renderSidebar() {
+  const el = document.getElementById('sideList');
+  const q = (document.getElementById('sideSearch')?.value || '').toLowerCase();
+  const codes = state.codes.filter(c => {
+    if (!q) return true;
+    return (c.name || '').toLowerCase().includes(q) || c.type.includes(q) || buildQRString(c.type, c.data).toLowerCase().includes(q);
+  }).sort((a, b) => b.created - a.created);
+
+  if (codes.length === 0) {
+    el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text2);font-size:13px">${q ? 'No matches' : 'No saved codes'}</div>`;
+    return;
+  }
+
+  el.innerHTML = codes.map(c => {
+    const dt = DATA_TYPES.find(d => d.id === c.type);
+    return `<div class="sidebar-item ${state.editingId === c.id ? 'active' : ''}" onclick="loadCode('${c.id}')">
+      <span class="si-icon">${dt ? dt.icon : '🔲'}</span>
+      <span class="si-label">${esc(c.name || buildQRString(c.type, c.data).slice(0, 25))}</span>
+      <span class="si-badge">${dt ? dt.label : c.type}</span>
+    </div>`;
+  }).join('');
+}
+
+// ========== Actions ==========
+function saveQR() {
+  const text = buildQRString(state.genType, state.genData);
+  if (!text) return toast('Enter data first');
+
+  const name = prompt('Name this QR code:', text.slice(0, 50));
+  if (name === null) return;
+
+  if (state.editingId) {
+    const idx = state.codes.findIndex(c => c.id === state.editingId);
+    if (idx >= 0) {
+      state.codes[idx] = { ...state.codes[idx], type: state.genType, data: { ...state.genData }, name: name || text.slice(0, 50), fg: state.genFg, bg: state.genBg, ec: state.genEC, quiet: state.genQuiet, updated: Date.now() };
+    }
+  } else {
+    state.codes.push({
+      id: uid(), type: state.genType, data: { ...state.genData }, name: name || text.slice(0, 50),
+      fg: state.genFg, bg: state.genBg, ec: state.genEC, quiet: state.genQuiet, created: Date.now()
+    });
+  }
+  save(); renderSidebar(); toast('Saved!');
+}
+
+function loadCode(id) {
+  const c = state.codes.find(x => x.id === id);
+  if (!c) return;
+  state.editingId = id;
+  state.genType = c.type;
+  state.genData = { ...c.data };
+  state.genFg = c.fg || '#000000';
+  state.genBg = c.bg || '#ffffff';
+  state.genEC = c.ec || 'M';
+  state.genQuiet = c.quiet ?? 4;
+  switchView('generate');
+}
+
+function deleteCode(id) {
+  if (!confirm('Delete this QR code?')) return;
+  state.codes = state.codes.filter(c => c.id !== id);
+  if (state.editingId === id) state.editingId = null;
+  save(); renderSidebar(); renderContent(); toast('Deleted');
+}
+
+function copySavedData(id) {
+  const c = state.codes.find(x => x.id === id);
+  if (!c) return;
+  navigator.clipboard.writeText(buildQRString(c.type, c.data)).then(() => toast('Data copied!'));
+}
+
+function downloadPNG() {
+  const canvas = document.getElementById('qrCanvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.download = 'qr-code.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  toast('PNG downloaded');
+}
+
+function downloadSavedPNG(id) {
+  const c = state.codes.find(x => x.id === id);
+  if (!c) return;
+  const canvas = document.createElement('canvas');
+  const text = buildQRString(c.type, c.data);
+  renderQR(canvas, text, 512, c.fg || '#000000', c.bg || '#ffffff', c.quiet || 4);
+  const a = document.createElement('a');
+  a.download = `${(c.name || 'qr-code').replace(/[^a-z0-9]/gi, '_')}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+function downloadSVG() {
+  const text = buildQRString(state.genType, state.genData);
+  if (!text) return;
+  const qr = QR.encode(text, state.genEC);
+  if (!qr) return toast('Data too large');
+  const quiet = state.genQuiet;
+  const total = qr.size + quiet * 2;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" width="${state.genSize}" height="${state.genSize}">`;
+  svg += `<rect width="${total}" height="${total}" fill="${state.genBg}"/>`;
+  for (let r = 0; r < qr.size; r++)
+    for (let c = 0; c < qr.size; c++)
+      if (qr.modules[r][c]) svg += `<rect x="${c + quiet}" y="${r + quiet}" width="1" height="1" fill="${state.genFg}"/>`;
+  svg += '</svg>';
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const a = document.createElement('a');
+  a.download = 'qr-code.svg';
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  toast('SVG downloaded');
+}
+
+function copyToClipboard() {
+  const canvas = document.getElementById('qrCanvas');
+  if (!canvas) return;
+  canvas.toBlob(blob => {
+    navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(() => toast('Copied to clipboard!'));
+  });
+}
+
+function downloadBatchZip() {
+  const input = document.getElementById('batchInput')?.value || '';
+  const lines = input.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return toast('No lines to download');
+  lines.forEach((line, i) => {
+    const canvas = document.createElement('canvas');
+    renderQR(canvas, line, 512, state.genFg, state.genBg, state.genQuiet);
+    const a = document.createElement('a');
+    a.download = `qr-${i + 1}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  });
+  toast(`Downloaded ${lines.length} PNGs`);
+}
+
+function exportAll() {
+  const blob = new Blob([JSON.stringify({ codes: state.codes }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.download = 'qr-forge-backup.json';
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  toast('Exported');
+}
+
+function importAll() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (d.codes) {
+          const existing = new Set(state.codes.map(c => c.id));
+          const newCodes = d.codes.filter(c => !existing.has(c.id));
+          state.codes.push(...newCodes);
+          save(); renderSidebar(); renderContent();
+          toast(`Imported ${newCodes.length} codes`);
+        }
+      } catch(e) { toast('Invalid file'); }
+    };
+    reader.readAsText(f);
+  };
+  input.click();
+}
+
+// ========== Keyboard Shortcuts ==========
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') e.target.blur();
+    return;
+  }
+  switch(e.key) {
+    case '1': switchView('generate'); break;
+    case '2': switchView('saved'); break;
+    case '3': switchView('batch'); break;
+    case '4': switchView('dashboard'); break;
+    case '?': switchView('help'); break;
+    case '/': e.preventDefault(); document.getElementById('sideSearch')?.focus(); break;
+    case 'n': case 'N': state.editingId = null; state.genData = {}; switchView('generate'); break;
+    case 's': case 'S': if (state.currentView === 'generate') saveQR(); break;
+    case 'd': if (state.currentView === 'generate') downloadPNG(); break;
+    case 'e': exportAll(); break;
+    case 'i': importAll(); break;
+    case 'Escape': document.querySelector('.modal-overlay')?.remove(); break;
+  }
+});
+
+// Batch line counter
+document.addEventListener('input', e => {
+  if (e.target.id === 'batchInput') {
+    const count = e.target.value.split('\n').map(l => l.trim()).filter(Boolean).length;
+    const el = document.getElementById('batchCount');
+    if (el) el.textContent = count;
+  }
+});
+
+// ========== Seed Demo Data ==========
+function seedDemo() {
+  if (state.codes.length > 0) return;
+  state.codes = [
+    { id: uid(), type: 'url', data: { url: 'https://utmstamp.com' }, name: 'UTMStamp Website', fg: '#000000', bg: '#ffffff', ec: 'M', quiet: 4, created: Date.now() - 86400000 * 5 },
+    { id: uid(), type: 'wifi', data: { ssid: 'MVP Cafe Guest', password: 'ShipFast2026', encryption: 'WPA', hidden: false }, name: 'Office WiFi', fg: '#1a1a2e', bg: '#ffffff', ec: 'M', quiet: 4, created: Date.now() - 86400000 * 4 },
+    { id: uid(), type: 'vcard', data: { name: 'Aman Jha', org: 'MVP Cafe', title: 'Head of Product', phone: '+919876543210', email: 'aj@mvp.cafe', url: 'https://helloaman.com' }, name: 'AJ Contact Card', fg: '#0d1117', bg: '#ffffff', ec: 'Q', quiet: 4, created: Date.now() - 86400000 * 3 },
+    { id: uid(), type: 'upi', data: { vpa: 'aman@upi', name: 'Aman Jha', amount: '', note: '' }, name: 'UPI Payment', fg: '#5f259f', bg: '#ffffff', ec: 'M', quiet: 4, created: Date.now() - 86400000 * 2 },
+    { id: uid(), type: 'url', data: { url: 'https://linkedin.com/in/amanjhanow' }, name: 'LinkedIn Profile', fg: '#0a66c2', bg: '#ffffff', ec: 'M', quiet: 4, created: Date.now() - 86400000 },
+    { id: uid(), type: 'email', data: { to: 'hello@mvp.cafe', subject: 'Quick Question', body: 'Hey AJ, I came across your work and wanted to connect.' }, name: 'Contact Email', fg: '#000000', bg: '#ffffff', ec: 'M', quiet: 4, created: Date.now() - 3600000 },
+    { id: uid(), type: 'whatsapp', data: { number: '919876543210', message: 'Hey! Saw your UTMStamp product — looks great.' }, name: 'WhatsApp Quick Chat', fg: '#128c7e', bg: '#ffffff', ec: 'M', quiet: 4, created: Date.now() - 1800000 },
+    { id: uid(), type: 'event', data: { summary: 'Product Strategy Review', start: '2026-06-02T10:00', end: '2026-06-02T11:00', location: 'Zoom', description: 'Q2 roadmap discussion + OKR review' }, name: 'Strategy Meeting', fg: '#000000', bg: '#ffffff', ec: 'M', quiet: 4, created: Date.now() - 900000 }
+  ];
+  save();
+}
+
+// ========== Init ==========
+load();
+seedDemo();
+renderSidebar();
+switchView('generate');
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

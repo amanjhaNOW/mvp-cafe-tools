@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Playground — Browser IDE</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#1c2128;--bg4:#21262d;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#1f6feb;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#bc8cff;--cyan:#79c0ff;--pink:#f778ba;--font:'SF Mono',Monaco,Consolas,'Liberation Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:10px;padding:6px 12px;background:var(--bg2);border-bottom:1px solid var(--border);min-height:40px;flex-shrink:0}
+.topbar .logo{font-weight:700;font-size:14px;color:var(--accent);white-space:nowrap;display:flex;align-items:center;gap:6px}
+.topbar .logo span{font-size:16px}
+.topbar .project-name{background:transparent;border:1px solid transparent;color:var(--text);font-size:13px;padding:3px 8px;border-radius:4px;font-family:inherit;max-width:200px}
+.topbar .project-name:hover{border-color:var(--border)}
+.topbar .project-name:focus{border-color:var(--accent);outline:none;background:var(--bg3)}
+.topbar .sep{width:1px;height:20px;background:var(--border)}
+.topbar .device-btns{display:flex;gap:2px}
+.topbar .device-btns button{background:transparent;border:1px solid transparent;color:var(--text2);padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px;transition:.15s}
+.topbar .device-btns button:hover{background:var(--bg3);color:var(--text)}
+.topbar .device-btns button.active{background:var(--accent2);color:#fff;border-color:var(--accent)}
+.btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px;transition:.15s;font-family:inherit;display:flex;align-items:center;gap:4px}
+.btn:hover{background:var(--bg4);border-color:var(--accent)}
+.btn.primary{background:var(--accent2);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent)}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn.danger:hover{background:rgba(248,81,73,.15)}
+.main-area{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.sidebar.hidden{display:none}
+.sidebar-header{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sidebar-header h3{font-size:12px;text-transform:uppercase;color:var(--text2);letter-spacing:.5px}
+.sidebar-search{margin:6px 8px;position:relative}
+.sidebar-search input{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:4px;font-size:12px;font-family:inherit}
+.sidebar-search input:focus{outline:none;border-color:var(--accent)}
+.sidebar-list{flex:1;overflow-y:auto;padding:4px 0}
+.sidebar-item{padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;border-left:2px solid transparent;transition:.1s}
+.sidebar-item:hover{background:var(--bg3)}
+.sidebar-item.active{background:var(--bg3);border-left-color:var(--accent);color:var(--accent)}
+.sidebar-item .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sidebar-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-item .del{opacity:0;background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 2px}
+.sidebar-item:hover .del{opacity:.7}
+.sidebar-item .del:hover{opacity:1}
+.sidebar-section{padding:6px 10px;font-size:11px;text-transform:uppercase;color:var(--text2);letter-spacing:.5px;margin-top:6px}
+.workspace{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.editor-area{display:flex;flex:1;overflow:hidden;position:relative}
+.code-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.editor-tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.editor-tab{padding:7px 14px;font-size:12px;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);transition:.15s;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.editor-tab:hover{color:var(--text);background:var(--bg3)}
+.editor-tab.active{color:var(--text);border-bottom-color:var(--accent);background:var(--bg)}
+.editor-tab .lang-dot{width:8px;height:8px;border-radius:50%}
+.editor-container{flex:1;position:relative;overflow:hidden;display:flex}
+.code-editor{width:100%;height:100%;position:absolute;top:0;left:0;resize:none;background:var(--bg);color:var(--text);border:none;padding:12px 14px;font-family:var(--font);font-size:13px;line-height:1.6;tab-size:2;white-space:pre;overflow:auto;outline:none;caret-color:var(--accent)}
+.code-editor::selection{background:rgba(88,166,255,.25)}
+.line-numbers{position:absolute;top:0;left:0;width:42px;padding:12px 0;font-family:var(--font);font-size:13px;line-height:1.6;color:var(--text2);text-align:right;user-select:none;pointer-events:none;overflow:hidden}
+.line-numbers span{display:block;padding-right:10px;opacity:.5}
+.code-editor.with-lines{padding-left:50px}
+.preview-panel{display:flex;flex-direction:column;overflow:hidden;border-left:1px solid var(--border);min-width:0}
+.preview-header{display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:var(--bg2);border-bottom:1px solid var(--border);height:33px;flex-shrink:0}
+.preview-header span{font-size:12px;color:var(--text2)}
+.preview-wrapper{flex:1;display:flex;justify-content:center;align-items:flex-start;background:var(--bg3);overflow:auto;padding:0}
+.preview-wrapper.device-mobile .preview-frame{width:375px;max-width:375px;border-left:1px solid var(--border);border-right:1px solid var(--border)}
+.preview-wrapper.device-tablet .preview-frame{width:768px;max-width:768px;border-left:1px solid var(--border);border-right:1px solid var(--border)}
+.preview-frame{width:100%;height:100%;border:none;background:#fff}
+.console-panel{border-top:1px solid var(--border);background:var(--bg);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+.console-header{display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:var(--bg2);border-bottom:1px solid var(--border);height:28px;flex-shrink:0;cursor:ns-resize}
+.console-header span{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.console-badge{background:var(--red);color:#fff;font-size:10px;padding:0 5px;border-radius:8px;min-width:16px;text-align:center;display:none}
+.console-body{flex:1;overflow-y:auto;font-family:var(--font);font-size:12px;padding:6px 10px;max-height:200px;min-height:0}
+.console-line{padding:2px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;word-break:break-all}
+.console-line.log{color:var(--text)}
+.console-line.warn{color:var(--orange);background:rgba(210,153,34,.08)}
+.console-line.error{color:var(--red);background:rgba(248,81,73,.08)}
+.console-line.info{color:var(--cyan)}
+.console-line .ts{color:var(--text2);font-size:10px;flex-shrink:0;min-width:50px}
+.resizer{width:4px;background:transparent;cursor:col-resize;flex-shrink:0;position:relative;z-index:5}
+.resizer:hover,.resizer.active{background:var(--accent)}
+.resizer-h{height:4px;background:transparent;cursor:row-resize;flex-shrink:0;position:relative;z-index:5}
+.resizer-h:hover,.resizer-h.active{background:var(--accent)}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:8px;width:90%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-head h2{font-size:15px;font-weight:600}
+.modal-body{padding:16px;overflow-y:auto;flex:1}
+.modal-foot{padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.close-btn{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:0 4px}
+.close-btn:hover{color:var(--text)}
+.template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.template-card{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;cursor:pointer;transition:.15s}
+.template-card:hover{border-color:var(--accent);background:var(--bg4)}
+.template-card .icon{font-size:24px;margin-bottom:6px}
+.template-card .tname{font-size:13px;font-weight:600;margin-bottom:4px}
+.template-card .tdesc{font-size:11px;color:var(--text2);line-height:1.4}
+.resources-list{display:flex;flex-direction:column;gap:6px}
+.resource-row{display:flex;gap:6px;align-items:center}
+.resource-row select{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:4px;font-size:12px}
+.resource-row input{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-size:12px;font-family:var(--font)}
+.resource-row input:focus,.resource-row select:focus{outline:none;border-color:var(--accent)}
+.settings-group{margin-bottom:14px}
+.settings-group label{display:flex;align-items:center;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.settings-group select,.settings-group input[type=number]{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-size:12px}
+.settings-group select:focus,.settings-group input:focus{outline:none;border-color:var(--accent)}
+.settings-group input[type=range]{width:120px;accent-color:var(--accent)}
+.toggle{position:relative;width:36px;height:20px;display:inline-block}
+.toggle input{opacity:0;width:0;height:0}
+.toggle .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--bg4);border-radius:10px;transition:.2s}
+.toggle .slider:before{content:'';position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:var(--text2);border-radius:50%;transition:.2s}
+.toggle input:checked+.slider{background:var(--accent2)}
+.toggle input:checked+.slider:before{transform:translateX(16px);background:#fff}
+.help-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px}
+.help-grid .hk{color:var(--text2)}
+.help-grid .hv{color:var(--text);font-family:var(--font)}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text2);gap:10px;font-size:14px}
+.empty-state span{font-size:36px}
+.status-bar{display:flex;align-items:center;justify-content:space-between;padding:2px 12px;background:var(--bg2);border-top:1px solid var(--border);font-size:11px;color:var(--text2);flex-shrink:0;height:22px}
+.status-bar .left,.status-bar .right{display:flex;gap:12px;align-items:center}
+.layout-btns{display:flex;gap:2px}
+.layout-btns button{background:transparent;border:1px solid transparent;color:var(--text2);padding:3px 6px;border-radius:3px;cursor:pointer;font-size:11px;transition:.15s}
+.layout-btns button:hover{color:var(--text)}
+.layout-btns button.active{color:var(--accent);border-color:var(--accent)}
+@media(max-width:768px){.sidebar{width:180px}.topbar{flex-wrap:wrap;gap:6px}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo"><span>⚡</span> Code Playground</div>
+  <input class="project-name" id="projName" value="" spellcheck="false" title="Click to rename project">
+  <div class="sep"></div>
+  <div class="device-btns">
+    <button onclick="setDevice('')" class="active" id="devAuto" title="Auto width">🖥 Auto</button>
+    <button onclick="setDevice('mobile')" id="devMob" title="375px">📱 Mobile</button>
+    <button onclick="setDevice('tablet')" id="devTab" title="768px">📟 Tablet</button>
+  </div>
+  <div class="sep"></div>
+  <button class="btn" onclick="run()" title="⌘Enter">▶ Run</button>
+  <button class="btn" onclick="openTemplates()" title="Templates">📦 Templates</button>
+  <button class="btn" onclick="openResources()" title="External Resources">🔗 Resources</button>
+  <button class="btn" onclick="openSettings()" title="Settings">⚙</button>
+  <button class="btn" onclick="exportHTML()" title="Export as HTML file">📤 Export</button>
+  <button class="btn" onclick="openHelp()" title="Keyboard shortcuts">❓</button>
+  <div style="flex:1"></div>
+  <div class="layout-btns">
+    <button onclick="setLayout('horizontal')" id="layH" class="active" title="Side by side">◫</button>
+    <button onclick="setLayout('vertical')" id="layV" title="Stacked">⬒</button>
+    <button onclick="setLayout('editor-only')" id="layE" title="Editor only">☰</button>
+    <button onclick="setLayout('preview-only')" id="layP" title="Preview only">◻</button>
+  </div>
+  <div class="sep"></div>
+  <button class="btn" onclick="toggleSidebar()" id="sidebarToggle" title="Toggle sidebar">☰</button>
+</div>
+<div class="main-area">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h3>Projects</h3>
+      <button class="btn" onclick="newProject()" style="padding:2px 6px;font-size:11px">+ New</button>
+    </div>
+    <div class="sidebar-search"><input type="text" id="sideSearch" placeholder="Search projects..." oninput="renderSidebar()"></div>
+    <div class="sidebar-list" id="sidebarList"></div>
+    <div class="sidebar-section">Templates</div>
+    <div class="sidebar-list" id="templateList" style="max-height:180px"></div>
+  </div>
+  <div class="workspace">
+    <div class="editor-area" id="editorArea">
+      <div class="code-panel" id="codePanel">
+        <div class="editor-tabs" id="editorTabs"></div>
+        <div class="editor-container" id="editorContainer">
+          <div class="line-numbers" id="lineNums"></div>
+          <textarea class="code-editor with-lines" id="codeEditor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+        </div>
+      </div>
+      <div class="resizer" id="resizer"></div>
+      <div class="preview-panel" id="previewPanel">
+        <div class="preview-header">
+          <span>Preview</span>
+          <div style="display:flex;gap:4px;align-items:center">
+            <button class="btn" onclick="refreshPreview()" style="padding:2px 6px;font-size:10px">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="preview-wrapper" id="previewWrapper">
+          <iframe class="preview-frame" id="previewFrame" sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin"></iframe>
+        </div>
+        <div class="console-panel" id="consolePanel" style="height:120px">
+          <div class="console-header" id="consoleHeader">
+            <span>Console <span class="console-badge" id="consoleBadge">0</span></span>
+            <div style="display:flex;gap:6px;align-items:center">
+              <button class="btn" onclick="clearConsole()" style="padding:1px 6px;font-size:10px">Clear</button>
+              <button class="close-btn" onclick="toggleConsole()" style="font-size:12px" title="Toggle console">▼</button>
+            </div>
+          </div>
+          <div class="console-body" id="consoleBody"></div>
+        </div>
+      </div>
+    </div>
+    <div class="status-bar">
+      <div class="left">
+        <span id="statusLang">HTML</span>
+        <span id="statusLines">Lines: 0</span>
+        <span id="statusChars">Chars: 0</span>
+      </div>
+      <div class="right">
+        <span id="statusAutorun">Auto-run: ON</span>
+        <span id="statusSave">Saved</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="if(event.target===this)closeModal()"></div>
+
+<script>
+// ── State ──
+const TABS = ['html','css','js'];
+const TAB_COLORS = {html:'#f06529',css:'#2965f1',js:'#f7df1e'};
+const TAB_LABELS = {html:'HTML',css:'CSS',js:'JavaScript'};
+let projects = [];
+let activeId = null;
+let activeTab = 'html';
+let settings = {autoRun:true,fontSize:13,tabSize:2,lineNumbers:true,wordWrap:false,consoleOpen:true,layout:'horizontal',sidebarOpen:true};
+let consoleLines = [];
+let updateTimer = null;
+
+// ── Templates ──
+const TEMPLATES = [
+  {id:'blank',name:'Blank',icon:'📄',desc:'Empty canvas',
+    html:'<h1>Hello World</h1>\n<p>Start building something awesome.</p>',
+    css:'body {\n  font-family: system-ui, sans-serif;\n  padding: 40px;\n  background: #0d1117;\n  color: #e6edf3;\n}\n\nh1 {\n  background: linear-gradient(135deg, #58a6ff, #bc8cff);\n  -webkit-background-clip: text;\n  -webkit-text-fill-color: transparent;\n}\n\np {\n  color: #8b949e;\n  margin-top: 8px;\n}',
+    js:'console.log("🚀 Ready to code!");'},
+  {id:'landing',name:'Landing Page',icon:'🚀',desc:'Marketing landing page with hero, features, CTA',
+    html:'<nav>\n  <div class="logo">⚡ ProductName</div>\n  <div class="nav-links">\n    <a href="#">Features</a>\n    <a href="#">Pricing</a>\n    <a href="#" class="cta-btn">Get Started</a>\n  </div>\n</nav>\n<section class="hero">\n  <h1>Build faster.<br>Ship smarter.</h1>\n  <p>The modern toolkit for teams that move fast and break conventions, not products.</p>\n  <div class="hero-btns">\n    <button class="primary">Start Free Trial</button>\n    <button class="secondary">Watch Demo →</button>\n  </div>\n</section>\n<section class="features">\n  <div class="feature"><span>⚡</span><h3>Lightning Fast</h3><p>Sub-100ms response times. Your users will thank you.</p></div>\n  <div class="feature"><span>🔒</span><h3>Secure by Default</h3><p>Enterprise-grade security without the enterprise headache.</p></div>\n  <div class="feature"><span>📊</span><h3>Real-time Analytics</h3><p>Know what\'s happening. As it happens.</p></div>\n</section>\n<section class="social-proof">\n  <p>Trusted by 2,000+ teams worldwide</p>\n  <div class="logos">Google &nbsp;•&nbsp; Stripe &nbsp;•&nbsp; Vercel &nbsp;•&nbsp; Linear &nbsp;•&nbsp; Notion</div>\n</section>',
+    css:'* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0a; color: #fafafa; }\nnav { display: flex; justify-content: space-between; align-items: center; padding: 16px 40px; border-bottom: 1px solid #222; }\n.logo { font-weight: 700; font-size: 18px; }\n.nav-links { display: flex; gap: 24px; align-items: center; }\n.nav-links a { color: #999; text-decoration: none; font-size: 14px; }\n.nav-links a:hover { color: #fff; }\n.cta-btn { background: #fff; color: #000 !important; padding: 6px 16px; border-radius: 6px; font-weight: 600; }\n.hero { text-align: center; padding: 100px 40px 60px; }\n.hero h1 { font-size: 56px; line-height: 1.1; background: linear-gradient(135deg, #fff, #888); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }\n.hero p { color: #888; font-size: 18px; margin-top: 20px; max-width: 500px; margin-inline: auto; line-height: 1.6; }\n.hero-btns { margin-top: 32px; display: flex; gap: 12px; justify-content: center; }\n.hero-btns button { padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; }\n.primary { background: #fff; color: #000; }\n.primary:hover { background: #ddd; }\n.secondary { background: transparent; color: #fff; border: 1px solid #333 !important; }\n.secondary:hover { border-color: #666 !important; }\n.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 60px 40px; max-width: 900px; margin: 0 auto; }\n.feature { background: #111; border: 1px solid #222; border-radius: 12px; padding: 28px; }\n.feature span { font-size: 32px; }\n.feature h3 { margin-top: 12px; font-size: 16px; }\n.feature p { color: #888; font-size: 13px; margin-top: 6px; line-height: 1.5; }\n.social-proof { text-align: center; padding: 40px; border-top: 1px solid #222; }\n.social-proof p { color: #666; font-size: 13px; }\n.logos { color: #444; margin-top: 8px; font-size: 14px; letter-spacing: 2px; }',
+    js:'document.querySelectorAll("button").forEach(b => {\n  b.addEventListener("click", () => {\n    console.log(`Clicked: ${b.textContent}`);\n  });\n});'},
+  {id:'dashboard',name:'Dashboard',icon:'📊',desc:'Stats cards, charts, data table',
+    html:'<div class="dash">\n  <header>\n    <h1>📊 Dashboard</h1>\n    <div class="period-btns">\n      <button class="active">7d</button>\n      <button>30d</button>\n      <button>90d</button>\n    </div>\n  </header>\n  <div class="cards">\n    <div class="card"><div class="label">Total Users</div><div class="value">12,847</div><div class="change up">↑ 12.3%</div></div>\n    <div class="card"><div class="label">Revenue</div><div class="value">$48,295</div><div class="change up">↑ 8.1%</div></div>\n    <div class="card"><div class="label">Conversion</div><div class="value">3.42%</div><div class="change down">↓ 0.5%</div></div>\n    <div class="card"><div class="label">Avg Session</div><div class="value">4m 12s</div><div class="change up">↑ 2.1%</div></div>\n  </div>\n  <div class="chart-area">\n    <h3>Traffic Overview</h3>\n    <canvas id="chart" width="700" height="200"></canvas>\n  </div>\n  <div class="table-area">\n    <h3>Recent Activity</h3>\n    <table>\n      <thead><tr><th>User</th><th>Action</th><th>Date</th><th>Status</th></tr></thead>\n      <tbody id="tbody"></tbody>\n    </table>\n  </div>\n</div>',
+    css:'* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { font-family: system-ui, sans-serif; background: #0d1117; color: #e6edf3; padding: 20px; }\nheader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }\nh1 { font-size: 22px; }\n.period-btns { display: flex; gap: 4px; }\n.period-btns button { background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }\n.period-btns button.active { background: #1f6feb; color: #fff; border-color: #58a6ff; }\n.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }\n.card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }\n.card .label { font-size: 12px; color: #8b949e; }\n.card .value { font-size: 24px; font-weight: 700; margin-top: 4px; }\n.card .change { font-size: 12px; margin-top: 4px; }\n.up { color: #3fb950; }\n.down { color: #f85149; }\n.chart-area, .table-area { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-bottom: 16px; }\nh3 { font-size: 14px; margin-bottom: 12px; color: #8b949e; }\ntable { width: 100%; border-collapse: collapse; font-size: 13px; }\nth { text-align: left; padding: 8px; color: #8b949e; border-bottom: 1px solid #30363d; font-weight: 500; }\ntd { padding: 8px; border-bottom: 1px solid #21262d; }\n.badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; }\n.badge.success { background: rgba(63,185,80,.15); color: #3fb950; }\n.badge.pending { background: rgba(210,153,34,.15); color: #d29922; }\n.badge.failed { background: rgba(248,81,73,.15); color: #f85149; }',
+    js:'// Draw chart\nconst ctx = document.getElementById("chart").getContext("2d");\nconst data = [120,180,150,220,190,280,250,310,290,340,320,380,350,410];\nconst max = Math.max(...data);\nctx.strokeStyle = "#58a6ff";\nctx.lineWidth = 2;\nctx.beginPath();\ndata.forEach((v,i) => {\n  const x = (i/(data.length-1)) * 680 + 10;\n  const y = 190 - (v/max) * 170;\n  i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);\n});\nctx.stroke();\n// Fill area\nctx.lineTo(690, 190);\nctx.lineTo(10, 190);\nctx.closePath();\nctx.fillStyle = "rgba(88,166,255,0.1)";\nctx.fill();\n\n// Table data\nconst actions = ["Signed up","Purchased Pro","Exported report","Invited team","Updated profile"];\nconst statuses = ["success","pending","success","success","failed"];\nconst names = ["Sarah C.","Mike R.","Priya S.","Alex T.","Jordan K."];\nconst tbody = document.getElementById("tbody");\nnames.forEach((n,i) => {\n  const d = new Date(); d.setDate(d.getDate() - i);\n  tbody.innerHTML += `<tr><td>${n}</td><td>${actions[i]}</td><td>${d.toLocaleDateString()}</td><td><span class="badge ${statuses[i]}">${statuses[i]}</span></td></tr>`;\n});\n\nconsole.log("Dashboard loaded with", data.length, "data points");'},
+  {id:'todo',name:'Todo App',icon:'✅',desc:'Interactive todo list with add/complete/delete',
+    html:'<div class="app">\n  <h1>✅ Todo List</h1>\n  <div class="input-row">\n    <input type="text" id="inp" placeholder="What needs to be done?" autofocus>\n    <button onclick="addTodo()">Add</button>\n  </div>\n  <div class="filters">\n    <button class="active" onclick="setFilter(\'all\',this)">All</button>\n    <button onclick="setFilter(\'active\',this)">Active</button>\n    <button onclick="setFilter(\'done\',this)">Done</button>\n  </div>\n  <ul id="list"></ul>\n  <div class="footer" id="footer"></div>\n</div>',
+    css:'* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { font-family: system-ui, sans-serif; background: #0d1117; color: #e6edf3; display: flex; justify-content: center; padding: 40px 20px; }\n.app { width: 100%; max-width: 500px; }\nh1 { font-size: 28px; margin-bottom: 20px; }\n.input-row { display: flex; gap: 8px; margin-bottom: 16px; }\n.input-row input { flex: 1; background: #161b22; border: 1px solid #30363d; color: #e6edf3; padding: 10px 14px; border-radius: 6px; font-size: 14px; outline: none; }\n.input-row input:focus { border-color: #58a6ff; }\n.input-row button { background: #1f6feb; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }\n.input-row button:hover { background: #58a6ff; }\n.filters { display: flex; gap: 4px; margin-bottom: 16px; }\n.filters button { background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }\n.filters button.active { background: #1f6feb; color: #fff; border-color: #58a6ff; }\nul { list-style: none; }\nli { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #161b22; border: 1px solid #30363d; border-radius: 6px; margin-bottom: 6px; }\nli.done .text { text-decoration: line-through; color: #484f58; }\nli .check { width: 18px; height: 18px; border: 2px solid #30363d; border-radius: 50%; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; }\nli.done .check { background: #3fb950; border-color: #3fb950; color: #fff; }\nli .text { flex: 1; font-size: 14px; }\nli .del { background: none; border: none; color: #484f58; cursor: pointer; font-size: 16px; opacity: 0; }\nli:hover .del { opacity: 1; }\nli .del:hover { color: #f85149; }\n.footer { margin-top: 12px; font-size: 12px; color: #484f58; display: flex; justify-content: space-between; }',
+    js:'let todos = [\n  {id:1, text:"Ship the MVP", done:true},\n  {id:2, text:"Write launch post", done:false},\n  {id:3, text:"Set up analytics", done:false},\n  {id:4, text:"Email early users", done:false}\n];\nlet filter = "all";\nlet nextId = 5;\n\nfunction addTodo() {\n  const inp = document.getElementById("inp");\n  const text = inp.value.trim();\n  if (!text) return;\n  todos.push({id: nextId++, text, done: false});\n  inp.value = "";\n  render();\n  console.log(`Added: "${text}"`);\n}\n\ndocument.getElementById("inp").addEventListener("keydown", e => {\n  if (e.key === "Enter") addTodo();\n});\n\nfunction toggle(id) {\n  const t = todos.find(t => t.id === id);\n  if (t) t.done = !t.done;\n  render();\n}\n\nfunction remove(id) {\n  todos = todos.filter(t => t.id !== id);\n  render();\n  console.log("Deleted todo #" + id);\n}\n\nfunction setFilter(f, btn) {\n  filter = f;\n  document.querySelectorAll(".filters button").forEach(b => b.classList.remove("active"));\n  btn.classList.add("active");\n  render();\n}\n\nfunction render() {\n  const list = document.getElementById("list");\n  const filtered = todos.filter(t => filter === "all" ? true : filter === "done" ? t.done : !t.done);\n  list.innerHTML = filtered.map(t => `\n    <li class="${t.done ? "done" : ""}">\n      <div class="check" onclick="toggle(${t.id})">${t.done ? "✓" : ""}</div>\n      <span class="text">${t.text}</span>\n      <button class="del" onclick="remove(${t.id})">✕</button>\n    </li>\n  `).join("");\n  const active = todos.filter(t => !t.done).length;\n  document.getElementById("footer").innerHTML = `<span>${active} item${active !== 1 ? "s" : ""} left</span><span>${todos.length} total</span>`;\n}\n\nrender();\nconsole.log("Todo app ready!", todos.length, "items loaded");'},
+  {id:'animation',name:'CSS Animation',icon:'🎨',desc:'Animated elements with keyframes & transitions',
+    html:'<div class="scene">\n  <div class="orbit-system">\n    <div class="sun">☀️</div>\n    <div class="orbit o1"><div class="planet p1">🌍</div></div>\n    <div class="orbit o2"><div class="planet p2">🪐</div></div>\n    <div class="orbit o3"><div class="planet p3">🌙</div></div>\n  </div>\n  <div class="particles" id="particles"></div>\n  <div class="text-anim">\n    <span>C</span><span>S</span><span>S</span>\n    <span>&nbsp;</span>\n    <span>I</span><span>S</span>\n    <span>&nbsp;</span>\n    <span>M</span><span>A</span><span>G</span><span>I</span><span>C</span>\n  </div>\n  <div class="wave">\n    <div class="bar"></div><div class="bar"></div><div class="bar"></div>\n    <div class="bar"></div><div class="bar"></div><div class="bar"></div>\n    <div class="bar"></div><div class="bar"></div><div class="bar"></div>\n    <div class="bar"></div><div class="bar"></div><div class="bar"></div>\n  </div>\n</div>',
+    css:'* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { background: #0a0a1a; overflow: hidden; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }\n.scene { position: relative; width: 100%; height: 100vh; }\n.orbit-system { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }\n.sun { font-size: 40px; position: absolute; top: -20px; left: -20px; animation: pulse 2s ease-in-out infinite; }\n@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.2); } }\n.orbit { position: absolute; border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; top: 50%; left: 50%; }\n.o1 { width: 120px; height: 120px; margin: -60px 0 0 -60px; animation: spin 4s linear infinite; }\n.o2 { width: 200px; height: 200px; margin: -100px 0 0 -100px; animation: spin 7s linear infinite; }\n.o3 { width: 280px; height: 280px; margin: -140px 0 0 -140px; animation: spin 11s linear infinite reverse; }\n@keyframes spin { to { transform: rotate(360deg); } }\n.planet { position: absolute; font-size: 20px; top: -10px; left: 50%; margin-left: -10px; }\n.text-anim { position: absolute; bottom: 120px; width: 100%; text-align: center; }\n.text-anim span { display: inline-block; font-size: 48px; font-weight: 900; font-family: system-ui; color: #fff; animation: bounce 0.6s ease infinite alternate; }\n.text-anim span:nth-child(1) { animation-delay: 0s; color: #ff6b6b; }\n.text-anim span:nth-child(2) { animation-delay: 0.05s; color: #ffa06b; }\n.text-anim span:nth-child(3) { animation-delay: 0.1s; color: #ffd06b; }\n.text-anim span:nth-child(5) { animation-delay: 0.15s; color: #6bff6b; }\n.text-anim span:nth-child(6) { animation-delay: 0.2s; color: #6bffd0; }\n.text-anim span:nth-child(8) { animation-delay: 0.25s; color: #6bb4ff; }\n.text-anim span:nth-child(9) { animation-delay: 0.3s; color: #8c6bff; }\n.text-anim span:nth-child(10) { animation-delay: 0.35s; color: #d06bff; }\n.text-anim span:nth-child(11) { animation-delay: 0.4s; color: #ff6bd0; }\n.text-anim span:nth-child(12) { animation-delay: 0.45s; color: #ff6b8c; }\n@keyframes bounce { to { transform: translateY(-20px); text-shadow: 0 0 20px currentColor; } }\n.wave { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; height: 50px; }\n.bar { width: 8px; background: linear-gradient(to top, #58a6ff, #bc8cff); border-radius: 4px; animation: waveBar 1.2s ease-in-out infinite; }\n.bar:nth-child(1) { animation-delay: 0s; }\n.bar:nth-child(2) { animation-delay: 0.1s; }\n.bar:nth-child(3) { animation-delay: 0.2s; }\n.bar:nth-child(4) { animation-delay: 0.3s; }\n.bar:nth-child(5) { animation-delay: 0.4s; }\n.bar:nth-child(6) { animation-delay: 0.5s; }\n.bar:nth-child(7) { animation-delay: 0.4s; }\n.bar:nth-child(8) { animation-delay: 0.3s; }\n.bar:nth-child(9) { animation-delay: 0.2s; }\n.bar:nth-child(10) { animation-delay: 0.1s; }\n.bar:nth-child(11) { animation-delay: 0s; }\n.bar:nth-child(12) { animation-delay: 0.1s; }\n@keyframes waveBar { 0%,100% { height: 10px; } 50% { height: 50px; } }\n.particles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }',
+    js:'// Floating particles\nconst container = document.getElementById("particles");\nfor (let i = 0; i < 40; i++) {\n  const p = document.createElement("div");\n  const size = Math.random() * 4 + 1;\n  p.style.cssText = `\n    position: absolute;\n    width: ${size}px; height: ${size}px;\n    background: rgba(255,255,255,${Math.random()*0.5+0.1});\n    border-radius: 50%;\n    left: ${Math.random()*100}%;\n    top: ${Math.random()*100}%;\n    animation: float ${Math.random()*10+5}s ease-in-out infinite alternate;\n    animation-delay: ${Math.random()*5}s;\n  `;\n  container.appendChild(p);\n}\n\nconst style = document.createElement("style");\nstyle.textContent = `@keyframes float {\n  from { transform: translate(0, 0) scale(1); opacity: 0.3; }\n  to { transform: translate(${Math.random()*200-100}px, ${Math.random()*200-100}px) scale(1.5); opacity: 0.8; }\n}`;\ndocument.head.appendChild(style);\n\nconsole.log("🪐 Solar system animation loaded");'},
+  {id:'game',name:'Snake Game',icon:'🐍',desc:'Classic snake game with canvas',
+    html:'<div class="game-ui">\n  <div class="game-header">\n    <h1>🐍 Snake</h1>\n    <div class="score">Score: <span id="score">0</span></div>\n  </div>\n  <canvas id="canvas" width="400" height="400"></canvas>\n  <div class="controls">\n    <p id="msg">Press any arrow key to start</p>\n  </div>\n</div>',
+    css:'* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { background: #0d1117; color: #e6edf3; font-family: system-ui, sans-serif; display: flex; justify-content: center; padding: 20px; }\n.game-ui { text-align: center; }\n.game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; width: 400px; }\nh1 { font-size: 22px; }\n.score { font-size: 18px; font-weight: 700; color: #3fb950; }\ncanvas { background: #161b22; border: 2px solid #30363d; border-radius: 8px; display: block; }\n.controls { margin-top: 12px; }\n.controls p { color: #8b949e; font-size: 13px; }',
+    js:'const canvas = document.getElementById("canvas");\nconst ctx = canvas.getContext("2d");\nconst CELL = 20, COLS = 20, ROWS = 20;\nlet snake = [{x:10,y:10}];\nlet food = {x:15,y:10};\nlet dir = {x:0,y:0};\nlet score = 0, running = false, gameOver = false;\n\nfunction draw() {\n  ctx.fillStyle = "#161b22";\n  ctx.fillRect(0,0,400,400);\n  // Grid\n  ctx.strokeStyle = "#1c2128";\n  for(let i=0;i<=COLS;i++){ctx.beginPath();ctx.moveTo(i*CELL,0);ctx.lineTo(i*CELL,400);ctx.stroke();}\n  for(let i=0;i<=ROWS;i++){ctx.beginPath();ctx.moveTo(0,i*CELL);ctx.lineTo(400,i*CELL);ctx.stroke();}\n  // Food\n  ctx.fillStyle = "#f85149";\n  ctx.beginPath();\n  ctx.arc(food.x*CELL+CELL/2, food.y*CELL+CELL/2, CELL/2-2, 0, Math.PI*2);\n  ctx.fill();\n  // Snake\n  snake.forEach((s,i) => {\n    ctx.fillStyle = i===0 ? "#3fb950" : "#238636";\n    ctx.fillRect(s.x*CELL+1, s.y*CELL+1, CELL-2, CELL-2);\n    if(i===0) {\n      ctx.fillStyle="#fff";\n      ctx.fillRect(s.x*CELL+4,s.y*CELL+4,4,4);\n      ctx.fillRect(s.x*CELL+12,s.y*CELL+4,4,4);\n    }\n  });\n  if(gameOver) {\n    ctx.fillStyle="rgba(0,0,0,0.7)";\n    ctx.fillRect(0,0,400,400);\n    ctx.fillStyle="#f85149";\n    ctx.font="bold 28px system-ui";\n    ctx.textAlign="center";\n    ctx.fillText("Game Over!",200,190);\n    ctx.fillStyle="#8b949e";\n    ctx.font="14px system-ui";\n    ctx.fillText("Press Space to restart",200,220);\n  }\n}\n\nfunction update() {\n  if(!running||gameOver) return;\n  const head = {x:snake[0].x+dir.x, y:snake[0].y+dir.y};\n  if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS||snake.some(s=>s.x===head.x&&s.y===head.y)) {\n    gameOver = true;\n    document.getElementById("msg").textContent = "Game Over! Press Space to restart";\n    console.log("Game over! Final score:", score);\n    draw(); return;\n  }\n  snake.unshift(head);\n  if(head.x===food.x&&head.y===food.y) {\n    score++;\n    document.getElementById("score").textContent = score;\n    do { food = {x:Math.floor(Math.random()*COLS),y:Math.floor(Math.random()*ROWS)}; } while(snake.some(s=>s.x===food.x&&s.y===food.y));\n    console.log("🍎 Score:", score);\n  } else snake.pop();\n  draw();\n}\n\ndocument.addEventListener("keydown", e => {\n  if(e.key===" "&&gameOver){snake=[{x:10,y:10}];dir={x:0,y:0};food={x:15,y:10};score=0;gameOver=false;running=false;document.getElementById("score").textContent="0";document.getElementById("msg").textContent="Press arrow key to start";draw();return;}\n  const dirs={ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0}};\n  if(dirs[e.key]){e.preventDefault();if(dir.x!==-dirs[e.key].x||dir.y!==-dirs[e.key].y){dir=dirs[e.key];if(!running){running=true;document.getElementById("msg").textContent="Use arrow keys to steer";}}}\n});\n\nsetInterval(update, 120);\ndraw();\nconsole.log("🐍 Snake game ready!");'},
+  {id:'form',name:'Multi-Step Form',icon:'📝',desc:'Multi-step form with validation & progress bar',
+    html:'<div class="form-container">\n  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>\n  <div class="step-indicator" id="stepIndicator"></div>\n  <form id="form" onsubmit="return false">\n    <div class="step" id="step-1">\n      <h2>👤 Personal Info</h2>\n      <div class="field"><label>Full Name</label><input type="text" id="name" placeholder="Aman Jha" required></div>\n      <div class="field"><label>Email</label><input type="email" id="email" placeholder="aj@example.com" required></div>\n      <div class="field"><label>Phone</label><input type="tel" id="phone" placeholder="+91 98765 43210"></div>\n    </div>\n    <div class="step" id="step-2" style="display:none">\n      <h2>💼 Professional</h2>\n      <div class="field"><label>Company</label><input type="text" id="company" placeholder="Acme Inc"></div>\n      <div class="field"><label>Role</label><select id="role"><option value="">Select...</option><option>Founder</option><option>Product Manager</option><option>Engineer</option><option>Designer</option><option>Marketing</option><option>Other</option></select></div>\n      <div class="field"><label>Team Size</label><div class="radio-group"><label class="radio"><input type="radio" name="team" value="1-5"> 1-5</label><label class="radio"><input type="radio" name="team" value="6-20"> 6-20</label><label class="radio"><input type="radio" name="team" value="21-50"> 21-50</label><label class="radio"><input type="radio" name="team" value="50+"> 50+</label></div></div>\n    </div>\n    <div class="step" id="step-3" style="display:none">\n      <h2>🎯 Preferences</h2>\n      <div class="field"><label>Interests</label><div class="checkbox-group"><label class="cb"><input type="checkbox" value="product"> Product</label><label class="cb"><input type="checkbox" value="growth"> Growth</label><label class="cb"><input type="checkbox" value="engineering"> Engineering</label><label class="cb"><input type="checkbox" value="design"> Design</label><label class="cb"><input type="checkbox" value="ai"> AI/ML</label></div></div>\n      <div class="field"><label>Anything else?</label><textarea id="notes" placeholder="Tell us more..." rows="3"></textarea></div>\n    </div>\n    <div class="step" id="step-4" style="display:none">\n      <h2>✅ All Done!</h2>\n      <div class="summary" id="summary"></div>\n    </div>\n    <div class="nav-btns">\n      <button type="button" id="prevBtn" onclick="prevStep()" style="display:none">← Back</button>\n      <div style="flex:1"></div>\n      <button type="button" id="nextBtn" onclick="nextStep()" class="primary">Next →</button>\n    </div>\n  </form>\n</div>',
+    css:'* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { background: #0d1117; color: #e6edf3; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }\n.form-container { width: 100%; max-width: 480px; background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 28px; }\n.progress-bar { height: 4px; background: #21262d; border-radius: 2px; margin-bottom: 16px; overflow: hidden; }\n.progress-fill { height: 100%; background: linear-gradient(90deg, #58a6ff, #bc8cff); border-radius: 2px; transition: width 0.3s ease; width: 25%; }\n.step-indicator { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }\n.step-dot { width: 8px; height: 8px; border-radius: 50%; background: #30363d; transition: .2s; }\n.step-dot.active { background: #58a6ff; transform: scale(1.3); }\n.step-dot.done { background: #3fb950; }\nh2 { font-size: 20px; margin-bottom: 20px; }\n.field { margin-bottom: 16px; }\n.field label { display: block; font-size: 13px; color: #8b949e; margin-bottom: 6px; }\ninput, select, textarea { width: 100%; background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 10px 12px; border-radius: 6px; font-size: 14px; font-family: inherit; outline: none; }\ninput:focus, select:focus, textarea:focus { border-color: #58a6ff; }\n.radio-group, .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }\n.radio, .cb { display: flex; align-items: center; gap: 6px; background: #0d1117; border: 1px solid #30363d; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }\n.radio:hover, .cb:hover { border-color: #58a6ff; }\n.radio input, .cb input { accent-color: #58a6ff; }\n.nav-btns { display: flex; gap: 8px; margin-top: 24px; }\n.nav-btns button { padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid #30363d; background: #21262d; color: #e6edf3; }\n.nav-btns .primary { background: #1f6feb; border-color: #58a6ff; color: #fff; }\n.nav-btns .primary:hover { background: #58a6ff; }\n.summary { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 16px; font-size: 13px; line-height: 2; }\n.summary strong { color: #58a6ff; }',
+    js:'let currentStep = 1;\nconst totalSteps = 4;\n\nfunction renderIndicator() {\n  const c = document.getElementById("stepIndicator");\n  c.innerHTML = "";\n  for (let i = 1; i <= totalSteps; i++) {\n    const dot = document.createElement("div");\n    dot.className = "step-dot" + (i === currentStep ? " active" : i < currentStep ? " done" : "");\n    c.appendChild(dot);\n  }\n  document.getElementById("progressFill").style.width = (currentStep / totalSteps * 100) + "%";\n}\n\nfunction showStep(n) {\n  for (let i = 1; i <= totalSteps; i++) {\n    document.getElementById("step-" + i).style.display = i === n ? "block" : "none";\n  }\n  document.getElementById("prevBtn").style.display = n > 1 ? "block" : "none";\n  document.getElementById("nextBtn").textContent = n === totalSteps ? "Submit" : n === totalSteps - 1 ? "Review →" : "Next →";\n  if (n === totalSteps) buildSummary();\n  renderIndicator();\n}\n\nfunction nextStep() {\n  if (currentStep === 1) {\n    const name = document.getElementById("name").value;\n    const email = document.getElementById("email").value;\n    if (!name || !email) { alert("Please fill in Name and Email"); return; }\n  }\n  if (currentStep < totalSteps) {\n    currentStep++;\n    showStep(currentStep);\n    console.log("Step", currentStep, "of", totalSteps);\n  } else {\n    alert("🎉 Form submitted! Check the console.");\n    console.log("Form data:", getFormData());\n  }\n}\n\nfunction prevStep() {\n  if (currentStep > 1) { currentStep--; showStep(currentStep); }\n}\n\nfunction getFormData() {\n  return {\n    name: document.getElementById("name").value,\n    email: document.getElementById("email").value,\n    phone: document.getElementById("phone").value,\n    company: document.getElementById("company").value,\n    role: document.getElementById("role").value,\n    team: document.querySelector(\'input[name="team"]:checked\')?.value || "",\n    interests: [...document.querySelectorAll(\'.cb input:checked\')].map(c => c.value),\n    notes: document.getElementById("notes").value\n  };\n}\n\nfunction buildSummary() {\n  const d = getFormData();\n  document.getElementById("summary").innerHTML = `\n    <strong>Name:</strong> ${d.name || "-"}<br>\n    <strong>Email:</strong> ${d.email || "-"}<br>\n    <strong>Phone:</strong> ${d.phone || "-"}<br>\n    <strong>Company:</strong> ${d.company || "-"}<br>\n    <strong>Role:</strong> ${d.role || "-"}<br>\n    <strong>Team:</strong> ${d.team || "-"}<br>\n    <strong>Interests:</strong> ${d.interests.join(", ") || "-"}<br>\n    <strong>Notes:</strong> ${d.notes || "-"}\n  `;\n}\n\nshowStep(1);\nconsole.log("📝 Multi-step form ready!");'},
+  {id:'api',name:'API Explorer',icon:'🔌',desc:'Fetch & display data from REST APIs',
+    html:'<div class="app">\n  <h1>🔌 API Explorer</h1>\n  <div class="controls">\n    <select id="method">\n      <option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option>\n    </select>\n    <input type="text" id="url" value="https://jsonplaceholder.typicode.com/posts?_limit=5" placeholder="Enter URL...">\n    <button onclick="fetchAPI()">Send →</button>\n  </div>\n  <div class="body-input" id="bodySection" style="display:none">\n    <label>Request Body (JSON)</label>\n    <textarea id="reqBody" rows="4">{\n  "title": "Test Post",\n  "body": "Hello from Code Playground!",\n  "userId": 1\n}</textarea>\n  </div>\n  <div class="status-row" id="statusRow" style="display:none">\n    <span class="status-badge" id="statusBadge">200</span>\n    <span id="statusTime">0ms</span>\n    <span id="statusSize">0 bytes</span>\n  </div>\n  <div class="tabs">\n    <button class="active" onclick="showTab(\'response\',this)">Response</button>\n    <button onclick="showTab(\'headers\',this)">Headers</button>\n    <button onclick="showTab(\'raw\',this)">Raw</button>\n  </div>\n  <pre id="response" class="output">Click "Send" to make a request...</pre>\n  <pre id="headers" class="output" style="display:none"></pre>\n  <pre id="raw" class="output" style="display:none"></pre>\n</div>',
+    css:'* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { background: #0d1117; color: #e6edf3; font-family: system-ui, sans-serif; padding: 20px; }\nh1 { font-size: 22px; margin-bottom: 16px; }\n.controls { display: flex; gap: 8px; margin-bottom: 12px; }\n.controls select { background: #21262d; border: 1px solid #30363d; color: #3fb950; padding: 8px; border-radius: 6px; font-weight: 700; font-size: 13px; }\n.controls input { flex: 1; background: #161b22; border: 1px solid #30363d; color: #e6edf3; padding: 8px 12px; border-radius: 6px; font-family: monospace; font-size: 13px; }\n.controls input:focus { border-color: #58a6ff; outline: none; }\n.controls button { background: #1f6feb; color: #fff; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }\n.controls button:hover { background: #58a6ff; }\n.body-input { margin-bottom: 12px; }\n.body-input label { font-size: 12px; color: #8b949e; display: block; margin-bottom: 4px; }\n.body-input textarea { width: 100%; background: #161b22; border: 1px solid #30363d; color: #e6edf3; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 12px; resize: vertical; }\n.status-row { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; font-size: 13px; }\n.status-badge { padding: 2px 10px; border-radius: 4px; font-weight: 700; font-size: 13px; }\n.status-badge.s2 { background: rgba(63,185,80,.2); color: #3fb950; }\n.status-badge.s3 { background: rgba(210,153,34,.2); color: #d29922; }\n.status-badge.s4 { background: rgba(248,81,73,.2); color: #f85149; }\n.status-badge.s5 { background: rgba(248,81,73,.2); color: #f85149; }\n.tabs { display: flex; gap: 2px; margin-bottom: 0; }\n.tabs button { background: #21262d; border: 1px solid #30363d; border-bottom: none; color: #8b949e; padding: 6px 14px; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 12px; }\n.tabs button.active { background: #161b22; color: #e6edf3; }\n.output { background: #161b22; border: 1px solid #30363d; border-radius: 0 0 8px 8px; padding: 14px; font-family: monospace; font-size: 12px; line-height: 1.5; overflow: auto; max-height: 400px; white-space: pre-wrap; word-break: break-all; min-height: 100px; }',
+    js:'const method = document.getElementById("method");\nconst bodySection = document.getElementById("bodySection");\nmethod.addEventListener("change", () => {\n  bodySection.style.display = ["POST","PUT"].includes(method.value) ? "block" : "none";\n});\n\nlet respData = "", respHeaders = "";\n\nasync function fetchAPI() {\n  const url = document.getElementById("url").value;\n  if (!url) return;\n  document.getElementById("response").textContent = "Loading...";\n  const start = performance.now();\n  try {\n    const opts = { method: method.value };\n    if (["POST","PUT"].includes(method.value)) {\n      opts.headers = {"Content-Type":"application/json"};\n      opts.body = document.getElementById("reqBody").value;\n    }\n    const res = await fetch(url, opts);\n    const time = Math.round(performance.now() - start);\n    const text = await res.text();\n    const size = new Blob([text]).size;\n    \n    // Status\n    const sr = document.getElementById("statusRow"); sr.style.display = "flex";\n    const badge = document.getElementById("statusBadge");\n    badge.textContent = res.status + " " + res.statusText;\n    badge.className = "status-badge s" + String(res.status)[0];\n    document.getElementById("statusTime").textContent = time + "ms";\n    document.getElementById("statusSize").textContent = size > 1024 ? (size/1024).toFixed(1) + " KB" : size + " bytes";\n    \n    // Format\n    try { respData = JSON.stringify(JSON.parse(text), null, 2); } catch { respData = text; }\n    respHeaders = [...res.headers.entries()].map(([k,v]) => `${k}: ${v}`).join("\\n");\n    \n    document.getElementById("response").textContent = respData;\n    document.getElementById("headers").textContent = respHeaders;\n    document.getElementById("raw").textContent = text;\n    \n    console.log(`${method.value} ${url} → ${res.status} (${time}ms, ${size} bytes)`);\n  } catch (err) {\n    document.getElementById("response").textContent = "Error: " + err.message;\n    console.error("Request failed:", err.message);\n  }\n}\n\nfunction showTab(tab, btn) {\n  document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));\n  btn.classList.add("active");\n  ["response","headers","raw"].forEach(t => {\n    document.getElementById(t).style.display = t === tab ? "block" : "none";\n  });\n}\n\nconsole.log("🔌 API Explorer ready — try changing the URL and method");'},
+  {id:'timer',name:'Countdown Timer',icon:'⏱',desc:'Animated countdown with custom targets',
+    html:'<div class="timer-app">\n  <div class="rings" id="rings">\n    <svg viewBox="0 0 200 200" class="ring-svg">\n      <circle cx="100" cy="100" r="90" class="ring-bg"/>\n      <circle cx="100" cy="100" r="90" class="ring-fill" id="ringFill" stroke-dasharray="565.48" stroke-dashoffset="0"/>\n    </svg>\n    <div class="time-display">\n      <div class="time" id="time">25:00</div>\n      <div class="label" id="label">Focus Time</div>\n    </div>\n  </div>\n  <div class="presets">\n    <button onclick="setTime(5)" class="preset">5m</button>\n    <button onclick="setTime(15)" class="preset">15m</button>\n    <button onclick="setTime(25)" class="preset active">25m</button>\n    <button onclick="setTime(45)" class="preset">45m</button>\n    <button onclick="setTime(60)" class="preset">60m</button>\n  </div>\n  <div class="btns">\n    <button onclick="toggleTimer()" id="mainBtn" class="main-btn">▶ Start</button>\n    <button onclick="resetTimer()" class="reset-btn">↻ Reset</button>\n  </div>\n  <div class="sessions">\n    <span id="sessions">Sessions: 0</span>\n  </div>\n</div>',
+    css:'* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { background: #0d1117; color: #e6edf3; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; }\n.timer-app { text-align: center; }\n.rings { position: relative; width: 240px; height: 240px; margin: 0 auto 24px; }\n.ring-svg { width: 100%; height: 100%; transform: rotate(-90deg); }\n.ring-bg { fill: none; stroke: #21262d; stroke-width: 6; }\n.ring-fill { fill: none; stroke: #58a6ff; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.5s linear; }\n.time-display { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }\n.time { font-size: 48px; font-weight: 700; font-variant-numeric: tabular-nums; }\n.label { font-size: 13px; color: #8b949e; margin-top: 4px; }\n.presets { display: flex; gap: 6px; justify-content: center; margin-bottom: 20px; }\n.preset { background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }\n.preset.active { background: #1f6feb; color: #fff; border-color: #58a6ff; }\n.preset:hover { color: #fff; }\n.btns { display: flex; gap: 10px; justify-content: center; }\n.main-btn { background: #1f6feb; color: #fff; border: none; padding: 12px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; min-width: 140px; }\n.main-btn:hover { background: #58a6ff; }\n.main-btn.running { background: #d29922; }\n.main-btn.running:hover { background: #e3b341; }\n.reset-btn { background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer; }\n.reset-btn:hover { color: #fff; }\n.sessions { margin-top: 16px; font-size: 13px; color: #484f58; }\n@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }',
+    js:'let totalSec = 25*60, remaining = 25*60, running = false, sessions = 0, interval;\nconst circumference = 2 * Math.PI * 90;\n\nfunction updateDisplay() {\n  const m = Math.floor(remaining/60), s = remaining%60;\n  document.getElementById("time").textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;\n  const pct = 1 - remaining/totalSec;\n  document.getElementById("ringFill").style.strokeDashoffset = circumference * (1-pct);\n  document.title = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")} — Timer`;\n}\n\nfunction toggleTimer() {\n  if (running) {\n    clearInterval(interval); running = false;\n    document.getElementById("mainBtn").textContent = "▶ Resume";\n    document.getElementById("mainBtn").classList.remove("running");\n  } else {\n    running = true;\n    document.getElementById("mainBtn").textContent = "⏸ Pause";\n    document.getElementById("mainBtn").classList.add("running");\n    interval = setInterval(() => {\n      remaining--;\n      if (remaining <= 0) {\n        clearInterval(interval); running = false;\n        sessions++;\n        document.getElementById("sessions").textContent = `Sessions: ${sessions}`;\n        document.getElementById("mainBtn").textContent = "▶ Start";\n        document.getElementById("mainBtn").classList.remove("running");\n        document.getElementById("label").textContent = "Done! 🎉";\n        console.log(`🎉 Session ${sessions} complete!`);\n        remaining = 0;\n      }\n      updateDisplay();\n    }, 1000);\n    document.getElementById("label").textContent = "Focus Time";\n    console.log(`Timer ${running ? "started" : "resumed"}: ${Math.ceil(remaining/60)} min`);\n  }\n}\n\nfunction resetTimer() {\n  clearInterval(interval); running = false;\n  remaining = totalSec;\n  document.getElementById("mainBtn").textContent = "▶ Start";\n  document.getElementById("mainBtn").classList.remove("running");\n  document.getElementById("label").textContent = "Focus Time";\n  updateDisplay();\n}\n\nfunction setTime(min) {\n  clearInterval(interval); running = false;\n  totalSec = min*60; remaining = totalSec;\n  document.querySelectorAll(".preset").forEach(b => b.classList.remove("active"));\n  event.target.classList.add("active");\n  document.getElementById("mainBtn").textContent = "▶ Start";\n  document.getElementById("mainBtn").classList.remove("running");\n  document.getElementById("label").textContent = "Focus Time";\n  updateDisplay();\n  console.log(`Timer set to ${min} minutes`);\n}\n\nupdateDisplay();\nconsole.log("⏱ Timer ready — 25 min focus session");'},
+  {id:'chart',name:'Chart Builder',icon:'📈',desc:'Build bar, line, pie & area charts',
+    html:'<div class="app">\n  <h1>📈 Chart Builder</h1>\n  <div class="toolbar">\n    <div class="chart-types">\n      <button onclick="setType(\'bar\')" class="active" id="btn-bar">Bar</button>\n      <button onclick="setType(\'line\')" id="btn-line">Line</button>\n      <button onclick="setType(\'pie\')" id="btn-pie">Pie</button>\n      <button onclick="setType(\'area\')" id="btn-area">Area</button>\n    </div>\n    <button onclick="randomize()" class="refresh">🎲 Randomize</button>\n    <button onclick="addPoint()" class="add-btn">+ Add Point</button>\n  </div>\n  <div class="chart-container">\n    <canvas id="chart" width="700" height="350"></canvas>\n  </div>\n  <div class="data-editor">\n    <h3>Data Points</h3>\n    <div id="dataList"></div>\n  </div>\n</div>',
+    css:'* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { background: #0d1117; color: #e6edf3; font-family: system-ui, sans-serif; padding: 20px; }\nh1 { font-size: 22px; margin-bottom: 16px; }\n.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }\n.chart-types { display: flex; gap: 2px; }\n.chart-types button { background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 12px; }\n.chart-types button.active { background: #1f6feb; color: #fff; border-color: #58a6ff; }\n.refresh,.add-btn { background: #21262d; border: 1px solid #30363d; color: #e6edf3; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 12px; }\n.refresh:hover,.add-btn:hover { border-color: #58a6ff; }\n.chart-container { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-bottom: 16px; }\ncanvas { width: 100%; }\n.data-editor { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }\nh3 { font-size: 13px; color: #8b949e; margin-bottom: 10px; }\n.data-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }\n.data-row input { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 4px 8px; border-radius: 4px; font-size: 12px; }\n.data-row input:focus { border-color: #58a6ff; outline: none; }\n.data-row input.label-input { width: 120px; }\n.data-row input.value-input { width: 80px; }\n.data-row .color-dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }\n.data-row .del { background: none; border: none; color: #484f58; cursor: pointer; font-size: 14px; }\n.data-row .del:hover { color: #f85149; }',
+    js:'const COLORS = ["#58a6ff","#3fb950","#f85149","#d29922","#bc8cff","#f778ba","#79c0ff","#56d364","#ff7b72","#e3b341","#d2a8ff","#ff9bce"];\nlet chartType = "bar";\nlet data = [\n  {label:"Jan",value:120,color:COLORS[0]},\n  {label:"Feb",value:180,color:COLORS[1]},\n  {label:"Mar",value:150,color:COLORS[2]},\n  {label:"Apr",value:220,color:COLORS[3]},\n  {label:"May",value:190,color:COLORS[4]},\n  {label:"Jun",value:280,color:COLORS[5]}\n];\n\nfunction setType(t) {\n  chartType = t;\n  document.querySelectorAll(".chart-types button").forEach(b => b.classList.remove("active"));\n  document.getElementById("btn-"+t).classList.add("active");\n  drawChart();\n  console.log("Chart type:", t);\n}\n\nfunction randomize() {\n  data.forEach(d => d.value = Math.floor(Math.random()*300)+50);\n  renderData(); drawChart();\n}\n\nfunction addPoint() {\n  const labels = ["Jul","Aug","Sep","Oct","Nov","Dec","Q1","Q2","Q3","Q4"];\n  data.push({label:labels[data.length%labels.length],value:Math.floor(Math.random()*300)+50,color:COLORS[data.length%COLORS.length]});\n  renderData(); drawChart();\n}\n\nfunction removePoint(i) {\n  data.splice(i,1); renderData(); drawChart();\n}\n\nfunction renderData() {\n  const el = document.getElementById("dataList");\n  el.innerHTML = data.map((d,i) => `<div class="data-row">\n    <div class="color-dot" style="background:${d.color}"></div>\n    <input class="label-input" value="${d.label}" onchange="data[${i}].label=this.value;drawChart()">\n    <input class="value-input" type="number" value="${d.value}" onchange="data[${i}].value=+this.value;drawChart()">\n    <button class="del" onclick="removePoint(${i})">✕</button>\n  </div>`).join("");\n}\n\nfunction drawChart() {\n  const canvas = document.getElementById("chart");\n  const ctx = canvas.getContext("2d");\n  const W = canvas.width, H = canvas.height;\n  ctx.clearRect(0,0,W,H);\n  if(!data.length) return;\n  const max = Math.max(...data.map(d=>d.value))*1.15;\n  const pad = {t:20,r:20,b:40,l:50};\n  const cw = W-pad.l-pad.r, ch = H-pad.t-pad.b;\n  \n  // Grid\n  ctx.strokeStyle = "#21262d"; ctx.lineWidth = 1;\n  for(let i=0;i<=5;i++) {\n    const y = pad.t + ch - (i/5)*ch;\n    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();\n    ctx.fillStyle = "#484f58"; ctx.font = "10px system-ui"; ctx.textAlign = "right";\n    ctx.fillText(Math.round(max*i/5), pad.l-6, y+3);\n  }\n  \n  if (chartType === "pie") {\n    const total = data.reduce((s,d) => s+d.value, 0);\n    const cx = W/2, cy = H/2-10, r = Math.min(cw,ch)/2-10;\n    let angle = -Math.PI/2;\n    data.forEach(d => {\n      const sweep = (d.value/total)*Math.PI*2;\n      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,angle,angle+sweep); ctx.closePath();\n      ctx.fillStyle = d.color; ctx.fill();\n      const mid = angle+sweep/2;\n      const tx = cx+Math.cos(mid)*(r*0.65), ty = cy+Math.sin(mid)*(r*0.65);\n      ctx.fillStyle = "#fff"; ctx.font = "bold 11px system-ui"; ctx.textAlign = "center";\n      ctx.fillText(Math.round(d.value/total*100)+"%", tx, ty+4);\n      angle += sweep;\n    });\n  } else {\n    const barW = cw/data.length;\n    if (chartType === "bar") {\n      data.forEach((d,i) => {\n        const x = pad.l+i*barW+barW*0.15;\n        const h = (d.value/max)*ch;\n        const y = pad.t+ch-h;\n        ctx.fillStyle = d.color;\n        ctx.fillRect(x,y,barW*0.7,h);\n      });\n    }\n    if (chartType === "line" || chartType === "area") {\n      ctx.beginPath();\n      data.forEach((d,i) => {\n        const x = pad.l+i*barW+barW/2;\n        const y = pad.t+ch-(d.value/max)*ch;\n        i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);\n      });\n      if (chartType === "area") {\n        const last = pad.l+(data.length-1)*barW+barW/2;\n        ctx.lineTo(last,pad.t+ch); ctx.lineTo(pad.l+barW/2,pad.t+ch); ctx.closePath();\n        ctx.fillStyle = data[0].color+"22"; ctx.fill();\n        ctx.beginPath();\n        data.forEach((d,i) => {\n          const x = pad.l+i*barW+barW/2;\n          const y = pad.t+ch-(d.value/max)*ch;\n          i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);\n        });\n      }\n      ctx.strokeStyle = data[0].color; ctx.lineWidth = 2.5; ctx.stroke();\n      data.forEach((d,i) => {\n        const x = pad.l+i*barW+barW/2;\n        const y = pad.t+ch-(d.value/max)*ch;\n        ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fillStyle=d.color; ctx.fill();\n        ctx.strokeStyle="#0d1117"; ctx.lineWidth=2; ctx.stroke();\n      });\n    }\n    // Labels\n    ctx.fillStyle = "#8b949e"; ctx.font = "11px system-ui"; ctx.textAlign = "center";\n    data.forEach((d,i) => {\n      ctx.fillText(d.label, pad.l+i*barW+barW/2, H-pad.b+16);\n    });\n  }\n}\n\nrenderData(); drawChart();\nconsole.log("📈 Chart Builder loaded with", data.length, "data points");'}
+];
+
+// ── Init ──
+function init() {
+  const saved = localStorage.getItem('cp_projects');
+  const savedSettings = localStorage.getItem('cp_settings');
+  if (savedSettings) Object.assign(settings, JSON.parse(savedSettings));
+  if (saved) {
+    projects = JSON.parse(saved);
+  }
+  if (!projects.length) {
+    // Seed with a demo project from the Blank template
+    const t = TEMPLATES[0];
+    const p = createProjectFromTemplate(t, 'My First Project');
+    projects.push(p);
+    activeId = p.id;
+  } else {
+    activeId = projects[0].id;
+  }
+  applySettings();
+  renderSidebar();
+  renderTemplateSidebar();
+  loadProject(activeId);
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2,6); }
+
+function createProjectFromTemplate(t, name) {
+  return {
+    id: uid(),
+    name: name || t.name,
+    html: t.html || '',
+    css: t.css || '',
+    js: t.js || '',
+    resources: [],
+    created: Date.now(),
+    modified: Date.now()
+  };
+}
+
+// ── Save ──
+function save() {
+  const p = getProject();
+  if (p) p.modified = Date.now();
+  localStorage.setItem('cp_projects', JSON.stringify(projects));
+  localStorage.setItem('cp_settings', JSON.stringify(settings));
+  document.getElementById('statusSave').textContent = 'Saved ✓';
+  setTimeout(() => { document.getElementById('statusSave').textContent = 'Saved'; }, 1500);
+}
+
+function getProject(id) { return projects.find(p => p.id === (id || activeId)); }
+
+// ── Sidebar ──
+function renderSidebar() {
+  const q = (document.getElementById('sideSearch').value || '').toLowerCase();
+  const list = document.getElementById('sidebarList');
+  const filtered = projects.filter(p => !q || p.name.toLowerCase().includes(q));
+  list.innerHTML = filtered.map(p => `
+    <div class="sidebar-item${p.id===activeId?' active':''}" onclick="loadProject('${p.id}')">
+      <div class="dot" style="background:${p.id===activeId?'var(--accent)':'var(--text2)'}"></div>
+      <span class="name">${esc(p.name)}</span>
+      <button class="del" onclick="event.stopPropagation();deleteProject('${p.id}')" title="Delete">✕</button>
+    </div>
+  `).join('');
+}
+
+function renderTemplateSidebar() {
+  const list = document.getElementById('templateList');
+  list.innerHTML = TEMPLATES.map(t => `
+    <div class="sidebar-item" onclick="newFromTemplate('${t.id}')">
+      <span style="font-size:14px">${t.icon}</span>
+      <span class="name">${t.name}</span>
+    </div>
+  `).join('');
+}
+
+// ── Project CRUD ──
+function newProject() {
+  const p = createProjectFromTemplate(TEMPLATES[0], 'Untitled ' + (projects.length + 1));
+  projects.unshift(p);
+  activeId = p.id;
+  save();
+  renderSidebar();
+  loadProject(p.id);
+}
+
+function newFromTemplate(tid) {
+  const t = TEMPLATES.find(t => t.id === tid);
+  if (!t) return;
+  const p = createProjectFromTemplate(t, t.name + ' ' + (projects.filter(x=>x.name.startsWith(t.name)).length+1));
+  projects.unshift(p);
+  activeId = p.id;
+  save();
+  renderSidebar();
+  loadProject(p.id);
+  closeModal();
+}
+
+function deleteProject(id) {
+  if (projects.length <= 1) return;
+  if (!confirm('Delete this project?')) return;
+  projects = projects.filter(p => p.id !== id);
+  if (activeId === id) activeId = projects[0].id;
+  save();
+  renderSidebar();
+  loadProject(activeId);
+}
+
+function loadProject(id) {
+  activeId = id;
+  const p = getProject();
+  if (!p) return;
+  document.getElementById('projName').value = p.name;
+  renderSidebar();
+  renderEditorTabs();
+  loadTab(activeTab);
+  scheduleRun();
+}
+
+// ── Editor Tabs ──
+function renderEditorTabs() {
+  const el = document.getElementById('editorTabs');
+  el.innerHTML = TABS.map(t => `
+    <div class="editor-tab${t===activeTab?' active':''}" onclick="switchTab('${t}')">
+      <span class="lang-dot" style="background:${TAB_COLORS[t]}"></span>
+      ${TAB_LABELS[t]}
+    </div>
+  `).join('') + `
+    <div style="flex:1"></div>
+    <div class="editor-tab" onclick="formatCode()" title="Format code" style="font-size:11px;color:var(--text2)">{ } Format</div>
+  `;
+}
+
+function switchTab(tab) {
+  saveCurrentTab();
+  activeTab = tab;
+  renderEditorTabs();
+  loadTab(tab);
+}
+
+function saveCurrentTab() {
+  const p = getProject();
+  if (!p) return;
+  p[activeTab] = document.getElementById('codeEditor').value;
+}
+
+function loadTab(tab) {
+  const p = getProject();
+  if (!p) return;
+  const editor = document.getElementById('codeEditor');
+  editor.value = p[tab] || '';
+  updateLineNumbers();
+  updateStatus();
+}
+
+// ── Line Numbers ──
+function updateLineNumbers() {
+  if (!settings.lineNumbers) {
+    document.getElementById('lineNums').innerHTML = '';
+    document.getElementById('codeEditor').classList.remove('with-lines');
+    return;
+  }
+  document.getElementById('codeEditor').classList.add('with-lines');
+  const lines = document.getElementById('codeEditor').value.split('\n').length;
+  let html = '';
+  for (let i = 1; i <= lines; i++) html += `<span>${i}</span>`;
+  document.getElementById('lineNums').innerHTML = html;
+}
+
+// ── Status ──
+function updateStatus() {
+  const editor = document.getElementById('codeEditor');
+  const val = editor.value;
+  document.getElementById('statusLang').textContent = TAB_LABELS[activeTab];
+  document.getElementById('statusLines').textContent = 'Lines: ' + val.split('\n').length;
+  document.getElementById('statusChars').textContent = 'Chars: ' + val.length;
+  document.getElementById('statusAutorun').textContent = 'Auto-run: ' + (settings.autoRun ? 'ON' : 'OFF');
+}
+
+// ── Editor Events ──
+const editor = document.getElementById('codeEditor');
+editor.addEventListener('input', () => {
+  saveCurrentTab();
+  updateLineNumbers();
+  updateStatus();
+  if (settings.autoRun) scheduleRun();
+  save();
+});
+
+editor.addEventListener('scroll', () => {
+  document.getElementById('lineNums').style.top = -editor.scrollTop + 'px';
+});
+
+editor.addEventListener('keydown', e => {
+  // Tab key
+  if (e.key === 'Tab' && !e.shiftKey) {
+    e.preventDefault();
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const spaces = ' '.repeat(settings.tabSize);
+    editor.value = editor.value.substring(0,start) + spaces + editor.value.substring(end);
+    editor.selectionStart = editor.selectionEnd = start + settings.tabSize;
+    editor.dispatchEvent(new Event('input'));
+  }
+  // Auto-close brackets
+  const pairs = {'(':')','[':']','{':'}','"':'"',"'":"'",'`':'`'};
+  if (pairs[e.key]) {
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    if (start !== end) {
+      e.preventDefault();
+      const selected = editor.value.substring(start, end);
+      editor.value = editor.value.substring(0,start) + e.key + selected + pairs[e.key] + editor.value.substring(end);
+      editor.selectionStart = start + 1;
+      editor.selectionEnd = end + 1;
+      editor.dispatchEvent(new Event('input'));
+    }
+  }
+  // Cmd+Enter to run
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault();
+    run();
+  }
+});
+
+// ── Run / Preview ──
+let runTimer;
+function scheduleRun() {
+  clearTimeout(runTimer);
+  runTimer = setTimeout(run, 400);
+}
+
+function run() {
+  clearTimeout(runTimer);
+  saveCurrentTab();
+  const p = getProject();
+  if (!p) return;
+  
+  const resourceTags = (p.resources || []).map(r => {
+    if (r.type === 'css') return `<link rel="stylesheet" href="${esc(r.url)}">`;
+    return `<script src="${esc(r.url)}"><\/script>`;
+  }).join('\n');
+  
+  const consoleScript = `
+<script>
+(function(){
+  const origLog = console.log, origWarn = console.warn, origError = console.error, origInfo = console.info;
+  function send(type, args) {
+    try {
+      parent.postMessage({type:'console',level:type,data:Array.from(args).map(a=>{
+        try{return typeof a==='object'?JSON.stringify(a,null,2):String(a)}catch(e){return String(a)}
+      }).join(' ')}, '*');
+    }catch(e){}
+  }
+  console.log = function(){send('log',arguments);origLog.apply(console,arguments);};
+  console.warn = function(){send('warn',arguments);origWarn.apply(console,arguments);};
+  console.error = function(){send('error',arguments);origError.apply(console,arguments);};
+  console.info = function(){send('info',arguments);origInfo.apply(console,arguments);};
+  window.onerror = function(msg,url,line,col,err){
+    send('error',['Error: '+msg+' (line '+line+')']);
+  };
+  window.addEventListener('unhandledrejection',function(e){
+    send('error',['Unhandled Promise: '+(e.reason&&e.reason.message||e.reason)]);
+  });
+})();
+<\/script>`;
+  
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+${resourceTags}
+<style>${p.css || ''}</style>
+${consoleScript}
+</head>
+<body>
+${p.html || ''}
+<script>${p.js || ''}<\/script>
+</body>
+</html>`;
+  
+  clearConsole();
+  const frame = document.getElementById('previewFrame');
+  frame.srcdoc = html;
+}
+
+function refreshPreview() { run(); }
+
+// ── Console ──
+window.addEventListener('message', e => {
+  if (e.data && e.data.type === 'console') {
+    addConsoleLine(e.data.level, e.data.data);
+  }
+});
+
+function addConsoleLine(level, text) {
+  consoleLines.push({level, text, time: new Date()});
+  const body = document.getElementById('consoleBody');
+  const ts = new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  body.innerHTML += `<div class="console-line ${level}"><span class="ts">${ts}</span>${esc(text)}</div>`;
+  body.scrollTop = body.scrollHeight;
+  const badge = document.getElementById('consoleBadge');
+  const errCount = consoleLines.filter(l=>l.level==='error').length;
+  if (errCount > 0) {
+    badge.textContent = errCount;
+    badge.style.display = 'inline';
+  }
+}
+
+function clearConsole() {
+  consoleLines = [];
+  document.getElementById('consoleBody').innerHTML = '';
+  document.getElementById('consoleBadge').style.display = 'none';
+}
+
+function toggleConsole() {
+  const panel = document.getElementById('consolePanel');
+  const body = document.getElementById('consoleBody');
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    panel.style.height = '120px';
+  } else {
+    body.style.display = 'none';
+    panel.style.height = '28px';
+  }
+}
+
+// ── Device Preview ──
+function setDevice(d) {
+  const wrapper = document.getElementById('previewWrapper');
+  wrapper.className = 'preview-wrapper' + (d ? ' device-' + d : '');
+  document.querySelectorAll('.device-btns button').forEach(b => b.classList.remove('active'));
+  document.getElementById(d === 'mobile' ? 'devMob' : d === 'tablet' ? 'devTab' : 'devAuto').classList.add('active');
+}
+
+// ── Layout ──
+function setLayout(layout) {
+  settings.layout = layout;
+  const area = document.getElementById('editorArea');
+  const codePanel = document.getElementById('codePanel');
+  const previewPanel = document.getElementById('previewPanel');
+  const resizer = document.getElementById('resizer');
+  
+  area.style.flexDirection = layout === 'vertical' ? 'column' : 'row';
+  resizer.style.display = (layout === 'editor-only' || layout === 'preview-only') ? 'none' : 'block';
+  
+  if (layout === 'vertical') {
+    resizer.className = 'resizer-h';
+    resizer.style.display = 'block';
+    codePanel.style.display = 'flex';
+    previewPanel.style.display = 'flex';
+    codePanel.style.width = '100%';
+    previewPanel.style.width = '100%';
+  } else if (layout === 'editor-only') {
+    codePanel.style.display = 'flex';
+    previewPanel.style.display = 'none';
+    codePanel.style.flex = '1';
+  } else if (layout === 'preview-only') {
+    codePanel.style.display = 'none';
+    previewPanel.style.display = 'flex';
+    previewPanel.style.flex = '1';
+  } else {
+    resizer.className = 'resizer';
+    codePanel.style.display = 'flex';
+    previewPanel.style.display = 'flex';
+    codePanel.style.width = '';
+    previewPanel.style.width = '';
+    codePanel.style.flex = '1';
+    previewPanel.style.flex = '1';
+  }
+  
+  document.querySelectorAll('.layout-btns button').forEach(b => b.classList.remove('active'));
+  document.getElementById(layout === 'horizontal' ? 'layH' : layout === 'vertical' ? 'layV' : layout === 'editor-only' ? 'layE' : 'layP').classList.add('active');
+  save();
+}
+
+// ── Resizer ──
+(function initResizer() {
+  const resizer = document.getElementById('resizer');
+  let startX, startWidth;
+  
+  resizer.addEventListener('mousedown', e => {
+    e.preventDefault();
+    startX = e.clientX;
+    const codePanel = document.getElementById('codePanel');
+    startWidth = codePanel.getBoundingClientRect().width;
+    resizer.classList.add('active');
+    
+    function onMove(e) {
+      const diff = e.clientX - startX;
+      const newWidth = Math.max(200, startWidth + diff);
+      const container = document.getElementById('editorArea').getBoundingClientRect().width;
+      if (newWidth < container - 200) {
+        document.getElementById('codePanel').style.flex = 'none';
+        document.getElementById('codePanel').style.width = newWidth + 'px';
+      }
+    }
+    
+    function onUp() {
+      resizer.classList.remove('active');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();
+
+// ── Console Resizer ──
+(function initConsoleResizer() {
+  const header = document.getElementById('consoleHeader');
+  let startY, startHeight;
+  
+  header.addEventListener('mousedown', e => {
+    if (e.target.tagName === 'BUTTON') return;
+    e.preventDefault();
+    startY = e.clientY;
+    const panel = document.getElementById('consolePanel');
+    startHeight = panel.getBoundingClientRect().height;
+    
+    function onMove(e) {
+      const diff = startY - e.clientY;
+      const newHeight = Math.max(28, Math.min(400, startHeight + diff));
+      panel.style.height = newHeight + 'px';
+      if (newHeight <= 28) {
+        document.getElementById('consoleBody').style.display = 'none';
+      } else {
+        document.getElementById('consoleBody').style.display = 'block';
+      }
+    }
+    
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();
+
+// ── Format Code ──
+function formatCode() {
+  const editor = document.getElementById('codeEditor');
+  let code = editor.value;
+  
+  if (activeTab === 'js') {
+    // Basic JS formatting: fix indentation
+    code = basicJSFormat(code);
+  } else if (activeTab === 'css') {
+    code = basicCSSFormat(code);
+  } else {
+    code = basicHTMLFormat(code);
+  }
+  
+  editor.value = code;
+  editor.dispatchEvent(new Event('input'));
+}
+
+function basicJSFormat(code) {
+  // Simple indent normalizer
+  const lines = code.split('\n');
+  let indent = 0;
+  const tab = ' '.repeat(settings.tabSize);
+  return lines.map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith('}') || trimmed.startsWith(']') || trimmed.startsWith(')')) indent = Math.max(0, indent - 1);
+    const result = tab.repeat(indent) + trimmed;
+    if (trimmed.endsWith('{') || trimmed.endsWith('[') || trimmed.endsWith('(')) indent++;
+    return result;
+  }).join('\n');
+}
+
+function basicCSSFormat(code) {
+  // Format CSS
+  return code
+    .replace(/\s*{\s*/g, ' {\n  ')
+    .replace(/\s*}\s*/g, '\n}\n')
+    .replace(/;\s*/g, ';\n  ')
+    .replace(/\n  \n}/g, '\n}')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function basicHTMLFormat(code) {
+  const lines = code.split('\n');
+  const tab = ' '.repeat(settings.tabSize);
+  let indent = 0;
+  const selfClose = /^<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)\b/i;
+  const closing = /^<\//;
+  const opening = /^<[a-zA-Z]/;
+  
+  return lines.map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return '';
+    if (closing.test(trimmed)) indent = Math.max(0, indent - 1);
+    const result = tab.repeat(indent) + trimmed;
+    if (opening.test(trimmed) && !selfClose.test(trimmed) && !closing.test(trimmed) && !trimmed.includes('</')) {
+      indent++;
+    }
+    return result;
+  }).join('\n');
+}
+
+// ── Export ──
+function exportHTML() {
+  saveCurrentTab();
+  const p = getProject();
+  if (!p) return;
+  
+  const resourceTags = (p.resources || []).map(r => {
+    if (r.type === 'css') return `<link rel="stylesheet" href="${r.url}">`;
+    return `<script src="${r.url}"><\/script>`;
+  }).join('\n  ');
+  
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${esc(p.name)}</title>
+  ${resourceTags}
+  <style>
+${p.css}
+  </style>
+</head>
+<body>
+${p.html}
+  <script>
+${p.js}
+  <\/script>
+</body>
+</html>`;
+  
+  downloadFile(p.name.replace(/[^a-z0-9]/gi, '-').toLowerCase() + '.html', html, 'text/html');
+}
+
+function downloadFile(name, content, type) {
+  const blob = new Blob([content], {type});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Export/Import JSON ──
+function exportJSON() {
+  downloadFile('code-playground-backup.json', JSON.stringify(projects, null, 2), 'application/json');
+}
+
+function importJSON(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (Array.isArray(data)) {
+        data.forEach(p => {
+          if (!projects.find(x => x.id === p.id)) projects.push(p);
+        });
+      }
+      save(); renderSidebar();
+      if (data.length) loadProject(data[0].id);
+    } catch (e) { alert('Invalid JSON file'); }
+  };
+  reader.readAsText(file);
+}
+
+// ── Modals ──
+function openModal(title, content) {
+  const overlay = document.getElementById('modalOverlay');
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `<div class="modal">
+    <div class="modal-head"><h2>${title}</h2><button class="close-btn" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">${content}</div>
+  </div>`;
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').style.display = 'none';
+}
+
+function openTemplates() {
+  const html = '<div class="template-grid">' + TEMPLATES.map(t => `
+    <div class="template-card" onclick="newFromTemplate('${t.id}')">
+      <div class="icon">${t.icon}</div>
+      <div class="tname">${t.name}</div>
+      <div class="tdesc">${t.desc}</div>
+    </div>
+  `).join('') + '</div>';
+  openModal('📦 Templates', html);
+}
+
+function openResources() {
+  const p = getProject();
+  if (!p) return;
+  if (!p.resources) p.resources = [];
+  
+  let html = '<p style="font-size:12px;color:var(--text2);margin-bottom:12px">Add external CSS/JS libraries (CDN URLs)</p>';
+  html += '<div class="resources-list" id="resList">';
+  p.resources.forEach((r, i) => {
+    html += `<div class="resource-row">
+      <select onchange="updateResource(${i},'type',this.value)">
+        <option value="css"${r.type==='css'?' selected':''}>CSS</option>
+        <option value="js"${r.type==='js'?' selected':''}>JS</option>
+      </select>
+      <input value="${esc(r.url)}" onchange="updateResource(${i},'url',this.value)" placeholder="https://cdn.example.com/lib.js">
+      <button class="btn danger" onclick="removeResource(${i})" style="padding:2px 8px">✕</button>
+    </div>`;
+  });
+  html += '</div>';
+  html += `<div style="margin-top:10px;display:flex;gap:6px">
+    <button class="btn" onclick="addResource()">+ Add Resource</button>
+  </div>`;
+  html += `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+    <p style="font-size:11px;color:var(--text2);margin-bottom:6px">Quick Add:</p>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">
+      <button class="btn" onclick="quickAdd('css','https://cdn.jsdelivr.net/npm/tailwindcss@3/dist/tailwind.min.css')" style="font-size:10px">Tailwind</button>
+      <button class="btn" onclick="quickAdd('css','https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css')" style="font-size:10px">Bootstrap CSS</button>
+      <button class="btn" onclick="quickAdd('js','https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js')" style="font-size:10px">Bootstrap JS</button>
+      <button class="btn" onclick="quickAdd('js','https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js')" style="font-size:10px">Alpine.js</button>
+      <button class="btn" onclick="quickAdd('css','https://cdn.jsdelivr.net/npm/animate.css@4/animate.min.css')" style="font-size:10px">Animate.css</button>
+      <button class="btn" onclick="quickAdd('js','https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js')" style="font-size:10px">Chart.js</button>
+      <button class="btn" onclick="quickAdd('js','https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js')" style="font-size:10px">GSAP</button>
+      <button class="btn" onclick="quickAdd('js','https://cdn.jsdelivr.net/npm/three@0.160/build/three.min.js')" style="font-size:10px">Three.js</button>
+    </div>
+  </div>`;
+  openModal('🔗 External Resources', html);
+}
+
+function addResource() {
+  const p = getProject();
+  p.resources.push({type:'js',url:''});
+  save();
+  openResources();
+}
+
+function removeResource(i) {
+  const p = getProject();
+  p.resources.splice(i, 1);
+  save();
+  openResources();
+}
+
+function updateResource(i, key, val) {
+  const p = getProject();
+  p.resources[i][key] = val;
+  save();
+  if (settings.autoRun) scheduleRun();
+}
+
+function quickAdd(type, url) {
+  const p = getProject();
+  if (!p.resources) p.resources = [];
+  if (!p.resources.find(r => r.url === url)) {
+    p.resources.push({type, url});
+    save();
+    if (settings.autoRun) scheduleRun();
+  }
+  openResources();
+}
+
+function openSettings() {
+  const html = `
+    <div class="settings-group"><label>Font Size <input type="number" value="${settings.fontSize}" min="10" max="24" onchange="settings.fontSize=+this.value;applySettings();save()"></label></div>
+    <div class="settings-group"><label>Tab Size <input type="number" value="${settings.tabSize}" min="1" max="8" onchange="settings.tabSize=+this.value;save()"></label></div>
+    <div class="settings-group"><label>Auto-run <label class="toggle"><input type="checkbox" ${settings.autoRun?'checked':''} onchange="settings.autoRun=this.checked;updateStatus();save()"><span class="slider"></span></label></label></div>
+    <div class="settings-group"><label>Line Numbers <label class="toggle"><input type="checkbox" ${settings.lineNumbers?'checked':''} onchange="settings.lineNumbers=this.checked;updateLineNumbers();save()"><span class="slider"></span></label></label></div>
+    <div class="settings-group"><label>Word Wrap <label class="toggle"><input type="checkbox" ${settings.wordWrap?'checked':''} onchange="settings.wordWrap=this.checked;applySettings();save()"><span class="slider"></span></label></label></div>
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:8px">Data Management</p>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="exportJSON()">📤 Export All Projects</button>
+        <button class="btn" onclick="document.getElementById('importFile').click()">📥 Import Projects</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(this.files[0]);closeModal()">
+      </div>
+    </div>
+  `;
+  openModal('⚙ Settings', html);
+}
+
+function openHelp() {
+  const html = `
+    <div style="margin-bottom:16px">
+      <p style="font-size:13px;color:var(--text);margin-bottom:10px">⌨️ <strong>Keyboard Shortcuts</strong></p>
+      <div class="help-grid">
+        <span class="hk">Run code</span><span class="hv">⌘/Ctrl + Enter</span>
+        <span class="hk">Switch to HTML</span><span class="hv">⌘/Ctrl + 1</span>
+        <span class="hk">Switch to CSS</span><span class="hv">⌘/Ctrl + 2</span>
+        <span class="hk">Switch to JS</span><span class="hv">⌘/Ctrl + 3</span>
+        <span class="hk">New project</span><span class="hv">⌘/Ctrl + N</span>
+        <span class="hk">Export HTML</span><span class="hv">⌘/Ctrl + E</span>
+        <span class="hk">Toggle sidebar</span><span class="hv">⌘/Ctrl + B</span>
+        <span class="hk">Format code</span><span class="hv">⌘/Ctrl + Shift + F</span>
+        <span class="hk">Templates</span><span class="hv">⌘/Ctrl + T</span>
+        <span class="hk">Settings</span><span class="hv">⌘/Ctrl + ,</span>
+        <span class="hk">Close modal</span><span class="hv">Escape</span>
+        <span class="hk">Tab indent</span><span class="hv">Tab</span>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:12px">
+      <p style="font-size:13px;color:var(--text);margin-bottom:6px">📋 <strong>Features</strong></p>
+      <ul style="font-size:12px;color:var(--text2);line-height:1.8;padding-left:16px">
+        <li>Live preview with auto-run (configurable delay)</li>
+        <li>Console output capture (log, warn, error, info)</li>
+        <li>9 starter templates (Landing Page, Dashboard, Todo, Snake Game, etc.)</li>
+        <li>External resource manager with quick-add (Tailwind, Bootstrap, Chart.js, GSAP, Three.js)</li>
+        <li>Responsive testing (Mobile 375px / Tablet 768px / Auto)</li>
+        <li>4 layout modes (Side-by-side, Stacked, Editor-only, Preview-only)</li>
+        <li>Resizable panels (drag the divider)</li>
+        <li>Basic code formatting for HTML/CSS/JS</li>
+        <li>Auto-closing brackets and quote wrapping</li>
+        <li>Line numbers with scroll sync</li>
+        <li>Export as standalone HTML file</li>
+        <li>JSON backup &amp; restore for all projects</li>
+        <li>Multi-project management with sidebar</li>
+        <li>Dark mode optimized for late-night coding</li>
+      </ul>
+    </div>
+  `;
+  openModal('❓ Help & Shortcuts', html);
+}
+
+// ── Sidebar Toggle ──
+function toggleSidebar() {
+  settings.sidebarOpen = !settings.sidebarOpen;
+  document.getElementById('sidebar').classList.toggle('hidden', !settings.sidebarOpen);
+  save();
+}
+
+// ── Apply Settings ──
+function applySettings() {
+  const editor = document.getElementById('codeEditor');
+  editor.style.fontSize = settings.fontSize + 'px';
+  document.getElementById('lineNums').style.fontSize = settings.fontSize + 'px';
+  editor.style.whiteSpace = settings.wordWrap ? 'pre-wrap' : 'pre';
+  editor.style.wordBreak = settings.wordWrap ? 'break-all' : 'normal';
+  setLayout(settings.layout);
+  if (!settings.sidebarOpen) document.getElementById('sidebar').classList.add('hidden');
+}
+
+// ── Project Name ──
+document.getElementById('projName').addEventListener('change', function() {
+  const p = getProject();
+  if (p) {
+    p.name = this.value || 'Untitled';
+    save();
+    renderSidebar();
+  }
+});
+
+// ── Global Keyboard Shortcuts ──
+document.addEventListener('keydown', e => {
+  const mod = e.metaKey || e.ctrlKey;
+  
+  if (e.key === 'Escape') {
+    closeModal();
+    return;
+  }
+  
+  // Don't intercept when focus is in modals
+  if (document.getElementById('modalOverlay').style.display === 'flex') return;
+  
+  if (mod && e.key === 'Enter') {
+    e.preventDefault();
+    run();
+  } else if (mod && e.key === '1') {
+    e.preventDefault();
+    switchTab('html');
+  } else if (mod && e.key === '2') {
+    e.preventDefault();
+    switchTab('css');
+  } else if (mod && e.key === '3') {
+    e.preventDefault();
+    switchTab('js');
+  } else if (mod && e.key === 'b') {
+    e.preventDefault();
+    toggleSidebar();
+  } else if (mod && e.key === 'e' && !e.shiftKey) {
+    e.preventDefault();
+    exportHTML();
+  } else if (mod && e.shiftKey && e.key === 'F') {
+    e.preventDefault();
+    formatCode();
+  } else if (mod && e.key === 't') {
+    e.preventDefault();
+    openTemplates();
+  } else if (mod && e.key === ',') {
+    e.preventDefault();
+    openSettings();
+  } else if (mod && e.key === 'n') {
+    // Only intercept if not in editor
+    if (document.activeElement !== document.getElementById('codeEditor')) {
+      e.preventDefault();
+      newProject();
+    }
+  }
+});
+
+// ── Escape helper ──
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Boot ──
+init();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

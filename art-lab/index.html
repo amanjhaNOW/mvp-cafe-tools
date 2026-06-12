@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Art Lab — Generative Art Studio</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#21262d;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#3fb950;--danger:#f85149;--warn:#d29922;--pink:#f778ba;--purple:#bc8cff;--radius:8px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:var(--radius);font-size:13px;padding:6px 12px;transition:all .15s}
+input,select,textarea{font-family:inherit;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;font-size:13px;outline:none}
+input:focus,select:focus{border-color:var(--accent)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:18px;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:22px}
+.sidebar-search{width:100%;margin-top:10px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:13px}
+.sidebar-list{flex:1;overflow-y:auto;padding:8px}
+.sidebar-item{padding:10px 12px;border-radius:var(--radius);cursor:pointer;margin-bottom:2px;display:flex;align-items:center;gap:8px;font-size:13px;transition:background .15s}
+.sidebar-item:hover{background:var(--surface2)}
+.sidebar-item.active{background:var(--accent);color:#fff}
+.sidebar-item .algo-icon{font-size:16px;width:24px;text-align:center}
+.sidebar-item .algo-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-item .algo-tag{font-size:10px;padding:2px 6px;background:var(--surface2);border-radius:10px;color:var(--text2)}
+.sidebar-item.active .algo-tag{background:rgba(255,255,255,.2);color:#fff}
+.sidebar-section{padding:6px 12px;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-top:8px}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
+.toolbar .btn{padding:6px 14px;background:var(--surface2);color:var(--text);border:1px solid var(--border);font-size:13px}
+.toolbar .btn:hover{background:var(--border)}
+.toolbar .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.toolbar .btn.primary:hover{opacity:.85}
+.toolbar .btn.success{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+.toolbar .btn.danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+.toolbar .sep{width:1px;height:24px;background:var(--border)}
+.toolbar .spacer{flex:1}
+.view-tabs{display:flex;gap:2px}
+.view-tabs .btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Canvas area */
+.canvas-area{flex:1;display:flex;overflow:hidden}
+.canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;background:#000;position:relative;overflow:hidden}
+.canvas-wrap canvas{cursor:crosshair}
+.canvas-info{position:absolute;bottom:10px;left:10px;font-size:11px;color:var(--text2);background:rgba(0,0,0,.7);padding:4px 10px;border-radius:var(--radius)}
+
+/* Controls Panel */
+.controls{width:300px;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:16px;flex-shrink:0}
+.controls h3{font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.ctrl-group{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.ctrl-group:last-child{border-bottom:none}
+.ctrl-row{margin-bottom:10px}
+.ctrl-row label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+.ctrl-row input[type=range]{width:100%;accent-color:var(--accent)}
+.ctrl-row .range-val{display:flex;justify-content:space-between;align-items:center}
+.ctrl-row .range-val span{font-size:12px;color:var(--accent);font-weight:600;min-width:40px;text-align:right}
+.ctrl-row input[type=number]{width:80px}
+.ctrl-row select{width:100%}
+.ctrl-row input[type=color]{width:36px;height:28px;padding:2px;cursor:pointer}
+.color-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.color-swatch{width:28px;height:28px;border-radius:var(--radius);cursor:pointer;border:2px solid transparent;transition:border .15s}
+.color-swatch:hover,.color-swatch.active{border-color:var(--text)}
+.color-swatch.add{background:var(--surface2);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text2)}
+.ctrl-row .seed-row{display:flex;gap:6px;align-items:center}
+.ctrl-row .seed-row input{flex:1}
+
+/* Gallery */
+.gallery{display:none;flex:1;overflow-y:auto;padding:20px}
+.gallery.show{display:block}
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.gallery-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.gallery-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.gallery-card img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.gallery-card .card-info{padding:10px}
+.gallery-card .card-info h4{font-size:13px;margin-bottom:4px}
+.gallery-card .card-info p{font-size:11px;color:var(--text2)}
+.gallery-card .card-actions{display:flex;gap:4px;padding:0 10px 10px}
+.gallery-card .card-actions button{font-size:11px;padding:4px 8px;background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.gallery-card .card-actions button:hover{background:var(--border)}
+.gallery-card .card-actions button.del:hover{background:var(--danger);color:#fff}
+.gallery-empty{text-align:center;padding:60px 20px;color:var(--text2)}
+.gallery-empty span{font-size:48px;display:block;margin-bottom:16px}
+
+/* Dashboard */
+.dashboard{display:none;flex:1;overflow-y:auto;padding:20px}
+.dashboard.show{display:block}
+.dash-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px}
+.dash-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.dash-stat .val{font-size:28px;font-weight:700;color:var(--accent)}
+.dash-stat .lbl{font-size:12px;color:var(--text2);margin-top:4px}
+
+/* Presets modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto;padding:20px}
+.modal h2{font-size:16px;margin-bottom:16px}
+.modal-close{float:right;background:none;color:var(--text2);font-size:18px;padding:4px}
+.preset-list{display:grid;gap:8px}
+.preset-item{padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:border .15s}
+.preset-item:hover{border-color:var(--accent)}
+.preset-item h4{font-size:13px;margin-bottom:4px}
+.preset-item p{font-size:11px;color:var(--text2)}
+
+/* Help */
+.help-content{padding:12px}
+.help-content table{width:100%;border-collapse:collapse;font-size:12px}
+.help-content td{padding:4px 8px;border-bottom:1px solid var(--border)}
+.help-content td:first-child{font-weight:600;color:var(--accent);white-space:nowrap;width:100px}
+
+/* Responsive */
+@media(max-width:900px){.sidebar{width:200px}.controls{width:240px}}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span>🎨</span> Art Lab</h1>
+    <input class="sidebar-search" id="algoSearch" placeholder="Search algorithms... (/)" />
+  </div>
+  <div class="sidebar-list" id="algoList"></div>
+</div>
+
+<div class="main">
+  <div class="toolbar">
+    <div class="view-tabs">
+      <button class="btn active" data-view="canvas" onclick="setView('canvas')">🖌️ Canvas</button>
+      <button class="btn" data-view="gallery" onclick="setView('gallery')">🖼️ Gallery</button>
+      <button class="btn" data-view="dashboard" onclick="setView('dashboard')">📊 Dashboard</button>
+    </div>
+    <div class="sep"></div>
+    <button class="btn primary" onclick="generate()" title="Generate (Space)">▶ Generate</button>
+    <button class="btn" onclick="randomize()" title="Randomize (R)">🎲 Randomize</button>
+    <button class="btn" onclick="showPresets()">📦 Presets</button>
+    <div class="spacer"></div>
+    <button class="btn" onclick="saveToGallery()" title="Save (S)">💾 Save</button>
+    <button class="btn" onclick="exportPNG()" title="Export PNG (E)">📥 PNG</button>
+    <button class="btn" onclick="exportSVG()">📥 SVG</button>
+    <button class="btn" onclick="showHelp()">❓</button>
+  </div>
+
+  <div class="canvas-area" id="canvasView">
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="artCanvas" width="800" height="800"></canvas>
+      <div class="canvas-info" id="canvasInfo">800 × 800 | Flow Field</div>
+    </div>
+    <div class="controls" id="controlsPanel"></div>
+  </div>
+
+  <div class="gallery" id="galleryView"></div>
+  <div class="dashboard" id="dashboardView"></div>
+</div>
+
+<div class="modal-overlay" id="presetModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModals()">✕</button>
+    <h2>🎨 Presets</h2>
+    <div class="preset-list" id="presetList"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="helpModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModals()">✕</button>
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="help-content">
+      <table>
+        <tr><td>Space</td><td>Generate artwork</td></tr>
+        <tr><td>R</td><td>Randomize parameters</td></tr>
+        <tr><td>S</td><td>Save to gallery</td></tr>
+        <tr><td>E</td><td>Export as PNG</td></tr>
+        <tr><td>N</td><td>New random seed</td></tr>
+        <tr><td>1</td><td>Canvas view</td></tr>
+        <tr><td>2</td><td>Gallery view</td></tr>
+        <tr><td>3</td><td>Dashboard view</td></tr>
+        <tr><td>/</td><td>Search algorithms</td></tr>
+        <tr><td>↑↓</td><td>Navigate algorithms</td></tr>
+        <tr><td>Esc</td><td>Close modals</td></tr>
+        <tr><td>?</td><td>Show this help</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ DATA ============
+const PALETTES = {
+  midnight: ['#0d1b2a','#1b263b','#415a77','#778da9','#e0e1dd'],
+  sunset: ['#ff6b6b','#feca57','#ff9ff3','#54a0ff','#5f27cd'],
+  ocean: ['#0077b6','#00b4d8','#90e0ef','#caf0f8','#023e8a'],
+  forest: ['#2d6a4f','#40916c','#52b788','#74c69d','#b7e4c7'],
+  neon: ['#ff006e','#8338ec','#3a86ff','#06d6a0','#ffd166'],
+  mono: ['#f8f9fa','#dee2e6','#adb5bd','#495057','#212529'],
+  pastel: ['#ffc8dd','#ffafcc','#bde0fe','#a2d2ff','#cdb4db'],
+  fire: ['#d00000','#e85d04','#faa307','#ffba08','#370617'],
+  cyberpunk: ['#f72585','#b5179e','#7209b7','#560bad','#3f37c9'],
+  earth: ['#6b4226','#a0522d','#cd853f','#deb887','#f5deb3'],
+  aurora: ['#00f5d4','#00bbf9','#9b5de5','#f15bb5','#fee440'],
+  retro: ['#264653','#2a9d8f','#e9c46a','#f4a261','#e76f51']
+};
+
+const ALGORITHMS = [
+  {id:'flow_field',name:'Flow Field',icon:'🌊',cat:'Fields',desc:'Perlin noise-driven particle flow'},
+  {id:'circle_pack',name:'Circle Packing',icon:'⭕',cat:'Packing',desc:'Non-overlapping circles fill space'},
+  {id:'spirograph',name:'Spirograph',icon:'🌀',cat:'Curves',desc:'Hypotrochoid mathematical curves'},
+  {id:'voronoi',name:'Voronoi Diagram',icon:'🔷',cat:'Geometry',desc:'Nearest-neighbor cell partitioning'},
+  {id:'lsystem_tree',name:'L-System Tree',icon:'🌳',cat:'Fractals',desc:'Recursive branching tree growth'},
+  {id:'wave_interference',name:'Wave Interference',icon:'〰️',cat:'Waves',desc:'Overlapping wave patterns'},
+  {id:'recursive_subdivide',name:'Recursive Subdivide',icon:'▦',cat:'Geometry',desc:'Mondrian-style rectangular division'},
+  {id:'galaxy_spiral',name:'Galaxy Spiral',icon:'🌌',cat:'Space',desc:'Logarithmic spiral arm simulation'},
+  {id:'mesh_gradient',name:'Mesh Gradient',icon:'🎆',cat:'Color',desc:'Smooth multi-point color blending'},
+  {id:'concentric_rings',name:'Concentric Rings',icon:'🎯',cat:'Geometry',desc:'Layered ring patterns with variation'},
+  {id:'dot_matrix',name:'Dot Matrix',icon:'⚫',cat:'Patterns',desc:'Size-varying dot grid patterns'},
+  {id:'terrain_contour',name:'Terrain Contour',icon:'🗺️',cat:'Fields',desc:'Topographic contour line map'},
+  {id:'string_art',name:'String Art',icon:'🧵',cat:'Curves',desc:'Thread connections between points'},
+  {id:'maze_gen',name:'Maze Generator',icon:'🏛️',cat:'Algorithms',desc:'Recursive backtracker maze'},
+  {id:'phyllotaxis',name:'Phyllotaxis',icon:'🌻',cat:'Nature',desc:'Fibonacci spiral sunflower pattern'},
+  {id:'reaction_diffusion',name:'Reaction Diffusion',icon:'🧫',cat:'Simulation',desc:'Turing pattern formation'},
+  {id:'kaleidoscope',name:'Kaleidoscope',icon:'🔮',cat:'Symmetry',desc:'Radial symmetry reflections'},
+  {id:'circuit_board',name:'Circuit Board',icon:'🔌',cat:'Tech',desc:'PCB-style trace patterns'},
+  {id:'particle_swarm',name:'Particle Swarm',icon:'✨',cat:'Simulation',desc:'Swarming particle trails'},
+  {id:'geometric_tiling',name:'Geometric Tiling',icon:'🔶',cat:'Patterns',desc:'Repeating tessellation patterns'},
+  {id:'aurora_waves',name:'Aurora Borealis',icon:'🌈',cat:'Nature',desc:'Northern lights color waves'},
+  {id:'pen_plotter',name:'Pen Plotter',icon:'🖊️',cat:'Drawing',desc:'Plotter-style hatching & lines'},
+  {id:'crystal_growth',name:'Crystal Growth',icon:'💎',cat:'Simulation',desc:'Diffusion-limited aggregation'},
+  {id:'noise_terrain',name:'Noise Terrain',icon:'⛰️',cat:'3D',desc:'Heightmap terrain perspective'}
+];
+
+let state = {
+  algo: 'flow_field',
+  seed: Math.floor(Math.random()*999999),
+  palette: 'neon',
+  bgColor: '#0d1117',
+  width: 800,
+  height: 800,
+  params: {},
+  gallery: [],
+  stats: {generated:0, saved:0, exported:0, favAlgo:{}}
+};
+
+// ============ SEEDED RANDOM ============
+let _seed = 0;
+function seedRandom(s){_seed=s}
+function rng(){_seed=((_seed*16807)%2147483647);return(_seed-1)/2147483646}
+function rngRange(a,b){return a+rng()*(b-a)}
+function rngInt(a,b){return Math.floor(rngRange(a,b+1))}
+function rngPick(arr){return arr[rngInt(0,arr.length-1)]}
+
+// ============ PERLIN NOISE ============
+const perlinP=[];
+(function(){const p=[];for(let i=0;i<256;i++)p[i]=i;for(let i=255;i>0;i--){const j=Math.floor(Math.random()*(i+1));[p[i],p[j]]=[p[j],p[i]]}for(let i=0;i<512;i++)perlinP[i]=p[i&255]})();
+function fade(t){return t*t*t*(t*(t*6-15)+10)}
+function lerp(a,b,t){return a+t*(b-a)}
+function grad(hash,x,y){const h=hash&3;return((h&1)?-x:x)+((h&2)?-y:y)}
+function perlin(x,y){const X=Math.floor(x)&255,Y=Math.floor(y)&255;x-=Math.floor(x);y-=Math.floor(y);const u=fade(x),v=fade(y);const A=perlinP[X]+Y,B=perlinP[X+1]+Y;return lerp(lerp(grad(perlinP[A],x,y),grad(perlinP[B],x-1,y),u),lerp(grad(perlinP[A+1],x,y-1),grad(perlinP[B+1],x-1,y-1),u),v)}
+
+// ============ LOAD/SAVE ============
+function load(){try{const d=JSON.parse(localStorage.getItem('artlab_v1'));if(d){state.gallery=d.gallery||[];state.stats=d.stats||state.stats}}catch(e){}}
+function save(){localStorage.setItem('artlab_v1',JSON.stringify({gallery:state.gallery,stats:state.stats}))}
+load();
+
+// ============ UI ============
+const canvas=document.getElementById('artCanvas');
+const ctx=canvas.getContext('2d');
+
+function renderSidebar(){
+  const q=document.getElementById('algoSearch').value.toLowerCase();
+  const list=document.getElementById('algoList');
+  let html='';
+  let lastCat='';
+  const filtered=ALGORITHMS.filter(a=>a.name.toLowerCase().includes(q)||a.cat.toLowerCase().includes(q)||a.desc.toLowerCase().includes(q));
+  filtered.forEach(a=>{
+    if(a.cat!==lastCat){html+=`<div class="sidebar-section">${a.cat}</div>`;lastCat=a.cat}
+    html+=`<div class="sidebar-item${state.algo===a.id?' active':''}" onclick="selectAlgo('${a.id}')">
+      <span class="algo-icon">${a.icon}</span>
+      <span class="algo-name">${a.name}</span>
+    </div>`;
+  });
+  list.innerHTML=html;
+}
+
+function selectAlgo(id){
+  state.algo=id;
+  state.params={};
+  renderSidebar();
+  renderControls();
+  generate();
+}
+
+function getAlgo(id){return ALGORITHMS.find(a=>a.id===id)}
+
+function renderControls(){
+  const algo=getAlgo(state.algo);
+  const p=getDefaultParams(state.algo);
+  Object.keys(p).forEach(k=>{if(!(k in state.params))state.params[k]=p[k]});
+  const panel=document.getElementById('controlsPanel');
+  let html=`<h3>${algo.icon} ${algo.name}</h3><p style="font-size:12px;color:var(--text2);margin-bottom:16px">${algo.desc}</p>`;
+  
+  // Seed
+  html+=`<div class="ctrl-group"><div class="ctrl-row"><label>Seed</label><div class="seed-row">
+    <input type="number" id="seedInput" value="${state.seed}" onchange="state.seed=+this.value;generate()"/>
+    <button class="btn" onclick="state.seed=Math.floor(Math.random()*999999);document.getElementById('seedInput').value=state.seed;generate()">🎲</button>
+  </div></div></div>`;
+  
+  // Size
+  html+=`<div class="ctrl-group"><div class="ctrl-row"><label>Canvas Size</label>
+    <select onchange="setSize(this.value)">
+      <option value="512"${state.width===512?' selected':''}>512 × 512</option>
+      <option value="800"${state.width===800?' selected':''}>800 × 800</option>
+      <option value="1024"${state.width===1024?' selected':''}>1024 × 1024</option>
+      <option value="1600"${state.width===1600?' selected':''}>1600 × 1600</option>
+      <option value="2048"${state.width===2048?' selected':''}>2048 × 2048</option>
+    </select></div></div>`;
+  
+  // Palette
+  html+=`<div class="ctrl-group"><div class="ctrl-row"><label>Color Palette</label>
+    <select id="paletteSelect" onchange="state.palette=this.value;generate()">`;
+  Object.keys(PALETTES).forEach(k=>{html+=`<option value="${k}"${state.palette===k?' selected':''}>${k.charAt(0).toUpperCase()+k.slice(1)}</option>`});
+  html+=`</select></div><div class="ctrl-row"><div class="color-row" id="palettePreview"></div></div>
+    <div class="ctrl-row"><label>Background</label>
+    <input type="color" value="${state.bgColor}" onchange="state.bgColor=this.value;generate()"/></div></div>`;
+  
+  // Algo-specific params
+  html+=`<div class="ctrl-group"><h3>⚙️ Parameters</h3>`;
+  const paramDefs=getParamDefs(state.algo);
+  paramDefs.forEach(d=>{
+    const v=state.params[d.key]!==undefined?state.params[d.key]:d.def;
+    if(d.type==='range'){
+      html+=`<div class="ctrl-row"><div class="range-val"><label>${d.label}</label><span id="pv_${d.key}">${d.fmt?d.fmt(v):v}</span></div>
+        <input type="range" min="${d.min}" max="${d.max}" step="${d.step||1}" value="${v}" 
+        oninput="state.params['${d.key}']=+this.value;document.getElementById('pv_${d.key}').textContent=${d.fmt?'('+d.fmt.toString()+')(this.value)':'this.value'};generate()"/></div>`;
+    } else if(d.type==='select'){
+      html+=`<div class="ctrl-row"><label>${d.label}</label><select onchange="state.params['${d.key}']=this.value;generate()">`;
+      d.options.forEach(o=>{html+=`<option value="${o}"${v===o?' selected':''}>${o}</option>`});
+      html+=`</select></div>`;
+    } else if(d.type==='bool'){
+      html+=`<div class="ctrl-row"><label><input type="checkbox" ${v?'checked':''} onchange="state.params['${d.key}']=this.checked;generate()"/> ${d.label}</label></div>`;
+    }
+  });
+  html+=`</div>`;
+  panel.innerHTML=html;
+  
+  // Render palette preview
+  setTimeout(()=>{
+    const pp=document.getElementById('palettePreview');
+    if(pp){pp.innerHTML=PALETTES[state.palette].map(c=>`<div class="color-swatch" style="background:${c}" title="${c}"></div>`).join('')}
+  },0);
+}
+
+function setSize(v){
+  state.width=state.height=+v;
+  canvas.width=canvas.height=+v;
+  generate();
+}
+
+function setView(v){
+  document.querySelectorAll('.view-tabs .btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+  document.getElementById('canvasView').style.display=v==='canvas'?'flex':'none';
+  document.getElementById('galleryView').className=v==='gallery'?'gallery show':'gallery';
+  document.getElementById('dashboardView').className=v==='dashboard'?'dashboard show':'dashboard';
+  if(v==='gallery')renderGallery();
+  if(v==='dashboard')renderDashboard();
+}
+
+function closeModals(){document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('show'))}
+function showHelp(){document.getElementById('helpModal').classList.add('show')}
+function showPresets(){
+  const list=document.getElementById('presetList');
+  const presets=getPresets();
+  list.innerHTML=presets.map(p=>`<div class="preset-item" onclick="applyPreset(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+    <h4>${p.icon} ${p.name}</h4><p>${p.desc}</p></div>`).join('');
+  document.getElementById('presetModal').classList.add('show');
+}
+function applyPreset(p){
+  state.algo=p.algo;state.palette=p.palette;state.params={...p.params};
+  if(p.bg)state.bgColor=p.bg;
+  state.seed=Math.floor(Math.random()*999999);
+  closeModals();renderSidebar();renderControls();generate();
+}
+
+// ============ PARAM DEFINITIONS ============
+function getDefaultParams(algo){
+  const d=getParamDefs(algo);const o={};d.forEach(p=>o[p.key]=p.def);return o;
+}
+function getParamDefs(algo){
+  switch(algo){
+    case 'flow_field': return [
+      {key:'particles',label:'Particles',type:'range',min:500,max:10000,step:100,def:3000},
+      {key:'steps',label:'Steps per Particle',type:'range',min:20,max:200,step:5,def:80},
+      {key:'scale',label:'Noise Scale',type:'range',min:0.001,max:0.02,step:0.001,def:0.005},
+      {key:'lineWidth',label:'Line Width',type:'range',min:0.5,max:4,step:0.5,def:1},
+      {key:'opacity',label:'Opacity',type:'range',min:5,max:80,step:5,def:15}
+    ];
+    case 'circle_pack': return [
+      {key:'maxCircles',label:'Max Circles',type:'range',min:100,max:3000,step:50,def:800},
+      {key:'minR',label:'Min Radius',type:'range',min:2,max:20,step:1,def:3},
+      {key:'maxR',label:'Max Radius',type:'range',min:20,max:150,step:5,def:80},
+      {key:'stroke',label:'Stroke Only',type:'bool',def:false},
+      {key:'lineWidth',label:'Stroke Width',type:'range',min:1,max:4,step:0.5,def:1.5}
+    ];
+    case 'spirograph': return [
+      {key:'R',label:'Outer Radius',type:'range',min:100,max:350,step:10,def:250},
+      {key:'r',label:'Inner Radius',type:'range',min:20,max:200,step:5,def:85},
+      {key:'d',label:'Pen Distance',type:'range',min:10,max:250,step:5,def:150},
+      {key:'layers',label:'Layers',type:'range',min:1,max:8,step:1,def:3},
+      {key:'lineWidth',label:'Line Width',type:'range',min:0.5,max:3,step:0.5,def:1}
+    ];
+    case 'voronoi': return [
+      {key:'points',label:'Points',type:'range',min:20,max:500,step:10,def:80},
+      {key:'style',label:'Style',type:'select',options:['filled','stroked','both'],def:'filled'},
+      {key:'relax',label:'Lloyd Relaxation',type:'range',min:0,max:10,step:1,def:2},
+      {key:'lineWidth',label:'Border Width',type:'range',min:1,max:4,step:0.5,def:1.5}
+    ];
+    case 'lsystem_tree': return [
+      {key:'depth',label:'Recursion Depth',type:'range',min:3,max:12,step:1,def:7},
+      {key:'angle',label:'Branch Angle',type:'range',min:10,max:45,step:1,def:25},
+      {key:'length',label:'Branch Length',type:'range',min:3,max:15,step:1,def:7},
+      {key:'decay',label:'Length Decay',type:'range',min:0.6,max:0.9,step:0.02,def:0.72},
+      {key:'lineWidth',label:'Max Width',type:'range',min:2,max:12,step:1,def:8}
+    ];
+    case 'wave_interference': return [
+      {key:'sources',label:'Wave Sources',type:'range',min:2,max:8,step:1,def:4},
+      {key:'frequency',label:'Frequency',type:'range',min:0.01,max:0.1,step:0.005,def:0.04},
+      {key:'amplitude',label:'Amplitude',type:'range',min:30,max:255,step:5,def:120},
+      {key:'style',label:'Render Style',type:'select',options:['smooth','contour','dots'],def:'smooth'}
+    ];
+    case 'recursive_subdivide': return [
+      {key:'depth',label:'Recursion Depth',type:'range',min:2,max:8,step:1,def:5},
+      {key:'splitProb',label:'Split Probability',type:'range',min:0.3,max:0.95,step:0.05,def:0.7},
+      {key:'gap',label:'Gap Size',type:'range',min:0,max:12,step:1,def:4},
+      {key:'lineWidth',label:'Border Width',type:'range',min:0,max:4,step:0.5,def:2}
+    ];
+    case 'galaxy_spiral': return [
+      {key:'arms',label:'Spiral Arms',type:'range',min:2,max:8,step:1,def:4},
+      {key:'stars',label:'Stars',type:'range',min:2000,max:20000,step:500,def:8000},
+      {key:'spread',label:'Arm Spread',type:'range',min:0.1,max:1,step:0.05,def:0.4},
+      {key:'twist',label:'Twist Factor',type:'range',min:1,max:6,step:0.5,def:3}
+    ];
+    case 'mesh_gradient': return [
+      {key:'points',label:'Control Points',type:'range',min:3,max:12,step:1,def:5},
+      {key:'resolution',label:'Resolution',type:'range',min:2,max:8,step:1,def:4},
+      {key:'blur',label:'Blur Amount',type:'range',min:20,max:200,step:10,def:80}
+    ];
+    case 'concentric_rings': return [
+      {key:'rings',label:'Ring Count',type:'range',min:10,max:80,step:2,def:30},
+      {key:'wobble',label:'Wobble',type:'range',min:0,max:20,step:1,def:8},
+      {key:'lineWidth',label:'Line Width',type:'range',min:1,max:6,step:0.5,def:2},
+      {key:'filled',label:'Filled',type:'bool',def:false}
+    ];
+    case 'dot_matrix': return [
+      {key:'cols',label:'Columns',type:'range',min:10,max:60,step:2,def:30},
+      {key:'maxR',label:'Max Dot Size',type:'range',min:3,max:20,step:1,def:10},
+      {key:'pattern',label:'Pattern',type:'select',options:['noise','radial','wave','random'],def:'noise'},
+      {key:'shape',label:'Shape',type:'select',options:['circle','square','diamond'],def:'circle'}
+    ];
+    case 'terrain_contour': return [
+      {key:'lines',label:'Contour Lines',type:'range',min:8,max:40,step:2,def:20},
+      {key:'scale',label:'Noise Scale',type:'range',min:0.003,max:0.02,step:0.001,def:0.008},
+      {key:'lineWidth',label:'Line Width',type:'range',min:0.5,max:3,step:0.5,def:1}
+    ];
+    case 'string_art': return [
+      {key:'points',label:'Points',type:'range',min:20,max:200,step:5,def:80},
+      {key:'connections',label:'Connections',type:'range',min:100,max:5000,step:100,def:1500},
+      {key:'shape',label:'Shape',type:'select',options:['circle','square','heart','star'],def:'circle'},
+      {key:'lineWidth',label:'Line Width',type:'range',min:0.3,max:2,step:0.1,def:0.5},
+      {key:'opacity',label:'Opacity',type:'range',min:5,max:60,step:5,def:20}
+    ];
+    case 'maze_gen': return [
+      {key:'cellSize',label:'Cell Size',type:'range',min:8,max:40,step:2,def:16},
+      {key:'wallWidth',label:'Wall Width',type:'range',min:1,max:6,step:1,def:2},
+      {key:'showSolution',label:'Show Solution',type:'bool',def:true}
+    ];
+    case 'phyllotaxis': return [
+      {key:'n',label:'Points',type:'range',min:200,max:5000,step:100,def:2000},
+      {key:'angleOffset',label:'Angle Offset',type:'range',min:0,max:10,step:0.1,def:0},
+      {key:'maxR',label:'Max Dot Size',type:'range',min:2,max:12,step:1,def:5},
+      {key:'style',label:'Style',type:'select',options:['dots','petals','squares'],def:'dots'}
+    ];
+    case 'reaction_diffusion': return [
+      {key:'iterations',label:'Iterations',type:'range',min:500,max:5000,step:250,def:2000},
+      {key:'feed',label:'Feed Rate',type:'range',min:0.01,max:0.08,step:0.002,def:0.055},
+      {key:'kill',label:'Kill Rate',type:'range',min:0.04,max:0.075,step:0.001,def:0.062}
+    ];
+    case 'kaleidoscope': return [
+      {key:'segments',label:'Segments',type:'range',min:4,max:16,step:2,def:8},
+      {key:'shapes',label:'Shapes per Segment',type:'range',min:10,max:100,step:5,def:40},
+      {key:'complexity',label:'Complexity',type:'range',min:1,max:5,step:1,def:3}
+    ];
+    case 'circuit_board': return [
+      {key:'traces',label:'Trace Count',type:'range',min:20,max:200,step:10,def:80},
+      {key:'nodes',label:'Component Nodes',type:'range',min:10,max:80,step:5,def:30},
+      {key:'lineWidth',label:'Trace Width',type:'range',min:1,max:4,step:0.5,def:2}
+    ];
+    case 'particle_swarm': return [
+      {key:'particles',label:'Particles',type:'range',min:50,max:500,step:25,def:150},
+      {key:'steps',label:'Trail Length',type:'range',min:50,max:500,step:25,def:200},
+      {key:'attractors',label:'Attractors',type:'range',min:1,max:6,step:1,def:3},
+      {key:'lineWidth',label:'Trail Width',type:'range',min:0.5,max:3,step:0.5,def:1}
+    ];
+    case 'geometric_tiling': return [
+      {key:'tileSize',label:'Tile Size',type:'range',min:20,max:100,step:5,def:50},
+      {key:'pattern',label:'Pattern',type:'select',options:['triangles','hexagons','penrose','islamic'],def:'hexagons'},
+      {key:'lineWidth',label:'Line Width',type:'range',min:1,max:4,step:0.5,def:1.5},
+      {key:'filled',label:'Filled',type:'bool',def:true}
+    ];
+    case 'aurora_waves': return [
+      {key:'layers',label:'Wave Layers',type:'range',min:3,max:12,step:1,def:6},
+      {key:'amplitude',label:'Amplitude',type:'range',min:20,max:150,step:5,def:60},
+      {key:'frequency',label:'Frequency',type:'range',min:0.005,max:0.04,step:0.002,def:0.015},
+      {key:'blur',label:'Glow Amount',type:'range',min:0,max:40,step:5,def:15}
+    ];
+    case 'pen_plotter': return [
+      {key:'lineCount',label:'Line Count',type:'range',min:50,max:500,step:25,def:200},
+      {key:'style',label:'Style',type:'select',options:['hatching','crosshatch','contour','scribble'],def:'hatching'},
+      {key:'lineWidth',label:'Pen Width',type:'range',min:0.5,max:3,step:0.5,def:1},
+      {key:'density',label:'Density',type:'range',min:1,max:10,step:1,def:5}
+    ];
+    case 'crystal_growth': return [
+      {key:'particles',label:'Particles',type:'range',min:2000,max:20000,step:1000,def:8000},
+      {key:'seeds',label:'Seed Points',type:'range',min:1,max:5,step:1,def:1},
+      {key:'size',label:'Particle Size',type:'range',min:1,max:4,step:0.5,def:2}
+    ];
+    case 'noise_terrain': return [
+      {key:'resolution',label:'Resolution',type:'range',min:40,max:150,step:5,def:80},
+      {key:'elevation',label:'Elevation',type:'range',min:50,max:300,step:10,def:150},
+      {key:'noiseScale',label:'Noise Scale',type:'range',min:0.01,max:0.08,step:0.005,def:0.03},
+      {key:'wireframe',label:'Wireframe Only',type:'bool',def:false}
+    ];
+    default: return [];
+  }
+}
+
+// ============ PRESETS ============
+function getPresets(){return [
+  {name:'Cosmic Flow',icon:'🌌',desc:'Deep space particle flow',algo:'flow_field',palette:'cyberpunk',bg:'#0a0014',params:{particles:5000,steps:120,scale:0.004,lineWidth:1,opacity:10}},
+  {name:'Zen Garden',icon:'🪨',desc:'Minimal circle composition',algo:'circle_pack',palette:'mono',bg:'#f8f9fa',params:{maxCircles:500,minR:5,maxR:100,stroke:true,lineWidth:1.5}},
+  {name:'Neon Bloom',icon:'🌸',desc:'Vibrant phyllotaxis spiral',algo:'phyllotaxis',palette:'neon',bg:'#0d1117',params:{n:3000,angleOffset:0,maxR:6,style:'petals'}},
+  {name:'Ocean Waves',icon:'🌊',desc:'Calming wave interference',algo:'wave_interference',palette:'ocean',bg:'#023047',params:{sources:5,frequency:0.035,amplitude:100,style:'smooth'}},
+  {name:'Mondrian',icon:'🖼️',desc:'Bold rectangular divisions',algo:'recursive_subdivide',palette:'fire',bg:'#fefae0',params:{depth:5,splitProb:0.65,gap:6,lineWidth:3}},
+  {name:'Forest Canopy',icon:'🌲',desc:'Lush recursive trees',algo:'lsystem_tree',palette:'forest',bg:'#1a1a2e',params:{depth:9,angle:22,length:6,decay:0.74,lineWidth:10}},
+  {name:'Cyberpunk City',icon:'🏙️',desc:'Neon circuit traces',algo:'circuit_board',palette:'cyberpunk',bg:'#0d1117',params:{traces:120,nodes:50,lineWidth:2}},
+  {name:'Aurora Sky',icon:'🌈',desc:'Northern lights display',algo:'aurora_waves',palette:'aurora',bg:'#0a0a1a',params:{layers:8,amplitude:80,frequency:0.012,blur:20}},
+  {name:'Crystal Cave',icon:'💎',desc:'Growing crystal formation',algo:'crystal_growth',palette:'pastel',bg:'#1a1a2e',params:{particles:12000,seeds:3,size:2}},
+  {name:'Sacred Geometry',icon:'🔮',desc:'Kaleidoscope mandala',algo:'kaleidoscope',palette:'sunset',bg:'#0d1117',params:{segments:12,shapes:60,complexity:4}}
+]}
+
+// ============ ALGORITHMS ============
+function generate(){
+  seedRandom(state.seed);
+  canvas.width=state.width;canvas.height=state.height;
+  const W=canvas.width,H=canvas.height;
+  const pal=PALETTES[state.palette];
+  const p=state.params;
+  
+  ctx.fillStyle=state.bgColor;
+  ctx.fillRect(0,0,W,H);
+  
+  switch(state.algo){
+    case 'flow_field': drawFlowField(W,H,pal,p);break;
+    case 'circle_pack': drawCirclePack(W,H,pal,p);break;
+    case 'spirograph': drawSpirograph(W,H,pal,p);break;
+    case 'voronoi': drawVoronoi(W,H,pal,p);break;
+    case 'lsystem_tree': drawLSystemTree(W,H,pal,p);break;
+    case 'wave_interference': drawWaveInterference(W,H,pal,p);break;
+    case 'recursive_subdivide': drawRecursiveSubdivide(W,H,pal,p);break;
+    case 'galaxy_spiral': drawGalaxySpiral(W,H,pal,p);break;
+    case 'mesh_gradient': drawMeshGradient(W,H,pal,p);break;
+    case 'concentric_rings': drawConcentricRings(W,H,pal,p);break;
+    case 'dot_matrix': drawDotMatrix(W,H,pal,p);break;
+    case 'terrain_contour': drawTerrainContour(W,H,pal,p);break;
+    case 'string_art': drawStringArt(W,H,pal,p);break;
+    case 'maze_gen': drawMaze(W,H,pal,p);break;
+    case 'phyllotaxis': drawPhyllotaxis(W,H,pal,p);break;
+    case 'reaction_diffusion': drawReactionDiffusion(W,H,pal,p);break;
+    case 'kaleidoscope': drawKaleidoscope(W,H,pal,p);break;
+    case 'circuit_board': drawCircuitBoard(W,H,pal,p);break;
+    case 'particle_swarm': drawParticleSwarm(W,H,pal,p);break;
+    case 'geometric_tiling': drawGeometricTiling(W,H,pal,p);break;
+    case 'aurora_waves': drawAuroraWaves(W,H,pal,p);break;
+    case 'pen_plotter': drawPenPlotter(W,H,pal,p);break;
+    case 'crystal_growth': drawCrystalGrowth(W,H,pal,p);break;
+    case 'noise_terrain': drawNoiseTerrain(W,H,pal,p);break;
+  }
+  
+  document.getElementById('canvasInfo').textContent=`${W} × ${H} | ${getAlgo(state.algo).name} | Seed: ${state.seed}`;
+  state.stats.generated=(state.stats.generated||0)+1;
+  state.stats.favAlgo=state.stats.favAlgo||{};
+  state.stats.favAlgo[state.algo]=(state.stats.favAlgo[state.algo]||0)+1;
+  save();
+}
+
+// --- Flow Field ---
+function drawFlowField(W,H,pal,p){
+  for(let i=0;i<p.particles;i++){
+    let x=rng()*W,y=rng()*H;
+    const col=rngPick(pal);
+    ctx.beginPath();ctx.moveTo(x,y);
+    for(let s=0;s<p.steps;s++){
+      const angle=perlin(x*p.scale,y*p.scale)*Math.PI*4;
+      x+=Math.cos(angle)*2;y+=Math.sin(angle)*2;
+      if(x<0||x>W||y<0||y>H)break;
+      ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=col+hex(p.opacity);
+    ctx.lineWidth=p.lineWidth;ctx.stroke();
+  }
+}
+
+// --- Circle Pack ---
+function drawCirclePack(W,H,pal,p){
+  const circles=[];
+  for(let attempt=0;attempt<p.maxCircles*20&&circles.length<p.maxCircles;attempt++){
+    const x=rng()*W,y=rng()*H;
+    let maxR=p.maxR;
+    let ok=true;
+    for(const c of circles){
+      const d=Math.hypot(x-c.x,y-c.y);
+      if(d<c.r+p.minR){ok=false;break}
+      maxR=Math.min(maxR,d-c.r);
+    }
+    maxR=Math.min(maxR,x,y,W-x,H-y);
+    if(!ok||maxR<p.minR)continue;
+    const r=rngRange(p.minR,maxR);
+    circles.push({x,y,r});
+  }
+  circles.sort((a,b)=>b.r-a.r);
+  circles.forEach((c,i)=>{
+    const col=pal[i%pal.length];
+    ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,Math.PI*2);
+    if(p.stroke){ctx.strokeStyle=col;ctx.lineWidth=p.lineWidth;ctx.stroke()}
+    else{ctx.fillStyle=col+'cc';ctx.fill()}
+  });
+}
+
+// --- Spirograph ---
+function drawSpirograph(W,H,pal,p){
+  const cx=W/2,cy=H/2;
+  for(let L=0;L<p.layers;L++){
+    const R=p.R-L*15, r=p.r+L*10+rng()*20, d=p.d-L*8;
+    const col=pal[L%pal.length];
+    ctx.beginPath();
+    const steps=Math.ceil(2*Math.PI*r/gcd(R,r)*500);
+    for(let t=0;t<=steps;t++){
+      const th=t*0.01;
+      const x=cx+(R-r)*Math.cos(th)+d*Math.cos(th*(R-r)/r);
+      const y=cy+(R-r)*Math.sin(th)+d*Math.sin(th*(R-r)/r);
+      t===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=col+'cc';ctx.lineWidth=p.lineWidth;ctx.stroke();
+  }
+}
+function gcd(a,b){return b?gcd(b,a%b):a}
+
+// --- Voronoi ---
+function drawVoronoi(W,H,pal,p){
+  let pts=[];for(let i=0;i<p.points;i++)pts.push({x:rng()*W,y:rng()*H});
+  // Lloyd relaxation
+  for(let r=0;r<p.relax;r++){
+    const cells=pts.map(()=>({sx:0,sy:0,n:0}));
+    const step=4;
+    for(let y=0;y<H;y+=step)for(let x=0;x<W;x+=step){
+      let minD=Infinity,minI=0;
+      for(let i=0;i<pts.length;i++){const d=Math.hypot(x-pts[i].x,y-pts[i].y);if(d<minD){minD=d;minI=i}}
+      cells[minI].sx+=x;cells[minI].sy+=y;cells[minI].n++;
+    }
+    pts=pts.map((pt,i)=>cells[i].n>0?{x:cells[i].sx/cells[i].n,y:cells[i].sy/cells[i].n}:pt);
+  }
+  // Render via pixel assignment
+  const imgData=ctx.getImageData(0,0,W,H);const d=imgData.data;
+  const colorsRGB=pal.map(hexToRGB);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    let minD=Infinity,minI=0;
+    for(let i=0;i<pts.length;i++){const dd=Math.hypot(x-pts[i].x,y-pts[i].y);if(dd<minD){minD=dd;minI=i}}
+    const c=colorsRGB[minI%colorsRGB.length];
+    const idx=(y*W+x)*4;
+    if(p.style==='filled'||p.style==='both'){d[idx]=c[0];d[idx+1]=c[1];d[idx+2]=c[2];d[idx+3]=255}
+  }
+  ctx.putImageData(imgData,0,0);
+  if(p.style==='stroked'||p.style==='both'){
+    // Draw edges via nearest 2 check
+    ctx.strokeStyle=state.bgColor==='#0d1117'?'#ffffff40':'#00000040';
+    ctx.lineWidth=p.lineWidth;
+    for(let y=0;y<H;y+=2)for(let x=0;x<W;x+=2){
+      let d1=Infinity,d2=Infinity,i1=0;
+      for(let i=0;i<pts.length;i++){const dd=Math.hypot(x-pts[i].x,y-pts[i].y);if(dd<d1){d2=d1;d1=dd;i1=i}else if(dd<d2)d2=dd}
+      if(d2-d1<2){ctx.fillStyle=state.bgColor==='#0d1117'?'#ffffff':'#000000';ctx.fillRect(x,y,2,2)}
+    }
+    pts.forEach(pt=>{ctx.beginPath();ctx.arc(pt.x,pt.y,3,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill()});
+  }
+}
+
+// --- L-System Tree ---
+function drawLSystemTree(W,H,pal,p){
+  ctx.lineCap='round';
+  function branch(x,y,angle,depth,width){
+    if(depth<=0)return;
+    const len=p.length*(1+rng()*0.3)*Math.pow(p.decay,p.depth-depth)*W/100;
+    const nx=x+Math.cos(angle)*len;
+    const ny=y+Math.sin(angle)*len;
+    const ci=Math.min(pal.length-1,Math.floor((1-depth/p.depth)*pal.length));
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(nx,ny);
+    ctx.strokeStyle=pal[ci];ctx.lineWidth=width;ctx.stroke();
+    const angleVar=p.angle*(0.8+rng()*0.4)*Math.PI/180;
+    const newW=width*0.7;
+    if(newW>0.5){
+      branch(nx,ny,angle-angleVar,depth-1,newW);
+      branch(nx,ny,angle+angleVar,depth-1,newW);
+      if(rng()>0.6)branch(nx,ny,angle+(rng()-0.5)*angleVar,depth-1,newW*0.8);
+    }
+    if(depth<=2){
+      ctx.beginPath();ctx.arc(nx,ny,rngRange(2,6),0,Math.PI*2);
+      ctx.fillStyle=rngPick(pal)+'88';ctx.fill();
+    }
+  }
+  branch(W/2,H*0.85,-Math.PI/2,p.depth,p.lineWidth);
+}
+
+// --- Wave Interference ---
+function drawWaveInterference(W,H,pal,p){
+  const sources=[];
+  for(let i=0;i<p.sources;i++)sources.push({x:rng()*W,y:rng()*H,phase:rng()*Math.PI*2});
+  const imgData=ctx.getImageData(0,0,W,H);const d=imgData.data;
+  const colorsRGB=pal.map(hexToRGB);
+  const step=p.style==='dots'?4:1;
+  for(let y=0;y<H;y+=step)for(let x=0;x<W;x+=step){
+    let val=0;
+    sources.forEach(s=>{const dist=Math.hypot(x-s.x,y-s.y);val+=Math.sin(dist*p.frequency+s.phase)});
+    val=val/p.sources;
+    if(p.style==='contour'){val=Math.round(val*8)/8}
+    const t=(val+1)/2;
+    const ci=Math.floor(t*(colorsRGB.length-1));
+    const frac=t*(colorsRGB.length-1)-ci;
+    const c1=colorsRGB[Math.min(ci,colorsRGB.length-1)];
+    const c2=colorsRGB[Math.min(ci+1,colorsRGB.length-1)]||c1;
+    if(p.style==='dots'){
+      const r=Math.abs(val)*6+1;
+      ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle=`rgb(${lerp(c1[0],c2[0],frac)},${lerp(c1[1],c2[1],frac)},${lerp(c1[2],c2[2],frac)})`;ctx.fill();
+    } else {
+      const idx=(y*W+x)*4;
+      d[idx]=lerp(c1[0],c2[0],frac);d[idx+1]=lerp(c1[1],c2[1],frac);d[idx+2]=lerp(c1[2],c2[2],frac);d[idx+3]=p.amplitude+Math.abs(val)*p.amplitude;
+    }
+  }
+  if(p.style!=='dots')ctx.putImageData(imgData,0,0);
+}
+
+// --- Recursive Subdivide ---
+function drawRecursiveSubdivide(W,H,pal,p){
+  function subdivide(x,y,w,h,depth){
+    if(depth<=0||w<20||h<20||rng()>p.splitProb){
+      ctx.fillStyle=rngPick(pal)+(rng()>0.2?'cc':'66');
+      ctx.fillRect(x+p.gap/2,y+p.gap/2,w-p.gap,h-p.gap);
+      if(p.lineWidth>0){ctx.strokeStyle=state.bgColor;ctx.lineWidth=p.lineWidth;ctx.strokeRect(x+p.gap/2,y+p.gap/2,w-p.gap,h-p.gap)}
+      return;
+    }
+    if(rng()>0.5){
+      const split=rngRange(0.3,0.7)*w;
+      subdivide(x,y,split,h,depth-1);
+      subdivide(x+split,y,w-split,h,depth-1);
+    } else {
+      const split=rngRange(0.3,0.7)*h;
+      subdivide(x,y,w,split,depth-1);
+      subdivide(x,y+split,w,h-split,depth-1);
+    }
+  }
+  subdivide(0,0,W,H,p.depth);
+}
+
+// --- Galaxy Spiral ---
+function drawGalaxySpiral(W,H,pal,p){
+  const cx=W/2,cy=H/2;const maxR=Math.min(W,H)*0.42;
+  for(let i=0;i<p.stars;i++){
+    const arm=rngInt(0,p.arms-1);
+    const dist=rng()*maxR;
+    const baseAngle=(arm/p.arms)*Math.PI*2;
+    const spiralAngle=baseAngle+p.twist*(dist/maxR);
+    const spread=p.spread*(1-dist/maxR*0.5);
+    const x=cx+Math.cos(spiralAngle)*dist+(rng()-0.5)*spread*dist*0.3;
+    const y=cy+Math.sin(spiralAngle)*dist+(rng()-0.5)*spread*dist*0.3;
+    const bright=1-dist/maxR*0.7;
+    const size=rng()<0.01?rngRange(2,4):rngRange(0.5,2);
+    const col=rngPick(pal);
+    ctx.beginPath();ctx.arc(x,y,size,0,Math.PI*2);
+    ctx.fillStyle=col+hex(Math.floor(bright*200+55));ctx.fill();
+  }
+  // Core glow
+  const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,maxR*0.15);
+  grad.addColorStop(0,pal[0]+'66');grad.addColorStop(1,'transparent');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+}
+
+// --- Mesh Gradient ---
+function drawMeshGradient(W,H,pal,p){
+  const pts=[];
+  for(let i=0;i<p.points;i++)pts.push({x:rng()*W,y:rng()*H,col:rngPick(pal)});
+  // Draw large blurred circles
+  const temp=document.createElement('canvas');temp.width=W;temp.height=H;
+  const tc=temp.getContext('2d');
+  tc.filter=`blur(${p.blur}px)`;
+  pts.forEach(pt=>{
+    const r=rngRange(W*0.2,W*0.5);
+    const g=tc.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y,r);
+    g.addColorStop(0,pt.col+'cc');g.addColorStop(1,pt.col+'00');
+    tc.fillStyle=g;tc.fillRect(0,0,W,H);
+  });
+  ctx.drawImage(temp,0,0);
+}
+
+// --- Concentric Rings ---
+function drawConcentricRings(W,H,pal,p){
+  const cx=W/2,cy=H/2;const maxR=Math.hypot(W,H)/2;const step=maxR/p.rings;
+  for(let i=p.rings;i>=1;i--){
+    const r=i*step;
+    ctx.beginPath();
+    for(let a=0;a<=360;a++){
+      const rad=a*Math.PI/180;
+      const wobble=perlin(a*0.05+state.seed*0.01,i*0.3)*p.wobble*step*0.3;
+      const rx=cx+Math.cos(rad)*(r+wobble);
+      const ry=cy+Math.sin(rad)*(r+wobble);
+      a===0?ctx.moveTo(rx,ry):ctx.lineTo(rx,ry);
+    }
+    ctx.closePath();
+    if(p.filled){ctx.fillStyle=pal[i%pal.length]+'44';ctx.fill()}
+    ctx.strokeStyle=pal[i%pal.length];ctx.lineWidth=p.lineWidth;ctx.stroke();
+  }
+}
+
+// --- Dot Matrix ---
+function drawDotMatrix(W,H,pal,p){
+  const cols=p.cols;const cellW=W/cols;const cellH=cellW;const rows=Math.ceil(H/cellH);
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const x=c*cellW+cellW/2;const y=r*cellH+cellH/2;
+    let val;
+    switch(p.pattern){
+      case 'noise':val=(perlin(c*0.1+state.seed,r*0.1)+1)/2;break;
+      case 'radial':val=1-Math.hypot(x-W/2,y-H/2)/Math.hypot(W/2,H/2);break;
+      case 'wave':val=(Math.sin(c*0.3+state.seed)+Math.cos(r*0.3))/2+0.5;break;
+      default:val=rng();
+    }
+    const sz=val*p.maxR;
+    const col=pal[Math.floor(val*(pal.length-1))];
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    switch(p.shape){
+      case 'circle':ctx.arc(x,y,sz,0,Math.PI*2);ctx.fill();break;
+      case 'square':ctx.fillRect(x-sz,y-sz,sz*2,sz*2);break;
+      case 'diamond':ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/4);ctx.fillRect(-sz,-sz,sz*2,sz*2);ctx.restore();break;
+    }
+  }
+}
+
+// --- Terrain Contour ---
+function drawTerrainContour(W,H,pal,p){
+  ctx.lineWidth=p.lineWidth;
+  for(let level=0;level<p.lines;level++){
+    const threshold=level/p.lines;
+    ctx.strokeStyle=pal[level%pal.length];
+    ctx.beginPath();
+    const step=4;
+    for(let y=0;y<H;y+=step)for(let x=0;x<W;x+=step){
+      const v=(perlin(x*p.scale+state.seed*0.1,y*p.scale)+1)/2;
+      const v2=(perlin((x+step)*p.scale+state.seed*0.1,y*p.scale)+1)/2;
+      const v3=(perlin(x*p.scale+state.seed*0.1,(y+step)*p.scale)+1)/2;
+      if((v<threshold&&v2>=threshold)||(v>=threshold&&v2<threshold)){
+        const t=(threshold-v)/(v2-v);
+        ctx.moveTo(x+t*step,y);ctx.lineTo(x+t*step,y+1);
+      }
+      if((v<threshold&&v3>=threshold)||(v>=threshold&&v3<threshold)){
+        const t=(threshold-v)/(v3-v);
+        ctx.moveTo(x,y+t*step);ctx.lineTo(x+1,y+t*step);
+      }
+    }
+    ctx.stroke();
+  }
+}
+
+// --- String Art ---
+function drawStringArt(W,H,pal,p){
+  const pts=[];const cx=W/2,cy=H/2,r=Math.min(W,H)*0.45;
+  for(let i=0;i<p.points;i++){
+    const t=i/p.points;
+    switch(p.shape){
+      case 'circle':pts.push({x:cx+Math.cos(t*Math.PI*2)*r,y:cy+Math.sin(t*Math.PI*2)*r});break;
+      case 'square':{
+        const perim=t*4;const s=r*2;
+        if(perim<1)pts.push({x:cx-r+perim*s,y:cy-r});
+        else if(perim<2)pts.push({x:cx+r,y:cy-r+(perim-1)*s});
+        else if(perim<3)pts.push({x:cx+r-(perim-2)*s,y:cy+r});
+        else pts.push({x:cx-r,y:cy+r-(perim-3)*s});
+      }break;
+      case 'heart':{
+        const a=t*Math.PI*2;
+        pts.push({x:cx+r*0.7*16*Math.pow(Math.sin(a),3)/16,y:cy-r*0.7*(13*Math.cos(a)-5*Math.cos(2*a)-2*Math.cos(3*a)-Math.cos(4*a))/16});
+      }break;
+      case 'star':{
+        const a=t*Math.PI*2-Math.PI/2;const ri=i%2===0?r:r*0.4;
+        pts.push({x:cx+Math.cos(a)*ri,y:cy+Math.sin(a)*ri});
+      }break;
+    }
+  }
+  ctx.lineWidth=p.lineWidth;
+  for(let i=0;i<p.connections;i++){
+    const a=rngInt(0,pts.length-1),b=rngInt(0,pts.length-1);
+    if(a===b)continue;
+    ctx.beginPath();ctx.moveTo(pts[a].x,pts[a].y);ctx.lineTo(pts[b].x,pts[b].y);
+    ctx.strokeStyle=rngPick(pal)+hex(p.opacity);ctx.stroke();
+  }
+}
+
+// --- Maze ---
+function drawMaze(W,H,pal,p){
+  const cs=p.cellSize;const cols=Math.floor(W/cs);const rows=Math.floor(H/cs);
+  const grid=Array.from({length:rows},()=>Array.from({length:cols},()=>({visited:false,walls:[true,true,true,true]})));
+  const stack=[{r:0,c:0}];grid[0][0].visited=true;
+  while(stack.length){
+    const{r,c}=stack[stack.length-1];
+    const neighbors=[];
+    if(r>0&&!grid[r-1][c].visited)neighbors.push({r:r-1,c,w:0,ow:2});
+    if(c<cols-1&&!grid[r][c+1].visited)neighbors.push({r,c:c+1,w:1,ow:3});
+    if(r<rows-1&&!grid[r+1][c].visited)neighbors.push({r:r+1,c,w:2,ow:0});
+    if(c>0&&!grid[r][c-1].visited)neighbors.push({r,c:c-1,w:3,ow:1});
+    if(neighbors.length){
+      const n=neighbors[rngInt(0,neighbors.length-1)];
+      grid[r][c].walls[n.w]=false;
+      grid[n.r][n.c].walls[n.ow]=false;
+      grid[n.r][n.c].visited=true;
+      stack.push({r:n.r,c:n.c});
+    } else stack.pop();
+  }
+  const ox=(W-cols*cs)/2,oy=(H-rows*cs)/2;
+  ctx.strokeStyle=rngPick(pal);ctx.lineWidth=p.wallWidth;ctx.lineCap='round';
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const x=ox+c*cs,y=oy+r*cs;const w=grid[r][c].walls;
+    ctx.strokeStyle=pal[Math.floor((r+c)%pal.length)];
+    if(w[0]){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+cs,y);ctx.stroke()}
+    if(w[1]){ctx.beginPath();ctx.moveTo(x+cs,y);ctx.lineTo(x+cs,y+cs);ctx.stroke()}
+    if(w[2]){ctx.beginPath();ctx.moveTo(x,y+cs);ctx.lineTo(x+cs,y+cs);ctx.stroke()}
+    if(w[3]){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+cs);ctx.stroke()}
+  }
+  if(p.showSolution){
+    // BFS solve
+    const visited2=Array.from({length:rows},()=>Array(cols).fill(false));
+    const parent=Array.from({length:rows},()=>Array(cols).fill(null));
+    const queue=[{r:0,c:0}];visited2[0][0]=true;
+    const dirs=[[-1,0,0],[0,1,1],[1,0,2],[0,-1,3]];
+    while(queue.length){
+      const{r,c}=queue.shift();
+      if(r===rows-1&&c===cols-1)break;
+      for(const[dr,dc,wi] of dirs){
+        const nr=r+dr,nc=c+dc;
+        if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&!visited2[nr][nc]&&!grid[r][c].walls[wi]){
+          visited2[nr][nc]=true;parent[nr][nc]={r,c};queue.push({r:nr,c:nc});
+        }
+      }
+    }
+    const path=[];let cur={r:rows-1,c:cols-1};
+    while(cur){path.push(cur);cur=parent[cur.r][cur.c]}
+    path.reverse();
+    ctx.strokeStyle='#ff006e88';ctx.lineWidth=cs*0.3;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();
+    path.forEach((p,i)=>{const x=ox+p.c*cs+cs/2,y=oy+p.r*cs+cs/2;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
+    ctx.stroke();
+  }
+}
+
+// --- Phyllotaxis ---
+function drawPhyllotaxis(W,H,pal,p){
+  const cx=W/2,cy=H/2;const golden=137.508+p.angleOffset;const maxR=Math.min(W,H)*0.45;
+  for(let i=0;i<p.n;i++){
+    const angle=i*golden*Math.PI/180;
+    const r=Math.sqrt(i/p.n)*maxR;
+    const x=cx+Math.cos(angle)*r;
+    const y=cy+Math.sin(angle)*r;
+    const t=i/p.n;
+    const col=pal[Math.floor(t*(pal.length-1))];
+    const sz=p.maxR*(1-t*0.5);
+    switch(p.style){
+      case 'dots':ctx.beginPath();ctx.arc(x,y,sz,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();break;
+      case 'petals':ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.beginPath();ctx.ellipse(0,0,sz*2,sz,0,0,Math.PI*2);ctx.fillStyle=col+'aa';ctx.fill();ctx.restore();break;
+      case 'squares':ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.fillStyle=col+'cc';ctx.fillRect(-sz,-sz,sz*2,sz*2);ctx.restore();break;
+    }
+  }
+}
+
+// --- Reaction Diffusion (simplified) ---
+function drawReactionDiffusion(W,H,pal,p){
+  const sz=Math.min(200,W);const scale=W/sz;
+  let a=Array.from({length:sz},()=>Array(sz).fill(1));
+  let b=Array.from({length:sz},()=>Array(sz).fill(0));
+  // Seed
+  for(let i=0;i<5;i++){
+    const cx=rngInt(sz*0.2,sz*0.8),cy=rngInt(sz*0.2,sz*0.8);
+    for(let dy=-5;dy<=5;dy++)for(let dx=-5;dx<=5;dx++){
+      const nx=cx+dx,ny=cy+dy;
+      if(nx>=0&&nx<sz&&ny>=0&&ny<sz)b[ny][nx]=1;
+    }
+  }
+  const dA=1.0,dB=0.5,f=p.feed,k=p.kill;
+  for(let iter=0;iter<p.iterations;iter++){
+    const na=a.map(r=>[...r]),nb=b.map(r=>[...r]);
+    for(let y=1;y<sz-1;y++)for(let x=1;x<sz-1;x++){
+      const lapA=a[y-1][x]+a[y+1][x]+a[y][x-1]+a[y][x+1]-4*a[y][x];
+      const lapB=b[y-1][x]+b[y+1][x]+b[y][x-1]+b[y][x+1]-4*b[y][x];
+      const ab2=a[y][x]*b[y][x]*b[y][x];
+      na[y][x]=Math.min(1,Math.max(0,a[y][x]+dA*lapA-ab2+f*(1-a[y][x])));
+      nb[y][x]=Math.min(1,Math.max(0,b[y][x]+dB*lapB+ab2-(k+f)*b[y][x]));
+    }
+    a=na;b=nb;
+  }
+  const imgData=ctx.createImageData(W,H);const d=imgData.data;
+  const colorsRGB=pal.map(hexToRGB);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const sy=Math.floor(y/scale),sx=Math.floor(x/scale);
+    const v=Math.max(0,Math.min(1,1-b[Math.min(sy,sz-1)][Math.min(sx,sz-1)]));
+    const ci=Math.floor(v*(colorsRGB.length-1));
+    const c=colorsRGB[ci];
+    const idx=(y*W+x)*4;d[idx]=c[0];d[idx+1]=c[1];d[idx+2]=c[2];d[idx+3]=255;
+  }
+  ctx.putImageData(imgData,0,0);
+}
+
+// --- Kaleidoscope ---
+function drawKaleidoscope(W,H,pal,p){
+  const cx=W/2,cy=H/2;const r=Math.min(W,H)*0.45;
+  const segAngle=Math.PI*2/p.segments;
+  // Draw one segment then rotate
+  const tempCanvas=document.createElement('canvas');tempCanvas.width=W;tempCanvas.height=H;
+  const tc=tempCanvas.getContext('2d');
+  for(let i=0;i<p.shapes;i++){
+    const a=rng()*segAngle;const d=rng()*r;
+    const x=cx+Math.cos(a)*d;const y=cy+Math.sin(a)*d;
+    const sz=rngRange(5,30+p.complexity*10);
+    tc.fillStyle=rngPick(pal)+hex(rngInt(80,200));
+    const shape=rngInt(0,2);
+    tc.beginPath();
+    if(shape===0){tc.arc(x,y,sz,0,Math.PI*2)}
+    else if(shape===1){tc.rect(x-sz/2,y-sz/2,sz,sz)}
+    else{tc.moveTo(x,y-sz);tc.lineTo(x+sz,y+sz);tc.lineTo(x-sz,y+sz);tc.closePath()}
+    tc.fill();
+  }
+  // Replicate segments
+  for(let s=0;s<p.segments;s++){
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(s*segAngle);
+    if(s%2===1)ctx.scale(1,-1);
+    ctx.translate(-cx,-cy);
+    ctx.drawImage(tempCanvas,0,0);
+    ctx.restore();
+  }
+}
+
+// --- Circuit Board ---
+function drawCircuitBoard(W,H,pal,p){
+  const grid=20;
+  // Traces
+  ctx.lineCap='round';ctx.lineJoin='round';
+  for(let i=0;i<p.traces;i++){
+    let x=rngInt(0,Math.floor(W/grid))*grid;
+    let y=rngInt(0,Math.floor(H/grid))*grid;
+    ctx.beginPath();ctx.moveTo(x,y);
+    ctx.strokeStyle=rngPick(pal)+hex(rngInt(100,200));
+    ctx.lineWidth=p.lineWidth;
+    const steps=rngInt(5,20);
+    for(let s=0;s<steps;s++){
+      const dir=rngInt(0,3);
+      const len=rngInt(1,5)*grid;
+      switch(dir){
+        case 0:x+=len;break;case 1:y+=len;break;
+        case 2:x-=len;break;case 3:y-=len;break;
+      }
+      x=Math.max(0,Math.min(W,x));y=Math.max(0,Math.min(H,y));
+      ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+  // Nodes
+  for(let i=0;i<p.nodes;i++){
+    const x=rngInt(0,Math.floor(W/grid))*grid;
+    const y=rngInt(0,Math.floor(H/grid))*grid;
+    const sz=rngRange(3,8);
+    const col=rngPick(pal);
+    if(rng()>0.5){
+      ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,sz,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=state.bgColor;ctx.beginPath();ctx.arc(x,y,sz*0.4,0,Math.PI*2);ctx.fill();
+    } else {
+      ctx.fillStyle=col;ctx.fillRect(x-sz,y-sz,sz*2,sz*2);
+    }
+  }
+}
+
+// --- Particle Swarm ---
+function drawParticleSwarm(W,H,pal,p){
+  const attractors=[];
+  for(let i=0;i<p.attractors;i++)attractors.push({x:rng()*W,y:rng()*H,strength:rngRange(50,200)});
+  
+  for(let i=0;i<p.particles;i++){
+    let x=rng()*W,y=rng()*H;
+    let vx=rngRange(-2,2),vy=rngRange(-2,2);
+    const col=rngPick(pal);
+    ctx.beginPath();ctx.moveTo(x,y);
+    for(let s=0;s<p.steps;s++){
+      attractors.forEach(a=>{
+        const dx=a.x-x,dy=a.y-y;
+        const d=Math.max(10,Math.hypot(dx,dy));
+        vx+=dx/d*a.strength/d;vy+=dy/d*a.strength/d;
+      });
+      vx*=0.98;vy*=0.98;
+      x+=vx;y+=vy;
+      ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=col+hex(rngInt(20,60));
+    ctx.lineWidth=p.lineWidth;ctx.stroke();
+  }
+}
+
+// --- Geometric Tiling ---
+function drawGeometricTiling(W,H,pal,p){
+  ctx.lineWidth=p.lineWidth;
+  switch(p.pattern){
+    case 'triangles':{
+      const s=p.tileSize;const h=s*Math.sqrt(3)/2;
+      for(let row=0;row*h<H+h;row++)for(let col=0;col*s/2<W+s;col++){
+        const x=col*s/2;const y=row*h;
+        const up=((col+row)%2===0);
+        ctx.beginPath();
+        if(up){ctx.moveTo(x,y+h);ctx.lineTo(x+s/2,y);ctx.lineTo(x+s,y+h)}
+        else{ctx.moveTo(x,y);ctx.lineTo(x+s/2,y+h);ctx.lineTo(x+s,y)}
+        ctx.closePath();
+        if(p.filled){ctx.fillStyle=rngPick(pal)+'aa';ctx.fill()}
+        ctx.strokeStyle=rngPick(pal);ctx.stroke();
+      }
+    }break;
+    case 'hexagons':{
+      const s=p.tileSize;const h=s*Math.sqrt(3);
+      for(let row=0;row*h*0.75<H+h;row++)for(let col=0;col*s*1.5<W+s*2;col++){
+        const x=col*s*1.5+(row%2)*s*0.75;const y=row*h*0.5;
+        ctx.beginPath();
+        for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6;ctx.lineTo(x+Math.cos(a)*s*0.5,y+Math.sin(a)*s*0.5)}
+        ctx.closePath();
+        if(p.filled){ctx.fillStyle=rngPick(pal)+'aa';ctx.fill()}
+        ctx.strokeStyle=rngPick(pal);ctx.stroke();
+      }
+    }break;
+    case 'penrose':{
+      // Simplified Penrose-ish kite-dart tiling
+      const s=p.tileSize;
+      for(let y=0;y<H+s*2;y+=s*0.8)for(let x=0;x<W+s*2;x+=s){
+        const ox=x+(Math.floor(y/s)%2)*s*0.5;
+        const a=rng()*Math.PI*2;
+        ctx.beginPath();
+        ctx.moveTo(ox,y);ctx.lineTo(ox+s*0.4*Math.cos(a),y+s*0.4*Math.sin(a));
+        ctx.lineTo(ox+s*0.3*Math.cos(a+1.2),y+s*0.3*Math.sin(a+1.2));
+        ctx.lineTo(ox+s*0.4*Math.cos(a+2.4),y+s*0.4*Math.sin(a+2.4));
+        ctx.closePath();
+        if(p.filled){ctx.fillStyle=rngPick(pal)+'88';ctx.fill()}
+        ctx.strokeStyle=rngPick(pal)+'cc';ctx.stroke();
+      }
+    }break;
+    case 'islamic':{
+      const s=p.tileSize;
+      for(let y=-s;y<H+s;y+=s)for(let x=-s;x<W+s;x+=s){
+        const cx=x+s/2,cy=y+s/2;
+        for(let i=0;i<8;i++){
+          const a1=i*Math.PI/4;const a2=(i+1)*Math.PI/4;
+          ctx.beginPath();
+          ctx.moveTo(cx+Math.cos(a1)*s*0.5,cy+Math.sin(a1)*s*0.5);
+          ctx.lineTo(cx+Math.cos((a1+a2)/2)*s*0.25,cy+Math.sin((a1+a2)/2)*s*0.25);
+          ctx.lineTo(cx+Math.cos(a2)*s*0.5,cy+Math.sin(a2)*s*0.5);
+          ctx.strokeStyle=rngPick(pal);ctx.stroke();
+          if(p.filled){ctx.fillStyle=rngPick(pal)+'44';ctx.fill()}
+        }
+      }
+    }break;
+  }
+}
+
+// --- Aurora Waves ---
+function drawAuroraWaves(W,H,pal,p){
+  for(let L=0;L<p.layers;L++){
+    const baseY=H*0.3+L*(H*0.5/p.layers);
+    const col=pal[L%pal.length];
+    ctx.beginPath();
+    ctx.moveTo(0,H);
+    for(let x=0;x<=W;x+=2){
+      const n1=perlin(x*p.frequency+L*0.5+state.seed*0.01,L*0.8)*p.amplitude;
+      const n2=perlin(x*p.frequency*0.5+L*2+state.seed*0.02,L*1.5)*p.amplitude*0.5;
+      const y=baseY+n1+n2;
+      ctx.lineTo(x,y);
+    }
+    ctx.lineTo(W,H);ctx.closePath();
+    const grad=ctx.createLinearGradient(0,baseY-p.amplitude,0,H);
+    grad.addColorStop(0,col+'88');grad.addColorStop(0.5,col+'44');grad.addColorStop(1,col+'00');
+    ctx.fillStyle=grad;
+    if(p.blur>0){ctx.filter=`blur(${p.blur}px)`;ctx.fill();ctx.filter='none'}
+    else ctx.fill();
+  }
+}
+
+// --- Pen Plotter ---
+function drawPenPlotter(W,H,pal,p){
+  ctx.lineWidth=p.lineWidth;ctx.lineCap='round';
+  const spacing=Math.max(3,20-p.density*2);
+  switch(p.style){
+    case 'hatching':
+      for(let i=0;i<p.lineCount;i++){
+        const y=rng()*H;
+        const noiseVal=perlin(0,y*0.01+state.seed)*100;
+        ctx.beginPath();ctx.moveTo(0,y+noiseVal);
+        for(let x=0;x<W;x+=5){
+          const n=perlin(x*0.008+state.seed*0.01,y*0.01)*20;
+          ctx.lineTo(x,y+n+noiseVal);
+        }
+        ctx.strokeStyle=rngPick(pal);ctx.stroke();
+      }break;
+    case 'crosshatch':
+      for(let i=0;i<p.lineCount;i++){
+        const y=i*spacing;
+        ctx.beginPath();
+        for(let x=0;x<W;x+=5){ctx.lineTo(x,y+perlin(x*0.01+state.seed,y*0.01)*15)}
+        ctx.strokeStyle=rngPick(pal)+'88';ctx.stroke();
+      }
+      for(let i=0;i<p.lineCount;i++){
+        const x=i*spacing;
+        ctx.beginPath();
+        for(let y=0;y<H;y+=5){ctx.lineTo(x+perlin(x*0.01,y*0.01+state.seed)*15,y)}
+        ctx.strokeStyle=rngPick(pal)+'88';ctx.stroke();
+      }break;
+    case 'contour':
+      for(let i=0;i<p.lineCount;i++){
+        const baseAngle=rng()*Math.PI*2;
+        const cx=rng()*W,cy=rng()*H;
+        ctx.beginPath();
+        for(let a=0;a<Math.PI*2;a+=0.05){
+          const r=50+i*spacing*0.3+perlin(a*2+state.seed*0.01,i*0.5)*30;
+          ctx.lineTo(cx+Math.cos(a+baseAngle)*r,cy+Math.sin(a+baseAngle)*r);
+        }
+        ctx.closePath();ctx.strokeStyle=rngPick(pal)+'66';ctx.stroke();
+      }break;
+    case 'scribble':
+      for(let i=0;i<p.lineCount;i++){
+        let x=rng()*W,y=rng()*H;
+        ctx.beginPath();ctx.moveTo(x,y);
+        for(let s=0;s<50;s++){
+          x+=rngRange(-10,10);y+=rngRange(-10,10);
+          ctx.lineTo(x,y);
+        }
+        ctx.strokeStyle=rngPick(pal)+hex(rngInt(30,80));ctx.stroke();
+      }break;
+  }
+}
+
+// --- Crystal Growth (DLA) ---
+function drawCrystalGrowth(W,H,pal,p){
+  const scale=2;const sw=Math.floor(W/scale);const sh=Math.floor(H/scale);
+  const grid=Array.from({length:sh},()=>Array(sw).fill(0));
+  // Seed points
+  for(let i=0;i<p.seeds;i++){
+    const sx=Math.floor(rng()*sw*0.4+sw*0.3);
+    const sy=Math.floor(rng()*sh*0.4+sh*0.3);
+    grid[sy][sx]=1;
+  }
+  let attached=p.seeds;
+  for(let attempt=0;attempt<p.particles&&attached<p.particles;attempt++){
+    let x=rngInt(1,sw-2),y=rngInt(1,sh-2);
+    let steps=0;
+    while(steps<2000){
+      const dx=rngInt(-1,1),dy=rngInt(-1,1);
+      x=Math.max(1,Math.min(sw-2,x+dx));
+      y=Math.max(1,Math.min(sh-2,y+dy));
+      if(grid[y-1][x]||grid[y+1][x]||grid[y][x-1]||grid[y][x+1]){
+        grid[y][x]=attached+1;attached++;break;
+      }
+      steps++;
+    }
+  }
+  const colorsRGB=pal.map(hexToRGB);
+  for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){
+    if(grid[y][x]){
+      const t=grid[y][x]/attached;
+      const ci=Math.floor(t*(colorsRGB.length-1));
+      const c=colorsRGB[ci];
+      ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;
+      ctx.beginPath();ctx.arc(x*scale+scale/2,y*scale+scale/2,p.size,0,Math.PI*2);ctx.fill();
+    }
+  }
+}
+
+// --- Noise Terrain ---
+function drawNoiseTerrain(W,H,pal,p){
+  const res=p.resolution;const cellW=W/res;const cellH=cellW*0.5;
+  const colorsRGB=pal.map(hexToRGB);
+  const heights=[];
+  for(let z=0;z<=res;z++){
+    heights[z]=[];
+    for(let x=0;x<=res;x++){
+      heights[z][x]=perlin(x*p.noiseScale*10+state.seed,z*p.noiseScale*10)*p.elevation;
+    }
+  }
+  // Isometric projection
+  for(let z=res;z>=0;z--)for(let x=0;x<=res;x++){
+    const h=heights[z][x];
+    const sx=W/2+(x-res/2)*cellW*0.7-(z-res/2)*cellW*0.7;
+    const sy=H/2+(x-res/2)*cellH*0.7+(z-res/2)*cellH*0.7-h;
+    const t=Math.max(0,Math.min(1,(h+p.elevation)/(p.elevation*2)));
+    const ci=Math.floor(t*(colorsRGB.length-1));
+    const c=colorsRGB[Math.min(ci,colorsRGB.length-1)];
+    
+    if(!p.wireframe&&z<res&&x<res){
+      const h2=heights[z][x+1],h3=heights[z+1][x],h4=heights[z+1][x+1];
+      const sx2=W/2+(x+1-res/2)*cellW*0.7-(z-res/2)*cellW*0.7;
+      const sy2=H/2+(x+1-res/2)*cellH*0.7+(z-res/2)*cellH*0.7-h2;
+      const sx3=W/2+(x-res/2)*cellW*0.7-(z+1-res/2)*cellW*0.7;
+      const sy3=H/2+(x-res/2)*cellH*0.7+(z+1-res/2)*cellH*0.7-h3;
+      const sx4=W/2+(x+1-res/2)*cellW*0.7-(z+1-res/2)*cellW*0.7;
+      const sy4=H/2+(x+1-res/2)*cellH*0.7+(z+1-res/2)*cellH*0.7-h4;
+      ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx2,sy2);ctx.lineTo(sx4,sy4);ctx.lineTo(sx3,sy3);ctx.closePath();
+      ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},0.9)`;ctx.fill();
+      ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},0.5)`;ctx.lineWidth=0.5;ctx.stroke();
+    } else if(p.wireframe){
+      if(x<res){
+        const h2=heights[z][x+1];
+        const sx2=W/2+(x+1-res/2)*cellW*0.7-(z-res/2)*cellW*0.7;
+        const sy2=H/2+(x+1-res/2)*cellH*0.7+(z-res/2)*cellH*0.7-h2;
+        ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx2,sy2);ctx.strokeStyle=`rgb(${c[0]},${c[1]},${c[2]})`;ctx.lineWidth=0.5;ctx.stroke();
+      }
+      if(z<res){
+        const h3=heights[z+1][x];
+        const sx3=W/2+(x-res/2)*cellW*0.7-(z+1-res/2)*cellW*0.7;
+        const sy3=H/2+(x-res/2)*cellH*0.7+(z+1-res/2)*cellH*0.7-h3;
+        ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx3,sy3);ctx.strokeStyle=`rgb(${c[0]},${c[1]},${c[2]})`;ctx.lineWidth=0.5;ctx.stroke();
+      }
+    }
+  }
+}
+
+// ============ UTILS ============
+function hex(v){return Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')}
+function hexToRGB(h){h=h.replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]}
+
+function randomize(){
+  state.seed=Math.floor(Math.random()*999999);
+  state.palette=rngPick(Object.keys(PALETTES));
+  const defs=getParamDefs(state.algo);
+  defs.forEach(d=>{
+    if(d.type==='range')state.params[d.key]=rngRange(d.min,d.max);
+    else if(d.type==='select')state.params[d.key]=rngPick(d.options);
+    else if(d.type==='bool')state.params[d.key]=rng()>0.5;
+  });
+  renderControls();generate();
+}
+
+function saveToGallery(){
+  const dataUrl=canvas.toDataURL('image/png');
+  const algo=getAlgo(state.algo);
+  state.gallery.unshift({
+    id:Date.now(),name:`${algo.name} #${state.seed}`,algo:state.algo,seed:state.seed,
+    palette:state.palette,params:{...state.params},bg:state.bgColor,
+    image:dataUrl,date:new Date().toISOString(),width:state.width,height:state.height
+  });
+  state.stats.saved=(state.stats.saved||0)+1;save();
+}
+
+function exportPNG(){
+  const a=document.createElement('a');
+  a.download=`artlab-${state.algo}-${state.seed}.png`;
+  a.href=canvas.toDataURL('image/png');a.click();
+  state.stats.exported=(state.stats.exported||0)+1;save();
+}
+
+function exportSVG(){
+  // Canvas to data URL wrapped in SVG for vector-ish export
+  const dataUrl=canvas.toDataURL('image/png');
+  const svg=`<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${state.width}" height="${state.height}">
+<image width="${state.width}" height="${state.height}" xlink:href="${dataUrl}"/>
+</svg>`;
+  const blob=new Blob([svg],{type:'image/svg+xml'});
+  const a=document.createElement('a');a.download=`artlab-${state.algo}-${state.seed}.svg`;
+  a.href=URL.createObjectURL(blob);a.click();
+  state.stats.exported=(state.stats.exported||0)+1;save();
+}
+
+// ============ GALLERY ============
+function renderGallery(){
+  const el=document.getElementById('galleryView');
+  if(!state.gallery.length){
+    el.innerHTML=`<div class="gallery-empty"><span>🖼️</span><p>No saved artworks yet.<br>Generate something beautiful and press 💾 Save!</p></div>`;return;
+  }
+  el.innerHTML=`<div class="gallery-grid">${state.gallery.map(g=>`<div class="gallery-card">
+    <img src="${g.image}" alt="${g.name}"/>
+    <div class="card-info"><h4>${g.name}</h4><p>${g.palette} • ${g.width}×${g.height} • ${new Date(g.date).toLocaleDateString()}</p></div>
+    <div class="card-actions">
+      <button onclick="loadFromGallery(${g.id})">🔄 Load</button>
+      <button onclick="exportGalleryPNG(${g.id})">📥 PNG</button>
+      <button class="del" onclick="deleteFromGallery(${g.id})">🗑️</button>
+    </div>
+  </div>`).join('')}</div>`;
+}
+
+function loadFromGallery(id){
+  const g=state.gallery.find(x=>x.id===id);if(!g)return;
+  state.algo=g.algo;state.seed=g.seed;state.palette=g.palette;state.params={...g.params};
+  state.bgColor=g.bg||'#0d1117';state.width=g.width;state.height=g.height;
+  setView('canvas');renderSidebar();renderControls();generate();
+}
+
+function exportGalleryPNG(id){
+  const g=state.gallery.find(x=>x.id===id);if(!g)return;
+  const a=document.createElement('a');a.download=`artlab-${g.algo}-${g.seed}.png`;a.href=g.image;a.click();
+}
+
+function deleteFromGallery(id){
+  state.gallery=state.gallery.filter(x=>x.id!==id);save();renderGallery();
+}
+
+// ============ DASHBOARD ============
+function renderDashboard(){
+  const el=document.getElementById('dashboardView');
+  const topAlgo=Object.entries(state.stats.favAlgo||{}).sort((a,b)=>b[1]-a[1]);
+  const topName=topAlgo[0]?getAlgo(topAlgo[0][0])?.name||topAlgo[0][0]:'—';
+  
+  let html=`<h2 style="margin-bottom:16px">📊 Studio Dashboard</h2>`;
+  html+=`<div class="dash-stats">
+    <div class="dash-stat"><div class="val">${state.stats.generated||0}</div><div class="lbl">Generated</div></div>
+    <div class="dash-stat"><div class="val">${state.stats.saved||0}</div><div class="lbl">Saved</div></div>
+    <div class="dash-stat"><div class="val">${state.stats.exported||0}</div><div class="lbl">Exported</div></div>
+    <div class="dash-stat"><div class="val">${state.gallery.length}</div><div class="lbl">In Gallery</div></div>
+    <div class="dash-stat"><div class="val">${ALGORITHMS.length}</div><div class="lbl">Algorithms</div></div>
+    <div class="dash-stat"><div class="val">${topName}</div><div class="lbl">Most Used</div></div>
+  </div>`;
+  
+  // Algorithm usage
+  if(topAlgo.length){
+    const maxV=topAlgo[0][1];
+    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
+      <h3 style="margin-bottom:12px">🎨 Algorithm Usage</h3>`;
+    topAlgo.slice(0,10).forEach(([id,count])=>{
+      const a=getAlgo(id);const pct=count/maxV*100;
+      html+=`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
+        <span>${a?a.icon+' '+a.name:id}</span><span style="color:var(--accent)">${count}</span></div>
+        <div style="height:6px;background:var(--surface2);border-radius:3px"><div style="height:100%;width:${pct}%;background:var(--accent);border-radius:3px"></div></div></div>`;
+    });
+    html+=`</div>`;
+  }
+  
+  // Palette gallery
+  html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+    <h3 style="margin-bottom:12px">🎭 Available Palettes (${Object.keys(PALETTES).length})</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">`;
+  Object.entries(PALETTES).forEach(([name,colors])=>{
+    html+=`<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer" onclick="state.palette='${name}';setView('canvas');renderControls();generate()">
+      <div style="display:flex;gap:2px">${colors.map(c=>`<div style="width:20px;height:20px;border-radius:4px;background:${c}"></div>`).join('')}</div>
+      <span style="font-size:12px">${name}</span></div>`;
+  });
+  html+=`</div></div>`;
+  
+  el.innerHTML=html;
+}
+
+// ============ KEYBOARD ============
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA'){
+    if(e.key==='Escape')e.target.blur();return;
+  }
+  switch(e.key){
+    case ' ':e.preventDefault();generate();break;
+    case 'r':case 'R':randomize();break;
+    case 's':saveToGallery();break;
+    case 'e':exportPNG();break;
+    case 'n':state.seed=Math.floor(Math.random()*999999);renderControls();generate();break;
+    case '1':setView('canvas');break;
+    case '2':setView('gallery');break;
+    case '3':setView('dashboard');break;
+    case '/':e.preventDefault();document.getElementById('algoSearch').focus();break;
+    case '?':showHelp();break;
+    case 'Escape':closeModals();break;
+    case 'ArrowDown':case 'ArrowUp':{
+      e.preventDefault();
+      const idx=ALGORITHMS.findIndex(a=>a.id===state.algo);
+      const ni=e.key==='ArrowDown'?Math.min(idx+1,ALGORITHMS.length-1):Math.max(idx-1,0);
+      selectAlgo(ALGORITHMS[ni].id);
+    }break;
+  }
+});
+
+document.getElementById('algoSearch').addEventListener('input',renderSidebar);
+
+// ============ INIT ============
+renderSidebar();
+renderControls();
+generate();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

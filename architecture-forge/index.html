@@ -1,0 +1,1621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture Forge — System Architecture Diagram Builder</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#3fb950;--danger:#f85149;--warn:#d29922;--purple:#bc8cff;--pink:#f778ba;--cyan:#79c0ff;--orange:#ffa657}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;display:flex;flex-direction:column}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:var(--text)}
+input,select,textarea{font-family:inherit;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+::selection{background:var(--accent);color:#fff}
+
+/* Layout */
+.app{display:flex;flex:1;overflow:hidden}
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:12px;border-bottom:1px solid var(--border)}
+.sidebar-header h2{font-size:14px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.sidebar-search{width:100%;padding:6px 10px;font-size:12px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+.sidebar-list{flex:1;overflow-y:auto;padding:8px}
+.sidebar-item{padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:2px;transition:background .15s}
+.sidebar-item:hover{background:var(--surface2)}
+.sidebar-item.active{background:var(--accent);color:#fff}
+.sidebar-item .count{margin-left:auto;font-size:11px;color:var(--text2);background:var(--surface2);padding:1px 6px;border-radius:10px}
+.sidebar-item.active .count{background:rgba(255,255,255,.2);color:#fff}
+.sidebar-footer{padding:8px 12px;border-top:1px solid var(--border);display:flex;gap:6px}
+.sidebar-footer button{flex:1;padding:6px;font-size:12px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);transition:background .15s}
+.sidebar-footer button:hover{background:var(--border)}
+.sidebar-footer button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sidebar-footer button.primary:hover{opacity:.9}
+
+/* Main Area */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.toolbar-group{display:flex;align-items:center;gap:4px;padding-right:8px;border-right:1px solid var(--border);margin-right:4px}
+.toolbar-group:last-child{border:none;margin:0;padding:0}
+.tool-btn{padding:5px 10px;font-size:12px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;gap:4px;white-space:nowrap;transition:all .15s}
+.tool-btn:hover{background:var(--border);border-color:var(--text2)}
+.tool-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tool-btn.danger{color:var(--danger)}
+.tool-btn.danger:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
+.tool-btn .icon{font-size:14px}
+
+/* Canvas */
+.canvas-wrap{flex:1;position:relative;overflow:hidden;background:var(--bg)}
+.canvas-wrap svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+.canvas-wrap svg *{pointer-events:auto}
+
+/* Grid */
+.grid-pattern{opacity:.15}
+
+/* Nodes */
+.arch-node{position:absolute;cursor:move;user-select:none;min-width:120px}
+.arch-node.selected .node-body{outline:2px solid var(--accent);outline-offset:2px}
+.node-body{background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:10px;text-align:center;transition:border-color .15s,box-shadow .15s;position:relative}
+.node-body:hover{border-color:var(--text2)}
+.node-icon{font-size:28px;margin-bottom:4px;display:block}
+.node-label{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;display:block}
+.node-type-label{font-size:10px;color:var(--text2);margin-top:2px;display:block}
+.node-port{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--border);border:2px solid var(--surface);cursor:crosshair;z-index:10;transition:all .15s}
+.node-port:hover,.node-port.active{background:var(--accent);transform:scale(1.3)}
+.port-top{top:-6px;left:50%;transform:translateX(-50%)}
+.port-bottom{bottom:-6px;left:50%;transform:translateX(-50%)}
+.port-left{left:-6px;top:50%;transform:translateY(-50%)}
+.port-right{right:-6px;top:50%;transform:translateY(-50%)}
+.port-top:hover,.port-top.active{transform:translateX(-50%) scale(1.3)}
+.port-bottom:hover,.port-bottom.active{transform:translateX(-50%) scale(1.3)}
+.port-left:hover,.port-left.active{transform:translateY(-50%) scale(1.3)}
+.port-right:hover,.port-right.active{transform:translateY(-50%) scale(1.3)}
+
+/* Node Colors by type */
+.node-service .node-body{border-color:#388bfd40;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-database .node-body{border-color:#3fb95040;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-api .node-body{border-color:#bc8cff40;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-queue .node-body{border-color:#ffa65740;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-cache .node-body{border-color:#f8514940;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-cdn .node-body{border-color:#79c0ff40;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-lb .node-body{border-color:#d2992240;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-client .node-body{border-color:#58a6ff40;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-storage .node-body{border-color:#3fb95040;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-serverless .node-body{border-color:#f778ba40;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-container .node-body{border-color:#79c0ff40;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-external .node-body{border-color:#8b949e40;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-monitor .node-body{border-color:#d2992240;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-auth .node-body{border-color:#f8514940;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-search .node-body{border-color:#bc8cff40;background:linear-gradient(135deg,#161b22,#0d1117)}
+.node-ml .node-body{border-color:#f778ba40;background:linear-gradient(135deg,#161b22,#0d1117)}
+
+/* Connections */
+.connection{fill:none;stroke:var(--border);stroke-width:2;cursor:pointer;transition:stroke .15s}
+.connection:hover{stroke:var(--accent);stroke-width:3}
+.connection.selected{stroke:var(--accent);stroke-width:3}
+.conn-arrow{fill:var(--border);transition:fill .15s}
+.connection:hover+.conn-arrow,.connection.selected+.conn-arrow{fill:var(--accent)}
+.conn-label{font-size:11px;fill:var(--text2);pointer-events:auto;cursor:pointer}
+.conn-label:hover{fill:var(--accent)}
+.conn-label-bg{fill:var(--bg);rx:3}
+.conn-protocol{font-size:9px;fill:var(--text2);font-style:italic}
+
+/* Views */
+.view{display:none;flex:1;overflow:auto;padding:20px}
+.view.active{display:flex;flex-direction:column}
+.canvas-view{padding:0}
+.canvas-view.active{display:block}
+
+/* Component Palette */
+.palette{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;padding:12px}
+.palette-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:1px solid var(--border);border-radius:8px;cursor:grab;transition:all .15s;font-size:11px;text-align:center}
+.palette-item:hover{border-color:var(--accent);background:var(--surface2)}
+.palette-item .p-icon{font-size:22px}
+.palette-item .p-label{font-size:10px;color:var(--text2)}
+
+/* Tabs */
+.tab-bar{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--surface)}
+.tab-btn{padding:8px 16px;font-size:13px;border-bottom:2px solid transparent;transition:all .15s;color:var(--text2)}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h3{font-size:16px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.modal label{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;margin-top:10px}
+.modal label:first-of-type{margin-top:0}
+.modal input,.modal select,.modal textarea{width:100%;margin-bottom:2px}
+.modal textarea{min-height:60px;resize:vertical}
+.modal-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.modal-actions button{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{opacity:.9}
+.btn-secondary{background:var(--surface2);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--border)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{opacity:.9}
+
+/* Dashboard */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
+.stat-card .stat-value{font-size:28px;font-weight:700}
+.stat-card .stat-label{font-size:12px;color:var(--text2);margin-top:4px}
+.chart-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
+.chart-section h4{font-size:14px;margin-bottom:12px;color:var(--text2)}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
+.bar-label{width:120px;text-align:right;color:var(--text2);flex-shrink:0}
+.bar-track{flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .3s;display:flex;align-items:center;padding:0 6px;font-size:10px;color:#fff;font-weight:600;min-width:fit-content}
+.templates-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.template-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all .2s}
+.template-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.template-card h4{margin-bottom:4px;font-size:14px}
+.template-card p{font-size:12px;color:var(--text2);margin-bottom:8px}
+.template-card .meta{font-size:11px;color:var(--text2);display:flex;gap:12px}
+
+/* Help */
+.shortcut-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.shortcut-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.shortcut-key{background:var(--surface2);padding:2px 8px;border-radius:4px;font-size:12px;font-family:monospace;border:1px solid var(--border)}
+
+/* Zoom controls */
+.zoom-controls{position:absolute;bottom:16px;right:16px;display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px;z-index:20}
+.zoom-controls button{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:14px;background:var(--surface2);border:1px solid var(--border)}
+.zoom-controls button:hover{background:var(--border)}
+.zoom-controls .zoom-val{font-size:11px;display:flex;align-items:center;padding:0 6px;color:var(--text2)}
+
+/* Mini map */
+.minimap{position:absolute;bottom:16px;left:16px;width:160px;height:100px;background:var(--surface);border:1px solid var(--border);border-radius:8px;z-index:20;overflow:hidden;opacity:.8}
+.minimap:hover{opacity:1}
+.minimap canvas{width:100%;height:100%}
+
+/* Connection colors by protocol */
+.conn-http{stroke:#58a6ff}
+.conn-grpc{stroke:#bc8cff}
+.conn-ws{stroke:#3fb950}
+.conn-pubsub{stroke:#ffa657}
+.conn-tcp{stroke:#79c0ff}
+.conn-rest{stroke:#58a6ff}
+.conn-graphql{stroke:#f778ba}
+.conn-sql{stroke:#3fb950}
+.conn-redis{stroke:#f85149}
+.conn-amqp{stroke:#d29922}
+.conn-custom{stroke:var(--border)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text2)}
+
+/* Node group */
+.node-group-box{position:absolute;border:2px dashed var(--border);border-radius:12px;background:rgba(88,166,255,.03);pointer-events:none}
+.node-group-label{position:absolute;top:-20px;left:8px;font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.5px;text-transform:uppercase;pointer-events:auto;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>🏗️ Architecture Forge</h2>
+      <input class="sidebar-search" id="diagramSearch" placeholder="Search diagrams… ( / )" />
+    </div>
+    <div class="sidebar-list" id="diagramList"></div>
+    <div class="sidebar-footer">
+      <button class="primary" onclick="newDiagram()">+ New</button>
+      <button onclick="importData()">Import</button>
+      <button onclick="exportData()">Export</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-view="canvas" onclick="switchView('canvas')">🎨 Canvas</button>
+      <button class="tab-btn" data-view="components" onclick="switchView('components')">📦 Components</button>
+      <button class="tab-btn" data-view="connections" onclick="switchView('connections')">🔗 Connections</button>
+      <button class="tab-btn" data-view="templates" onclick="switchView('templates')">📋 Templates</button>
+      <button class="tab-btn" data-view="dashboard" onclick="switchView('dashboard')">📊 Dashboard</button>
+      <button class="tab-btn" data-view="help" onclick="switchView('help')">❓ Help</button>
+    </div>
+
+    <!-- Canvas View -->
+    <div class="view canvas-view active" id="view-canvas">
+      <div class="toolbar" id="canvasToolbar">
+        <div class="toolbar-group">
+          <button class="tool-btn" onclick="addNodeFromToolbar('service')" title="Add Service"><span class="icon">⚙️</span> Service</button>
+          <button class="tool-btn" onclick="addNodeFromToolbar('database')" title="Add Database"><span class="icon">🗄️</span> DB</button>
+          <button class="tool-btn" onclick="addNodeFromToolbar('api')" title="Add API Gateway"><span class="icon">🌐</span> API</button>
+          <button class="tool-btn" onclick="addNodeFromToolbar('queue')" title="Add Message Queue"><span class="icon">📨</span> Queue</button>
+          <button class="tool-btn" onclick="addNodeFromToolbar('cache')" title="Add Cache"><span class="icon">⚡</span> Cache</button>
+          <button class="tool-btn" onclick="addNodeFromToolbar('client')" title="Add Client"><span class="icon">💻</span> Client</button>
+        </div>
+        <div class="toolbar-group">
+          <button class="tool-btn" id="connectBtn" onclick="toggleConnectMode()" title="Connect nodes (C)"><span class="icon">🔗</span> Connect</button>
+          <button class="tool-btn" onclick="addGroup()" title="Add Group (G)"><span class="icon">📁</span> Group</button>
+        </div>
+        <div class="toolbar-group">
+          <button class="tool-btn" onclick="autoLayout()" title="Auto-layout (A)"><span class="icon">✨</span> Layout</button>
+          <button class="tool-btn" onclick="fitView()" title="Fit view (F)"><span class="icon">🎯</span> Fit</button>
+          <button class="tool-btn" id="gridBtn" onclick="toggleGrid()" title="Toggle grid (#)"><span class="icon">⊞</span> Grid</button>
+          <button class="tool-btn" id="snapBtn" onclick="toggleSnap()" title="Toggle snap (S)"><span class="icon">🧲</span> Snap</button>
+        </div>
+        <div class="toolbar-group">
+          <button class="tool-btn" onclick="exportSVG()" title="Export SVG"><span class="icon">🖼️</span> SVG</button>
+          <button class="tool-btn" onclick="exportPNG()" title="Export PNG"><span class="icon">📸</span> PNG</button>
+        </div>
+        <div class="toolbar-group">
+          <button class="tool-btn" onclick="undo()" title="Undo (⌘Z)"><span class="icon">↩️</span></button>
+          <button class="tool-btn" onclick="redo()" title="Redo (⌘⇧Z)"><span class="icon">↪️</span></button>
+          <button class="tool-btn danger" onclick="deleteSelected()" title="Delete (Del)"><span class="icon">🗑️</span></button>
+        </div>
+      </div>
+      <div class="canvas-wrap" id="canvasWrap">
+        <svg id="canvasSVG" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="gridSmall" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="var(--border)" stroke-width="0.5" class="grid-pattern"/>
+            </pattern>
+            <pattern id="gridLarge" width="100" height="100" patternUnits="userSpaceOnUse">
+              <rect width="100" height="100" fill="url(#gridSmall)"/>
+              <path d="M 100 0 L 0 0 0 100" fill="none" stroke="var(--border)" stroke-width="1" class="grid-pattern"/>
+            </pattern>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="var(--border)" class="conn-arrow"/>
+            </marker>
+          </defs>
+          <rect id="gridRect" width="10000" height="10000" x="-5000" y="-5000" fill="url(#gridLarge)" />
+          <g id="connectionsLayer"></g>
+          <g id="groupsLayer"></g>
+        </svg>
+        <div id="nodesContainer" style="position:absolute;top:0;left:0;width:0;height:0"></div>
+        <div class="zoom-controls">
+          <button onclick="zoomIn()">+</button>
+          <span class="zoom-val" id="zoomVal">100%</span>
+          <button onclick="zoomOut()">−</button>
+          <button onclick="fitView()">⊡</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Components View -->
+    <div class="view" id="view-components">
+      <h3 style="margin-bottom:16px">📦 Component Library</h3>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Drag onto the canvas, or click to add to the center of the current view.</p>
+      <div class="palette" id="componentPalette"></div>
+    </div>
+
+    <!-- Connections View -->
+    <div class="view" id="view-connections">
+      <h3 style="margin-bottom:16px">🔗 All Connections</h3>
+      <div id="connectionsList"></div>
+    </div>
+
+    <!-- Templates View -->
+    <div class="view" id="view-templates">
+      <h3 style="margin-bottom:16px">📋 Architecture Templates</h3>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Click a template to create a new diagram with the architecture pre-built.</p>
+      <div class="templates-grid" id="templatesGrid"></div>
+    </div>
+
+    <!-- Dashboard View -->
+    <div class="view" id="view-dashboard">
+      <h3 style="margin-bottom:16px">📊 Dashboard</h3>
+      <div id="dashboardContent"></div>
+    </div>
+
+    <!-- Help View -->
+    <div class="view" id="view-help">
+      <h3 style="margin-bottom:16px">❓ Keyboard Shortcuts & Help</h3>
+      <div id="helpContent"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modalOverlay" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()"></div>
+
+<script>
+// ================= DATA & STATE =================
+const NODE_TYPES = {
+  service:    { icon:'⚙️', label:'Service', color:'#388bfd', desc:'Backend service or microservice' },
+  database:   { icon:'🗄️', label:'Database', color:'#3fb950', desc:'SQL/NoSQL database' },
+  api:        { icon:'🌐', label:'API Gateway', color:'#bc8cff', desc:'API gateway or router' },
+  queue:      { icon:'📨', label:'Message Queue', color:'#ffa657', desc:'Kafka, RabbitMQ, SQS, etc.' },
+  cache:      { icon:'⚡', label:'Cache', color:'#f85149', desc:'Redis, Memcached, CDN cache' },
+  cdn:        { icon:'🌍', label:'CDN', color:'#79c0ff', desc:'Content delivery network' },
+  lb:         { icon:'⚖️', label:'Load Balancer', color:'#d29922', desc:'Load balancer / reverse proxy' },
+  client:     { icon:'💻', label:'Client', color:'#58a6ff', desc:'Web/mobile/desktop client' },
+  storage:    { icon:'📁', label:'Object Storage', color:'#3fb950', desc:'S3, GCS, Azure Blob' },
+  serverless: { icon:'λ',  label:'Serverless', color:'#f778ba', desc:'Lambda, Cloud Functions' },
+  container:  { icon:'🐳', label:'Container', color:'#79c0ff', desc:'Docker, Kubernetes pod' },
+  external:   { icon:'🔌', label:'External API', color:'#8b949e', desc:'Third-party service/API' },
+  monitor:    { icon:'📈', label:'Monitoring', color:'#d29922', desc:'Logging, metrics, alerting' },
+  auth:       { icon:'🔐', label:'Auth Service', color:'#f85149', desc:'Authentication/authorization' },
+  search:     { icon:'🔍', label:'Search Engine', color:'#bc8cff', desc:'Elasticsearch, Algolia' },
+  ml:         { icon:'🧠', label:'ML/AI Service', color:'#f778ba', desc:'Model serving, inference' },
+};
+
+const PROTOCOLS = ['HTTP','REST','gRPC','WebSocket','Pub/Sub','TCP','GraphQL','SQL','Redis','AMQP','Custom'];
+const PROTOCOL_CLASSES = {HTTP:'conn-http',REST:'conn-rest',gRPC:'conn-grpc',WebSocket:'conn-ws','Pub/Sub':'conn-pubsub',TCP:'conn-tcp',GraphQL:'conn-graphql',SQL:'conn-sql',Redis:'conn-redis',AMQP:'conn-amqp',Custom:'conn-custom'};
+
+let state = {
+  diagrams: [],
+  activeDiagram: null,
+  zoom: 1,
+  panX: 0,
+  panY: 0,
+  showGrid: true,
+  snapToGrid: true,
+  gridSize: 20,
+  connectMode: false,
+  connectFrom: null,
+  connectFromPort: null,
+  selectedNodes: [],
+  selectedConnection: null,
+  undoStack: [],
+  redoStack: [],
+  dragging: null,
+  panning: false,
+  panStart: null,
+};
+
+const LS_KEY = 'architecture-forge-data';
+
+function save() {
+  const d = { diagrams: state.diagrams, activeDiagram: state.activeDiagram };
+  try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch(e) {}
+}
+
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(LS_KEY));
+    if (d && d.diagrams) {
+      state.diagrams = d.diagrams;
+      state.activeDiagram = d.activeDiagram;
+    }
+  } catch(e) {}
+  if (!state.diagrams.length) seedData();
+}
+
+function uid() { return 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function getDiagram() { return state.diagrams.find(d => d.id === state.activeDiagram); }
+
+function pushUndo() {
+  const diag = getDiagram();
+  if (!diag) return;
+  state.undoStack.push(JSON.stringify({ nodes: diag.nodes, connections: diag.connections, groups: diag.groups || [] }));
+  if (state.undoStack.length > 50) state.undoStack.shift();
+  state.redoStack = [];
+}
+
+function undo() {
+  const diag = getDiagram();
+  if (!diag || !state.undoStack.length) return;
+  state.redoStack.push(JSON.stringify({ nodes: diag.nodes, connections: diag.connections, groups: diag.groups || [] }));
+  const prev = JSON.parse(state.undoStack.pop());
+  diag.nodes = prev.nodes; diag.connections = prev.connections; diag.groups = prev.groups || [];
+  save(); renderCanvas();
+}
+
+function redo() {
+  const diag = getDiagram();
+  if (!diag || !state.redoStack.length) return;
+  state.undoStack.push(JSON.stringify({ nodes: diag.nodes, connections: diag.connections, groups: diag.groups || [] }));
+  const next = JSON.parse(state.redoStack.pop());
+  diag.nodes = next.nodes; diag.connections = next.connections; diag.groups = next.groups || [];
+  save(); renderCanvas();
+}
+
+// ================= SIDEBAR =================
+function renderSidebar() {
+  const list = document.getElementById('diagramList');
+  const search = document.getElementById('diagramSearch').value.toLowerCase();
+  const filtered = state.diagrams.filter(d => d.name.toLowerCase().includes(search));
+  list.innerHTML = filtered.map(d => `
+    <div class="sidebar-item ${d.id === state.activeDiagram ? 'active' : ''}" onclick="selectDiagram('${d.id}')" ondblclick="renameDiagram('${d.id}')">
+      <span>${d.emoji || '🏗️'}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.name)}</span>
+      <span class="count">${d.nodes.length}</span>
+    </div>
+  `).join('');
+}
+
+function selectDiagram(id) {
+  state.activeDiagram = id;
+  state.selectedNodes = [];
+  state.selectedConnection = null;
+  state.undoStack = [];
+  state.redoStack = [];
+  state.zoom = 1; state.panX = 0; state.panY = 0;
+  save(); renderSidebar(); renderCanvas();
+}
+
+function newDiagram() {
+  const d = { id: uid(), name: 'Untitled Diagram', emoji: '🏗️', nodes: [], connections: [], groups: [], createdAt: new Date().toISOString() };
+  state.diagrams.unshift(d);
+  state.activeDiagram = d.id;
+  save(); renderSidebar(); renderCanvas();
+}
+
+function renameDiagram(id) {
+  const d = state.diagrams.find(x => x.id === id);
+  if (!d) return;
+  showModal('Rename Diagram', [
+    { key:'name', label:'Name', value: d.name },
+    { key:'emoji', label:'Emoji', value: d.emoji || '🏗️' },
+  ], (vals) => {
+    d.name = vals.name || 'Untitled'; d.emoji = vals.emoji || '🏗️';
+    save(); renderSidebar();
+  });
+}
+
+function deleteDiagram(id) {
+  state.diagrams = state.diagrams.filter(d => d.id !== id);
+  if (state.activeDiagram === id) state.activeDiagram = state.diagrams[0]?.id || null;
+  save(); renderSidebar(); renderCanvas();
+}
+
+// ================= CANVAS =================
+function renderCanvas() {
+  const diag = getDiagram();
+  const nc = document.getElementById('nodesContainer');
+  const cl = document.getElementById('connectionsLayer');
+  const gl = document.getElementById('groupsLayer');
+  nc.innerHTML = ''; cl.innerHTML = ''; gl.innerHTML = '';
+  if (!diag) { nc.innerHTML = '<div style="position:fixed;top:50%;left:55%;transform:translate(-50%,-50%);text-align:center;color:var(--text2)"><p style="font-size:48px;margin-bottom:12px">🏗️</p><p>No diagram selected</p><p style="font-size:12px;margin-top:8px">Create one or pick a template</p></div>'; return; }
+
+  updateTransform();
+  // Grid
+  document.getElementById('gridRect').style.display = state.showGrid ? 'block' : 'none';
+  document.getElementById('gridBtn').classList.toggle('active', state.showGrid);
+  document.getElementById('snapBtn').classList.toggle('active', state.snapToGrid);
+
+  // Groups
+  (diag.groups || []).forEach(g => {
+    const nodes = diag.nodes.filter(n => g.nodeIds.includes(n.id));
+    if (!nodes.length) return;
+    const pad = 30;
+    const xs = nodes.map(n => n.x); const ys = nodes.map(n => n.y);
+    const maxXs = nodes.map(n => n.x + (n.width || 140)); const maxYs = nodes.map(n => n.y + (n.height || 80));
+    const x = Math.min(...xs) - pad; const y = Math.min(...ys) - pad - 16;
+    const w = Math.max(...maxXs) - x + pad; const h = Math.max(...maxYs) - y + pad;
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',x); rect.setAttribute('y',y); rect.setAttribute('width',w); rect.setAttribute('height',h);
+    rect.setAttribute('rx','12'); rect.setAttribute('fill','rgba(88,166,255,.03)');
+    rect.setAttribute('stroke','var(--border)'); rect.setAttribute('stroke-width','2'); rect.setAttribute('stroke-dasharray','8,4');
+    gl.appendChild(rect);
+    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x', x + 8); label.setAttribute('y', y + 12);
+    label.setAttribute('fill','var(--text2)'); label.setAttribute('font-size','11');
+    label.setAttribute('font-weight','600'); label.setAttribute('letter-spacing','0.5');
+    label.textContent = g.name.toUpperCase();
+    label.style.cursor = 'pointer';
+    label.addEventListener('click', () => editGroup(g.id));
+    gl.appendChild(label);
+  });
+
+  // Connections
+  diag.connections.forEach(c => renderConnection(c, cl, diag));
+
+  // Temp connection line
+  if (state.connectMode && state.connectFrom) {
+    // drawn in mousemove
+  }
+
+  // Nodes
+  diag.nodes.forEach(n => {
+    const type = NODE_TYPES[n.type] || NODE_TYPES.service;
+    const el = document.createElement('div');
+    el.className = `arch-node node-${n.type} ${state.selectedNodes.includes(n.id) ? 'selected' : ''}`;
+    el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
+    el.dataset.id = n.id;
+    el.innerHTML = `
+      <div class="node-body">
+        <div class="node-port port-top" data-port="top" data-node="${n.id}"></div>
+        <div class="node-port port-bottom" data-port="bottom" data-node="${n.id}"></div>
+        <div class="node-port port-left" data-port="left" data-node="${n.id}"></div>
+        <div class="node-port port-right" data-port="right" data-node="${n.id}"></div>
+        <span class="node-icon">${type.icon}</span>
+        <span class="node-label">${esc(n.label || type.label)}</span>
+        ${n.sublabel ? `<span class="node-type-label">${esc(n.sublabel)}</span>` : `<span class="node-type-label">${type.label}</span>`}
+      </div>
+    `;
+
+    // Port events
+    el.querySelectorAll('.node-port').forEach(port => {
+      port.addEventListener('mousedown', e => {
+        e.stopPropagation();
+        if (!state.connectMode) toggleConnectMode();
+        state.connectFrom = n.id;
+        state.connectFromPort = port.dataset.port;
+        port.classList.add('active');
+      });
+    });
+
+    // Node drag
+    el.addEventListener('mousedown', e => {
+      if (e.target.classList.contains('node-port')) return;
+      if (state.connectMode && state.connectFrom && state.connectFrom !== n.id) {
+        // Complete connection
+        completeConnection(n.id, 'auto');
+        return;
+      }
+      if (state.connectMode && !state.connectFrom) {
+        state.connectFrom = n.id;
+        state.connectFromPort = 'auto';
+        return;
+      }
+      e.stopPropagation();
+      if (!state.selectedNodes.includes(n.id)) {
+        if (!e.shiftKey) state.selectedNodes = [];
+        state.selectedNodes.push(n.id);
+      }
+      state.selectedConnection = null;
+      const startX = e.clientX, startY = e.clientY;
+      const origPositions = state.selectedNodes.map(id => {
+        const nd = diag.nodes.find(x => x.id === id);
+        return { id, x: nd.x, y: nd.y };
+      });
+      let moved = false;
+      const onMove = ev => {
+        const dx = (ev.clientX - startX) / state.zoom;
+        const dy = (ev.clientY - startY) / state.zoom;
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+          if (!moved) { pushUndo(); moved = true; }
+          origPositions.forEach(op => {
+            const nd = diag.nodes.find(x => x.id === op.id);
+            nd.x = state.snapToGrid ? Math.round((op.x + dx) / state.gridSize) * state.gridSize : op.x + dx;
+            nd.y = state.snapToGrid ? Math.round((op.y + dy) / state.gridSize) * state.gridSize : op.y + dy;
+          });
+          renderCanvas();
+        }
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        if (moved) save();
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      renderCanvas();
+    });
+
+    // Double click to edit
+    el.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      editNode(n.id);
+    });
+
+    nc.appendChild(el);
+  });
+}
+
+function renderConnection(c, layer, diag) {
+  const fromNode = diag.nodes.find(n => n.id === c.from);
+  const toNode = diag.nodes.find(n => n.id === c.to);
+  if (!fromNode || !toNode) return;
+
+  const fw = fromNode.width || 140, fh = fromNode.height || 80;
+  const tw = toNode.width || 140, th = toNode.height || 80;
+
+  // Calculate best ports
+  const ports = getBestPorts(fromNode, toNode, fw, fh, tw, th, c.fromPort, c.toPort);
+  const { x1, y1, x2, y2, cp1x, cp1y, cp2x, cp2y } = ports;
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+  const d = `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
+  path.setAttribute('d', d);
+  path.classList.add('connection');
+  if (c.protocol) path.classList.add(PROTOCOL_CLASSES[c.protocol] || 'conn-custom');
+  if (state.selectedConnection === c.id) path.classList.add('selected');
+  if (c.dashed) path.setAttribute('stroke-dasharray', '6,3');
+  path.setAttribute('marker-end', 'url(#arrowhead)');
+  path.addEventListener('click', e => {
+    e.stopPropagation();
+    state.selectedConnection = c.id;
+    state.selectedNodes = [];
+    renderCanvas();
+  });
+  path.addEventListener('dblclick', e => {
+    e.stopPropagation();
+    editConnection(c.id);
+  });
+  layer.appendChild(path);
+
+  // Label
+  if (c.label || c.protocol) {
+    const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
+    const text = c.label || c.protocol;
+    const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('x', midX - text.length * 3.2 - 4);
+    bg.setAttribute('y', midY - 8);
+    bg.setAttribute('width', text.length * 6.4 + 8);
+    bg.setAttribute('height', 16);
+    bg.classList.add('conn-label-bg');
+    bg.setAttribute('rx', '3');
+    layer.appendChild(bg);
+
+    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x', midX); label.setAttribute('y', midY + 4);
+    label.setAttribute('text-anchor', 'middle');
+    label.classList.add('conn-label');
+    label.textContent = text;
+    label.addEventListener('dblclick', e => { e.stopPropagation(); editConnection(c.id); });
+    layer.appendChild(label);
+
+    if (c.label && c.protocol) {
+      const proto = document.createElementNS('http://www.w3.org/2000/svg','text');
+      proto.setAttribute('x', midX); proto.setAttribute('y', midY + 16);
+      proto.setAttribute('text-anchor', 'middle');
+      proto.classList.add('conn-protocol');
+      proto.textContent = c.protocol;
+      layer.appendChild(proto);
+    }
+  }
+}
+
+function getBestPorts(from, to, fw, fh, tw, th, fpOverride, tpOverride) {
+  const fcx = from.x + fw/2, fcy = from.y + fh/2;
+  const tcx = to.x + tw/2, tcy = to.y + th/2;
+  const dx = tcx - fcx, dy = tcy - fcy;
+
+  let fp = fpOverride, tp = tpOverride;
+  if (!fp || fp === 'auto') {
+    if (Math.abs(dx) > Math.abs(dy)) fp = dx > 0 ? 'right' : 'left';
+    else fp = dy > 0 ? 'bottom' : 'top';
+  }
+  if (!tp || tp === 'auto') {
+    if (Math.abs(dx) > Math.abs(dy)) tp = dx > 0 ? 'left' : 'right';
+    else tp = dy > 0 ? 'top' : 'bottom';
+  }
+
+  const getPortPos = (node, port, w, h) => {
+    switch(port) {
+      case 'top': return { x: node.x + w/2, y: node.y };
+      case 'bottom': return { x: node.x + w/2, y: node.y + h };
+      case 'left': return { x: node.x, y: node.y + h/2 };
+      case 'right': return { x: node.x + w, y: node.y + h/2 };
+    }
+  };
+
+  const p1 = getPortPos(from, fp, fw, fh);
+  const p2 = getPortPos(to, tp, tw, th);
+  const off = 60;
+  const getCP = (pos, port) => {
+    switch(port) {
+      case 'top': return { x: pos.x, y: pos.y - off };
+      case 'bottom': return { x: pos.x, y: pos.y + off };
+      case 'left': return { x: pos.x - off, y: pos.y };
+      case 'right': return { x: pos.x + off, y: pos.y };
+    }
+  };
+  const cp1 = getCP(p1, fp), cp2 = getCP(p2, tp);
+
+  return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y, cp1x: cp1.x, cp1y: cp1.y, cp2x: cp2.x, cp2y: cp2.y };
+}
+
+function updateTransform() {
+  const svg = document.getElementById('canvasSVG');
+  const nc = document.getElementById('nodesContainer');
+  svg.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+  nc.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+  nc.style.transformOrigin = '0 0';
+  svg.style.transformOrigin = '0 0';
+  document.getElementById('zoomVal').textContent = Math.round(state.zoom * 100) + '%';
+}
+
+// ================= INTERACTIONS =================
+function addNodeFromToolbar(type) {
+  const diag = getDiagram(); if (!diag) return;
+  pushUndo();
+  const wrap = document.getElementById('canvasWrap');
+  const cx = (wrap.clientWidth/2 - state.panX) / state.zoom;
+  const cy = (wrap.clientHeight/2 - state.panY) / state.zoom;
+  const x = state.snapToGrid ? Math.round(cx / state.gridSize) * state.gridSize : cx;
+  const y = state.snapToGrid ? Math.round(cy / state.gridSize) * state.gridSize : cy;
+  const node = { id: uid(), type, label: NODE_TYPES[type].label, sublabel: '', x: x - 70, y: y - 40, width: 140, height: 80, notes: '' };
+  diag.nodes.push(node);
+  save(); renderCanvas();
+  state.selectedNodes = [node.id];
+  renderCanvas();
+}
+
+function toggleConnectMode() {
+  state.connectMode = !state.connectMode;
+  state.connectFrom = null;
+  state.connectFromPort = null;
+  document.getElementById('connectBtn').classList.toggle('active', state.connectMode);
+  document.getElementById('canvasWrap').style.cursor = state.connectMode ? 'crosshair' : 'default';
+}
+
+function completeConnection(toId, toPort) {
+  const diag = getDiagram(); if (!diag) return;
+  if (state.connectFrom === toId) return;
+  const existing = diag.connections.find(c => c.from === state.connectFrom && c.to === toId);
+  if (existing) { state.connectFrom = null; state.connectFromPort = null; return; }
+  pushUndo();
+  diag.connections.push({
+    id: uid(), from: state.connectFrom, to: toId,
+    fromPort: state.connectFromPort || 'auto', toPort: toPort || 'auto',
+    label: '', protocol: 'HTTP', dashed: false, notes: ''
+  });
+  state.connectFrom = null; state.connectFromPort = null;
+  save(); renderCanvas();
+}
+
+function toggleGrid() { state.showGrid = !state.showGrid; renderCanvas(); }
+function toggleSnap() { state.snapToGrid = !state.snapToGrid; renderCanvas(); }
+
+function editNode(id) {
+  const diag = getDiagram(); if (!diag) return;
+  const n = diag.nodes.find(x => x.id === id); if (!n) return;
+  const typeOpts = Object.entries(NODE_TYPES).map(([k,v]) => ({ value:k, label:`${v.icon} ${v.label}` }));
+  showModal('Edit Component', [
+    { key:'label', label:'Name', value: n.label },
+    { key:'sublabel', label:'Subtitle', value: n.sublabel || '' },
+    { key:'type', label:'Type', type:'select', value: n.type, options: typeOpts },
+    { key:'notes', label:'Notes', type:'textarea', value: n.notes || '' },
+  ], (vals) => {
+    pushUndo();
+    n.label = vals.label; n.sublabel = vals.sublabel; n.type = vals.type; n.notes = vals.notes;
+    save(); renderCanvas();
+  }, [{ label:'Delete', class:'btn-danger', action: () => { pushUndo(); diag.nodes = diag.nodes.filter(x=>x.id!==id); diag.connections = diag.connections.filter(c=>c.from!==id&&c.to!==id); (diag.groups||[]).forEach(g=>{g.nodeIds=g.nodeIds.filter(x=>x!==id)}); state.selectedNodes=state.selectedNodes.filter(x=>x!==id); save(); renderCanvas(); closeModal(); }}]);
+}
+
+function editConnection(id) {
+  const diag = getDiagram(); if (!diag) return;
+  const c = diag.connections.find(x => x.id === id); if (!c) return;
+  const protoOpts = PROTOCOLS.map(p => ({ value:p, label:p }));
+  showModal('Edit Connection', [
+    { key:'label', label:'Label', value: c.label || '' },
+    { key:'protocol', label:'Protocol', type:'select', value: c.protocol || 'HTTP', options: protoOpts },
+    { key:'dashed', label:'Dashed Line', type:'checkbox', value: c.dashed },
+    { key:'notes', label:'Notes', type:'textarea', value: c.notes || '' },
+  ], (vals) => {
+    pushUndo();
+    c.label = vals.label; c.protocol = vals.protocol; c.dashed = vals.dashed === true || vals.dashed === 'true'; c.notes = vals.notes;
+    save(); renderCanvas();
+  }, [{ label:'Delete', class:'btn-danger', action: () => { pushUndo(); diag.connections = diag.connections.filter(x=>x.id!==id); state.selectedConnection=null; save(); renderCanvas(); closeModal(); }}]);
+}
+
+function deleteSelected() {
+  const diag = getDiagram(); if (!diag) return;
+  if (state.selectedConnection) {
+    pushUndo();
+    diag.connections = diag.connections.filter(c => c.id !== state.selectedConnection);
+    state.selectedConnection = null;
+    save(); renderCanvas(); return;
+  }
+  if (state.selectedNodes.length) {
+    pushUndo();
+    diag.nodes = diag.nodes.filter(n => !state.selectedNodes.includes(n.id));
+    diag.connections = diag.connections.filter(c => !state.selectedNodes.includes(c.from) && !state.selectedNodes.includes(c.to));
+    (diag.groups||[]).forEach(g => { g.nodeIds = g.nodeIds.filter(x => !state.selectedNodes.includes(x)); });
+    state.selectedNodes = [];
+    save(); renderCanvas();
+  }
+}
+
+// ================= GROUPS =================
+function addGroup() {
+  const diag = getDiagram(); if (!diag) return;
+  if (!state.selectedNodes.length) { alert('Select nodes first (click + shift-click), then create a group.'); return; }
+  showModal('Create Group', [
+    { key:'name', label:'Group Name', value: 'New Group' },
+  ], (vals) => {
+    pushUndo();
+    if (!diag.groups) diag.groups = [];
+    diag.groups.push({ id: uid(), name: vals.name, nodeIds: [...state.selectedNodes] });
+    save(); renderCanvas();
+  });
+}
+
+function editGroup(id) {
+  const diag = getDiagram(); if (!diag) return;
+  const g = (diag.groups||[]).find(x => x.id === id); if (!g) return;
+  showModal('Edit Group', [
+    { key:'name', label:'Group Name', value: g.name },
+  ], (vals) => {
+    g.name = vals.name; save(); renderCanvas();
+  }, [{ label:'Delete Group', class:'btn-danger', action: () => { diag.groups = diag.groups.filter(x=>x.id!==id); save(); renderCanvas(); closeModal(); }}]);
+}
+
+// ================= AUTO LAYOUT =================
+function autoLayout() {
+  const diag = getDiagram(); if (!diag || !diag.nodes.length) return;
+  pushUndo();
+  // Layered layout: group by dependency depth
+  const adj = {}; const inDeg = {};
+  diag.nodes.forEach(n => { adj[n.id] = []; inDeg[n.id] = 0; });
+  diag.connections.forEach(c => { if(adj[c.from]) adj[c.from].push(c.to); if(inDeg[c.to]!==undefined) inDeg[c.to]++; });
+
+  const layers = []; const assigned = new Set();
+  // BFS from roots (0 in-degree)
+  let current = diag.nodes.filter(n => inDeg[n.id] === 0).map(n => n.id);
+  if (!current.length) current = [diag.nodes[0].id]; // fallback
+  while (current.length) {
+    layers.push(current);
+    current.forEach(id => assigned.add(id));
+    const next = new Set();
+    current.forEach(id => (adj[id]||[]).forEach(tid => { if (!assigned.has(tid)) next.add(tid); }));
+    current = [...next];
+  }
+  // Unassigned
+  const remaining = diag.nodes.filter(n => !assigned.has(n.id)).map(n=>n.id);
+  if (remaining.length) layers.push(remaining);
+
+  const gapX = 220, gapY = 140;
+  layers.forEach((layer, li) => {
+    const startY = -(layer.length - 1) * gapY / 2;
+    layer.forEach((nid, ni) => {
+      const node = diag.nodes.find(n => n.id === nid);
+      if (node) {
+        node.x = Math.round((li * gapX + 100) / state.gridSize) * state.gridSize;
+        node.y = Math.round((startY + ni * gapY + 300) / state.gridSize) * state.gridSize;
+      }
+    });
+  });
+  save(); renderCanvas();
+  setTimeout(fitView, 50);
+}
+
+function fitView() {
+  const diag = getDiagram(); if (!diag || !diag.nodes.length) return;
+  const wrap = document.getElementById('canvasWrap');
+  const xs = diag.nodes.map(n => n.x);
+  const ys = diag.nodes.map(n => n.y);
+  const maxXs = diag.nodes.map(n => n.x + (n.width || 140));
+  const maxYs = diag.nodes.map(n => n.y + (n.height || 80));
+  const minX = Math.min(...xs) - 60, minY = Math.min(...ys) - 60;
+  const maxX = Math.max(...maxXs) + 60, maxY = Math.max(...maxYs) + 60;
+  const w = maxX - minX, h = maxY - minY;
+  const scaleX = wrap.clientWidth / w, scaleY = wrap.clientHeight / h;
+  state.zoom = Math.min(scaleX, scaleY, 2);
+  state.zoom = Math.max(state.zoom, 0.2);
+  state.panX = (wrap.clientWidth - w * state.zoom) / 2 - minX * state.zoom;
+  state.panY = (wrap.clientHeight - h * state.zoom) / 2 - minY * state.zoom;
+  updateTransform(); renderCanvas();
+}
+
+function zoomIn() { state.zoom = Math.min(state.zoom * 1.2, 3); updateTransform(); }
+function zoomOut() { state.zoom = Math.max(state.zoom / 1.2, 0.15); updateTransform(); }
+
+// ================= PAN & ZOOM EVENTS =================
+document.getElementById('canvasWrap').addEventListener('mousedown', function(e) {
+  if (e.target === this || e.target.tagName === 'rect' || e.target.closest('#canvasSVG')) {
+    if (state.connectMode) {
+      state.connectFrom = null; state.connectFromPort = null;
+      document.querySelectorAll('.node-port.active').forEach(p=>p.classList.remove('active'));
+      return;
+    }
+    state.selectedNodes = []; state.selectedConnection = null;
+    state.panning = true;
+    state.panStart = { x: e.clientX - state.panX, y: e.clientY - state.panY };
+    this.style.cursor = 'grabbing';
+    renderCanvas();
+  }
+});
+
+window.addEventListener('mousemove', function(e) {
+  if (state.panning && state.panStart) {
+    state.panX = e.clientX - state.panStart.x;
+    state.panY = e.clientY - state.panStart.y;
+    updateTransform();
+  }
+});
+
+window.addEventListener('mouseup', function() {
+  if (state.panning) {
+    state.panning = false; state.panStart = null;
+    document.getElementById('canvasWrap').style.cursor = state.connectMode ? 'crosshair' : 'default';
+  }
+});
+
+document.getElementById('canvasWrap').addEventListener('wheel', function(e) {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  const newZoom = Math.min(Math.max(state.zoom * delta, 0.15), 3);
+  const rect = this.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  state.panX = mx - (mx - state.panX) * (newZoom / state.zoom);
+  state.panY = my - (my - state.panY) * (newZoom / state.zoom);
+  state.zoom = newZoom;
+  updateTransform();
+}, { passive: false });
+
+// ================= MODAL =================
+function showModal(title, fields, onSave, extraBtns) {
+  const overlay = document.getElementById('modalOverlay');
+  let html = `<div class="modal"><h3>${title}</h3>`;
+  fields.forEach(f => {
+    html += `<label>${f.label}</label>`;
+    if (f.type === 'textarea') {
+      html += `<textarea id="modal-${f.key}">${esc(f.value||'')}</textarea>`;
+    } else if (f.type === 'select') {
+      html += `<select id="modal-${f.key}">${f.options.map(o=>`<option value="${o.value}" ${o.value===f.value?'selected':''}>${esc(o.label)}</option>`).join('')}</select>`;
+    } else if (f.type === 'checkbox') {
+      html += `<label style="display:flex;align-items:center;gap:8px;margin-top:4px"><input type="checkbox" id="modal-${f.key}" ${f.value?'checked':''}/> ${f.label}</label>`;
+    } else {
+      html += `<input id="modal-${f.key}" value="${esc(f.value||'')}" />`;
+    }
+  });
+  html += `<div class="modal-actions">`;
+  if (extraBtns) extraBtns.forEach(b => { html += `<button class="${b.class}" id="modal-extra-${b.label.replace(/\s/g,'')}">${b.label}</button>`; });
+  html += `<button class="btn-secondary" onclick="closeModal()">Cancel</button>`;
+  html += `<button class="btn-primary" id="modalSaveBtn">Save</button>`;
+  html += `</div></div>`;
+  overlay.innerHTML = html;
+  overlay.style.display = 'flex';
+
+  document.getElementById('modalSaveBtn').addEventListener('click', () => {
+    const vals = {};
+    fields.forEach(f => {
+      const el = document.getElementById(`modal-${f.key}`);
+      vals[f.key] = f.type === 'checkbox' ? el.checked : el.value;
+    });
+    onSave(vals);
+    closeModal();
+  });
+
+  if (extraBtns) extraBtns.forEach(b => {
+    const el = document.getElementById(`modal-extra-${b.label.replace(/\s/g,'')}`);
+    if (el) el.addEventListener('click', b.action);
+  });
+
+  const first = overlay.querySelector('input,select,textarea');
+  if (first) setTimeout(() => first.focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').style.display = 'none';
+}
+
+// ================= VIEWS =================
+function switchView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelector(`[data-view="${v}"]`).classList.add('active');
+  if (v === 'components') renderComponentPalette();
+  if (v === 'connections') renderConnectionsList();
+  if (v === 'templates') renderTemplates();
+  if (v === 'dashboard') renderDashboard();
+  if (v === 'help') renderHelp();
+}
+
+function renderComponentPalette() {
+  const pal = document.getElementById('componentPalette');
+  pal.innerHTML = Object.entries(NODE_TYPES).map(([k,v]) => `
+    <div class="palette-item" onclick="addNodeFromToolbar('${k}')" draggable="true">
+      <span class="p-icon">${v.icon}</span>
+      <strong>${v.label}</strong>
+      <span class="p-label">${v.desc}</span>
+    </div>
+  `).join('');
+}
+
+function renderConnectionsList() {
+  const diag = getDiagram();
+  const el = document.getElementById('connectionsList');
+  if (!diag || !diag.connections.length) { el.innerHTML = '<p style="color:var(--text2);font-size:13px">No connections yet. Use Connect mode (C) to link nodes.</p>'; return; }
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <tr style="border-bottom:1px solid var(--border);color:var(--text2)"><th style="text-align:left;padding:8px">From</th><th style="text-align:left;padding:8px">To</th><th style="text-align:left;padding:8px">Protocol</th><th style="text-align:left;padding:8px">Label</th><th style="padding:8px">Actions</th></tr>
+    ${diag.connections.map(c => {
+      const from = diag.nodes.find(n=>n.id===c.from);
+      const to = diag.nodes.find(n=>n.id===c.to);
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px">${from ? esc(from.label) : '?'}</td>
+        <td style="padding:8px">${to ? esc(to.label) : '?'}</td>
+        <td style="padding:8px"><span style="background:var(--surface2);padding:2px 8px;border-radius:4px;font-size:11px">${c.protocol||'-'}</span></td>
+        <td style="padding:8px">${esc(c.label||'-')}</td>
+        <td style="padding:8px;text-align:center"><button class="tool-btn" onclick="editConnection('${c.id}')">Edit</button></td>
+      </tr>`;
+    }).join('')}
+  </table>`;
+}
+
+// ================= TEMPLATES =================
+const TEMPLATES = [
+  {
+    name: 'UTMStamp Architecture',
+    desc: 'Full SaaS architecture for UTMStamp — the email signature tracker AJ built in 13 days.',
+    emoji: '📧',
+    nodes: [
+      { id:'t1', type:'client', label:'Web App', sublabel:'Next.js + React', x:60, y:200 },
+      { id:'t2', type:'cdn', label:'Vercel Edge', sublabel:'CDN + SSR', x:260, y:80 },
+      { id:'t3', type:'api', label:'API Gateway', sublabel:'Next.js API Routes', x:460, y:200 },
+      { id:'t4', type:'auth', label:'Clerk Auth', sublabel:'Authentication', x:260, y:340 },
+      { id:'t5', type:'database', label:'Supabase', sublabel:'PostgreSQL + RLS', x:660, y:120 },
+      { id:'t6', type:'serverless', label:'Click Tracker', sublabel:'Edge Function', x:660, y:300 },
+      { id:'t7', type:'cache', label:'Upstash Redis', sublabel:'Rate Limiting', x:860, y:200 },
+      { id:'t8', type:'external', label:'Resend', sublabel:'Email Delivery', x:860, y:40 },
+      { id:'t9', type:'monitor', label:'PostHog', sublabel:'Analytics', x:460, y:420 },
+      { id:'t10', type:'external', label:'Stripe', sublabel:'Payments', x:660, y:440 },
+    ],
+    connections: [
+      { from:'t1', to:'t2', protocol:'HTTP', label:'Static Assets' },
+      { from:'t1', to:'t3', protocol:'REST', label:'API Calls' },
+      { from:'t1', to:'t4', protocol:'HTTP', label:'Auth Flow' },
+      { from:'t3', to:'t5', protocol:'SQL', label:'Queries' },
+      { from:'t3', to:'t6', protocol:'HTTP', label:'Track Click' },
+      { from:'t6', to:'t5', protocol:'SQL', label:'Write Event' },
+      { from:'t6', to:'t7', protocol:'Redis', label:'Rate Check' },
+      { from:'t3', to:'t8', protocol:'REST', label:'Send Email' },
+      { from:'t3', to:'t9', protocol:'HTTP', label:'Events' },
+      { from:'t3', to:'t10', protocol:'REST', label:'Subscriptions' },
+    ],
+    groups: [
+      { name:'Frontend', nodeIds:['t1','t2'] },
+      { name:'Backend', nodeIds:['t3','t4'] },
+      { name:'Data Layer', nodeIds:['t5','t6','t7'] },
+      { name:'Integrations', nodeIds:['t8','t9','t10'] },
+    ]
+  },
+  {
+    name: 'Microservices E-Commerce',
+    desc: 'Classic microservices architecture for an e-commerce platform with event-driven communication.',
+    emoji: '🛒',
+    nodes: [
+      { id:'m1', type:'client', label:'Web/Mobile', sublabel:'React/Flutter', x:60, y:240 },
+      { id:'m2', type:'lb', label:'Load Balancer', sublabel:'Nginx/ALB', x:260, y:240 },
+      { id:'m3', type:'api', label:'API Gateway', sublabel:'Kong/Express', x:460, y:240 },
+      { id:'m4', type:'service', label:'User Service', sublabel:'Node.js', x:700, y:60 },
+      { id:'m5', type:'service', label:'Product Service', sublabel:'Go', x:700, y:180 },
+      { id:'m6', type:'service', label:'Order Service', sublabel:'Java', x:700, y:300 },
+      { id:'m7', type:'service', label:'Payment Service', sublabel:'Python', x:700, y:420 },
+      { id:'m8', type:'queue', label:'Event Bus', sublabel:'Kafka', x:940, y:240 },
+      { id:'m9', type:'database', label:'Users DB', sublabel:'PostgreSQL', x:940, y:60 },
+      { id:'m10', type:'database', label:'Products DB', sublabel:'MongoDB', x:940, y:140 },
+      { id:'m11', type:'database', label:'Orders DB', sublabel:'PostgreSQL', x:1140, y:240 },
+      { id:'m12', type:'cache', label:'Redis Cache', sublabel:'Session + Cache', x:460, y:80 },
+      { id:'m13', type:'search', label:'Elasticsearch', sublabel:'Product Search', x:940, y:400 },
+      { id:'m14', type:'monitor', label:'Datadog', sublabel:'Monitoring', x:460, y:420 },
+      { id:'m15', type:'storage', label:'S3', sublabel:'Product Images', x:1140, y:120 },
+    ],
+    connections: [
+      { from:'m1', to:'m2', protocol:'HTTP', label:'Requests' },
+      { from:'m2', to:'m3', protocol:'HTTP', label:'Route' },
+      { from:'m3', to:'m4', protocol:'gRPC', label:'Users' },
+      { from:'m3', to:'m5', protocol:'gRPC', label:'Products' },
+      { from:'m3', to:'m6', protocol:'gRPC', label:'Orders' },
+      { from:'m3', to:'m7', protocol:'gRPC', label:'Pay' },
+      { from:'m4', to:'m9', protocol:'SQL', label:'Read/Write' },
+      { from:'m5', to:'m10', protocol:'TCP', label:'Read/Write' },
+      { from:'m6', to:'m8', protocol:'Pub/Sub', label:'Order Events' },
+      { from:'m7', to:'m8', protocol:'Pub/Sub', label:'Payment Events' },
+      { from:'m8', to:'m11', protocol:'TCP', label:'Persist' },
+      { from:'m3', to:'m12', protocol:'Redis', label:'Session' },
+      { from:'m5', to:'m13', protocol:'REST', label:'Index' },
+      { from:'m5', to:'m15', protocol:'HTTP', label:'Images' },
+    ],
+    groups: [
+      { name:'Edge', nodeIds:['m1','m2'] },
+      { name:'Gateway', nodeIds:['m3','m12'] },
+      { name:'Services', nodeIds:['m4','m5','m6','m7'] },
+      { name:'Data Stores', nodeIds:['m9','m10','m11','m13','m15'] },
+    ]
+  },
+  {
+    name: 'Real-Time Analytics Pipeline',
+    desc: 'Event streaming architecture for real-time data processing and analytics dashboards.',
+    emoji: '📊',
+    nodes: [
+      { id:'a1', type:'client', label:'Web/Mobile SDK', sublabel:'Event Producer', x:60, y:200 },
+      { id:'a2', type:'api', label:'Event Collector', sublabel:'Express/Fastify', x:280, y:200 },
+      { id:'a3', type:'queue', label:'Kafka', sublabel:'Event Stream', x:500, y:200 },
+      { id:'a4', type:'serverless', label:'Stream Processor', sublabel:'Flink/Lambda', x:720, y:100 },
+      { id:'a5', type:'serverless', label:'Enrichment', sublabel:'Lambda', x:720, y:300 },
+      { id:'a6', type:'database', label:'ClickHouse', sublabel:'Analytics DB', x:940, y:100 },
+      { id:'a7', type:'cache', label:'Redis', sublabel:'Real-time Counters', x:940, y:260 },
+      { id:'a8', type:'storage', label:'S3 Data Lake', sublabel:'Raw Events', x:940, y:400 },
+      { id:'a9', type:'service', label:'Query API', sublabel:'GraphQL', x:1160, y:180 },
+      { id:'a10', type:'client', label:'Dashboard', sublabel:'React + D3', x:1380, y:180 },
+      { id:'a11', type:'ml', label:'Anomaly Detection', sublabel:'ML Model', x:720, y:440 },
+      { id:'a12', type:'monitor', label:'Grafana', sublabel:'Ops Dashboard', x:1160, y:380 },
+    ],
+    connections: [
+      { from:'a1', to:'a2', protocol:'HTTP', label:'Events' },
+      { from:'a2', to:'a3', protocol:'Pub/Sub', label:'Publish' },
+      { from:'a3', to:'a4', protocol:'Pub/Sub', label:'Stream' },
+      { from:'a3', to:'a5', protocol:'Pub/Sub', label:'Enrich' },
+      { from:'a4', to:'a6', protocol:'SQL', label:'Aggregates' },
+      { from:'a4', to:'a7', protocol:'Redis', label:'Counters' },
+      { from:'a5', to:'a8', protocol:'HTTP', label:'Archive' },
+      { from:'a6', to:'a9', protocol:'SQL', label:'Query' },
+      { from:'a7', to:'a9', protocol:'Redis', label:'Real-time' },
+      { from:'a9', to:'a10', protocol:'GraphQL', label:'Data' },
+      { from:'a3', to:'a11', protocol:'Pub/Sub', label:'Detect' },
+      { from:'a6', to:'a12', protocol:'SQL', label:'Metrics' },
+    ],
+    groups: [
+      { name:'Ingestion', nodeIds:['a1','a2'] },
+      { name:'Stream Processing', nodeIds:['a3','a4','a5'] },
+      { name:'Storage', nodeIds:['a6','a7','a8'] },
+      { name:'Serving', nodeIds:['a9','a10'] },
+    ]
+  },
+  {
+    name: 'Serverless Full-Stack',
+    desc: 'Modern serverless architecture with edge functions, managed database, and third-party integrations.',
+    emoji: 'λ',
+    nodes: [
+      { id:'s1', type:'client', label:'SPA', sublabel:'React/Vue', x:60, y:200 },
+      { id:'s2', type:'cdn', label:'CloudFront/Vercel', sublabel:'Edge CDN', x:280, y:100 },
+      { id:'s3', type:'serverless', label:'Auth Edge', sublabel:'Edge Function', x:280, y:300 },
+      { id:'s4', type:'serverless', label:'API Functions', sublabel:'Lambda/Vercel', x:500, y:200 },
+      { id:'s5', type:'database', label:'PlanetScale', sublabel:'Serverless MySQL', x:720, y:120 },
+      { id:'s6', type:'cache', label:'Upstash Redis', sublabel:'Serverless Cache', x:720, y:280 },
+      { id:'s7', type:'storage', label:'R2/S3', sublabel:'File Storage', x:720, y:400 },
+      { id:'s8', type:'queue', label:'SQS/Inngest', sublabel:'Background Jobs', x:500, y:380 },
+      { id:'s9', type:'external', label:'Stripe', sublabel:'Billing', x:940, y:120 },
+      { id:'s10', type:'external', label:'Resend', sublabel:'Email', x:940, y:260 },
+      { id:'s11', type:'monitor', label:'Sentry', sublabel:'Error Tracking', x:940, y:380 },
+    ],
+    connections: [
+      { from:'s1', to:'s2', protocol:'HTTP', label:'Assets' },
+      { from:'s1', to:'s3', protocol:'HTTP', label:'Auth' },
+      { from:'s1', to:'s4', protocol:'REST', label:'API' },
+      { from:'s4', to:'s5', protocol:'SQL', label:'Queries' },
+      { from:'s4', to:'s6', protocol:'Redis', label:'Cache' },
+      { from:'s4', to:'s8', protocol:'HTTP', label:'Enqueue' },
+      { from:'s8', to:'s7', protocol:'HTTP', label:'Upload' },
+      { from:'s8', to:'s10', protocol:'REST', label:'Send' },
+      { from:'s4', to:'s9', protocol:'REST', label:'Billing' },
+      { from:'s4', to:'s11', protocol:'HTTP', label:'Errors' },
+    ],
+    groups: [
+      { name:'Edge', nodeIds:['s1','s2','s3'] },
+      { name:'Compute', nodeIds:['s4','s8'] },
+      { name:'Data', nodeIds:['s5','s6','s7'] },
+    ]
+  },
+  {
+    name: 'IoT Platform (ZYOD-style)',
+    desc: 'Industrial IoT architecture with device management, MQTT ingestion, and real-time monitoring — inspired by AJ\'s ZYOD experience.',
+    emoji: '🏭',
+    nodes: [
+      { id:'i1', type:'client', label:'Sewing Machines', sublabel:'IoT Sensors', x:60, y:160 },
+      { id:'i2', type:'client', label:'QR Scanners', sublabel:'Mobile/Tablet', x:60, y:320 },
+      { id:'i3', type:'api', label:'MQTT Broker', sublabel:'Mosquitto/HiveMQ', x:300, y:160 },
+      { id:'i4', type:'api', label:'REST API', sublabel:'Express/FastAPI', x:300, y:320 },
+      { id:'i5', type:'queue', label:'Kafka', sublabel:'Event Stream', x:540, y:240 },
+      { id:'i6', type:'serverless', label:'Stream Processor', sublabel:'Flink', x:740, y:120 },
+      { id:'i7', type:'service', label:'WMS Service', sublabel:'Warehouse Mgmt', x:740, y:280 },
+      { id:'i8', type:'database', label:'TimescaleDB', sublabel:'Time-series Data', x:960, y:120 },
+      { id:'i9', type:'database', label:'PostgreSQL', sublabel:'Business Data', x:960, y:280 },
+      { id:'i10', type:'cache', label:'Redis', sublabel:'Real-time State', x:960, y:400 },
+      { id:'i11', type:'client', label:'Dashboard', sublabel:'React + D3', x:1180, y:200 },
+      { id:'i12', type:'monitor', label:'Grafana', sublabel:'Factory Metrics', x:1180, y:360 },
+      { id:'i13', type:'ml', label:'Predictive Maint.', sublabel:'ML Models', x:740, y:440 },
+    ],
+    connections: [
+      { from:'i1', to:'i3', protocol:'TCP', label:'MQTT' },
+      { from:'i2', to:'i4', protocol:'REST', label:'Scan Data' },
+      { from:'i3', to:'i5', protocol:'Pub/Sub', label:'Sensor Events' },
+      { from:'i4', to:'i5', protocol:'Pub/Sub', label:'Scan Events' },
+      { from:'i5', to:'i6', protocol:'Pub/Sub', label:'Process' },
+      { from:'i5', to:'i7', protocol:'Pub/Sub', label:'WMS Events' },
+      { from:'i6', to:'i8', protocol:'SQL', label:'Time Series' },
+      { from:'i7', to:'i9', protocol:'SQL', label:'WMS Data' },
+      { from:'i6', to:'i10', protocol:'Redis', label:'Live State' },
+      { from:'i10', to:'i11', protocol:'WebSocket', label:'Real-time' },
+      { from:'i8', to:'i12', protocol:'SQL', label:'Metrics' },
+      { from:'i5', to:'i13', protocol:'Pub/Sub', label:'Train/Predict' },
+    ],
+    groups: [
+      { name:'Factory Floor', nodeIds:['i1','i2'] },
+      { name:'Ingestion', nodeIds:['i3','i4','i5'] },
+      { name:'Processing', nodeIds:['i6','i7','i13'] },
+      { name:'Storage', nodeIds:['i8','i9','i10'] },
+    ]
+  },
+  {
+    name: 'CI/CD Pipeline',
+    desc: 'Modern DevOps pipeline with Git, containerization, testing, and multi-environment deployment.',
+    emoji: '🚀',
+    nodes: [
+      { id:'c1', type:'client', label:'Developer', sublabel:'Local Machine', x:60, y:200 },
+      { id:'c2', type:'external', label:'GitHub', sublabel:'Source Control', x:280, y:200 },
+      { id:'c3', type:'service', label:'GitHub Actions', sublabel:'CI Runner', x:500, y:120 },
+      { id:'c4', type:'service', label:'Test Suite', sublabel:'Jest/Playwright', x:500, y:300 },
+      { id:'c5', type:'container', label:'Docker Build', sublabel:'Container Image', x:720, y:200 },
+      { id:'c6', type:'storage', label:'ECR/GHCR', sublabel:'Image Registry', x:940, y:200 },
+      { id:'c7', type:'container', label:'Staging K8s', sublabel:'Staging Env', x:1160, y:120 },
+      { id:'c8', type:'container', label:'Production K8s', sublabel:'Production Env', x:1160, y:300 },
+      { id:'c9', type:'database', label:'Staging DB', sublabel:'PostgreSQL', x:1380, y:120 },
+      { id:'c10', type:'database', label:'Production DB', sublabel:'PostgreSQL', x:1380, y:300 },
+      { id:'c11', type:'monitor', label:'Sentry', sublabel:'Error Tracking', x:1160, y:440 },
+    ],
+    connections: [
+      { from:'c1', to:'c2', protocol:'HTTP', label:'git push' },
+      { from:'c2', to:'c3', protocol:'HTTP', label:'Webhook' },
+      { from:'c2', to:'c4', protocol:'HTTP', label:'Trigger Tests' },
+      { from:'c3', to:'c5', protocol:'TCP', label:'Build' },
+      { from:'c4', to:'c5', protocol:'HTTP', label:'Pass → Build', dashed:true },
+      { from:'c5', to:'c6', protocol:'HTTP', label:'Push Image' },
+      { from:'c6', to:'c7', protocol:'HTTP', label:'Deploy Staging' },
+      { from:'c6', to:'c8', protocol:'HTTP', label:'Deploy Prod', dashed:true },
+      { from:'c7', to:'c9', protocol:'SQL', label:'Migrate' },
+      { from:'c8', to:'c10', protocol:'SQL', label:'Migrate' },
+      { from:'c8', to:'c11', protocol:'HTTP', label:'Errors' },
+    ],
+    groups: [
+      { name:'Development', nodeIds:['c1','c2'] },
+      { name:'CI', nodeIds:['c3','c4','c5'] },
+      { name:'CD', nodeIds:['c6','c7','c8'] },
+    ]
+  },
+];
+
+function renderTemplates() {
+  const grid = document.getElementById('templatesGrid');
+  grid.innerHTML = TEMPLATES.map((t,i) => `
+    <div class="template-card" onclick="applyTemplate(${i})">
+      <h4>${t.emoji} ${esc(t.name)}</h4>
+      <p>${esc(t.desc)}</p>
+      <div class="meta">
+        <span>📦 ${t.nodes.length} components</span>
+        <span>🔗 ${t.connections.length} connections</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function applyTemplate(idx) {
+  const t = TEMPLATES[idx];
+  const d = {
+    id: uid(), name: t.name, emoji: t.emoji,
+    nodes: t.nodes.map(n => ({ ...n, id: uid(), width: 140, height: 80, notes: '' })),
+    connections: [], groups: [],
+    createdAt: new Date().toISOString()
+  };
+  // Map old IDs to new
+  const idMap = {};
+  t.nodes.forEach((orig, i) => { idMap[orig.id] = d.nodes[i].id; });
+  d.connections = t.connections.map(c => ({
+    id: uid(), from: idMap[c.from], to: idMap[c.to],
+    fromPort: 'auto', toPort: 'auto',
+    label: c.label || '', protocol: c.protocol || 'HTTP',
+    dashed: c.dashed || false, notes: ''
+  }));
+  d.groups = (t.groups || []).map(g => ({
+    id: uid(), name: g.name, nodeIds: g.nodeIds.map(x => idMap[x]).filter(Boolean)
+  }));
+  state.diagrams.unshift(d);
+  state.activeDiagram = d.id;
+  save(); renderSidebar(); renderCanvas();
+  switchView('canvas');
+  setTimeout(fitView, 100);
+}
+
+// ================= DASHBOARD =================
+function renderDashboard() {
+  const el = document.getElementById('dashboardContent');
+  const all = state.diagrams;
+  const totalNodes = all.reduce((s,d) => s + d.nodes.length, 0);
+  const totalConns = all.reduce((s,d) => s + d.connections.length, 0);
+  const totalGroups = all.reduce((s,d) => s + (d.groups||[]).length, 0);
+
+  // Type distribution
+  const typeCounts = {};
+  all.forEach(d => d.nodes.forEach(n => { typeCounts[n.type] = (typeCounts[n.type]||0) + 1; }));
+  const sortedTypes = Object.entries(typeCounts).sort((a,b) => b[1] - a[1]);
+  const maxType = sortedTypes[0]?.[1] || 1;
+
+  // Protocol distribution
+  const protoCounts = {};
+  all.forEach(d => d.connections.forEach(c => { protoCounts[c.protocol||'None'] = (protoCounts[c.protocol||'None']||0) + 1; }));
+  const sortedProtos = Object.entries(protoCounts).sort((a,b) => b[1] - a[1]);
+  const maxProto = sortedProtos[0]?.[1] || 1;
+
+  el.innerHTML = `
+    <div class="dash-grid">
+      <div class="stat-card"><div class="stat-value">${all.length}</div><div class="stat-label">Diagrams</div></div>
+      <div class="stat-card"><div class="stat-value">${totalNodes}</div><div class="stat-label">Total Components</div></div>
+      <div class="stat-card"><div class="stat-value">${totalConns}</div><div class="stat-label">Total Connections</div></div>
+      <div class="stat-card"><div class="stat-value">${totalGroups}</div><div class="stat-label">Total Groups</div></div>
+      <div class="stat-card"><div class="stat-value">${Object.keys(typeCounts).length}</div><div class="stat-label">Component Types Used</div></div>
+      <div class="stat-card"><div class="stat-value">${Object.keys(protoCounts).length}</div><div class="stat-label">Protocols Used</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="chart-section">
+        <h4>Components by Type</h4>
+        ${sortedTypes.map(([k,v]) => {
+          const t = NODE_TYPES[k];
+          return `<div class="bar-row"><span class="bar-label">${t?t.icon+' '+t.label:k}</span><div class="bar-track"><div class="bar-fill" style="width:${v/maxType*100}%;background:${t?t.color:'var(--accent)'}">${v}</div></div></div>`;
+        }).join('')}
+      </div>
+      <div class="chart-section">
+        <h4>Connections by Protocol</h4>
+        ${sortedProtos.map(([k,v]) => `<div class="bar-row"><span class="bar-label">${k}</span><div class="bar-track"><div class="bar-fill" style="width:${v/maxProto*100}%;background:var(--accent)">${v}</div></div></div>`).join('')}
+      </div>
+    </div>
+    <div class="chart-section">
+      <h4>Diagrams Overview</h4>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <tr style="border-bottom:1px solid var(--border);color:var(--text2)"><th style="text-align:left;padding:8px">Diagram</th><th style="text-align:left;padding:8px">Components</th><th style="text-align:left;padding:8px">Connections</th><th style="text-align:left;padding:8px">Groups</th></tr>
+        ${all.map(d => `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="selectDiagram('${d.id}');switchView('canvas')">
+          <td style="padding:8px">${d.emoji||'🏗️'} ${esc(d.name)}</td>
+          <td style="padding:8px">${d.nodes.length}</td>
+          <td style="padding:8px">${d.connections.length}</td>
+          <td style="padding:8px">${(d.groups||[]).length}</td>
+        </tr>`).join('')}
+      </table>
+    </div>
+  `;
+}
+
+// ================= HELP =================
+function renderHelp() {
+  document.getElementById('helpContent').innerHTML = `
+    <div class="chart-section">
+      <h4>Canvas Shortcuts</h4>
+      <div class="shortcut-grid">
+        ${[
+          ['C', 'Toggle Connect mode'],
+          ['G', 'Create Group from selected'],
+          ['A', 'Auto-layout nodes'],
+          ['F', 'Fit view'],
+          ['#', 'Toggle grid'],
+          ['S', 'Toggle snap-to-grid'],
+          ['Del / Backspace', 'Delete selected'],
+          ['⌘Z', 'Undo'],
+          ['⌘⇧Z', 'Redo'],
+          ['+/−', 'Zoom in/out'],
+          ['0', 'Reset zoom to 100%'],
+          ['Click + Drag', 'Move node'],
+          ['Shift + Click', 'Multi-select'],
+          ['Click background', 'Pan canvas'],
+          ['Scroll wheel', 'Zoom at cursor'],
+          ['Double-click node', 'Edit node'],
+          ['Double-click connection', 'Edit connection'],
+        ].map(([k,d]) => `<div class="shortcut-row"><span>${d}</span><span class="shortcut-key">${k}</span></div>`).join('')}
+      </div>
+    </div>
+    <div class="chart-section">
+      <h4>Navigation</h4>
+      <div class="shortcut-grid">
+        ${[
+          ['N', 'New diagram'],
+          ['/', 'Focus search'],
+          ['1-6', 'Switch views'],
+          ['E', 'Export JSON'],
+          ['I', 'Import JSON'],
+          ['?', 'Help'],
+          ['Esc', 'Close modal / deselect'],
+        ].map(([k,d]) => `<div class="shortcut-row"><span>${d}</span><span class="shortcut-key">${k}</span></div>`).join('')}
+      </div>
+    </div>
+    <div class="chart-section">
+      <h4>Component Types</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">
+        ${Object.entries(NODE_TYPES).map(([k,v]) => `<div style="display:flex;align-items:center;gap:8px;padding:6px;border:1px solid var(--border);border-radius:6px">
+          <span style="font-size:20px">${v.icon}</span>
+          <div><strong style="font-size:12px">${v.label}</strong><br><span style="font-size:11px;color:var(--text2)">${v.desc}</span></div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="chart-section">
+      <h4>Protocols</h4>
+      <p style="font-size:13px;color:var(--text2)">${PROTOCOLS.join(' · ')}</p>
+      <p style="font-size:12px;color:var(--text2);margin-top:8px">Each protocol has a unique connection color for visual clarity.</p>
+    </div>
+  `;
+}
+
+// ================= EXPORT / IMPORT =================
+function exportData() {
+  const json = JSON.stringify({ diagrams: state.diagrams, exportedAt: new Date().toISOString() }, null, 2);
+  download(json, 'architecture-forge-backup.json', 'application/json');
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.diagrams) {
+          data.diagrams.forEach(d => {
+            if (!state.diagrams.find(x => x.id === d.id)) state.diagrams.push(d);
+          });
+          save(); renderSidebar(); renderCanvas();
+        }
+      } catch(e) { alert('Invalid JSON'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function exportSVG() {
+  const diag = getDiagram(); if (!diag || !diag.nodes.length) return;
+  // Build a standalone SVG
+  const xs = diag.nodes.map(n => n.x);
+  const ys = diag.nodes.map(n => n.y);
+  const maxXs = diag.nodes.map(n => n.x + (n.width||140));
+  const maxYs = diag.nodes.map(n => n.y + (n.height||80));
+  const minX = Math.min(...xs) - 80, minY = Math.min(...ys) - 80;
+  const maxX = Math.max(...maxXs) + 80, maxY = Math.max(...maxYs) + 80;
+  const w = maxX - minX, h = maxY - minY;
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${minX} ${minY} ${w} ${h}" style="background:#0d1117;font-family:-apple-system,system-ui,sans-serif">`;
+  // Connections
+  diag.connections.forEach(c => {
+    const from = diag.nodes.find(n=>n.id===c.from);
+    const to = diag.nodes.find(n=>n.id===c.to);
+    if (!from || !to) return;
+    const ports = getBestPorts(from, to, 140, 80, 140, 80, c.fromPort, c.toPort);
+    const color = c.protocol && NODE_TYPES[c.protocol] ? NODE_TYPES[c.protocol].color : '#30363d';
+    svg += `<path d="M ${ports.x1} ${ports.y1} C ${ports.cp1x} ${ports.cp1y}, ${ports.cp2x} ${ports.cp2y}, ${ports.x2} ${ports.y2}" fill="none" stroke="${color}" stroke-width="2" ${c.dashed?'stroke-dasharray="6,3"':''}/>`;
+    if (c.label || c.protocol) {
+      const mx = (ports.x1+ports.x2)/2, my = (ports.y1+ports.y2)/2;
+      svg += `<text x="${mx}" y="${my+4}" text-anchor="middle" fill="#8b949e" font-size="11">${esc(c.label||c.protocol)}</text>`;
+    }
+  });
+  // Nodes
+  diag.nodes.forEach(n => {
+    const t = NODE_TYPES[n.type] || NODE_TYPES.service;
+    svg += `<rect x="${n.x}" y="${n.y}" width="140" height="80" rx="10" fill="#161b22" stroke="${t.color}40" stroke-width="2"/>`;
+    svg += `<text x="${n.x+70}" y="${n.y+32}" text-anchor="middle" font-size="22">${t.icon}</text>`;
+    svg += `<text x="${n.x+70}" y="${n.y+52}" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="600">${esc(n.label)}</text>`;
+    if (n.sublabel) svg += `<text x="${n.x+70}" y="${n.y+66}" text-anchor="middle" fill="#8b949e" font-size="10">${esc(n.sublabel)}</text>`;
+  });
+  svg += '</svg>';
+  download(svg, `${diag.name.replace(/\s/g,'-').toLowerCase()}.svg`, 'image/svg+xml');
+}
+
+function exportPNG() {
+  const diag = getDiagram(); if (!diag || !diag.nodes.length) { alert('No nodes to export'); return; }
+  // Use canvas to render
+  const xs = diag.nodes.map(n=>n.x), ys = diag.nodes.map(n=>n.y);
+  const maxXs = diag.nodes.map(n=>n.x+140), maxYs = diag.nodes.map(n=>n.y+80);
+  const minX = Math.min(...xs)-80, minY = Math.min(...ys)-80;
+  const maxX = Math.max(...maxXs)+80, maxY = Math.max(...maxYs)+80;
+  const w = (maxX-minX)*2, h = (maxY-minY)*2;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2,2);
+  ctx.translate(-minX, -minY);
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(minX,minY,maxX-minX,maxY-minY);
+
+  // Draw connections
+  diag.connections.forEach(c => {
+    const from = diag.nodes.find(n=>n.id===c.from);
+    const to = diag.nodes.find(n=>n.id===c.to);
+    if (!from||!to) return;
+    const p = getBestPorts(from,to,140,80,140,80,c.fromPort,c.toPort);
+    ctx.beginPath();
+    ctx.moveTo(p.x1,p.y1);
+    ctx.bezierCurveTo(p.cp1x,p.cp1y,p.cp2x,p.cp2y,p.x2,p.y2);
+    ctx.strokeStyle = '#30363d'; ctx.lineWidth = 2;
+    if(c.dashed) ctx.setLineDash([6,3]); else ctx.setLineDash([]);
+    ctx.stroke();
+    if(c.label||c.protocol){
+      const mx=(p.x1+p.x2)/2,my=(p.y1+p.y2)/2;
+      ctx.font='11px -apple-system,sans-serif';ctx.fillStyle='#8b949e';ctx.textAlign='center';
+      ctx.fillText(c.label||c.protocol,mx,my+4);
+    }
+  });
+  ctx.setLineDash([]);
+
+  // Draw nodes
+  diag.nodes.forEach(n => {
+    const t = NODE_TYPES[n.type]||NODE_TYPES.service;
+    ctx.fillStyle='#161b22';ctx.strokeStyle=t.color+'40';ctx.lineWidth=2;
+    roundRect(ctx,n.x,n.y,140,80,10);
+    ctx.font='22px -apple-system,sans-serif';ctx.fillStyle='#e6edf3';ctx.textAlign='center';
+    ctx.fillText(t.icon,n.x+70,n.y+32);
+    ctx.font='bold 12px -apple-system,sans-serif';ctx.fillStyle='#e6edf3';
+    ctx.fillText(n.label,n.x+70,n.y+52);
+    if(n.sublabel){ctx.font='10px -apple-system,sans-serif';ctx.fillStyle='#8b949e';ctx.fillText(n.sublabel,n.x+70,n.y+66);}
+  });
+
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${diag.name.replace(/\s/g,'-').toLowerCase()}.png`;
+    a.click(); URL.revokeObjectURL(url);
+  });
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();ctx.fill();ctx.stroke();
+}
+
+function download(content, name, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function esc(s) { const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
+
+// ================= KEYBOARD =================
+document.addEventListener('keydown', e => {
+  const overlay = document.getElementById('modalOverlay');
+  if (overlay.style.display === 'flex') {
+    if (e.key === 'Escape') closeModal();
+    if ((e.metaKey||e.ctrlKey) && e.key === 'Enter') { const btn=document.getElementById('modalSaveBtn'); if(btn)btn.click(); }
+    return;
+  }
+  const inInput = ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
+  if (inInput) {
+    if (e.key === 'Escape') document.activeElement.blur();
+    return;
+  }
+
+  if (e.key === 'Escape') { state.selectedNodes=[]; state.selectedConnection=null; if(state.connectMode)toggleConnectMode(); renderCanvas(); }
+  if (e.key === '/') { e.preventDefault(); document.getElementById('diagramSearch').focus(); }
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); newDiagram(); }
+  if (e.key === 'c') toggleConnectMode();
+  if (e.key === 'g') addGroup();
+  if (e.key === 'a') autoLayout();
+  if (e.key === 'f') fitView();
+  if (e.key === '#') toggleGrid();
+  if (e.key === 's') toggleSnap();
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelected(); }
+  if ((e.metaKey||e.ctrlKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+  if ((e.metaKey||e.ctrlKey) && e.key === 'z' && e.shiftKey) { e.preventDefault(); redo(); }
+  if (e.key === '=' || e.key === '+') { e.preventDefault(); zoomIn(); }
+  if (e.key === '-') { e.preventDefault(); zoomOut(); }
+  if (e.key === '0') { state.zoom=1; state.panX=0; state.panY=0; updateTransform(); }
+  if (e.key === 'e') exportData();
+  if (e.key === 'i') importData();
+  if (e.key === '1') switchView('canvas');
+  if (e.key === '2') switchView('components');
+  if (e.key === '3') switchView('connections');
+  if (e.key === '4') switchView('templates');
+  if (e.key === '5') switchView('dashboard');
+  if (e.key === '6' || e.key === '?') switchView('help');
+});
+
+// Search
+document.getElementById('diagramSearch').addEventListener('input', renderSidebar);
+
+// ================= SEED DATA =================
+function seedData() {
+  // Apply UTMStamp template as default
+  const t = TEMPLATES[0];
+  const d = {
+    id: uid(), name: t.name, emoji: t.emoji,
+    nodes: t.nodes.map(n => ({ ...n, id: uid(), width: 140, height: 80, notes: '' })),
+    connections: [], groups: [],
+    createdAt: new Date().toISOString()
+  };
+  const idMap = {};
+  t.nodes.forEach((orig, i) => { idMap[orig.id] = d.nodes[i].id; });
+  d.connections = t.connections.map(c => ({
+    id: uid(), from: idMap[c.from], to: idMap[c.to],
+    fromPort: 'auto', toPort: 'auto',
+    label: c.label || '', protocol: c.protocol || 'HTTP',
+    dashed: c.dashed || false, notes: ''
+  }));
+  d.groups = (t.groups || []).map(g => ({
+    id: uid(), name: g.name, nodeIds: g.nodeIds.map(x => idMap[x]).filter(Boolean)
+  }));
+
+  state.diagrams = [d];
+  state.activeDiagram = d.id;
+}
+
+// ================= INIT =================
+load();
+renderSidebar();
+renderCanvas();
+setTimeout(fitView, 200);
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

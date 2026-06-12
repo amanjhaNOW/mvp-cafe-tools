@@ -789,8 +789,6 @@ ${a.animation?'.link:hover{transform:translateY(-3px) scale(1.02);}':''}
   </div>
   ${a.showFooter&&p.profile.footer?`<div class="footer">${esc(p.profile.footer)}</div>`:''}
 </div>
-<!-- MVPC_BRIDGE -->
-<script src="/_shell/bridge.js"></script>
 </body>
 </html>`;
   }
@@ -1088,5 +1086,7 @@ function renderAll() { renderPageList(); renderEditor(); }
 load();
 renderAll();
 </script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
 </body>
 </html>

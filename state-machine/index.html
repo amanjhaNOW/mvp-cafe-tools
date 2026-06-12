@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>State Machine Designer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#388bfd;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#bc8cff;--pink:#f778ba;--cyan:#39d2c0;--yellow:#e3b341}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:var(--text);font-size:13px}
+input,select,textarea{font-family:inherit;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical}
+/* Sidebar */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:18px}
+.machine-list{flex:1;overflow-y:auto;padding:8px}
+.machine-item{padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;font-size:13px;transition:background .15s}
+.machine-item:hover{background:var(--surface2)}
+.machine-item.active{background:var(--accent);color:#fff}
+.machine-item .info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.machine-item .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.machine-item .meta{font-size:11px;opacity:.7}
+.machine-item .del{opacity:0;font-size:16px;padding:2px 6px;border-radius:4px;flex-shrink:0}
+.machine-item:hover .del{opacity:.5}
+.machine-item .del:hover{opacity:1;background:rgba(248,81,73,.2);color:var(--red)}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px}
+.sidebar-footer button{flex:1;padding:8px;background:var(--accent);color:#fff;border-radius:6px;font-weight:600;font-size:12px}
+.sidebar-footer button:hover{background:var(--accent2)}
+.search-box{margin-bottom:8px}
+.search-box input{width:100%;padding:8px 10px;font-size:12px}
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+/* Tabs */
+.tabs{display:flex;gap:0;background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px}
+.tab{padding:10px 16px;font-size:13px;font-weight:500;border-bottom:2px solid transparent;cursor:pointer;color:var(--text2);transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+/* Canvas */
+.canvas-container{flex:1;position:relative;overflow:hidden;background:var(--bg)}
+.canvas-container svg{width:100%;height:100%;position:absolute;top:0;left:0}
+.canvas-bg{fill:var(--bg)}
+.grid-line{stroke:var(--border);stroke-width:0.5;opacity:.3}
+/* States */
+.state-node{cursor:grab}
+.state-node:active{cursor:grabbing}
+.state-circle{stroke-width:2;transition:stroke .15s}
+.state-circle.initial{stroke-dasharray:8 4}
+.state-label{font-size:13px;font-weight:600;fill:var(--text);pointer-events:none;text-anchor:middle;dominant-baseline:central}
+.state-sublabel{font-size:10px;fill:var(--text2);pointer-events:none;text-anchor:middle}
+.state-node.selected .state-circle{stroke:var(--accent)!important;stroke-width:3}
+.state-node.sim-active .state-circle{stroke:var(--green)!important;stroke-width:4;filter:drop-shadow(0 0 8px rgba(63,185,80,.4))}
+/* Transitions */
+.transition-path{fill:none;stroke-width:2;cursor:pointer;transition:stroke .15s}
+.transition-path:hover{stroke-width:3}
+.transition-path.selected{stroke:var(--accent)!important;stroke-width:3}
+.transition-path.sim-available{stroke:var(--yellow)!important;stroke-width:3;stroke-dasharray:8 4;animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-24}}
+.transition-arrow{pointer-events:none}
+.transition-label-bg{fill:var(--surface);rx:4;opacity:.9}
+.transition-label{font-size:11px;fill:var(--text);pointer-events:none;text-anchor:middle;dominant-baseline:central;font-weight:500}
+.transition-label.sim-available{fill:var(--yellow)!important;font-weight:700}
+/* Self-loop */
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border)}
+.toolbar .btn{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:6px;transition:background .15s}
+.toolbar .btn:hover{background:var(--surface2)}
+.toolbar .btn.primary{background:var(--accent);color:#fff}
+.toolbar .btn.primary:hover{background:var(--accent2)}
+.toolbar .btn.danger{color:var(--red)}
+.toolbar .btn.danger:hover{background:rgba(248,81,73,.1)}
+.toolbar .sep{width:1px;height:24px;background:var(--border)}
+.toolbar .zoom-info{font-size:11px;color:var(--text2);min-width:40px;text-align:center}
+/* Panels */
+.panel{position:absolute;right:16px;top:16px;width:300px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;z-index:10;max-height:calc(100% - 32px);overflow-y:auto}
+.panel h3{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.panel h3 .close{font-size:18px;cursor:pointer;opacity:.5;padding:2px 6px;border-radius:4px}
+.panel h3 .close:hover{opacity:1;background:var(--surface2)}
+.panel .field{margin-bottom:10px}
+.panel .field label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.panel .field input,.panel .field select,.panel .field textarea{width:100%}
+.panel .field textarea{min-height:60px}
+.panel .actions{display:flex;gap:8px;margin-top:12px}
+.panel .actions button{flex:1;padding:8px;border-radius:6px;font-weight:600;font-size:12px}
+.panel .actions .save{background:var(--accent);color:#fff}
+.panel .actions .save:hover{background:var(--accent2)}
+.panel .actions .del{background:rgba(248,81,73,.1);color:var(--red)}
+.panel .actions .del:hover{background:rgba(248,81,73,.2)}
+/* Colors */
+.color-row{display:flex;gap:6px;flex-wrap:wrap}
+.color-swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color .15s}
+.color-swatch:hover,.color-swatch.active{border-color:var(--text)}
+/* Simulation */
+.sim-bar{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 20px;z-index:10;display:flex;align-items:center;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.sim-bar .current-state{font-weight:700;color:var(--green);font-size:14px}
+.sim-bar .events{display:flex;gap:6px;flex-wrap:wrap}
+.sim-bar .event-btn{padding:6px 14px;border-radius:6px;background:rgba(227,179,65,.15);color:var(--yellow);font-weight:600;font-size:12px;border:1px solid rgba(227,179,65,.3);transition:all .15s}
+.sim-bar .event-btn:hover{background:rgba(227,179,65,.3);transform:scale(1.05)}
+.sim-bar .reset-btn{padding:6px 14px;border-radius:6px;background:rgba(248,81,73,.1);color:var(--red);font-weight:600;font-size:12px}
+.sim-bar .history{font-size:11px;color:var(--text2);max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Code view */
+.code-view{flex:1;overflow:auto;padding:24px;background:var(--bg)}
+.code-view .format-tabs{display:flex;gap:0;margin-bottom:16px;background:var(--surface);border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.code-view .format-tab{padding:10px 16px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);transition:all .15s}
+.code-view .format-tab:hover{color:var(--text)}
+.code-view .format-tab.active{background:var(--accent);color:#fff}
+.code-view pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;overflow-x:auto;font-size:13px;line-height:1.6;font-family:'SF Mono',Consolas,monospace;white-space:pre;color:var(--text)}
+.code-view .copy-btn{margin-top:12px;padding:8px 16px;background:var(--accent);color:#fff;border-radius:6px;font-weight:600;font-size:12px}
+.code-view .copy-btn:hover{background:var(--accent2)}
+/* Dashboard */
+.dashboard{flex:1;overflow-y:auto;padding:24px}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
+.stat-card .value{font-size:28px;font-weight:800;margin-bottom:4px}
+.stat-card .label{font-size:12px;color:var(--text2)}
+.dash-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.dash-section h3{font-size:14px;font-weight:700;margin-bottom:12px}
+.dash-table{width:100%;border-collapse:collapse}
+.dash-table th,.dash-table td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:13px}
+.dash-table th{color:var(--text2);font-weight:600;font-size:11px;text-transform:uppercase}
+.dash-bar{height:20px;border-radius:4px;min-width:4px;transition:width .3s}
+/* Transitions list */
+.trans-list{flex:1;overflow-y:auto;padding:16px}
+.trans-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .15s}
+.trans-item:hover{border-color:var(--accent)}
+.trans-item .flow{display:flex;align-items:center;gap:8px;font-size:13px}
+.trans-item .arrow{color:var(--text2)}
+.trans-item .event{background:rgba(227,179,65,.15);color:var(--yellow);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.trans-item .btns{display:flex;gap:4px}
+.trans-item .btns button{padding:4px 8px;border-radius:4px;font-size:12px}
+.trans-item .btns button:hover{background:var(--surface2)}
+/* Toast */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:100;animation:fadeInUp .3s;pointer-events:none}
+@keyframes fadeInUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+/* Help modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.modal .close{cursor:pointer;font-size:20px;opacity:.6}
+.modal .close:hover{opacity:1}
+.modal .shortcut{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.modal .shortcut .key{background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.badge.initial{background:rgba(63,185,80,.15);color:var(--green)}
+.badge.final{background:rgba(188,140,255,.15);color:var(--purple)}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span>⚡</span> State Machine</h1>
+  </div>
+  <div class="machine-list">
+    <div class="search-box"><input id="searchInput" type="text" placeholder="Search machines..."></div>
+    <div id="machineList"></div>
+  </div>
+  <div class="sidebar-footer">
+    <button onclick="newMachine()">+ New Machine</button>
+    <button onclick="importData()" style="background:var(--surface2)">Import</button>
+  </div>
+</div>
+<div class="main">
+  <div class="tabs">
+    <div class="tab active" data-view="canvas" onclick="switchView('canvas')">⚡ Designer</div>
+    <div class="tab" data-view="transitions" onclick="switchView('transitions')">🔀 Transitions</div>
+    <div class="tab" data-view="simulate" onclick="switchView('simulate')">▶️ Simulate</div>
+    <div class="tab" data-view="code" onclick="switchView('code')">💻 Export Code</div>
+    <div class="tab" data-view="dashboard" onclick="switchView('dashboard')">📊 Dashboard</div>
+  </div>
+  <!-- Canvas View -->
+  <div id="view-canvas" class="view" style="flex:1;display:flex;flex-direction:column">
+    <div class="toolbar">
+      <button class="btn primary" onclick="addState()">+ State</button>
+      <button class="btn" onclick="startTransitionMode()" id="transBtn">🔗 Transition</button>
+      <div class="sep"></div>
+      <button class="btn" onclick="autoLayout()">📐 Auto Layout</button>
+      <button class="btn" onclick="fitView()">⊞ Fit</button>
+      <div class="sep"></div>
+      <button class="btn" onclick="zoomIn()">+</button>
+      <span class="zoom-info" id="zoomInfo">100%</span>
+      <button class="btn" onclick="zoomOut()">−</button>
+      <div class="sep"></div>
+      <button class="btn danger" onclick="deleteSelected()">🗑 Delete</button>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="exportJSON()">📥 Export</button>
+      <button class="btn" onclick="showHelp()">? Help</button>
+    </div>
+    <div class="canvas-container" id="canvasContainer">
+      <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+  <!-- Transitions View -->
+  <div id="view-transitions" class="view trans-list" style="display:none"></div>
+  <!-- Simulate View -->
+  <div id="view-simulate" class="view" style="flex:1;display:flex;flex-direction:column;display:none">
+    <div class="toolbar">
+      <button class="btn primary" onclick="resetSim()">🔄 Reset</button>
+      <span style="font-size:13px;color:var(--text2)">Click available events below or on the canvas to step through</span>
+    </div>
+    <div class="canvas-container" id="simCanvasContainer">
+      <svg id="simCanvas" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+  <!-- Code View -->
+  <div id="view-code" class="view code-view" style="display:none"></div>
+  <!-- Dashboard View -->
+  <div id="view-dashboard" class="view dashboard" style="display:none"></div>
+</div>
+<!-- State Panel -->
+<div class="panel" id="statePanel" style="display:none">
+  <h3>Edit State <span class="close" onclick="closePanel()">&times;</span></h3>
+  <div class="field"><label>Name</label><input id="stateName" type="text" maxlength="30"></div>
+  <div class="field"><label>Description</label><textarea id="stateDesc"></textarea></div>
+  <div class="field"><label>Type</label>
+    <select id="stateType"><option value="normal">Normal</option><option value="initial">Initial</option><option value="final">Final</option><option value="initial-final">Initial + Final</option></select>
+  </div>
+  <div class="field"><label>Color</label>
+    <div class="color-row" id="stateColors"></div>
+  </div>
+  <div class="field"><label>Entry Actions</label><input id="stateEntry" type="text" placeholder="e.g. sendEmail(), logEvent()"></div>
+  <div class="field"><label>Exit Actions</label><input id="stateExit" type="text" placeholder="e.g. cleanup(), notify()"></div>
+  <div class="actions">
+    <button class="save" onclick="saveState()">Save</button>
+    <button class="del" onclick="deleteState()">Delete</button>
+  </div>
+</div>
+<!-- Transition Panel -->
+<div class="panel" id="transPanel" style="display:none">
+  <h3>Edit Transition <span class="close" onclick="closePanel()">&times;</span></h3>
+  <div class="field"><label>Event / Trigger</label><input id="transEvent" type="text" placeholder="e.g. SUBMIT, click, timeout"></div>
+  <div class="field"><label>Guard Condition</label><input id="transGuard" type="text" placeholder="e.g. isValid, count > 3"></div>
+  <div class="field"><label>Actions</label><input id="transActions" type="text" placeholder="e.g. incrementCount(), sendNotification()"></div>
+  <div class="field"><label>Description</label><textarea id="transDesc"></textarea></div>
+  <div class="field"><label>Color</label>
+    <div class="color-row" id="transColors"></div>
+  </div>
+  <div class="actions">
+    <button class="save" onclick="saveTransition()">Save</button>
+    <button class="del" onclick="deleteTransition()">Delete</button>
+  </div>
+</div>
+
+<script>
+// ─── Data ──────────────────────────────────────────────────────
+const COLORS = ['#58a6ff','#3fb950','#f85149','#d29922','#bc8cff','#f778ba','#39d2c0','#e6edf3','#ff7b72','#7ee787'];
+const STATE_R = 44;
+let machines = [];
+let activeMachineId = null;
+let currentView = 'canvas';
+let zoom = 1, panX = 0, panY = 0;
+let dragging = null, dragStart = null, panning = false, panStart = null;
+let selected = { type: null, id: null };
+let transitionMode = false, transSource = null;
+let simState = null, simHistory = [];
+let codeFormat = 'xstate';
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8) }
+function getMachine() { return machines.find(m => m.id === activeMachineId) }
+function save() { localStorage.setItem('stateMachines', JSON.stringify(machines)) }
+function load() {
+  const d = localStorage.getItem('stateMachines');
+  if (d) { try { machines = JSON.parse(d) } catch(e) { machines = [] } }
+  if (!machines.length) seedData();
+  activeMachineId = machines[0]?.id;
+}
+
+// ─── Seed Data ─────────────────────────────────────────────────
+function seedData() {
+  machines = [
+    {
+      id: uid(), name: 'E-Commerce Order', description: 'Standard e-commerce order lifecycle from placement to delivery',
+      states: [
+        { id: 's1', name: 'Placed', x: 120, y: 300, color: '#58a6ff', type: 'initial', desc: 'Order has been placed by the customer', entry: 'sendConfirmationEmail()', exit: '' },
+        { id: 's2', name: 'Confirmed', x: 340, y: 180, color: '#3fb950', type: 'normal', desc: 'Order confirmed by the system', entry: 'reserveInventory()', exit: '' },
+        { id: 's3', name: 'Processing', x: 560, y: 180, color: '#d29922', type: 'normal', desc: 'Order is being prepared', entry: 'notifyWarehouse()', exit: '' },
+        { id: 's4', name: 'Shipped', x: 780, y: 180, color: '#bc8cff', type: 'normal', desc: 'Order has been shipped', entry: 'sendTrackingEmail()', exit: '' },
+        { id: 's5', name: 'Delivered', x: 900, y: 340, color: '#3fb950', type: 'final', desc: 'Order delivered to customer', entry: 'requestReview()', exit: '' },
+        { id: 's6', name: 'Cancelled', x: 340, y: 440, color: '#f85149', type: 'final', desc: 'Order was cancelled', entry: 'refundPayment(), releaseInventory()', exit: '' },
+        { id: 's7', name: 'Returned', x: 680, y: 440, color: '#f85149', type: 'final', desc: 'Order was returned', entry: 'processRefund()', exit: '' },
+      ],
+      transitions: [
+        { id: 't1', from: 's1', to: 's2', event: 'CONFIRM', guard: 'paymentVerified', actions: 'chargePayment()', color: '#3fb950', desc: '' },
+        { id: 't2', from: 's2', to: 's3', event: 'PROCESS', guard: 'inventoryAvailable', actions: 'createPickList()', color: '#d29922', desc: '' },
+        { id: 't3', from: 's3', to: 's4', event: 'SHIP', guard: '', actions: 'generateTrackingNumber()', color: '#bc8cff', desc: '' },
+        { id: 't4', from: 's4', to: 's5', event: 'DELIVER', guard: '', actions: 'confirmDelivery()', color: '#3fb950', desc: '' },
+        { id: 't5', from: 's1', to: 's6', event: 'CANCEL', guard: '', actions: 'refundPayment()', color: '#f85149', desc: '' },
+        { id: 't6', from: 's2', to: 's6', event: 'CANCEL', guard: '', actions: 'releaseInventory()', color: '#f85149', desc: '' },
+        { id: 't7', from: 's5', to: 's7', event: 'RETURN', guard: 'withinReturnWindow', actions: 'initiateReturn()', color: '#f85149', desc: '' },
+        { id: 't8', from: 's3', to: 's6', event: 'CANCEL', guard: 'notYetPacked', actions: 'releaseInventory()', color: '#f85149', desc: '' },
+      ]
+    },
+    {
+      id: uid(), name: 'UTMStamp Subscription', description: 'SaaS subscription lifecycle for UTMStamp',
+      states: [
+        { id: 's1', name: 'Visitor', x: 100, y: 280, color: '#8b949e', type: 'initial', desc: 'Anonymous website visitor', entry: '', exit: '' },
+        { id: 's2', name: 'Free Trial', x: 320, y: 180, color: '#58a6ff', type: 'normal', desc: '14-day free trial', entry: 'startTrial(), sendWelcomeEmail()', exit: '' },
+        { id: 's3', name: 'Active', x: 560, y: 180, color: '#3fb950', type: 'normal', desc: 'Paying subscriber', entry: 'provisionPlan(), sendReceipt()', exit: '' },
+        { id: 's4', name: 'Past Due', x: 560, y: 380, color: '#d29922', type: 'normal', desc: 'Payment failed', entry: 'sendDunningEmail()', exit: '' },
+        { id: 's5', name: 'Churned', x: 800, y: 380, color: '#f85149', type: 'final', desc: 'Subscription cancelled', entry: 'downgradeToFree(), sendOffboarding()', exit: '' },
+        { id: 's6', name: 'Paused', x: 320, y: 380, color: '#bc8cff', type: 'normal', desc: 'Voluntarily paused', entry: 'pauseBilling()', exit: '' },
+        { id: 's7', name: 'Enterprise', x: 800, y: 180, color: '#f778ba', type: 'normal', desc: 'Custom enterprise plan', entry: 'assignCSM(), customOnboarding()', exit: '' },
+      ],
+      transitions: [
+        { id: 't1', from: 's1', to: 's2', event: 'SIGN_UP', guard: '', actions: 'createAccount()', color: '#58a6ff', desc: '' },
+        { id: 't2', from: 's2', to: 's3', event: 'SUBSCRIBE', guard: 'paymentValid', actions: 'chargeCard()', color: '#3fb950', desc: '' },
+        { id: 't3', from: 's2', to: 's5', event: 'TRIAL_EXPIRED', guard: '!converted', actions: '', color: '#f85149', desc: '' },
+        { id: 't4', from: 's3', to: 's4', event: 'PAYMENT_FAILED', guard: '', actions: 'retryPayment()', color: '#d29922', desc: '' },
+        { id: 't5', from: 's4', to: 's3', event: 'PAYMENT_RECOVERED', guard: '', actions: 'reactivate()', color: '#3fb950', desc: '' },
+        { id: 't6', from: 's4', to: 's5', event: 'MAX_RETRIES', guard: 'retries >= 3', actions: '', color: '#f85149', desc: '' },
+        { id: 't7', from: 's3', to: 's5', event: 'CANCEL', guard: '', actions: 'processRefund()', color: '#f85149', desc: '' },
+        { id: 't8', from: 's3', to: 's6', event: 'PAUSE', guard: '', actions: '', color: '#bc8cff', desc: '' },
+        { id: 't9', from: 's6', to: 's3', event: 'RESUME', guard: '', actions: 'resumeBilling()', color: '#3fb950', desc: '' },
+        { id: 't10', from: 's3', to: 's7', event: 'UPGRADE_ENTERPRISE', guard: 'seats > 50', actions: 'migrateData()', color: '#f778ba', desc: '' },
+        { id: 't11', from: 's5', to: 's2', event: 'REACTIVATE', guard: '', actions: 'startNewTrial()', color: '#58a6ff', desc: '' },
+      ]
+    },
+    {
+      id: uid(), name: 'User Authentication', description: 'Login flow with MFA and session management',
+      states: [
+        { id: 's1', name: 'Logged Out', x: 120, y: 280, color: '#8b949e', type: 'initial', desc: 'No active session', entry: '', exit: '' },
+        { id: 's2', name: 'Credentials', x: 350, y: 180, color: '#58a6ff', type: 'normal', desc: 'Entering email/password', entry: 'showLoginForm()', exit: '' },
+        { id: 's3', name: 'MFA Check', x: 560, y: 180, color: '#d29922', type: 'normal', desc: 'Awaiting 2FA code', entry: 'sendOTP()', exit: '' },
+        { id: 's4', name: 'Authenticated', x: 780, y: 280, color: '#3fb950', type: 'normal', desc: 'Active session', entry: 'createSession(), setTokens()', exit: '' },
+        { id: 's5', name: 'Locked', x: 350, y: 400, color: '#f85149', type: 'normal', desc: 'Too many failed attempts', entry: 'lockAccount(), sendAlert()', exit: '' },
+        { id: 's6', name: 'Expired', x: 600, y: 400, color: '#d29922', type: 'normal', desc: 'Session expired', entry: 'clearTokens()', exit: '' },
+      ],
+      transitions: [
+        { id: 't1', from: 's1', to: 's2', event: 'LOGIN', guard: '', actions: '', color: '#58a6ff', desc: '' },
+        { id: 't2', from: 's2', to: 's3', event: 'CREDS_VALID', guard: 'mfaEnabled', actions: '', color: '#d29922', desc: '' },
+        { id: 't3', from: 's2', to: 's4', event: 'CREDS_VALID', guard: '!mfaEnabled', actions: '', color: '#3fb950', desc: '' },
+        { id: 't4', from: 's3', to: 's4', event: 'MFA_VALID', guard: '', actions: '', color: '#3fb950', desc: '' },
+        { id: 't5', from: 's2', to: 's5', event: 'FAILED', guard: 'attempts >= 5', actions: 'incrementAttempts()', color: '#f85149', desc: '' },
+        { id: 't6', from: 's3', to: 's5', event: 'MFA_FAILED', guard: 'attempts >= 3', actions: '', color: '#f85149', desc: '' },
+        { id: 't7', from: 's4', to: 's1', event: 'LOGOUT', guard: '', actions: 'destroySession()', color: '#8b949e', desc: '' },
+        { id: 't8', from: 's4', to: 's6', event: 'TOKEN_EXPIRED', guard: '', actions: '', color: '#d29922', desc: '' },
+        { id: 't9', from: 's6', to: 's2', event: 'RE_LOGIN', guard: '', actions: '', color: '#58a6ff', desc: '' },
+        { id: 't10', from: 's5', to: 's2', event: 'UNLOCK', guard: 'cooldownElapsed', actions: 'resetAttempts()', color: '#58a6ff', desc: '' },
+      ]
+    }
+  ];
+  save();
+}
+
+// ─── Render Sidebar ────────────────────────────────────────────
+function renderSidebar() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const list = document.getElementById('machineList');
+  list.innerHTML = '';
+  machines.filter(m => m.name.toLowerCase().includes(q)).forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'machine-item' + (m.id === activeMachineId ? ' active' : '');
+    div.innerHTML = `<div class="info"><span class="name">${esc(m.name)}</span><span class="meta">${m.states.length} states · ${m.transitions.length} transitions</span></div><span class="del" onclick="event.stopPropagation();deleteMachine('${m.id}')">&times;</span>`;
+    div.onclick = () => { activeMachineId = m.id; renderAll() };
+    list.appendChild(div);
+  });
+}
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+// ─── New Machine ───────────────────────────────────────────────
+function newMachine() {
+  const m = { id: uid(), name: 'New Machine', description: '', states: [], transitions: [] };
+  machines.unshift(m);
+  activeMachineId = m.id;
+  save(); renderAll();
+}
+function deleteMachine(id) {
+  if (machines.length <= 1) return;
+  machines = machines.filter(m => m.id !== id);
+  if (activeMachineId === id) activeMachineId = machines[0]?.id;
+  save(); renderAll();
+}
+
+// ─── States ────────────────────────────────────────────────────
+function addState() {
+  const m = getMachine(); if (!m) return;
+  const cx = (-panX + 400) / zoom, cy = (-panY + 300) / zoom;
+  const s = { id: uid(), name: 'State ' + (m.states.length + 1), x: cx, y: cy, color: COLORS[m.states.length % COLORS.length], type: m.states.length === 0 ? 'initial' : 'normal', desc: '', entry: '', exit: '' };
+  m.states.push(s);
+  save(); renderCanvas();
+  selectState(s.id);
+}
+function deleteState() {
+  const m = getMachine(); if (!m || !selected.id) return;
+  m.states = m.states.filter(s => s.id !== selected.id);
+  m.transitions = m.transitions.filter(t => t.from !== selected.id && t.to !== selected.id);
+  selected = { type: null, id: null };
+  closePanel(); save(); renderCanvas();
+}
+function selectState(id) {
+  selected = { type: 'state', id };
+  const m = getMachine(); if (!m) return;
+  const s = m.states.find(st => st.id === id); if (!s) return;
+  document.getElementById('stateName').value = s.name;
+  document.getElementById('stateDesc').value = s.desc || '';
+  document.getElementById('stateType').value = s.type;
+  document.getElementById('stateEntry').value = s.entry || '';
+  document.getElementById('stateExit').value = s.exit || '';
+  renderColorRow('stateColors', s.color);
+  document.getElementById('statePanel').style.display = '';
+  document.getElementById('transPanel').style.display = 'none';
+  renderCanvas();
+}
+function saveState() {
+  const m = getMachine(); if (!m) return;
+  const s = m.states.find(st => st.id === selected.id); if (!s) return;
+  s.name = document.getElementById('stateName').value.trim() || s.name;
+  s.desc = document.getElementById('stateDesc').value;
+  s.type = document.getElementById('stateType').value;
+  s.entry = document.getElementById('stateEntry').value;
+  s.exit = document.getElementById('stateExit').value;
+  const active = document.querySelector('#stateColors .color-swatch.active');
+  if (active) s.color = active.dataset.color;
+  save(); renderAll(); toast('State saved');
+}
+
+// ─── Transitions ───────────────────────────────────────────────
+function startTransitionMode() {
+  transitionMode = !transitionMode;
+  transSource = null;
+  document.getElementById('transBtn').style.background = transitionMode ? 'var(--accent)' : '';
+  document.getElementById('transBtn').style.color = transitionMode ? '#fff' : '';
+  renderCanvas();
+}
+function selectTransition(id) {
+  selected = { type: 'transition', id };
+  const m = getMachine(); if (!m) return;
+  const t = m.transitions.find(tr => tr.id === id); if (!t) return;
+  document.getElementById('transEvent').value = t.event || '';
+  document.getElementById('transGuard').value = t.guard || '';
+  document.getElementById('transActions').value = t.actions || '';
+  document.getElementById('transDesc').value = t.desc || '';
+  renderColorRow('transColors', t.color);
+  document.getElementById('transPanel').style.display = '';
+  document.getElementById('statePanel').style.display = 'none';
+  renderCanvas();
+}
+function saveTransition() {
+  const m = getMachine(); if (!m) return;
+  const t = m.transitions.find(tr => tr.id === selected.id); if (!t) return;
+  t.event = document.getElementById('transEvent').value.trim();
+  t.guard = document.getElementById('transGuard').value.trim();
+  t.actions = document.getElementById('transActions').value.trim();
+  t.desc = document.getElementById('transDesc').value;
+  const active = document.querySelector('#transColors .color-swatch.active');
+  if (active) t.color = active.dataset.color;
+  save(); renderAll(); toast('Transition saved');
+}
+function deleteTransition() {
+  const m = getMachine(); if (!m || !selected.id) return;
+  m.transitions = m.transitions.filter(t => t.id !== selected.id);
+  selected = { type: null, id: null };
+  closePanel(); save(); renderCanvas();
+}
+
+// ─── Color Row ─────────────────────────────────────────────────
+function renderColorRow(containerId, activeColor) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  COLORS.forEach(color => {
+    const d = document.createElement('div');
+    d.className = 'color-swatch' + (color === activeColor ? ' active' : '');
+    d.style.background = color;
+    d.dataset.color = color;
+    d.onclick = () => { c.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active')); d.classList.add('active') };
+    c.appendChild(d);
+  });
+}
+
+function closePanel() {
+  document.getElementById('statePanel').style.display = 'none';
+  document.getElementById('transPanel').style.display = 'none';
+  selected = { type: null, id: null };
+  renderCanvas();
+}
+
+// ─── Canvas Rendering ──────────────────────────────────────────
+function renderCanvas(svgId = 'canvas') {
+  const m = getMachine(); if (!m) return;
+  const svg = document.getElementById(svgId);
+  const container = svg.parentElement;
+  const w = container.clientWidth, h = container.clientHeight;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  
+  let html = `<rect class="canvas-bg" width="${w}" height="${h}"/>`;
+  // Grid
+  const gs = 40 * zoom;
+  if (gs > 10) {
+    const ox = panX % gs, oy = panY % gs;
+    for (let x = ox; x < w; x += gs) html += `<line class="grid-line" x1="${x}" y1="0" x2="${x}" y2="${h}"/>`;
+    for (let y = oy; y < h; y += gs) html += `<line class="grid-line" x1="0" y1="${y}" x2="${w}" y2="${y}"/>`;
+  }
+  
+  // Transitions
+  m.transitions.forEach(t => {
+    const from = m.states.find(s => s.id === t.from);
+    const to = m.states.find(s => s.id === t.to);
+    if (!from || !to) return;
+    const x1 = from.x * zoom + panX, y1 = from.y * zoom + panY;
+    const x2 = to.x * zoom + panX, y2 = to.y * zoom + panY;
+    const r = STATE_R * zoom;
+    const isSel = selected.type === 'transition' && selected.id === t.id;
+    const isSimAvail = currentView === 'simulate' && simState === t.from;
+    
+    if (t.from === t.to) {
+      // Self-loop
+      const loopR = r * 1.2;
+      const path = `M ${x1} ${y1 - r} C ${x1 - loopR*1.5} ${y1 - r - loopR*2} ${x1 + loopR*1.5} ${y1 - r - loopR*2} ${x1} ${y1 - r}`;
+      html += `<path d="${path}" class="transition-path${isSel?' selected':''}${isSimAvail?' sim-available':''}" stroke="${t.color || '#58a6ff'}" onclick="event.stopPropagation();${currentView==='simulate'?`simTrigger('${t.event}')` : `selectTransition('${t.id}')`}"/>`;
+      // Label
+      const lx = x1, ly = y1 - r - loopR * 1.4;
+      const label = t.event + (t.guard ? ` [${t.guard}]` : '');
+      if (label) {
+        const tw = label.length * 6.5 + 12;
+        html += `<rect class="transition-label-bg" x="${lx-tw/2}" y="${ly-9}" width="${tw}" height="18"/>`;
+        html += `<text class="transition-label${isSimAvail?' sim-available':''}" x="${lx}" y="${ly}">${esc(label)}</text>`;
+      }
+    } else {
+      // Check for parallel transitions (same pair, opposite direction)
+      const parallel = m.transitions.filter(tt => tt.id !== t.id && ((tt.from === t.from && tt.to === t.to) || (tt.from === t.to && tt.to === t.from)));
+      const sameDir = m.transitions.filter(tt => tt.from === t.from && tt.to === t.to);
+      const idx = sameDir.indexOf(t);
+      
+      const dx = x2 - x1, dy = y2 - y1;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 1) return;
+      const nx = -dy / dist, ny = dx / dist;
+      
+      let curve = 0;
+      if (parallel.length > 0 || sameDir.length > 1) {
+        const hasReverse = m.transitions.some(tt => tt.from === t.to && tt.to === t.from);
+        curve = hasReverse ? 40 : 0;
+        curve += idx * 30;
+      }
+      curve *= zoom;
+      
+      const mx = (x1+x2)/2 + nx * curve, my = (y1+y2)/2 + ny * curve;
+      
+      // Shorten to circle edge
+      const ang1 = Math.atan2(my - y1, mx - x1);
+      const sx = x1 + Math.cos(ang1) * r, sy = y1 + Math.sin(ang1) * r;
+      const ang2 = Math.atan2(my - y2, mx - x2);
+      const ex = x2 + Math.cos(ang2) * r, ey = y2 + Math.sin(ang2) * r;
+      
+      const path = `M ${sx} ${sy} Q ${mx} ${my} ${ex} ${ey}`;
+      html += `<path d="${path}" class="transition-path${isSel?' selected':''}${isSimAvail?' sim-available':''}" stroke="${t.color || '#58a6ff'}" onclick="event.stopPropagation();${currentView==='simulate'?`simTrigger('${t.event}')` : `selectTransition('${t.id}')`}" marker-end="url(#arrow-${t.id})"/>`;
+      
+      // Arrowhead
+      html += `<defs><marker id="arrow-${t.id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${t.color || '#58a6ff'}"/></marker></defs>`;
+      
+      // Label at midpoint of quadratic curve (t=0.5)
+      const lx = 0.25*sx + 0.5*mx + 0.25*ex;
+      const ly = 0.25*sy + 0.5*my + 0.25*ey;
+      const label = t.event + (t.guard ? ` [${t.guard}]` : '');
+      if (label) {
+        const tw = label.length * 6.5 + 12;
+        html += `<rect class="transition-label-bg" x="${lx-tw/2}" y="${ly-9}" width="${tw}" height="18"/>`;
+        html += `<text class="transition-label${isSimAvail?' sim-available':''}" x="${lx}" y="${ly}">${esc(label)}</text>`;
+      }
+    }
+  });
+  
+  // States
+  m.states.forEach(s => {
+    const cx = s.x * zoom + panX, cy = s.y * zoom + panY;
+    const r = STATE_R * zoom;
+    const isSel = selected.type === 'state' && selected.id === s.id;
+    const isSimActive = currentView === 'simulate' && simState === s.id;
+    const isInitial = s.type === 'initial' || s.type === 'initial-final';
+    const isFinal = s.type === 'final' || s.type === 'initial-final';
+    
+    html += `<g class="state-node${isSel?' selected':''}${isSimActive?' sim-active':''}" data-id="${s.id}" onmousedown="startDrag(event,'${s.id}')" onclick="event.stopPropagation();onStateClick('${s.id}')">`;
+    // Outer circle for final states
+    if (isFinal) {
+      html += `<circle cx="${cx}" cy="${cy}" r="${r+6}" fill="none" stroke="${s.color}" stroke-width="2" opacity=".5"/>`;
+    }
+    html += `<circle class="state-circle${isInitial?' initial':''}" cx="${cx}" cy="${cy}" r="${r}" fill="${s.color}22" stroke="${s.color}"/>`;
+    // Initial arrow
+    if (isInitial) {
+      html += `<line x1="${cx - r - 30}" y1="${cy}" x2="${cx - r - 4}" y2="${cy}" stroke="${s.color}" stroke-width="2" marker-end="url(#init-arrow-${s.id})"/>`;
+      html += `<defs><marker id="init-arrow-${s.id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="${s.color}"/></marker></defs>`;
+    }
+    html += `<text class="state-label" x="${cx}" y="${cy - (s.desc ? 4 : 0)}" style="font-size:${Math.max(10, 13*zoom)}px">${esc(s.name)}</text>`;
+    if (s.type !== 'normal') {
+      const badges = [];
+      if (isInitial) badges.push('start');
+      if (isFinal) badges.push('end');
+      html += `<text class="state-sublabel" x="${cx}" y="${cy + 14*zoom}" style="font-size:${Math.max(8,10*zoom)}px">${badges.join(' · ')}</text>`;
+    }
+    html += `</g>`;
+  });
+  
+  // Transition mode indicator
+  if (transitionMode && transSource) {
+    const s = m.states.find(st => st.id === transSource);
+    if (s) {
+      const cx = s.x * zoom + panX, cy = s.y * zoom + panY;
+      html += `<circle cx="${cx}" cy="${cy}" r="${STATE_R * zoom + 8}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 3" opacity=".7"/>`;
+    }
+  }
+  
+  svg.innerHTML = html;
+}
+
+function onStateClick(id) {
+  if (currentView === 'simulate') return;
+  if (transitionMode) {
+    if (!transSource) {
+      transSource = id;
+      renderCanvas();
+    } else {
+      const m = getMachine();
+      const t = { id: uid(), from: transSource, to: id, event: 'EVENT', guard: '', actions: '', color: COLORS[m.transitions.length % COLORS.length], desc: '' };
+      m.transitions.push(t);
+      transSource = null;
+      transitionMode = false;
+      document.getElementById('transBtn').style.background = '';
+      document.getElementById('transBtn').style.color = '';
+      save(); renderCanvas();
+      selectTransition(t.id);
+    }
+  } else {
+    selectState(id);
+  }
+}
+
+// ─── Drag ──────────────────────────────────────────────────────
+function startDrag(e, id) {
+  if (transitionMode || currentView === 'simulate') return;
+  e.preventDefault();
+  dragging = id;
+  const m = getMachine(); if (!m) return;
+  const s = m.states.find(st => st.id === id);
+  dragStart = { mx: e.clientX, my: e.clientY, sx: s.x, sy: s.y };
+}
+
+function initCanvasEvents(containerId, svgId) {
+  const container = document.getElementById(containerId);
+  container.addEventListener('mousedown', e => {
+    if (e.target === container || e.target.tagName === 'svg' || e.target.classList.contains('canvas-bg') || e.target.classList.contains('grid-line')) {
+      panning = true;
+      panStart = { x: e.clientX - panX, y: e.clientY - panY };
+      closePanel();
+    }
+  });
+  container.addEventListener('mousemove', e => {
+    if (dragging) {
+      const m = getMachine(); if (!m) return;
+      const s = m.states.find(st => st.id === dragging); if (!s) return;
+      s.x = dragStart.sx + (e.clientX - dragStart.mx) / zoom;
+      s.y = dragStart.sy + (e.clientY - dragStart.my) / zoom;
+      renderCanvas(svgId);
+    }
+    if (panning) {
+      panX = e.clientX - panStart.x;
+      panY = e.clientY - panStart.y;
+      renderCanvas(svgId);
+    }
+  });
+  window.addEventListener('mouseup', () => {
+    if (dragging) { save(); dragging = null; dragStart = null }
+    panning = false; panStart = null;
+  });
+  container.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect = container.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const oldZoom = zoom;
+    zoom *= e.deltaY < 0 ? 1.1 : 0.9;
+    zoom = Math.max(0.2, Math.min(4, zoom));
+    panX = mx - (mx - panX) * (zoom / oldZoom);
+    panY = my - (my - panY) * (zoom / oldZoom);
+    document.getElementById('zoomInfo').textContent = Math.round(zoom * 100) + '%';
+    renderCanvas(svgId);
+  }, { passive: false });
+}
+
+// ─── Zoom/Layout ───────────────────────────────────────────────
+function zoomIn() { zoom = Math.min(4, zoom * 1.2); document.getElementById('zoomInfo').textContent = Math.round(zoom*100)+'%'; renderCanvas() }
+function zoomOut() { zoom = Math.max(0.2, zoom / 1.2); document.getElementById('zoomInfo').textContent = Math.round(zoom*100)+'%'; renderCanvas() }
+function fitView() {
+  const m = getMachine(); if (!m || !m.states.length) return;
+  const container = document.getElementById(currentView === 'simulate' ? 'simCanvasContainer' : 'canvasContainer');
+  const w = container.clientWidth, h = container.clientHeight;
+  const xs = m.states.map(s => s.x), ys = m.states.map(s => s.y);
+  const minX = Math.min(...xs) - 80, maxX = Math.max(...xs) + 80;
+  const minY = Math.min(...ys) - 80, maxY = Math.max(...ys) + 80;
+  const sw = maxX - minX, sh = maxY - minY;
+  zoom = Math.min(w / sw, h / sh, 2);
+  panX = (w - sw * zoom) / 2 - minX * zoom;
+  panY = (h - sh * zoom) / 2 - minY * zoom;
+  document.getElementById('zoomInfo').textContent = Math.round(zoom*100)+'%';
+  renderCanvas(currentView === 'simulate' ? 'simCanvas' : 'canvas');
+}
+function autoLayout() {
+  const m = getMachine(); if (!m || !m.states.length) return;
+  // Layered layout based on dependencies
+  const inDeg = {}; m.states.forEach(s => inDeg[s.id] = 0);
+  m.transitions.forEach(t => { if (t.from !== t.to) inDeg[t.to] = (inDeg[t.to]||0) + 1 });
+  const layers = [];
+  const placed = new Set();
+  // Initial states first
+  const initials = m.states.filter(s => s.type === 'initial' || s.type === 'initial-final');
+  if (initials.length) { layers.push(initials.map(s => s.id)); initials.forEach(s => placed.add(s.id)) }
+  // BFS layers
+  let maxIter = m.states.length;
+  while (placed.size < m.states.length && maxIter-- > 0) {
+    const next = m.states.filter(s => !placed.has(s.id)).filter(s => {
+      const sources = m.transitions.filter(t => t.to === s.id && t.from !== t.to).map(t => t.from);
+      return sources.length === 0 || sources.some(src => placed.has(src));
+    });
+    if (next.length === 0) {
+      const remaining = m.states.filter(s => !placed.has(s.id));
+      layers.push(remaining.map(s => s.id));
+      remaining.forEach(s => placed.add(s.id));
+      break;
+    }
+    layers.push(next.map(s => s.id));
+    next.forEach(s => placed.add(s.id));
+  }
+  const xGap = 220, yGap = 140;
+  layers.forEach((layer, li) => {
+    const yOffset = -(layer.length - 1) * yGap / 2;
+    layer.forEach((sid, si) => {
+      const s = m.states.find(st => st.id === sid);
+      s.x = 160 + li * xGap;
+      s.y = 300 + yOffset + si * yGap;
+    });
+  });
+  save(); fitView();
+}
+function deleteSelected() {
+  if (selected.type === 'state') deleteState();
+  else if (selected.type === 'transition') deleteTransition();
+}
+
+// ─── Views ─────────────────────────────────────────────────────
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+  document.getElementById('view-' + view).style.display = view === 'canvas' || view === 'simulate' ? 'flex' : '';
+  closePanel();
+  if (view === 'simulate') { resetSim(); renderCanvas('simCanvas'); setTimeout(fitView, 50) }
+  if (view === 'transitions') renderTransitionsList();
+  if (view === 'code') renderCodeView();
+  if (view === 'dashboard') renderDashboard();
+  if (view === 'canvas') renderCanvas();
+}
+
+// ─── Transitions List ──────────────────────────────────────────
+function renderTransitionsList() {
+  const m = getMachine(); if (!m) return;
+  const el = document.getElementById('view-transitions');
+  if (!m.transitions.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">No transitions yet. Go to Designer and click 🔗 Transition to create one.</div>'; return }
+  el.innerHTML = m.transitions.map(t => {
+    const from = m.states.find(s => s.id === t.from);
+    const to = m.states.find(s => s.id === t.to);
+    return `<div class="trans-item" onclick="switchView('canvas');selectTransition('${t.id}')">
+      <div class="flow">
+        <span style="color:${from?.color||'#fff'};font-weight:600">${esc(from?.name||'?')}</span>
+        <span class="arrow">→</span>
+        <span style="color:${to?.color||'#fff'};font-weight:600">${esc(to?.name||'?')}</span>
+        ${t.event ? `<span class="event">${esc(t.event)}</span>` : ''}
+        ${t.guard ? `<span style="font-size:11px;color:var(--text2)">[${esc(t.guard)}]</span>` : ''}
+      </div>
+      <div class="btns">
+        <button onclick="event.stopPropagation();deleteTrans('${t.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function deleteTrans(id) {
+  const m = getMachine(); if (!m) return;
+  m.transitions = m.transitions.filter(t => t.id !== id);
+  save(); renderTransitionsList();
+}
+
+// ─── Simulation ────────────────────────────────────────────────
+function resetSim() {
+  const m = getMachine(); if (!m) return;
+  const init = m.states.find(s => s.type === 'initial' || s.type === 'initial-final');
+  simState = init ? init.id : m.states[0]?.id;
+  simHistory = [simState];
+  renderSimBar();
+  renderCanvas('simCanvas');
+}
+function simTrigger(event) {
+  const m = getMachine(); if (!m) return;
+  const available = m.transitions.filter(t => t.from === simState && t.event === event);
+  if (available.length === 0) return;
+  const t = available[0];
+  simState = t.to;
+  simHistory.push(event + ' → ' + (m.states.find(s => s.id === t.to)?.name || '?'));
+  renderSimBar();
+  renderCanvas('simCanvas');
+}
+function renderSimBar() {
+  const m = getMachine(); if (!m) return;
+  const state = m.states.find(s => s.id === simState);
+  const availTrans = m.transitions.filter(t => t.from === simState);
+  const events = [...new Set(availTrans.map(t => t.event).filter(Boolean))];
+  
+  let existing = document.querySelector('.sim-bar');
+  if (!existing) {
+    existing = document.createElement('div');
+    existing.className = 'sim-bar';
+    document.getElementById('view-simulate').appendChild(existing);
+  }
+  existing.innerHTML = `
+    <div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">Current State</div><div class="current-state">${esc(state?.name || '?')}</div></div>
+    <div class="sep" style="width:1px;height:36px;background:var(--border)"></div>
+    <div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Available Events</div>
+      <div class="events">${events.length ? events.map(e => `<button class="event-btn" onclick="simTrigger('${esc(e)}')">${esc(e)}</button>`).join('') : '<span style="color:var(--text2);font-size:12px">No events (final state)</span>'}</div>
+    </div>
+    <div class="sep" style="width:1px;height:36px;background:var(--border)"></div>
+    <button class="reset-btn" onclick="resetSim()">🔄 Reset</button>
+    <div style="max-width:200px"><div style="font-size:10px;color:var(--text2)">History: ${simHistory.length} steps</div><div class="history">${simHistory.slice(-5).join(' → ')}</div></div>
+  `;
+}
+
+// ─── Code Export ───────────────────────────────────────────────
+function renderCodeView() {
+  const m = getMachine(); if (!m) return;
+  const el = document.getElementById('view-code');
+  el.innerHTML = `
+    <div class="format-tabs">
+      <div class="format-tab${codeFormat==='xstate'?' active':''}" onclick="codeFormat='xstate';renderCodeView()">XState v5</div>
+      <div class="format-tab${codeFormat==='js'?' active':''}" onclick="codeFormat='js';renderCodeView()">JavaScript</div>
+      <div class="format-tab${codeFormat==='python'?' active':''}" onclick="codeFormat='python';renderCodeView()">Python</div>
+      <div class="format-tab${codeFormat==='mermaid'?' active':''}" onclick="codeFormat='mermaid';renderCodeView()">Mermaid</div>
+      <div class="format-tab${codeFormat==='plantuml'?' active':''}" onclick="codeFormat='plantuml';renderCodeView()">PlantUML</div>
+    </div>
+    <pre id="codeOutput">${esc(generateCode(codeFormat))}</pre>
+    <button class="copy-btn" onclick="copyCode()">📋 Copy to Clipboard</button>
+    <button class="copy-btn" onclick="downloadCode()" style="margin-left:8px;background:var(--surface2)">📥 Download</button>
+  `;
+}
+function generateCode(format) {
+  const m = getMachine(); if (!m) return '';
+  const init = m.states.find(s => s.type === 'initial' || s.type === 'initial-final');
+  const name = m.name.replace(/[^a-zA-Z0-9]/g, '');
+  
+  if (format === 'xstate') {
+    let code = `import { createMachine } from 'xstate';\n\nconst ${name || 'machine'} = createMachine({\n  id: '${m.name}',\n  initial: '${init?.name || m.states[0]?.name || 'unknown'}',\n  states: {\n`;
+    m.states.forEach(s => {
+      code += `    '${s.name}': {\n`;
+      if (s.type === 'final' || s.type === 'initial-final') code += `      type: 'final',\n`;
+      if (s.entry) code += `      entry: [${s.entry.split(',').map(a => `'${a.trim()}'`).join(', ')}],\n`;
+      if (s.exit) code += `      exit: [${s.exit.split(',').map(a => `'${a.trim()}'`).join(', ')}],\n`;
+      const trans = m.transitions.filter(t => t.from === s.id);
+      if (trans.length) {
+        code += `      on: {\n`;
+        const byEvent = {};
+        trans.forEach(t => { (byEvent[t.event || 'UNKNOWN'] = byEvent[t.event || 'UNKNOWN'] || []).push(t) });
+        Object.entries(byEvent).forEach(([event, ts]) => {
+          if (ts.length === 1) {
+            const t = ts[0];
+            const target = m.states.find(st => st.id === t.to);
+            let val = `'${target?.name}'`;
+            if (t.guard || t.actions) {
+              val = `{\n            target: '${target?.name}'`;
+              if (t.guard) val += `,\n            guard: '${t.guard}'`;
+              if (t.actions) val += `,\n            actions: [${t.actions.split(',').map(a => `'${a.trim()}'`).join(', ')}]`;
+              val += `\n          }`;
+            }
+            code += `        ${event}: ${val},\n`;
+          } else {
+            code += `        ${event}: [\n`;
+            ts.forEach(t => {
+              const target = m.states.find(st => st.id === t.to);
+              code += `          { target: '${target?.name}'`;
+              if (t.guard) code += `, guard: '${t.guard}'`;
+              if (t.actions) code += `, actions: [${t.actions.split(',').map(a => `'${a.trim()}'`).join(', ')}]`;
+              code += ` },\n`;
+            });
+            code += `        ],\n`;
+          }
+        });
+        code += `      },\n`;
+      }
+      code += `    },\n`;
+    });
+    code += `  }\n});\n\nexport default ${name || 'machine'};`;
+    return code;
+  }
+  
+  if (format === 'js') {
+    let code = `// ${m.name} — State Machine\n\nclass ${name || 'StateMachine'} {\n  constructor() {\n    this.state = '${init?.name || m.states[0]?.name}';\n    this.history = [this.state];\n  }\n\n  transition(event) {\n    const transitions = {\n`;
+    m.states.forEach(s => {
+      const trans = m.transitions.filter(t => t.from === s.id);
+      if (trans.length) {
+        code += `      '${s.name}': {\n`;
+        const byEvent = {};
+        trans.forEach(t => { (byEvent[t.event || 'UNKNOWN'] = byEvent[t.event || 'UNKNOWN'] || []).push(t) });
+        Object.entries(byEvent).forEach(([ev, ts]) => {
+          const target = m.states.find(st => st.id === ts[0].to);
+          code += `        '${ev}': '${target?.name}',\n`;
+        });
+        code += `      },\n`;
+      }
+    });
+    code += `    };\n\n    const next = transitions[this.state]?.[event];\n    if (next) {\n      this.state = next;\n      this.history.push(next);\n      return next;\n    }\n    return null; // Invalid transition\n  }\n\n  getState() { return this.state; }\n  getHistory() { return [...this.history]; }\n  reset() { this.state = '${init?.name || m.states[0]?.name}'; this.history = [this.state]; }\n}\n\nexport default ${name || 'StateMachine'};`;
+    return code;
+  }
+  
+  if (format === 'python') {
+    let code = `# ${m.name} — State Machine\n\nclass ${name || 'StateMachine'}:\n    def __init__(self):\n        self.state = "${init?.name || m.states[0]?.name}"\n        self.history = [self.state]\n        self.transitions = {\n`;
+    m.states.forEach(s => {
+      const trans = m.transitions.filter(t => t.from === s.id);
+      if (trans.length) {
+        code += `            "${s.name}": {\n`;
+        const byEvent = {};
+        trans.forEach(t => { (byEvent[t.event || 'UNKNOWN'] = byEvent[t.event || 'UNKNOWN'] || []).push(t) });
+        Object.entries(byEvent).forEach(([ev, ts]) => {
+          const target = m.states.find(st => st.id === ts[0].to);
+          code += `                "${ev}": "${target?.name}",\n`;
+        });
+        code += `            },\n`;
+      }
+    });
+    code += `        }\n\n    def trigger(self, event: str) -> str | None:\n        next_state = self.transitions.get(self.state, {}).get(event)\n        if next_state:\n            self.state = next_state\n            self.history.append(next_state)\n            return next_state\n        return None\n\n    def reset(self):\n        self.state = "${init?.name || m.states[0]?.name}"\n        self.history = [self.state]\n`;
+    return code;
+  }
+  
+  if (format === 'mermaid') {
+    let code = `stateDiagram-v2\n`;
+    if (init) code += `    [*] --> ${init.name.replace(/ /g,'_')}\n`;
+    m.transitions.forEach(t => {
+      const from = m.states.find(s => s.id === t.from);
+      const to = m.states.find(s => s.id === t.to);
+      if (!from || !to) return;
+      const fn = from.name.replace(/ /g,'_'), tn = to.name.replace(/ /g,'_');
+      const label = t.event + (t.guard ? ` [${t.guard}]` : '');
+      code += `    ${fn} --> ${tn}: ${label}\n`;
+    });
+    const finals = m.states.filter(s => s.type === 'final' || s.type === 'initial-final');
+    finals.forEach(s => { code += `    ${s.name.replace(/ /g,'_')} --> [*]\n` });
+    return code;
+  }
+  
+  if (format === 'plantuml') {
+    let code = `@startuml\n`;
+    if (init) code += `[*] --> ${init.name.replace(/ /g,'_')}\n`;
+    m.transitions.forEach(t => {
+      const from = m.states.find(s => s.id === t.from);
+      const to = m.states.find(s => s.id === t.to);
+      if (!from || !to) return;
+      const fn = from.name.replace(/ /g,'_'), tn = to.name.replace(/ /g,'_');
+      const label = t.event + (t.guard ? ` [${t.guard}]` : '');
+      code += `${fn} --> ${tn} : ${label}\n`;
+    });
+    const finals = m.states.filter(s => s.type === 'final' || s.type === 'initial-final');
+    finals.forEach(s => { code += `${s.name.replace(/ /g,'_')} --> [*]\n` });
+    code += `@enduml`;
+    return code;
+  }
+  
+  return '';
+}
+function copyCode() {
+  navigator.clipboard.writeText(generateCode(codeFormat)).then(() => toast('Copied!'));
+}
+function downloadCode() {
+  const ext = { xstate: '.ts', js: '.js', python: '.py', mermaid: '.mmd', plantuml: '.puml' }[codeFormat] || '.txt';
+  const m = getMachine(); if (!m) return;
+  const name = m.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+  const blob = new Blob([generateCode(codeFormat)], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name + ext;
+  a.click();
+}
+
+// ─── Dashboard ─────────────────────────────────────────────────
+function renderDashboard() {
+  const el = document.getElementById('view-dashboard');
+  const totalStates = machines.reduce((a, m) => a + m.states.length, 0);
+  const totalTrans = machines.reduce((a, m) => a + m.transitions.length, 0);
+  const totalMachines = machines.length;
+  const avgStates = totalMachines ? (totalStates / totalMachines).toFixed(1) : 0;
+  const allEvents = new Set(); machines.forEach(m => m.transitions.forEach(t => { if (t.event) allEvents.add(t.event) }));
+  const allGuards = machines.reduce((a, m) => a + m.transitions.filter(t => t.guard).length, 0);
+  
+  el.innerHTML = `
+    <h2 style="font-size:20px;margin-bottom:16px">📊 Dashboard</h2>
+    <div class="dash-grid">
+      <div class="stat-card"><div class="value" style="color:var(--accent)">${totalMachines}</div><div class="label">Machines</div></div>
+      <div class="stat-card"><div class="value" style="color:var(--green)">${totalStates}</div><div class="label">Total States</div></div>
+      <div class="stat-card"><div class="value" style="color:var(--orange)">${totalTrans}</div><div class="label">Total Transitions</div></div>
+      <div class="stat-card"><div class="value" style="color:var(--purple)">${allEvents.size}</div><div class="label">Unique Events</div></div>
+      <div class="stat-card"><div class="value" style="color:var(--cyan)">${avgStates}</div><div class="label">Avg States / Machine</div></div>
+      <div class="stat-card"><div class="value" style="color:var(--pink)">${allGuards}</div><div class="label">Guarded Transitions</div></div>
+    </div>
+    
+    <div class="dash-section">
+      <h3>Machines Overview</h3>
+      <table class="dash-table">
+        <tr><th>Name</th><th>States</th><th>Transitions</th><th>Events</th><th>Complexity</th></tr>
+        ${machines.map(m => {
+          const events = new Set(m.transitions.map(t => t.event).filter(Boolean));
+          const complexity = m.states.length + m.transitions.length;
+          const maxC = Math.max(...machines.map(mm => mm.states.length + mm.transitions.length), 1);
+          return `<tr>
+            <td style="font-weight:600">${esc(m.name)}</td>
+            <td>${m.states.length}</td>
+            <td>${m.transitions.length}</td>
+            <td>${events.size}</td>
+            <td><div style="display:flex;align-items:center;gap:8px"><div class="dash-bar" style="width:${complexity/maxC*120}px;background:${complexity > maxC * .7 ? 'var(--red)' : complexity > maxC * .4 ? 'var(--orange)' : 'var(--green)'}"></div>${complexity}</div></td>
+          </tr>`;
+        }).join('')}
+      </table>
+    </div>
+    
+    <div class="dash-section">
+      <h3>State Types Distribution</h3>
+      ${(() => {
+        const types = { initial: 0, normal: 0, final: 0 };
+        machines.forEach(m => m.states.forEach(s => {
+          if (s.type === 'initial' || s.type === 'initial-final') types.initial++;
+          if (s.type === 'final' || s.type === 'initial-final') types.final++;
+          if (s.type === 'normal') types.normal++;
+        }));
+        const max = Math.max(...Object.values(types), 1);
+        return `<div style="display:flex;flex-direction:column;gap:8px">
+          ${[['Initial', types.initial, 'var(--green)'], ['Normal', types.normal, 'var(--accent)'], ['Final', types.final, 'var(--purple)']].map(([label, val, color]) =>
+            `<div style="display:flex;align-items:center;gap:12px"><span style="width:60px;font-size:12px;color:var(--text2)">${label}</span><div class="dash-bar" style="width:${val/max*200}px;background:${color}"></div><span style="font-size:13px;font-weight:600">${val}</span></div>`
+          ).join('')}
+        </div>`;
+      })()}
+    </div>
+    
+    <div class="dash-section">
+      <h3>Most Used Events</h3>
+      ${(() => {
+        const eventCount = {};
+        machines.forEach(m => m.transitions.forEach(t => { if (t.event) eventCount[t.event] = (eventCount[t.event]||0) + 1 }));
+        const sorted = Object.entries(eventCount).sort((a,b) => b[1]-a[1]).slice(0, 10);
+        const max = sorted[0]?.[1] || 1;
+        return sorted.map(([ev, count]) =>
+          `<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><span style="width:120px;font-size:12px;font-family:monospace;color:var(--yellow)">${esc(ev)}</span><div class="dash-bar" style="width:${count/max*160}px;background:var(--yellow)"></div><span style="font-size:13px">${count}</span></div>`
+        ).join('') || '<div style="color:var(--text2);font-size:13px">No events defined</div>';
+      })()}
+    </div>
+  `;
+}
+
+// ─── Import/Export ─────────────────────────────────────────────
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(machines, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'state-machines.json';
+  a.click();
+  toast('Exported!');
+}
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (Array.isArray(data)) {
+          data.forEach(m => { if (!machines.find(mm => mm.id === m.id)) machines.push(m) });
+        } else if (data.states) {
+          machines.push({ ...data, id: data.id || uid() });
+        }
+        activeMachineId = machines[0]?.id;
+        save(); renderAll();
+        toast('Imported!');
+      } catch(e) { toast('Invalid JSON') }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ─── Toast ─────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+// ─── Help ──────────────────────────────────────────────────────
+function showHelp() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove() };
+  overlay.innerHTML = `<div class="modal">
+    <h2>⌨️ Keyboard Shortcuts <span class="close" onclick="this.closest('.modal-overlay').remove()">&times;</span></h2>
+    ${[
+      ['S', 'Add State'],
+      ['T', 'Start Transition Mode'],
+      ['A', 'Auto Layout'],
+      ['F', 'Fit to View'],
+      ['+/−', 'Zoom In/Out'],
+      ['Del/Backspace', 'Delete Selected'],
+      ['Esc', 'Close Panel / Deselect'],
+      ['1-5', 'Switch Views'],
+      ['N', 'New Machine'],
+      ['E', 'Export JSON'],
+      ['?', 'This Help'],
+    ].map(([k,d]) => `<div class="shortcut"><span>${d}</span><span class="key">${k}</span></div>`).join('')}
+    <h3 style="margin-top:16px;margin-bottom:8px">Canvas Controls</h3>
+    ${[
+      ['Click + Drag State', 'Move state'],
+      ['Click + Drag Background', 'Pan canvas'],
+      ['Scroll Wheel', 'Zoom in/out'],
+      ['Click State (in Transition mode)', 'Set source → target'],
+    ].map(([k,d]) => `<div class="shortcut"><span>${d}</span><span class="key" style="font-size:10px">${k}</span></div>`).join('')}
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+// ─── Keyboard ──────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  const key = e.key.toLowerCase();
+  if (key === 's' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); addState() }
+  else if (key === 't') { e.preventDefault(); startTransitionMode() }
+  else if (key === 'a') { e.preventDefault(); autoLayout() }
+  else if (key === 'f') { e.preventDefault(); fitView() }
+  else if (key === 'n') { e.preventDefault(); newMachine() }
+  else if (key === 'e') { e.preventDefault(); exportJSON() }
+  else if (key === '?') { e.preventDefault(); showHelp() }
+  else if (key === '=' || key === '+') { e.preventDefault(); zoomIn() }
+  else if (key === '-') { e.preventDefault(); zoomOut() }
+  else if (key === 'escape') { closePanel(); transitionMode = false; transSource = null; document.getElementById('transBtn').style.background=''; document.getElementById('transBtn').style.color='' }
+  else if (key === 'delete' || key === 'backspace') { if (!e.target.closest('.panel')) deleteSelected() }
+  else if (key === '1') switchView('canvas');
+  else if (key === '2') switchView('transitions');
+  else if (key === '3') switchView('simulate');
+  else if (key === '4') switchView('code');
+  else if (key === '5') switchView('dashboard');
+  else if (key === '/') { e.preventDefault(); document.getElementById('searchInput').focus() }
+});
+
+// ─── Init ──────────────────────────────────────────────────────
+function renderAll() { renderSidebar(); renderCanvas(); }
+
+document.getElementById('searchInput').addEventListener('input', renderSidebar);
+
+load();
+initCanvasEvents('canvasContainer', 'canvas');
+initCanvasEvents('simCanvasContainer', 'simCanvas');
+renderAll();
+setTimeout(fitView, 100);
+
+window.addEventListener('resize', () => renderCanvas());
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

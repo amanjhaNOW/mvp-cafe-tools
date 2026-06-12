@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Typing Arena — Speed Typing Test & Trainer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--text:#e6edf3;--dim:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff;--orange:#f0883e;--cyan:#39d353}
+body{font-family:'SF Mono','Fira Code','JetBrains Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.app{max-width:1100px;margin:0 auto;padding:20px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+header h1{font-size:22px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+header .sub{color:var(--dim);font-size:13px;margin-left:8px}
+.tabs{display:flex;gap:4px;background:var(--surface);border-radius:8px;padding:3px}
+.tab{padding:8px 16px;border:none;background:none;color:var(--dim);cursor:pointer;border-radius:6px;font-size:13px;font-family:inherit;transition:.2s}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--accent);color:#fff}
+.view{display:none}.view.active{display:block}
+
+/* Config bar */
+.config{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+.config-group{display:flex;gap:4px;background:var(--surface);border-radius:8px;padding:3px}
+.cfg-btn{padding:6px 14px;border:none;background:none;color:var(--dim);cursor:pointer;border-radius:6px;font-size:12px;font-family:inherit;transition:.2s}
+.cfg-btn:hover{color:var(--text)}
+.cfg-btn.active{background:var(--surface2);color:var(--accent);border:1px solid var(--accent)}
+
+/* Typing area */
+.typing-zone{position:relative;margin-bottom:20px}
+.text-display{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:32px;font-size:22px;line-height:1.8;min-height:180px;position:relative;cursor:text;user-select:none;overflow:hidden;transition:border-color .3s}
+.text-display.focused{border-color:var(--accent)}
+.text-display.error-flash{border-color:var(--red)}
+.char{transition:color .05s}
+.char.correct{color:var(--green)}
+.char.incorrect{color:var(--red);text-decoration:underline;text-decoration-color:var(--red)}
+.char.current{background:var(--accent);color:#fff;border-radius:2px;animation:blink 1s infinite}
+.char.pending{color:var(--dim)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.7}}
+.hidden-input{position:absolute;opacity:0;pointer-events:none}
+.restart-hint{text-align:center;color:var(--dim);font-size:13px;margin-top:12px}
+.restart-hint kbd{background:var(--surface2);padding:2px 8px;border-radius:4px;border:1px solid var(--border);font-size:12px}
+
+/* Live stats bar */
+.live-stats{display:flex;gap:16px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+.live-stat{text-align:center;padding:8px 16px}
+.live-stat .val{font-size:28px;font-weight:700;color:var(--accent)}
+.live-stat .lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+
+/* Timer bar */
+.timer-bar{height:4px;background:var(--surface);border-radius:2px;margin-bottom:20px;overflow:hidden}
+.timer-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--purple));transition:width .1s linear;border-radius:2px}
+
+/* Results */
+.results{background:var(--surface);border-radius:12px;padding:32px;border:1px solid var(--border)}
+.results h2{font-size:20px;margin-bottom:20px;text-align:center}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-bottom:24px}
+.result-card{background:var(--surface2);border-radius:10px;padding:16px;text-align:center;border:1px solid var(--border)}
+.result-card .val{font-size:32px;font-weight:700}
+.result-card .lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+.result-card.wpm .val{color:var(--accent)}
+.result-card.acc .val{color:var(--green)}
+.result-card.raw .val{color:var(--purple)}
+.result-card.err .val{color:var(--red)}
+.result-card.time .val{color:var(--yellow)}
+.result-card.chars .val{color:var(--cyan)}
+
+/* WPM chart */
+.wpm-chart{margin:24px 0}
+.wpm-chart h3{font-size:14px;color:var(--dim);margin-bottom:12px}
+.chart-svg{width:100%;height:200px}
+
+/* Problem keys */
+.problem-keys{margin:24px 0}
+.problem-keys h3{font-size:14px;color:var(--dim);margin-bottom:12px}
+.key-grid{display:flex;gap:8px;flex-wrap:wrap}
+.key-chip{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;min-width:52px}
+.key-chip .k{font-size:18px;font-weight:700}
+.key-chip .pct{font-size:11px;color:var(--red);margin-top:2px}
+
+/* Keyboard heatmap */
+.keyboard{margin:24px auto;max-width:700px}
+.keyboard h3{font-size:14px;color:var(--dim);margin-bottom:12px;text-align:center}
+.kb-row{display:flex;justify-content:center;gap:4px;margin-bottom:4px}
+.kb-key{min-width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:12px;font-weight:600;border:1px solid var(--border);transition:.2s}
+.kb-key.space{min-width:250px}
+.kb-key.wide{min-width:60px}
+.kb-key.wider{min-width:80px}
+
+/* History */
+.history-list{display:flex;flex-direction:column;gap:8px}
+.hist-item{display:grid;grid-template-columns:60px 80px 80px 80px 100px 1fr;gap:12px;align-items:center;padding:12px 16px;background:var(--surface);border-radius:8px;border:1px solid var(--border);font-size:13px}
+.hist-item .wpm{color:var(--accent);font-weight:700;font-size:18px}
+.hist-item .acc{color:var(--green)}
+.hist-item .mode{color:var(--purple)}
+.hist-item .dt{color:var(--dim);font-size:11px}
+.hist-header{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:1px;background:none;border:none}
+
+/* Dashboard */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.dash-card{background:var(--surface);border-radius:10px;padding:20px;border:1px solid var(--border);text-align:center}
+.dash-card .val{font-size:36px;font-weight:700;color:var(--accent)}
+.dash-card .lbl{font-size:12px;color:var(--dim);margin-top:4px}
+.progress-chart{background:var(--surface);border-radius:10px;padding:20px;border:1px solid var(--border);margin-bottom:16px}
+.progress-chart h3{font-size:14px;color:var(--dim);margin-bottom:12px}
+
+/* Practice */
+.practice-intro{text-align:center;padding:40px;color:var(--dim)}
+.practice-intro h2{color:var(--text);margin-bottom:12px}
+.weak-keys{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:20px 0}
+.weak-key{background:var(--surface);border:2px solid var(--red);border-radius:10px;padding:12px 20px;text-align:center;cursor:pointer;transition:.2s}
+.weak-key:hover{background:var(--surface2);border-color:var(--orange)}
+.weak-key .k{font-size:24px;font-weight:700}
+.weak-key .info{font-size:11px;color:var(--dim);margin-top:4px}
+
+/* Misc */
+.empty{text-align:center;padding:60px;color:var(--dim)}
+.empty h2{color:var(--text);margin-bottom:8px}
+.btn{padding:10px 20px;border:none;background:var(--accent);color:#fff;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.2s}
+.btn:hover{opacity:.9}
+.btn-outline{background:none;border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--accent)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.flex-between{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.mt16{margin-top:16px}
+.mb16{margin-bottom:16px}
+.text-center{text-align:center}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Personal best badge */
+.pb-badge{display:inline-block;background:var(--yellow);color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:8px;animation:pbpop .5s ease}
+@keyframes pbpop{0%{transform:scale(0)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+
+/* Focus overlay */
+.focus-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10}
+.typing-zone.zen .focus-overlay{display:block}
+
+@media(max-width:768px){
+  .hist-item{grid-template-columns:1fr 1fr;gap:8px}
+  .text-display{font-size:18px;padding:20px}
+  .result-grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div><h1>⌨️ Typing Arena<span class="sub">Speed Test & Trainer</span></h1></div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchView('test')">Test</button>
+    <button class="tab" onclick="switchView('history')">History</button>
+    <button class="tab" onclick="switchView('practice')">Practice</button>
+    <button class="tab" onclick="switchView('dashboard')">Dashboard</button>
+  </div>
+</header>
+
+<!-- TEST VIEW -->
+<div id="v-test" class="view active">
+  <div class="config">
+    <div class="config-group" id="mode-group">
+      <button class="cfg-btn active" data-mode="time" onclick="setMode('time',this)">⏱ Time</button>
+      <button class="cfg-btn" data-mode="words" onclick="setMode('words',this)">📝 Words</button>
+      <button class="cfg-btn" data-mode="quote" onclick="setMode('quote',this)">💬 Quote</button>
+      <button class="cfg-btn" data-mode="code" onclick="setMode('code',this)">💻 Code</button>
+    </div>
+    <div class="config-group" id="duration-group">
+      <button class="cfg-btn" data-dur="15" onclick="setDuration(15,this)">15s</button>
+      <button class="cfg-btn active" data-dur="30" onclick="setDuration(30,this)">30s</button>
+      <button class="cfg-btn" data-dur="60" onclick="setDuration(60,this)">60s</button>
+      <button class="cfg-btn" data-dur="120" onclick="setDuration(120,this)">120s</button>
+    </div>
+    <div class="config-group" id="text-group">
+      <button class="cfg-btn active" data-txt="common" onclick="setTextType('common',this)">Common</button>
+      <button class="cfg-btn" data-txt="product" onclick="setTextType('product',this)">Product</button>
+      <button class="cfg-btn" data-txt="tech" onclick="setTextType('tech',this)">Tech</button>
+    </div>
+  </div>
+
+  <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
+  
+  <div class="live-stats" id="live-stats">
+    <div class="live-stat"><div class="val" id="ls-wpm">0</div><div class="lbl">WPM</div></div>
+    <div class="live-stat"><div class="val" id="ls-acc">100%</div><div class="lbl">Accuracy</div></div>
+    <div class="live-stat"><div class="val" id="ls-time">30</div><div class="lbl">Time</div></div>
+    <div class="live-stat"><div class="val" id="ls-chars">0</div><div class="lbl">Chars</div></div>
+  </div>
+
+  <div class="typing-zone" id="typing-zone">
+    <div class="text-display" id="text-display" tabindex="0"></div>
+    <input class="hidden-input" id="hidden-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  </div>
+  <div class="restart-hint">Click the text area to start typing · <kbd>Tab</kbd>+<kbd>Enter</kbd> to restart · <kbd>Esc</kbd> to reset</div>
+
+  <div id="results-panel" style="display:none"></div>
+</div>
+
+<!-- HISTORY VIEW -->
+<div id="v-history" class="view">
+  <div class="flex-between mb16">
+    <h2>Test History</h2>
+    <div>
+      <button class="btn btn-outline btn-sm" onclick="exportHistory()">Export JSON</button>
+      <button class="btn btn-outline btn-sm" onclick="clearHistory()" style="margin-left:4px;color:var(--red)">Clear All</button>
+    </div>
+  </div>
+  <div id="history-list"></div>
+</div>
+
+<!-- PRACTICE VIEW -->
+<div id="v-practice" class="view">
+  <div id="practice-content"></div>
+</div>
+
+<!-- DASHBOARD VIEW -->
+<div id="v-dashboard" class="view">
+  <div id="dashboard-content"></div>
+</div>
+
+</div>
+
+<script>
+// ============ DATA ============
+const TEXTS = {
+  common: [
+    "the quick brown fox jumps over the lazy dog and runs through the forest at incredible speed while the sun sets behind the mountain peaks creating a beautiful orange glow across the entire valley below",
+    "she opened the door and stepped into the bright morning light feeling the warm breeze against her skin as birds sang their cheerful songs from the nearby trees creating a peaceful atmosphere",
+    "technology has changed the way we live work and communicate with each other making it possible to connect with people around the world in just seconds through various digital platforms",
+    "the restaurant was filled with the aroma of freshly baked bread and simmering sauces as the chef prepared each dish with care and precision ensuring every plate was a masterpiece",
+    "learning something new every day keeps the mind sharp and curious opening doors to opportunities that were previously invisible and building skills that compound over time into real expertise",
+    "coffee shops have become the modern workplace where freelancers and remote workers gather to find inspiration surrounded by the gentle hum of conversation and the smell of fresh espresso",
+    "the secret to getting ahead is getting started you do not have to be great to begin but you have to begin to be great focus on progress not perfection and keep moving forward",
+    "music has the power to transform our mood instantly a single song can bring back memories from years ago making us feel emotions we thought we had forgotten about completely",
+    "the best products solve real problems for real people they do not try to be everything for everyone instead they focus on doing one thing exceptionally well and iterate from there",
+    "writing code is like writing prose you need clarity structure and purpose every function should tell a story and every variable should have a meaningful name that reveals intent",
+    "startup founders often underestimate the importance of distribution a great product with poor distribution will lose to a mediocre product with great distribution every single time",
+    "the art of simplicity is knowing what to leave out not what to put in great design removes everything unnecessary until only the essential remains clear and purposeful",
+    "reading thirty minutes a day adds up to over one hundred and eighty hours per year thats enough to read fifty books and fundamentally change how you think about the world",
+    "the difference between ordinary and extraordinary is that little extra pushing past the comfortable zone where most people stop is where real growth and lasting achievement happens",
+    "good communication is the bridge between confusion and clarity it is not about using fancy words but about making complex ideas accessible to anyone regardless of their background"
+  ],
+  product: [
+    "product market fit is when your customers become your salespeople the product is so valuable that users cannot stop telling others about it and growth becomes organic and sustainable",
+    "the north star metric aligns every team around a single measure of value creation it is not revenue or signups but the core action that represents real value delivered to users",
+    "user research is not asking people what they want it is observing what they do understanding why they struggle and finding the gap between their current reality and desired outcome",
+    "agile is not about sprints and standups it is about building a culture of rapid experimentation learning from failures quickly and continuously delivering value to customers in small increments",
+    "the jobs to be done framework reminds us that customers do not buy products they hire solutions to make progress in their lives understanding this changes how you build everything",
+    "retention is the king metric of growth you can acquire millions of users but if they leave within a week you are filling a leaky bucket fix retention before scaling acquisition",
+    "feature prioritization using RICE scoring helps teams make objective decisions about what to build next by evaluating reach impact confidence and effort for every item on the backlog",
+    "the build measure learn loop from lean startup methodology emphasizes creating minimum viable experiments to test assumptions before investing significant time and resources into full product development",
+    "stakeholder management is about understanding what each person cares about and communicating in their language engineers want technical details executives want business impact designers want user insights",
+    "a good PRD answers three questions clearly what problem are we solving who has this problem and how will we know if our solution works these three things drive everything"
+  ],
+  tech: [
+    "typescript adds static type checking to javascript catching errors at compile time rather than runtime which significantly reduces bugs in production and makes refactoring large codebases much safer",
+    "react hooks like useState and useEffect replaced class components making code more readable and reusable custom hooks extract common logic into composable functions that any component can share",
+    "supabase provides an open source alternative to firebase with a postgres database real time subscriptions authentication and storage all accessible through a clean javascript client library",
+    "docker containers package applications with their dependencies ensuring consistent behavior across development staging and production environments eliminating the classic it works on my machine problem",
+    "git branching strategies like trunk based development encourage frequent small merges to the main branch reducing merge conflicts and enabling continuous integration with automated testing pipelines",
+    "api rate limiting protects your service from abuse and ensures fair usage across all clients common algorithms include token bucket sliding window and fixed window each with different tradeoffs",
+    "database indexing dramatically improves query performance by creating sorted data structures that allow the engine to find rows without scanning the entire table choose indexes based on query patterns",
+    "websockets enable full duplex communication between client and server making them ideal for real time features like chat notifications live dashboards and collaborative editing applications",
+    "kubernetes orchestrates containerized applications across clusters handling scaling load balancing service discovery and self healing when pods crash it automatically restarts them maintaining desired state",
+    "redis serves as both a cache and message broker its in memory data structure store supports strings hashes lists sets and sorted sets with sub millisecond response times at scale"
+  ],
+  quotes: [
+    "the only way to do great work is to love what you do if you havent found it yet keep looking dont settle as with all matters of the heart youll know when you find it",
+    "innovation distinguishes between a leader and a follower stay hungry stay foolish the people who are crazy enough to think they can change the world are the ones who do",
+    "your time is limited so dont waste it living someone elses life dont be trapped by dogma which is living with the results of other peoples thinking",
+    "move fast and break things unless you are breaking stuff you are not moving fast enough done is better than perfect and the biggest risk is not taking any risk at all",
+    "the best way to predict the future is to create it what gets measured gets managed and if you cant explain it simply you dont understand it well enough",
+    "first they ignore you then they laugh at you then they fight you then you win the strength of the team is each individual member the strength of each member is the team",
+    "talk is cheap show me the code programs must be written for people to read and only incidentally for machines to execute simplicity is the ultimate sophistication",
+    "any sufficiently advanced technology is indistinguishable from magic the computer was born to solve problems that did not exist before premature optimization is the root of all evil"
+  ],
+  code: [
+    "function debounce(fn, delay) { let timer; return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); }; }",
+    "const fetchData = async (url) => { try { const res = await fetch(url); if (!res.ok) throw new Error(res.statusText); return await res.json(); } catch (e) { console.error(e); } };",
+    "const pipe = (...fns) => (x) => fns.reduce((v, f) => f(v), x); const compose = (...fns) => (x) => fns.reduceRight((v, f) => f(v), x);",
+    "class EventEmitter { constructor() { this.events = {}; } on(e, fn) { (this.events[e] ||= []).push(fn); } emit(e, ...args) { (this.events[e] || []).forEach(fn => fn(...args)); } }",
+    "const deepClone = (obj) => { if (obj === null || typeof obj !== 'object') return obj; const clone = Array.isArray(obj) ? [] : {}; for (const key in obj) clone[key] = deepClone(obj[key]); return clone; };",
+    "const throttle = (fn, limit) => { let last = 0; return (...args) => { const now = Date.now(); if (now - last >= limit) { last = now; fn(...args); } }; };",
+    "const memoize = (fn) => { const cache = new Map(); return (...args) => { const key = JSON.stringify(args); if (cache.has(key)) return cache.get(key); const result = fn(...args); cache.set(key, result); return result; }; };",
+    "SELECT u.name, COUNT(o.id) AS order_count, SUM(o.total) AS revenue FROM users u LEFT JOIN orders o ON u.id = o.user_id WHERE o.created_at > NOW() - INTERVAL '30 days' GROUP BY u.id ORDER BY revenue DESC LIMIT 10;",
+    "app.use((err, req, res, next) => { const status = err.status || 500; const message = err.message || 'Internal Server Error'; console.error(`[${status}] ${message}`); res.status(status).json({ error: message }); });",
+    "const useLocalStorage = (key, initial) => { const [val, setVal] = useState(() => { try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : initial; } catch { return initial; } }); useEffect(() => { localStorage.setItem(key, JSON.stringify(val)); }, [key, val]); return [val, setVal]; };"
+  ]
+};
+
+// ============ STATE ============
+let S = {
+  mode: 'time',       // time | words | quote | code
+  duration: 30,       // seconds (for time mode)
+  wordCount: 50,      // for words mode
+  textType: 'common', // common | product | tech
+  testText: '',
+  chars: [],          // {char, status: 'pending'|'correct'|'incorrect'}
+  pos: 0,
+  started: false,
+  finished: false,
+  startTime: 0,
+  timer: null,
+  elapsed: 0,
+  wpmHistory: [],     // {time, wpm}
+  errors: 0,
+  totalTyped: 0,
+  correctChars: 0,
+  keyErrors: {},      // char -> {total, errors}
+  lastWpmUpdate: 0
+};
+
+let history = JSON.parse(localStorage.getItem('ta_history') || '[]');
+let personalBests = JSON.parse(localStorage.getItem('ta_pb') || '{}');
+let keyStats = JSON.parse(localStorage.getItem('ta_keystats') || '{}');
+
+// ============ INIT ============
+function init() {
+  generateText();
+  renderText();
+  document.getElementById('text-display').addEventListener('click', focusInput);
+  document.getElementById('hidden-input').addEventListener('input', handleInput);
+  document.getElementById('hidden-input').addEventListener('keydown', handleKeydown);
+  document.addEventListener('keydown', handleGlobalKey);
+}
+
+function focusInput() {
+  document.getElementById('hidden-input').focus();
+  document.getElementById('text-display').classList.add('focused');
+}
+
+// ============ TEXT GENERATION ============
+function generateText() {
+  let pool;
+  if (S.mode === 'quote') pool = TEXTS.quotes;
+  else if (S.mode === 'code') pool = TEXTS.code;
+  else pool = TEXTS[S.textType] || TEXTS.common;
+
+  if (S.mode === 'code') {
+    // Pick 3-5 random snippets
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    S.testText = shuffled.slice(0, 3).join('\n\n');
+  } else if (S.mode === 'quote') {
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    S.testText = shuffled.slice(0, 2).join(' ');
+  } else if (S.mode === 'words') {
+    // Get enough text
+    const all = pool.join(' ').split(' ').sort(() => Math.random() - 0.5);
+    S.testText = all.slice(0, 80).join(' ');
+  } else {
+    // Time mode — longer text
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    S.testText = shuffled.slice(0, 6).join(' ');
+  }
+
+  S.chars = S.testText.split('').map(c => ({ char: c, status: 'pending' }));
+  S.pos = 0;
+  S.started = false;
+  S.finished = false;
+  S.errors = 0;
+  S.totalTyped = 0;
+  S.correctChars = 0;
+  S.wpmHistory = [];
+  S.keyErrors = {};
+  S.elapsed = 0;
+  S.lastWpmUpdate = 0;
+  clearInterval(S.timer);
+  document.getElementById('results-panel').style.display = 'none';
+  document.getElementById('timer-fill').style.width = '100%';
+  updateLiveStats();
+}
+
+// ============ RENDER ============
+function renderText() {
+  const el = document.getElementById('text-display');
+  // Show only a window of chars around current position for performance
+  const windowSize = 300;
+  const start = Math.max(0, S.pos - 60);
+  const end = Math.min(S.chars.length, start + windowSize);
+  
+  let html = '';
+  for (let i = start; i < end; i++) {
+    const c = S.chars[i];
+    let cls = c.status;
+    if (i === S.pos && !S.finished) cls += ' current';
+    const ch = c.char === '\n' ? '↵\n' : (c.char === ' ' ? ' ' : escHtml(c.char));
+    html += `<span class="char ${cls}">${ch}</span>`;
+  }
+  el.innerHTML = html;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============ INPUT HANDLING ============
+function handleInput(e) {
+  if (S.finished) return;
+  const val = e.target.value;
+  e.target.value = '';
+  
+  if (!val) return;
+
+  for (const ch of val) {
+    typeChar(ch);
+  }
+}
+
+function handleKeydown(e) {
+  if (S.finished) return;
+  if (e.key === 'Backspace') {
+    e.preventDefault();
+    if (S.pos > 0) {
+      S.pos--;
+      S.chars[S.pos].status = 'pending';
+      renderText();
+      updateLiveStats();
+    }
+  }
+}
+
+function typeChar(ch) {
+  if (S.pos >= S.chars.length) return;
+  
+  if (!S.started) {
+    S.started = true;
+    S.startTime = Date.now();
+    startTimer();
+  }
+
+  const expected = S.chars[S.pos].char;
+  S.totalTyped++;
+
+  // Track key stats
+  if (!S.keyErrors[expected]) S.keyErrors[expected] = { total: 0, errors: 0 };
+  S.keyErrors[expected].total++;
+
+  // Global key stats
+  if (!keyStats[expected]) keyStats[expected] = { total: 0, errors: 0 };
+  keyStats[expected].total++;
+
+  if (ch === expected) {
+    S.chars[S.pos].status = 'correct';
+    S.correctChars++;
+    S.pos++;
+  } else {
+    S.chars[S.pos].status = 'incorrect';
+    S.errors++;
+    S.keyErrors[expected].errors++;
+    keyStats[expected].errors++;
+    S.pos++;
+    
+    // Flash border red briefly
+    const disp = document.getElementById('text-display');
+    disp.classList.add('error-flash');
+    setTimeout(() => disp.classList.remove('error-flash'), 150);
+  }
+
+  renderText();
+  updateLiveStats();
+
+  // Check completion
+  if (S.pos >= S.chars.length) {
+    finishTest();
+  }
+}
+
+// ============ TIMER ============
+function startTimer() {
+  const start = Date.now();
+  S.timer = setInterval(() => {
+    S.elapsed = (Date.now() - start) / 1000;
+    
+    if (S.mode === 'time') {
+      const remaining = Math.max(0, S.duration - S.elapsed);
+      document.getElementById('ls-time').textContent = Math.ceil(remaining);
+      document.getElementById('timer-fill').style.width = (remaining / S.duration * 100) + '%';
+      if (remaining <= 0) finishTest();
+    } else {
+      document.getElementById('ls-time').textContent = Math.floor(S.elapsed) + 's';
+      document.getElementById('timer-fill').style.width = '100%';
+    }
+
+    // Record WPM every second
+    if (S.elapsed - S.lastWpmUpdate >= 1) {
+      S.lastWpmUpdate = Math.floor(S.elapsed);
+      const mins = S.elapsed / 60;
+      const wpm = mins > 0 ? Math.round(S.correctChars / 5 / mins) : 0;
+      S.wpmHistory.push({ time: Math.floor(S.elapsed), wpm });
+    }
+
+    updateLiveStats();
+  }, 100);
+}
+
+function updateLiveStats() {
+  const mins = S.elapsed / 60 || 0.001;
+  const wpm = Math.round(S.correctChars / 5 / mins);
+  const acc = S.totalTyped > 0 ? Math.round(S.correctChars / S.totalTyped * 100) : 100;
+  
+  document.getElementById('ls-wpm').textContent = S.started ? wpm : 0;
+  document.getElementById('ls-acc').textContent = acc + '%';
+  document.getElementById('ls-chars').textContent = S.pos;
+  
+  if (!S.started) {
+    document.getElementById('ls-time').textContent = S.mode === 'time' ? S.duration : '0s';
+  }
+}
+
+// ============ FINISH ============
+function finishTest() {
+  if (S.finished) return;
+  S.finished = true;
+  clearInterval(S.timer);
+
+  const testTime = S.mode === 'time' ? S.duration : S.elapsed;
+  const mins = testTime / 60;
+  const wpm = Math.round(S.correctChars / 5 / mins);
+  const rawWpm = Math.round(S.totalTyped / 5 / mins);
+  const acc = S.totalTyped > 0 ? Math.round(S.correctChars / S.totalTyped * 100) : 100;
+
+  // Check personal best
+  const pbKey = `${S.mode}_${S.mode === 'time' ? S.duration : 'all'}`;
+  const isPB = !personalBests[pbKey] || wpm > personalBests[pbKey];
+  if (isPB) {
+    personalBests[pbKey] = wpm;
+    localStorage.setItem('ta_pb', JSON.stringify(personalBests));
+  }
+
+  // Save to history
+  const entry = {
+    id: Date.now(),
+    date: new Date().toISOString(),
+    mode: S.mode,
+    duration: S.mode === 'time' ? S.duration : Math.round(S.elapsed),
+    textType: S.textType,
+    wpm, rawWpm, acc,
+    errors: S.errors,
+    chars: S.totalTyped,
+    correctChars: S.correctChars,
+    wpmHistory: S.wpmHistory,
+    keyErrors: S.keyErrors
+  };
+  history.unshift(entry);
+  if (history.length > 200) history = history.slice(0, 200);
+  localStorage.setItem('ta_history', JSON.stringify(history));
+  localStorage.setItem('ta_keystats', JSON.stringify(keyStats));
+
+  renderResults(entry, isPB);
+  renderText(); // grey out remaining
+}
+
+function renderResults(r, isPB) {
+  const panel = document.getElementById('results-panel');
+  
+  // Problem keys
+  const problemKeys = Object.entries(r.keyErrors)
+    .filter(([k, v]) => v.errors > 0 && k.trim())
+    .map(([k, v]) => ({ key: k, errors: v.errors, total: v.total, rate: Math.round(v.errors / v.total * 100) }))
+    .sort((a, b) => b.rate - a.rate)
+    .slice(0, 10);
+
+  let problemHtml = '';
+  if (problemKeys.length > 0) {
+    problemHtml = `<div class="problem-keys"><h3>Problem Keys</h3><div class="key-grid">${
+      problemKeys.map(k => `<div class="key-chip"><div class="k">${escHtml(k.key === ' ' ? '␣' : k.key)}</div><div class="pct">${k.rate}% err</div></div>`).join('')
+    }</div></div>`;
+  }
+
+  // WPM chart
+  let chartHtml = '';
+  if (r.wpmHistory.length > 1) {
+    const maxWpm = Math.max(...r.wpmHistory.map(p => p.wpm), 1);
+    const w = 600, h = 160, pad = 40;
+    const xStep = (w - pad * 2) / Math.max(r.wpmHistory.length - 1, 1);
+    
+    let points = r.wpmHistory.map((p, i) => `${pad + i * xStep},${h - pad - (p.wpm / maxWpm * (h - pad * 2))}`).join(' ');
+    let areaPoints = points + ` ${pad + (r.wpmHistory.length - 1) * xStep},${h - pad} ${pad},${h - pad}`;
+    
+    // Y axis labels
+    let yLabels = '';
+    for (let i = 0; i <= 4; i++) {
+      const y = h - pad - (i / 4 * (h - pad * 2));
+      const val = Math.round(maxWpm * i / 4);
+      yLabels += `<text x="${pad - 8}" y="${y + 4}" fill="#8b949e" font-size="10" text-anchor="end">${val}</text>`;
+      yLabels += `<line x1="${pad}" y1="${y}" x2="${w - pad}" y2="${y}" stroke="#30363d" stroke-dasharray="4"/>`;
+    }
+
+    chartHtml = `<div class="wpm-chart"><h3>WPM Over Time</h3>
+    <svg viewBox="0 0 ${w} ${h}" class="chart-svg">
+      ${yLabels}
+      <polygon points="${areaPoints}" fill="rgba(88,166,255,0.1)"/>
+      <polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
+      ${r.wpmHistory.map((p, i) => `<circle cx="${pad + i * xStep}" cy="${h - pad - (p.wpm / maxWpm * (h - pad * 2))}" r="3" fill="var(--accent)"/>`).join('')}
+    </svg></div>`;
+  }
+
+  // Keyboard heatmap
+  const kbRows = [
+    ['`','1','2','3','4','5','6','7','8','9','0','-','='],
+    ['q','w','e','r','t','y','u','i','o','p','[',']','\\'],
+    ['a','s','d','f','g','h','j','k','l',';',"'"],
+    ['z','x','c','v','b','n','m',',','.','/'],
+    [' ']
+  ];
+
+  const allKeyStats = { ...keyStats };
+  // Add current test stats
+  Object.entries(r.keyErrors).forEach(([k, v]) => {
+    if (!allKeyStats[k]) allKeyStats[k] = { total: 0, errors: 0 };
+  });
+
+  let kbHtml = '<div class="keyboard"><h3>Key Accuracy Heatmap</h3>';
+  kbRows.forEach(row => {
+    kbHtml += '<div class="kb-row">';
+    row.forEach(k => {
+      const stat = allKeyStats[k] || allKeyStats[k.toUpperCase()] || { total: 0, errors: 0 };
+      const errRate = stat.total > 0 ? stat.errors / stat.total : 0;
+      let bg, fg;
+      if (stat.total === 0) { bg = 'var(--surface2)'; fg = 'var(--dim)'; }
+      else if (errRate < 0.03) { bg = 'rgba(63,185,80,0.3)'; fg = 'var(--green)'; }
+      else if (errRate < 0.08) { bg = 'rgba(63,185,80,0.15)'; fg = 'var(--green)'; }
+      else if (errRate < 0.15) { bg = 'rgba(210,153,34,0.3)'; fg = 'var(--yellow)'; }
+      else { bg = 'rgba(248,81,73,0.3)'; fg = 'var(--red)'; }
+      
+      const cls = k === ' ' ? 'kb-key space' : 'kb-key';
+      const label = k === ' ' ? 'Space' : k;
+      kbHtml += `<div class="${cls}" style="background:${bg};color:${fg}" title="${k === ' ' ? 'Space' : k}: ${stat.total} typed, ${stat.errors} errors">${escHtml(label)}</div>`;
+    });
+    kbHtml += '</div>';
+  });
+  kbHtml += '</div>';
+
+  panel.innerHTML = `<div class="results">
+    <h2>Test Complete! ${isPB ? '<span class="pb-badge">🏆 New Personal Best!</span>' : ''}</h2>
+    <div class="result-grid">
+      <div class="result-card wpm"><div class="val">${r.wpm}</div><div class="lbl">WPM</div></div>
+      <div class="result-card acc"><div class="val">${r.acc}%</div><div class="lbl">Accuracy</div></div>
+      <div class="result-card raw"><div class="val">${r.rawWpm}</div><div class="lbl">Raw WPM</div></div>
+      <div class="result-card err"><div class="val">${r.errors}</div><div class="lbl">Errors</div></div>
+      <div class="result-card time"><div class="val">${r.duration}s</div><div class="lbl">Time</div></div>
+      <div class="result-card chars"><div class="val">${r.chars}</div><div class="lbl">Chars Typed</div></div>
+    </div>
+    ${chartHtml}
+    ${problemHtml}
+    ${kbHtml}
+    <div class="text-center mt16">
+      <button class="btn" onclick="restart()">Try Again</button>
+      <button class="btn btn-outline" style="margin-left:8px" onclick="switchView('history')">View History</button>
+    </div>
+  </div>`;
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ============ CONTROLS ============
+function setMode(mode, btn) {
+  S.mode = mode;
+  document.querySelectorAll('#mode-group .cfg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  
+  // Show/hide duration group
+  const durGroup = document.getElementById('duration-group');
+  const txtGroup = document.getElementById('text-group');
+  durGroup.style.display = (mode === 'time') ? 'flex' : 'none';
+  txtGroup.style.display = (mode === 'code' || mode === 'quote') ? 'none' : 'flex';
+  
+  restart();
+}
+
+function setDuration(dur, btn) {
+  S.duration = dur;
+  document.querySelectorAll('#duration-group .cfg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  restart();
+}
+
+function setTextType(type, btn) {
+  S.textType = type;
+  document.querySelectorAll('#text-group .cfg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  restart();
+}
+
+function restart() {
+  generateText();
+  renderText();
+  document.getElementById('hidden-input').value = '';
+  focusInput();
+}
+
+// ============ VIEWS ============
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('v-' + view).classList.add('active');
+  document.querySelector(`.tab[onclick*="${view}"]`).classList.add('active');
+
+  if (view === 'history') renderHistory();
+  if (view === 'dashboard') renderDashboard();
+  if (view === 'practice') renderPractice();
+}
+
+// ============ HISTORY ============
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (history.length === 0) {
+    el.innerHTML = '<div class="empty"><h2>No tests yet</h2><p>Complete a typing test to see your history here.</p></div>';
+    return;
+  }
+
+  let html = `<div class="hist-item hist-header">
+    <span>WPM</span><span>Accuracy</span><span>Raw WPM</span><span>Errors</span><span>Mode</span><span>Date</span>
+  </div>`;
+  
+  history.forEach(h => {
+    const d = new Date(h.date);
+    const dateStr = `${d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
+    const modeStr = h.mode === 'time' ? `⏱ ${h.duration}s` : h.mode === 'words' ? '📝 Words' : h.mode === 'quote' ? '💬 Quote' : '💻 Code';
+    html += `<div class="hist-item">
+      <span class="wpm">${h.wpm}</span>
+      <span class="acc">${h.acc}%</span>
+      <span>${h.rawWpm || '—'}</span>
+      <span style="color:var(--red)">${h.errors}</span>
+      <span class="mode">${modeStr}</span>
+      <span class="dt">${dateStr}</span>
+    </div>`;
+  });
+
+  el.innerHTML = `<div class="history-list">${html}</div>`;
+}
+
+function exportHistory() {
+  const data = JSON.stringify({ history, personalBests, keyStats }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'typing-arena-data.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearHistory() {
+  if (!confirm('Clear all test history?')) return;
+  history = [];
+  personalBests = {};
+  keyStats = {};
+  localStorage.setItem('ta_history', '[]');
+  localStorage.setItem('ta_pb', '{}');
+  localStorage.setItem('ta_keystats', '{}');
+  renderHistory();
+}
+
+// ============ DASHBOARD ============
+function renderDashboard() {
+  const el = document.getElementById('dashboard-content');
+  if (history.length === 0) {
+    el.innerHTML = '<div class="empty"><h2>No data yet</h2><p>Complete some typing tests to see your stats.</p></div>';
+    return;
+  }
+
+  const totalTests = history.length;
+  const avgWpm = Math.round(history.reduce((s, h) => s + h.wpm, 0) / totalTests);
+  const bestWpm = Math.max(...history.map(h => h.wpm));
+  const avgAcc = Math.round(history.reduce((s, h) => s + h.acc, 0) / totalTests);
+  const totalTime = history.reduce((s, h) => s + h.duration, 0);
+  const totalChars = history.reduce((s, h) => s + (h.chars || 0), 0);
+
+  // Recent trend (last 10 vs previous 10)
+  const recent10 = history.slice(0, 10);
+  const prev10 = history.slice(10, 20);
+  const recentAvg = recent10.length > 0 ? Math.round(recent10.reduce((s, h) => s + h.wpm, 0) / recent10.length) : 0;
+  const prevAvg = prev10.length > 0 ? Math.round(prev10.reduce((s, h) => s + h.wpm, 0) / prev10.length) : recentAvg;
+  const trend = recentAvg - prevAvg;
+  const trendStr = trend > 0 ? `↑${trend}` : trend < 0 ? `↓${Math.abs(trend)}` : '→0';
+  const trendColor = trend > 0 ? 'var(--green)' : trend < 0 ? 'var(--red)' : 'var(--dim)';
+
+  // WPM progress chart (last 30 tests, reverse order)
+  const last30 = history.slice(0, 30).reverse();
+  let progressChart = '';
+  if (last30.length > 1) {
+    const maxW = Math.max(...last30.map(h => h.wpm), 1);
+    const w = 600, h = 180, pad = 40;
+    const xStep = (w - pad * 2) / Math.max(last30.length - 1, 1);
+    
+    let points = last30.map((p, i) => `${pad + i * xStep},${h - pad - (p.wpm / maxW * (h - pad * 2))}`).join(' ');
+    let area = points + ` ${pad + (last30.length - 1) * xStep},${h - pad} ${pad},${h - pad}`;
+    
+    let yLabels = '';
+    for (let i = 0; i <= 4; i++) {
+      const y = h - pad - (i / 4 * (h - pad * 2));
+      yLabels += `<text x="${pad - 8}" y="${y + 4}" fill="#8b949e" font-size="10" text-anchor="end">${Math.round(maxW * i / 4)}</text>`;
+      yLabels += `<line x1="${pad}" y1="${y}" x2="${w - pad}" y2="${y}" stroke="#30363d" stroke-dasharray="4"/>`;
+    }
+
+    // Moving average line
+    let maPoints = '';
+    if (last30.length >= 5) {
+      const ma = [];
+      for (let i = 0; i < last30.length; i++) {
+        const start = Math.max(0, i - 2);
+        const end = Math.min(last30.length, i + 3);
+        const slice = last30.slice(start, end);
+        ma.push(Math.round(slice.reduce((s, p) => s + p.wpm, 0) / slice.length));
+      }
+      maPoints = ma.map((v, i) => `${pad + i * xStep},${h - pad - (v / maxW * (h - pad * 2))}`).join(' ');
+    }
+
+    progressChart = `<div class="progress-chart"><h3>WPM Progress (Last ${last30.length} Tests)</h3>
+    <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:200px">
+      ${yLabels}
+      <polygon points="${area}" fill="rgba(88,166,255,0.08)"/>
+      <polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-opacity="0.4"/>
+      ${maPoints ? `<polyline points="${maPoints}" fill="none" stroke="var(--purple)" stroke-width="2.5" stroke-linejoin="round"/>` : ''}
+      ${last30.map((p, i) => `<circle cx="${pad + i * xStep}" cy="${h - pad - (p.wpm / maxW * (h - pad * 2))}" r="3" fill="var(--accent)" opacity="0.6"><title>${p.wpm} WPM</title></circle>`).join('')}
+      <text x="${w - pad}" y="16" fill="var(--purple)" font-size="10" text-anchor="end">— Moving Avg</text>
+      <text x="${w - pad - 100}" y="16" fill="var(--accent)" font-size="10" text-anchor="end" opacity="0.6">• Raw</text>
+    </svg></div>`;
+  }
+
+  // Accuracy distribution
+  const accBuckets = { '100%': 0, '95-99%': 0, '90-94%': 0, '85-89%': 0, '<85%': 0 };
+  history.forEach(h => {
+    if (h.acc === 100) accBuckets['100%']++;
+    else if (h.acc >= 95) accBuckets['95-99%']++;
+    else if (h.acc >= 90) accBuckets['90-94%']++;
+    else if (h.acc >= 85) accBuckets['85-89%']++;
+    else accBuckets['<85%']++;
+  });
+  const maxBucket = Math.max(...Object.values(accBuckets), 1);
+
+  // Mode distribution
+  const modeCounts = {};
+  history.forEach(h => { modeCounts[h.mode] = (modeCounts[h.mode] || 0) + 1; });
+  const modeMax = Math.max(...Object.values(modeCounts), 1);
+  const modeLabels = { time: '⏱ Time', words: '📝 Words', quote: '💬 Quote', code: '💻 Code' };
+
+  el.innerHTML = `
+    <div class="dash-grid">
+      <div class="dash-card"><div class="val">${totalTests}</div><div class="lbl">Tests Taken</div></div>
+      <div class="dash-card"><div class="val" style="color:var(--accent)">${avgWpm}</div><div class="lbl">Average WPM</div></div>
+      <div class="dash-card"><div class="val" style="color:var(--yellow)">${bestWpm}</div><div class="lbl">Best WPM</div></div>
+      <div class="dash-card"><div class="val" style="color:var(--green)">${avgAcc}%</div><div class="lbl">Average Accuracy</div></div>
+      <div class="dash-card"><div class="val" style="color:${trendColor}">${trendStr}</div><div class="lbl">WPM Trend</div></div>
+      <div class="dash-card"><div class="val" style="color:var(--cyan)">${Math.round(totalTime / 60)}m</div><div class="lbl">Total Practice</div></div>
+    </div>
+    ${progressChart}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="progress-chart"><h3>Accuracy Distribution</h3>
+        ${Object.entries(accBuckets).map(([label, count]) => `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="width:60px;font-size:12px;color:var(--dim);text-align:right">${label}</span>
+            <div style="flex:1;background:var(--surface2);border-radius:4px;height:20px;overflow:hidden">
+              <div style="width:${count/maxBucket*100}%;height:100%;background:var(--green);border-radius:4px;opacity:${count > 0 ? 1 : 0.2}"></div>
+            </div>
+            <span style="width:30px;font-size:12px;color:var(--dim)">${count}</span>
+          </div>`).join('')}
+      </div>
+      <div class="progress-chart"><h3>Mode Distribution</h3>
+        ${Object.entries(modeCounts).map(([mode, count]) => `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="width:80px;font-size:12px;color:var(--dim);text-align:right">${modeLabels[mode] || mode}</span>
+            <div style="flex:1;background:var(--surface2);border-radius:4px;height:20px;overflow:hidden">
+              <div style="width:${count/modeMax*100}%;height:100%;background:var(--purple);border-radius:4px"></div>
+            </div>
+            <span style="width:30px;font-size:12px;color:var(--dim)">${count}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="progress-chart mt16"><h3>Personal Bests</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+        ${Object.entries(personalBests).map(([key, wpm]) => {
+          const [mode, dur] = key.split('_');
+          const label = mode === 'time' ? `⏱ ${dur}s` : modeLabels[mode] || mode;
+          return `<div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;border:1px solid var(--border)">
+            <div style="font-size:24px;font-weight:700;color:var(--yellow)">${wpm}</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:4px">${label}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+// ============ PRACTICE ============
+function renderPractice() {
+  const el = document.getElementById('practice-content');
+  
+  // Find weak keys from global stats
+  const weakKeys = Object.entries(keyStats)
+    .filter(([k, v]) => v.total >= 5 && v.errors > 0 && k.trim())
+    .map(([k, v]) => ({ key: k, rate: Math.round(v.errors / v.total * 100), total: v.total, errors: v.errors }))
+    .sort((a, b) => b.rate - a.rate)
+    .slice(0, 12);
+
+  if (weakKeys.length === 0) {
+    el.innerHTML = `<div class="practice-intro">
+      <h2>Practice Mode</h2>
+      <p style="margin:16px 0">Complete a few typing tests first to identify your weak keys.</p>
+      <button class="btn" onclick="switchView('test')">Take a Test</button>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="practice-intro">
+    <h2>🎯 Weak Key Training</h2>
+    <p style="margin:12px 0;color:var(--dim)">These keys have the highest error rates across all your tests. Click one to practice words containing that key.</p>
+    <div class="weak-keys">
+      ${weakKeys.map(k => `<div class="weak-key" onclick="startPractice('${escHtml(k.key)}')">
+        <div class="k">${escHtml(k.key === ' ' ? '␣' : k.key)}</div>
+        <div class="info">${k.rate}% error · ${k.total} typed</div>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:24px">
+      <h3 style="margin-bottom:12px">All-Time Key Stats</h3>
+      <div class="keyboard" style="margin-top:8px">
+        ${renderKeyboardHeatmap()}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderKeyboardHeatmap() {
+  const kbRows = [
+    ['`','1','2','3','4','5','6','7','8','9','0','-','='],
+    ['q','w','e','r','t','y','u','i','o','p','[',']','\\'],
+    ['a','s','d','f','g','h','j','k','l',';',"'"],
+    ['z','x','c','v','b','n','m',',','.','/'],
+    [' ']
+  ];
+
+  let html = '';
+  kbRows.forEach(row => {
+    html += '<div class="kb-row">';
+    row.forEach(k => {
+      const stat = keyStats[k] || { total: 0, errors: 0 };
+      const errRate = stat.total > 0 ? stat.errors / stat.total : 0;
+      let bg, fg;
+      if (stat.total === 0) { bg = 'var(--surface2)'; fg = 'var(--dim)'; }
+      else if (errRate < 0.03) { bg = 'rgba(63,185,80,0.3)'; fg = 'var(--green)'; }
+      else if (errRate < 0.08) { bg = 'rgba(63,185,80,0.15)'; fg = 'var(--green)'; }
+      else if (errRate < 0.15) { bg = 'rgba(210,153,34,0.3)'; fg = 'var(--yellow)'; }
+      else { bg = 'rgba(248,81,73,0.3)'; fg = 'var(--red)'; }
+      
+      const cls = k === ' ' ? 'kb-key space' : 'kb-key';
+      const label = k === ' ' ? 'Space' : k;
+      html += `<div class="${cls}" style="background:${bg};color:${fg}" title="${k === ' ' ? 'Space' : k}: ${stat.total} typed, ${stat.errors} errors (${stat.total > 0 ? Math.round(errRate * 100) : 0}%)">${escHtml(label)}</div>`;
+    });
+    html += '</div>';
+  });
+  return html;
+}
+
+function startPractice(key) {
+  // Generate words containing the target key
+  const allWords = Object.values(TEXTS).flat().join(' ').toLowerCase().split(/\s+/);
+  const matching = [...new Set(allWords.filter(w => w.includes(key)))];
+  
+  if (matching.length < 10) {
+    // Fallback: just add repetitive practice words
+    const extras = ['the', 'that', 'this', 'they', 'them', 'then', 'than', 'think', 'through', 'there'];
+    matching.push(...extras);
+  }
+
+  // Shuffle and take 40 words
+  const shuffled = matching.sort(() => Math.random() - 0.5).slice(0, 40);
+  
+  // Switch to test mode with custom text
+  S.mode = 'time';
+  S.duration = 30;
+  S.testText = shuffled.join(' ');
+  S.chars = S.testText.split('').map(c => ({ char: c, status: 'pending' }));
+  S.pos = 0;
+  S.started = false;
+  S.finished = false;
+  S.errors = 0;
+  S.totalTyped = 0;
+  S.correctChars = 0;
+  S.wpmHistory = [];
+  S.keyErrors = {};
+  S.elapsed = 0;
+  S.lastWpmUpdate = 0;
+  clearInterval(S.timer);
+  document.getElementById('results-panel').style.display = 'none';
+  document.getElementById('timer-fill').style.width = '100%';
+  updateLiveStats();
+  
+  switchView('test');
+  renderText();
+  focusInput();
+}
+
+// ============ GLOBAL KEYS ============
+function handleGlobalKey(e) {
+  // Tab + Enter to restart
+  if (e.key === 'Tab' && !e.shiftKey) {
+    // Only prevent default if we're about to restart
+    const focused = document.activeElement;
+    if (focused && focused.id === 'hidden-input') {
+      e.preventDefault(); // prevent focus leaving
+    }
+  }
+  if (e.key === 'Enter' && e.target.id === 'hidden-input') {
+    // For code mode, allow enter
+    if (S.mode === 'code' && !S.finished && S.started) {
+      // type newline
+      return;
+    }
+  }
+  if (e.key === 'Tab') {
+    // Mark for restart on next Enter
+    S._tabPressed = true;
+    setTimeout(() => S._tabPressed = false, 500);
+    return;
+  }
+  if (e.key === 'Enter' && S._tabPressed) {
+    e.preventDefault();
+    S._tabPressed = false;
+    restart();
+    return;
+  }
+  if (e.key === 'Escape') {
+    restart();
+    return;
+  }
+  // Number keys for views (only when not typing)
+  if (!S.started || S.finished) {
+    if (e.key === '1') switchView('test');
+    if (e.key === '2') switchView('history');
+    if (e.key === '3') switchView('practice');
+    if (e.key === '4') switchView('dashboard');
+  }
+}
+
+// ============ BOOT ============
+init();
+
+// Auto-focus on click anywhere
+document.addEventListener('click', (e) => {
+  if (document.getElementById('v-test').classList.contains('active') && !e.target.closest('.tabs,.config,.results,.btn')) {
+    focusInput();
+  }
+});
+
+// Handle blur
+document.getElementById('hidden-input').addEventListener('blur', () => {
+  document.getElementById('text-display').classList.remove('focused');
+});
+document.getElementById('hidden-input').addEventListener('focus', () => {
+  document.getElementById('text-display').classList.add('focused');
+});
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

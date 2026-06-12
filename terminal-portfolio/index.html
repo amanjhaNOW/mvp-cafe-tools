@@ -1028,8 +1028,6 @@ default:out('<span class="red">command not found:</span> '+esc(c)+'. Type <span 
 function printWelcome(){out('<pre class="ascii">'+esc(profile.ascii)+'</pre>');out('');out('<span class="bold green">'+esc(profile.name)+'</span> — <span class="dim-color">'+esc(profile.title)+'</span>');out('<span class="dim-color">'+esc(profile.bio.split('\\n')[0])+'</span>');out('');out('Type <span class="accent">help</span> to see available commands. Tab to autocomplete.');out('')}
 init();
 <\/script>
-<!-- MVPC_BRIDGE -->
-<script src="/_shell/bridge.js"></script>
 </body>
 </html>`;
 }
@@ -1147,5 +1145,7 @@ if(profile.theme && profile.theme !== 'default'){
 // Init
 initTerminal();
 </script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
 </body>
 </html>

@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Org Chart Forge</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#242836;--bg4:#2e3348;--fg:#e2e8f0;--fg2:#94a3b8;--fg3:#64748b;--accent:#6366f1;--accent2:#818cf8;--border:#2e3348;--danger:#ef4444;--success:#22c55e;--warn:#f59e0b;--radius:10px;--shadow:0 4px 24px rgba(0,0,0,.4)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--fg);height:100vh;overflow:hidden;display:flex}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:var(--fg)}
+input,select,textarea{font-family:inherit;background:var(--bg3);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:20px}
+.org-list{flex:1;overflow-y:auto;padding:8px}
+.org-item{padding:10px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;transition:background .15s}
+.org-item:hover{background:var(--bg3)}
+.org-item.active{background:var(--bg4);font-weight:600}
+.org-item .count{font-size:12px;color:var(--fg3);background:var(--bg);padding:2px 8px;border-radius:99px}
+.org-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.org-item:hover .org-actions{opacity:1}
+.org-actions button{font-size:13px;padding:2px 6px;border-radius:4px}
+.org-actions button:hover{background:var(--bg)}
+.sidebar-bottom{padding:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.sidebar-bottom button{padding:8px;border-radius:8px;font-size:13px;font-weight:500;text-align:left;display:flex;align-items:center;gap:8px;transition:background .15s}
+.sidebar-bottom button:hover{background:var(--bg3)}
+.sidebar-bottom button.active{background:var(--accent);color:#fff}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-danger{color:var(--danger)}
+.btn-danger:hover{background:rgba(239,68,68,.15)}
+.add-org-btn{width:100%;padding:10px;border-radius:8px;font-size:13px;font-weight:500;color:var(--accent2);border:1px dashed var(--border);margin-top:4px;transition:all .15s}
+.add-org-btn:hover{background:var(--bg3);border-color:var(--accent)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.toolbar .search-box{position:relative;flex:0 0 220px}
+.toolbar .search-box input{padding-left:32px;background:var(--bg3);height:34px}
+.toolbar .search-box::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px}
+.toolbar .spacer{flex:1}
+.zoom-controls{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--fg3)}
+.zoom-controls button{width:28px;height:28px;border-radius:6px;font-size:14px;display:flex;align-items:center;justify-content:center;background:var(--bg3)}
+.zoom-controls button:hover{background:var(--bg4)}
+.view-tabs{display:flex;gap:2px;background:var(--bg3);border-radius:8px;padding:2px}
+.view-tabs button{padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;color:var(--fg2);transition:all .15s}
+.view-tabs button.active{background:var(--accent);color:#fff}
+.view-tabs button:hover:not(.active){color:var(--fg)}
+
+/* Canvas */
+.canvas-wrap{flex:1;overflow:hidden;position:relative;cursor:grab}
+.canvas-wrap.grabbing{cursor:grabbing}
+.canvas{position:absolute;transform-origin:0 0}
+.canvas svg{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+
+/* Node cards */
+.node{position:absolute;width:210px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:box-shadow .2s,border-color .2s;user-select:none}
+.node:hover{box-shadow:var(--shadow);border-color:var(--fg3)}
+.node.selected{border-color:var(--accent);box-shadow:0 0 0 2px rgba(99,102,241,.3)}
+.node .dept-bar{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:var(--radius) 0 0 var(--radius)}
+.node-body{padding:12px 12px 10px 16px}
+.node-top{display:flex;align-items:flex-start;gap:10px}
+.node-avatar{font-size:28px;line-height:1;flex-shrink:0;margin-top:2px}
+.node-info{flex:1;min-width:0}
+.node-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.node-title{font-size:11px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.node-dept{font-size:10px;padding:2px 8px;border-radius:99px;display:inline-block;margin-top:5px;font-weight:600;color:#fff}
+.node-footer{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+.node-reports{font-size:11px;color:var(--fg3)}
+.node-actions{display:flex;gap:2px;opacity:0;transition:opacity .15s}
+.node:hover .node-actions{opacity:1}
+.node-actions button{font-size:12px;width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center}
+.node-actions button:hover{background:var(--bg4)}
+.node-collapse{font-size:11px;color:var(--fg3);cursor:pointer;padding:2px 6px;border-radius:4px}
+.node-collapse:hover{background:var(--bg4);color:var(--fg)}
+
+/* People list */
+.people-view{flex:1;overflow-y:auto;padding:20px}
+.people-table{width:100%;border-collapse:collapse}
+.people-table th{text-align:left;padding:10px 14px;font-size:12px;color:var(--fg3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);cursor:pointer}
+.people-table th:hover{color:var(--fg)}
+.people-table td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.people-table tr:hover td{background:var(--bg2)}
+.people-table .avatar-cell{display:flex;align-items:center;gap:10px}
+.people-table .avatar-cell span:first-child{font-size:22px}
+
+/* Stats */
+.stats-view{flex:1;overflow-y:auto;padding:24px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:32px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.stat-card .label{font-size:12px;color:var(--fg3);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.stat-card .value{font-size:32px;font-weight:700;margin-top:6px}
+.stat-card .sub{font-size:12px;color:var(--fg3);margin-top:4px}
+.section-title{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.dept-bars{display:flex;flex-direction:column;gap:8px}
+.dept-bar-row{display:flex;align-items:center;gap:12px}
+.dept-bar-label{font-size:13px;width:120px;text-align:right;flex-shrink:0}
+.dept-bar-track{flex:1;height:28px;background:var(--bg3);border-radius:6px;overflow:hidden;position:relative}
+.dept-bar-fill{height:100%;border-radius:6px;transition:width .3s;display:flex;align-items:center;padding-left:10px;font-size:12px;font-weight:600;color:#fff;min-width:30px}
+.span-table{width:100%;border-collapse:collapse;background:var(--bg2);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+.span-table th,.span-table td{padding:10px 14px;text-align:left;font-size:13px}
+.span-table th{background:var(--bg3);font-weight:600;color:var(--fg2);font-size:12px;text-transform:uppercase}
+.span-table tr:not(:last-child) td{border-bottom:1px solid var(--border)}
+.reporting-chain{display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-top:16px}
+.chain-node{padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600;color:#fff}
+.chain-arrow{color:var(--fg3);font-size:14px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:14px;width:460px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal-header{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-header h2{font-size:18px;font-weight:700}
+.modal-header button{font-size:20px;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.modal-header button:hover{background:var(--bg3)}
+.modal-body{padding:20px 24px}
+.form-group{margin-bottom:16px}
+.form-group label{font-size:12px;font-weight:600;color:var(--fg2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.emoji-grid{display:flex;flex-wrap:wrap;gap:4px}
+.emoji-grid button{font-size:22px;width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.emoji-grid button:hover{background:var(--bg3)}
+.emoji-grid button.active{background:var(--accent);border-radius:8px}
+.modal-footer{padding:12px 24px 20px;display:flex;gap:8px;justify-content:flex-end}
+.dept-select{display:flex;flex-wrap:wrap;gap:6px}
+.dept-chip{padding:5px 12px;border-radius:99px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;opacity:.5;transition:opacity .15s,transform .1s}
+.dept-chip:hover{opacity:.75}
+.dept-chip.active{opacity:1;transform:scale(1.05)}
+
+/* Help */
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:2000}
+.help-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px 32px;max-width:420px;box-shadow:var(--shadow)}
+.help-box h2{margin-bottom:16px}
+.help-box table{width:100%}
+.help-box td{padding:4px 0;font-size:13px}
+.help-box td:first-child{font-weight:600;color:var(--accent2);width:100px}
+.help-box .close{margin-top:16px;text-align:center}
+
+/* Empty state */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--fg3);gap:12px}
+.empty span{font-size:48px}
+.empty p{font-size:14px}
+
+/* Context menu */
+.ctx-menu{position:fixed;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:6px;z-index:900;box-shadow:var(--shadow);min-width:180px}
+.ctx-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 12px;border-radius:6px;font-size:13px;text-align:left;transition:background .1s}
+.ctx-menu button:hover{background:var(--bg3)}
+.ctx-menu hr{border:none;border-top:1px solid var(--border);margin:4px 0}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);color:var(--fg);padding:12px 20px;border-radius:10px;font-size:13px;z-index:3000;box-shadow:var(--shadow);animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+</style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar"></div>
+<div class="main" id="main"></div>
+<div id="modal-root"></div>
+<div id="ctx-root"></div>
+<div id="help-root"></div>
+<div id="toast-root"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// Org Chart Forge — Day 77
+// Interactive Organization Chart Builder
+// ═══════════════════════════════════════════
+
+const DEPTS = {
+  'Executive':    '#f59e0b',
+  'Engineering':  '#3b82f6',
+  'Product':      '#8b5cf6',
+  'Design':       '#ec4899',
+  'Marketing':    '#10b981',
+  'Sales':        '#f97316',
+  'Operations':   '#14b8a6',
+  'Finance':      '#64748b',
+  'HR':           '#f43f5e',
+  'Data':         '#06b6d4',
+  'Support':      '#a855f7',
+  'Legal':        '#84cc16'
+};
+
+const EMOJIS = ['👩‍💼','👨‍💼','👩‍💻','👨‍💻','👩‍🔬','👨‍🔬','👩‍🎨','👨‍🎨','👩‍🏫','👨‍🏫','🧑‍💻','🧑‍💼','👷‍♀️','👷','🧑‍🔧','🧑‍🎨','👤','👩','👨','🧑','👩‍🚀','🦸‍♀️','🦸','🧙‍♂️'];
+
+const NODE_W = 210, NODE_H = 105, GAP_X = 28, GAP_Y = 72;
+
+let S = {
+  orgs: [],
+  activeOrg: 0,
+  view: 'chart',
+  search: '',
+  selected: null,
+  pan: { x: 0, y: 0 },
+  zoom: 1,
+  modal: null,
+  help: false,
+  ctx: null,
+  sortCol: 'name',
+  sortDir: 1
+};
+
+let positions = {};
+let isPanning = false, panStart = { x: 0, y: 0 }, panOrig = { x: 0, y: 0 };
+
+// ═══ Helpers ═══
+function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function org() { return S.orgs[S.activeOrg] || null; }
+function people() { return org()?.people || []; }
+function find(id) { return people().find(p => p.id === id); }
+function children(id) { return people().filter(p => p.parentId === id); }
+function root() { return people().find(p => !p.parentId); }
+function depth(id) { let d = 0, p = find(id); while (p?.parentId) { d++; p = find(p.parentId); } return d; }
+function ancestors(id) { let chain = [], p = find(id); while (p) { chain.unshift(p); p = p.parentId ? find(p.parentId) : null; } return chain; }
+function descendants(id) { let r = []; children(id).forEach(c => { r.push(c); r.push(...descendants(c.id)); }); return r; }
+function allVisible(id) { const p = find(id); if (!p) return []; let r = [p]; if (!p.collapsed) children(id).forEach(c => r.push(...allVisible(c.id))); return r; }
+function maxDepth(id = root()?.id) { if (!id) return 0; const p = find(id); const kids = children(id); if (!kids.length || p?.collapsed) return 1; return 1 + Math.max(...kids.map(k => maxDepth(k.id))); }
+function totalVisible() { const r = root(); return r ? allVisible(r.id).length : 0; }
+
+// ═══ Layout ═══
+function subtreeW(id) {
+  const p = find(id);
+  const kids = children(id);
+  if (!kids.length || p?.collapsed) return NODE_W;
+  return Math.max(NODE_W, kids.reduce((s, k) => s + subtreeW(k.id), 0) + (kids.length - 1) * GAP_X);
+}
+
+function layoutNode(id, cx, y) {
+  positions[id] = { x: cx - NODE_W / 2, y };
+  const p = find(id);
+  const kids = children(id);
+  if (!kids.length || p?.collapsed) return;
+  const tw = subtreeW(id);
+  let sx = cx - tw / 2;
+  for (const k of kids) {
+    const kw = subtreeW(k.id);
+    layoutNode(k.id, sx + kw / 2, y + NODE_H + GAP_Y);
+    sx += kw + GAP_X;
+  }
+}
+
+function doLayout() {
+  positions = {};
+  const r = root();
+  if (!r) return;
+  const tw = subtreeW(r.id);
+  layoutNode(r.id, tw / 2 + 40, 40);
+}
+
+// ═══ Save / Load ═══
+function save() { localStorage.setItem('orgchart_v1', JSON.stringify(S.orgs)); }
+function load() {
+  try {
+    const d = localStorage.getItem('orgchart_v1');
+    if (d) S.orgs = JSON.parse(d);
+  } catch (e) {}
+  if (!S.orgs.length) seedDemo();
+}
+
+// ═══ Toast ═══
+function toast(msg) {
+  const el = document.getElementById('toast-root');
+  el.innerHTML = `<div class="toast">${msg}</div>`;
+  setTimeout(() => el.innerHTML = '', 2500);
+}
+
+// ═══ CRUD ═══
+function addOrg(name) {
+  S.orgs.push({ id: 'o' + Date.now(), name, people: [] });
+  S.activeOrg = S.orgs.length - 1;
+  save(); render();
+}
+
+function renameOrg(i) {
+  const name = prompt('Rename org:', S.orgs[i].name);
+  if (name?.trim()) { S.orgs[i].name = name.trim(); save(); render(); }
+}
+
+function deleteOrg(i) {
+  if (!confirm(`Delete "${S.orgs[i].name}" and all its people?`)) return;
+  S.orgs.splice(i, 1);
+  S.activeOrg = Math.min(S.activeOrg, S.orgs.length - 1);
+  S.selected = null;
+  save(); render();
+}
+
+function addPerson(data) {
+  people().push({ id: uid(), collapsed: false, ...data });
+  save(); render();
+}
+
+function editPerson(id, data) {
+  const p = find(id);
+  if (p) Object.assign(p, data);
+  save(); render();
+}
+
+function deletePerson(id) {
+  const descs = descendants(id);
+  const count = descs.length;
+  const msg = count ? `Delete this person and ${count} report${count > 1 ? 's' : ''}?` : 'Delete this person?';
+  if (!confirm(msg)) return;
+  const toRemove = new Set([id, ...descs.map(d => d.id)]);
+  org().people = people().filter(p => !toRemove.has(p.id));
+  if (S.selected === id) S.selected = null;
+  save(); render();
+}
+
+function toggleCollapse(id) {
+  const p = find(id);
+  if (p) p.collapsed = !p.collapsed;
+  save(); render();
+}
+
+function movePerson(id, newParentId) {
+  if (id === newParentId) return;
+  // Prevent circular: newParent can't be a descendant of id
+  const descIds = new Set(descendants(id).map(d => d.id));
+  if (descIds.has(newParentId)) { toast('Cannot move under own subtree'); return; }
+  const p = find(id);
+  if (p) p.parentId = newParentId;
+  save(); render();
+}
+
+// ═══ Search filter ═══
+function matchesSearch(p) {
+  if (!S.search) return true;
+  const q = S.search.toLowerCase();
+  return p.name.toLowerCase().includes(q) || p.title.toLowerCase().includes(q) || p.dept.toLowerCase().includes(q);
+}
+
+// ═══ Render ═══
+function render() {
+  renderSidebar();
+  renderMain();
+}
+
+function renderSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.innerHTML = `
+    <div class="sidebar-header">
+      <h1><span>🏛️</span> Org Chart Forge</h1>
+    </div>
+    <div class="org-list">
+      ${S.orgs.map((o, i) => `
+        <div class="org-item${i === S.activeOrg ? ' active' : ''}" onclick="S.activeOrg=${i};S.selected=null;S.search='';save();render()">
+          <span style="font-size:14px">${o.name}</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="count">${o.people.length}</span>
+            <div class="org-actions">
+              <button onclick="event.stopPropagation();renameOrg(${i})" title="Rename">✏️</button>
+              <button onclick="event.stopPropagation();deleteOrg(${i})" title="Delete">🗑️</button>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+      <button class="add-org-btn" onclick="addOrg(prompt('Organization name:')||'')">+ New Organization</button>
+    </div>
+    <div class="sidebar-bottom">
+      ${['chart','people','stats'].map(v => `
+        <button class="${S.view === v ? 'active' : ''}" onclick="S.view='${v}';render()">
+          ${{chart:'🌳 Chart',people:'👥 People',stats:'📊 Dashboard'}[v]}
+        </button>
+      `).join('')}
+      <hr style="border:none;border-top:1px solid var(--border);margin:4px 0">
+      <button onclick="exportJSON()" style="font-size:12px">📤 Export JSON</button>
+      <button onclick="document.getElementById('import-file').click()" style="font-size:12px">📥 Import JSON</button>
+      <button onclick="S.help=true;renderHelp()" style="font-size:12px">❓ Shortcuts</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
+    </div>
+  `;
+}
+
+function renderMain() {
+  if (!org()) {
+    document.getElementById('main').innerHTML = '<div class="empty"><span>🏛️</span><p>Create an organization to get started</p><button class="btn btn-primary" onclick="addOrg(prompt(\'Name:\')||\'Untitled\')">+ New Org</button></div>';
+    return;
+  }
+  if (S.view === 'chart') renderChart();
+  else if (S.view === 'people') renderPeople();
+  else if (S.view === 'stats') renderStats();
+}
+
+// ═══ Chart View ═══
+function renderChart() {
+  doLayout();
+  const m = document.getElementById('main');
+
+  // Calculate canvas bounds
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const [id, pos] of Object.entries(positions)) {
+    minX = Math.min(minX, pos.x);
+    minY = Math.min(minY, pos.y);
+    maxX = Math.max(maxX, pos.x + NODE_W);
+    maxY = Math.max(maxY, pos.y + NODE_H);
+  }
+  const cw = Math.max(800, maxX + 80);
+  const ch = Math.max(600, maxY + 80);
+
+  // Build SVG connections
+  let svgLines = '';
+  for (const p of people()) {
+    if (!p.parentId || !positions[p.id] || !positions[p.parentId]) continue;
+    const parent = positions[p.parentId];
+    const child = positions[p.id];
+    const px = parent.x + NODE_W / 2;
+    const py = parent.y + NODE_H;
+    const cx = child.x + NODE_W / 2;
+    const cy = child.y;
+    const my = py + (cy - py) / 2;
+    svgLines += `<path d="M${px},${py} C${px},${my} ${cx},${my} ${cx},${cy}" fill="none" stroke="${DEPTS[find(p.parentId)?.dept] || '#4a5568'}" stroke-width="2" opacity="0.5"/>`;
+  }
+
+  // Build node cards
+  let nodes = '';
+  for (const p of (root() ? allVisible(root().id) : [])) {
+    const pos = positions[p.id];
+    if (!pos) continue;
+    const kids = children(p.id);
+    const deptColor = DEPTS[p.dept] || '#64748b';
+    const isSelected = S.selected === p.id;
+    const matchSearch = matchesSearch(p);
+    const opacity = S.search && !matchSearch ? 'opacity:0.2;' : '';
+
+    nodes += `
+      <div class="node${isSelected ? ' selected' : ''}" style="left:${pos.x}px;top:${pos.y}px;${opacity}"
+           onclick="selectNode('${p.id}')" oncontextmenu="showCtx(event,'${p.id}')">
+        <div class="dept-bar" style="background:${deptColor}"></div>
+        <div class="node-body">
+          <div class="node-top">
+            <div class="node-avatar">${p.emoji}</div>
+            <div class="node-info">
+              <div class="node-name">${esc(p.name)}</div>
+              <div class="node-title">${esc(p.title)}</div>
+              <div class="node-dept" style="background:${deptColor}">${esc(p.dept)}</div>
+            </div>
+          </div>
+          <div class="node-footer">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="node-reports">${kids.length ? kids.length + ' report' + (kids.length > 1 ? 's' : '') : 'IC'}</span>
+              ${kids.length ? `<span class="node-collapse" onclick="event.stopPropagation();toggleCollapse('${p.id}')">${p.collapsed ? '▶ ' + descendants(p.id).length : '▼'}</span>` : ''}
+            </div>
+            <div class="node-actions">
+              <button onclick="event.stopPropagation();openModal('add','${p.id}')" title="Add report">➕</button>
+              <button onclick="event.stopPropagation();openModal('edit','${p.id}')" title="Edit">✏️</button>
+              ${p.parentId ? `<button onclick="event.stopPropagation();deletePerson('${p.id}')" title="Delete">🗑️</button>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  m.innerHTML = `
+    <div class="toolbar">
+      <div class="view-tabs">
+        ${['chart','people','stats'].map(v => `<button class="${S.view === v ? 'active' : ''}" onclick="S.view='${v}';render()">${{chart:'🌳 Chart',people:'👥 People',stats:'📊 Stats'}[v]}</button>`).join('')}
+      </div>
+      <div class="search-box"><input type="text" placeholder="Search people..." value="${esc(S.search)}" oninput="S.search=this.value;render()" id="search-input"></div>
+      <div class="spacer"></div>
+      ${people().length === 0 ? `<button class="btn btn-primary btn-sm" onclick="openModal('root')">👑 Add Root</button>` : `<button class="btn btn-sm" style="background:var(--bg3)" onclick="openModal('add','${root()?.id || ''}')">➕ Add Person</button>`}
+      <button class="btn btn-sm" style="background:var(--bg3)" onclick="expandAll()">⬇ Expand All</button>
+      <button class="btn btn-sm" style="background:var(--bg3)" onclick="collapseAll()">⬆ Collapse All</button>
+      <button class="btn btn-sm" style="background:var(--bg3)" onclick="fitToView()">⛶ Fit</button>
+      <div class="zoom-controls">
+        <button onclick="adjustZoom(-0.1)">−</button>
+        <span id="zoom-label">${Math.round(S.zoom * 100)}%</span>
+        <button onclick="adjustZoom(0.1)">+</button>
+      </div>
+    </div>
+    <div class="canvas-wrap" id="canvas-wrap" onmousedown="startPan(event)" onwheel="onWheel(event)">
+      ${people().length === 0 ? '<div class="empty"><span>🌳</span><p>Add the root person to start building your org chart</p></div>' : `
+      <div class="canvas" id="canvas" style="width:${cw}px;height:${ch}px;transform:translate(${S.pan.x}px,${S.pan.y}px) scale(${S.zoom})">
+        <svg width="${cw}" height="${ch}">${svgLines}</svg>
+        ${nodes}
+      </div>`}
+    </div>
+    ${S.selected ? renderDetailPanel() : ''}
+  `;
+  renderModal();
+}
+
+function renderDetailPanel() {
+  const p = find(S.selected);
+  if (!p) return '';
+  const chain = ancestors(p.id);
+  const kids = children(p.id);
+  const descs = descendants(p.id);
+  const deptColor = DEPTS[p.dept] || '#64748b';
+
+  return `
+    <div style="position:absolute;right:0;top:46px;bottom:0;width:300px;background:var(--bg2);border-left:1px solid var(--border);padding:20px;overflow-y:auto;z-index:10">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <span style="font-size:12px;color:var(--fg3);text-transform:uppercase;font-weight:600">Person Details</span>
+        <button onclick="S.selected=null;render()" style="font-size:16px">✕</button>
+      </div>
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:48px;margin-bottom:8px">${p.emoji}</div>
+        <div style="font-size:16px;font-weight:700">${esc(p.name)}</div>
+        <div style="font-size:13px;color:var(--fg2);margin-top:2px">${esc(p.title)}</div>
+        <span class="node-dept" style="background:${deptColor};margin-top:8px">${esc(p.dept)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
+        <div style="background:var(--bg3);padding:12px;border-radius:8px;text-align:center">
+          <div style="font-size:20px;font-weight:700">${kids.length}</div>
+          <div style="font-size:11px;color:var(--fg3)">Direct Reports</div>
+        </div>
+        <div style="background:var(--bg3);padding:12px;border-radius:8px;text-align:center">
+          <div style="font-size:20px;font-weight:700">${descs.length}</div>
+          <div style="font-size:11px;color:var(--fg3)">Total Reports</div>
+        </div>
+        <div style="background:var(--bg3);padding:12px;border-radius:8px;text-align:center">
+          <div style="font-size:20px;font-weight:700">${depth(p.id)}</div>
+          <div style="font-size:11px;color:var(--fg3)">Depth Level</div>
+        </div>
+        <div style="background:var(--bg3);padding:12px;border-radius:8px;text-align:center">
+          <div style="font-size:20px;font-weight:700">${chain.length}</div>
+          <div style="font-size:11px;color:var(--fg3)">Chain Length</div>
+        </div>
+      </div>
+      ${chain.length > 1 ? `
+        <div style="font-size:12px;color:var(--fg3);font-weight:600;text-transform:uppercase;margin-bottom:8px">Reporting Chain</div>
+        <div class="reporting-chain">
+          ${chain.map((c, i) => `<span class="chain-node" style="background:${DEPTS[c.dept] || '#64748b'}">${c.emoji} ${esc(c.name)}</span>${i < chain.length - 1 ? '<span class="chain-arrow">→</span>' : ''}`).join('')}
+        </div>
+      ` : ''}
+      ${kids.length ? `
+        <div style="font-size:12px;color:var(--fg3);font-weight:600;text-transform:uppercase;margin:16px 0 8px">Direct Reports</div>
+        ${kids.map(k => `
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;margin-bottom:2px;transition:background .1s" 
+               onclick="S.selected='${k.id}';render()" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+            <span style="font-size:18px">${k.emoji}</span>
+            <div>
+              <div style="font-size:13px;font-weight:600">${esc(k.name)}</div>
+              <div style="font-size:11px;color:var(--fg3)">${esc(k.title)}</div>
+            </div>
+          </div>
+        `).join('')}
+      ` : ''}
+      <div style="margin-top:20px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:var(--bg3)" onclick="openModal('edit','${p.id}')">✏️ Edit</button>
+        <button class="btn btn-sm" style="background:var(--bg3)" onclick="openModal('add','${p.id}')">➕ Add Report</button>
+        <button class="btn btn-sm" style="background:var(--bg3)" onclick="openModal('move','${p.id}')">🔀 Reassign</button>
+        ${p.parentId ? `<button class="btn btn-sm btn-danger" onclick="deletePerson('${p.id}')">🗑️ Delete</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// ═══ People View ═══
+function renderPeople() {
+  const m = document.getElementById('main');
+  const filtered = people().filter(matchesSearch).sort((a, b) => {
+    const av = a[S.sortCol] || '', bv = b[S.sortCol] || '';
+    return (av < bv ? -1 : av > bv ? 1 : 0) * S.sortDir;
+  });
+
+  m.innerHTML = `
+    <div class="toolbar">
+      <div class="view-tabs">
+        ${['chart','people','stats'].map(v => `<button class="${S.view === v ? 'active' : ''}" onclick="S.view='${v}';render()">${{chart:'🌳 Chart',people:'👥 People',stats:'📊 Stats'}[v]}</button>`).join('')}
+      </div>
+      <div class="search-box"><input type="text" placeholder="Search..." value="${esc(S.search)}" oninput="S.search=this.value;render()" id="search-input"></div>
+      <div class="spacer"></div>
+      <span style="font-size:12px;color:var(--fg3)">${filtered.length} people</span>
+    </div>
+    <div class="people-view">
+      <table class="people-table">
+        <thead><tr>
+          ${[['name','Name'],['title','Title'],['dept','Department'],['reports','Reports'],['depth','Depth']].map(([k,l]) => 
+            `<th onclick="sortBy('${k}')">${l} ${S.sortCol === k ? (S.sortDir === 1 ? '↑' : '↓') : ''}</th>`
+          ).join('')}
+          <th>Actions</th>
+        </tr></thead>
+        <tbody>
+          ${filtered.map(p => {
+            const kids = children(p.id);
+            const manager = p.parentId ? find(p.parentId) : null;
+            return `<tr onclick="S.selected='${p.id}';S.view='chart';render()" style="cursor:pointer">
+              <td><div class="avatar-cell"><span>${p.emoji}</span><div><div style="font-weight:600">${esc(p.name)}</div>${manager ? `<div style="font-size:11px;color:var(--fg3)">↳ ${esc(manager.name)}</div>` : ''}</div></div></td>
+              <td>${esc(p.title)}</td>
+              <td><span class="node-dept" style="background:${DEPTS[p.dept] || '#64748b'};font-size:11px">${esc(p.dept)}</span></td>
+              <td>${kids.length}</td>
+              <td>${depth(p.id)}</td>
+              <td>
+                <button class="btn btn-sm" style="background:var(--bg3)" onclick="event.stopPropagation();openModal('edit','${p.id}')">✏️</button>
+                ${p.parentId ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deletePerson('${p.id}')">🗑️</button>` : ''}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function sortBy(col) {
+  if (S.sortCol === col) S.sortDir *= -1;
+  else { S.sortCol = col; S.sortDir = 1; }
+  render();
+}
+
+// ═══ Stats View ═══
+function renderStats() {
+  const m = document.getElementById('main');
+  const pp = people();
+  const r = root();
+  if (!pp.length) {
+    m.innerHTML = '<div class="empty"><span>📊</span><p>Add people to see stats</p></div>';
+    return;
+  }
+
+  const totalPeople = pp.length;
+  const deptCounts = {};
+  pp.forEach(p => { deptCounts[p.dept] = (deptCounts[p.dept] || 0) + 1; });
+  const deptEntries = Object.entries(deptCounts).sort((a, b) => b[1] - a[1]);
+  const maxDeptCount = Math.max(...Object.values(deptCounts));
+  const numDepts = Object.keys(deptCounts).length;
+
+  // Span of control
+  const managers = pp.filter(p => children(p.id).length > 0);
+  const spans = managers.map(p => ({ ...p, span: children(p.id).length, total: descendants(p.id).length }));
+  spans.sort((a, b) => b.span - a.span);
+  const avgSpan = managers.length ? (spans.reduce((s, m) => s + m.span, 0) / managers.length).toFixed(1) : 0;
+  const maxSpan = spans.length ? spans[0].span : 0;
+  const treeDepth = r ? maxDepth(r.id) : 0;
+  const ics = pp.filter(p => children(p.id).length === 0);
+
+  m.innerHTML = `
+    <div class="toolbar">
+      <div class="view-tabs">
+        ${['chart','people','stats'].map(v => `<button class="${S.view === v ? 'active' : ''}" onclick="S.view='${v}';render()">${{chart:'🌳 Chart',people:'👥 People',stats:'📊 Stats'}[v]}</button>`).join('')}
+      </div>
+    </div>
+    <div class="stats-view">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Total People</div><div class="value">${totalPeople}</div></div>
+        <div class="stat-card"><div class="label">Departments</div><div class="value">${numDepts}</div></div>
+        <div class="stat-card"><div class="label">Org Depth</div><div class="value">${treeDepth}</div><div class="sub">levels deep</div></div>
+        <div class="stat-card"><div class="label">Managers</div><div class="value">${managers.length}</div><div class="sub">${(managers.length / totalPeople * 100).toFixed(0)}% of org</div></div>
+        <div class="stat-card"><div class="label">Avg Span</div><div class="value">${avgSpan}</div><div class="sub">direct reports</div></div>
+        <div class="stat-card"><div class="label">Max Span</div><div class="value">${maxSpan}</div><div class="sub">${spans[0] ? esc(spans[0].name) : ''}</div></div>
+        <div class="stat-card"><div class="label">ICs</div><div class="value">${ics.length}</div><div class="sub">${(ics.length / totalPeople * 100).toFixed(0)}% individual contributors</div></div>
+        <div class="stat-card"><div class="label">Mgr:IC Ratio</div><div class="value">1:${ics.length && managers.length ? (ics.length / managers.length).toFixed(1) : '—'}</div></div>
+      </div>
+
+      <div class="section-title">📊 Department Distribution</div>
+      <div class="dept-bars" style="margin-bottom:32px">
+        ${deptEntries.map(([dept, count]) => `
+          <div class="dept-bar-row">
+            <div class="dept-bar-label">${dept}</div>
+            <div class="dept-bar-track">
+              <div class="dept-bar-fill" style="width:${count / maxDeptCount * 100}%;background:${DEPTS[dept] || '#64748b'}">${count}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="section-title">👔 Span of Control — Top Managers</div>
+      <table class="span-table" style="margin-bottom:32px">
+        <thead><tr><th>Person</th><th>Title</th><th>Direct</th><th>Total</th><th>Depth</th></tr></thead>
+        <tbody>
+          ${spans.slice(0, 10).map(s => `
+            <tr style="cursor:pointer" onclick="S.selected='${s.id}';S.view='chart';render()">
+              <td><div class="avatar-cell"><span>${s.emoji}</span><span style="font-weight:600">${esc(s.name)}</span></div></td>
+              <td>${esc(s.title)}</td>
+              <td><strong>${s.span}</strong></td>
+              <td>${s.total}</td>
+              <td>${depth(s.id)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="section-title">🏗️ Org Structure Health</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:12px">Span Distribution</div>
+          ${[{l:'Narrow (1-3)',min:1,max:3},{l:'Optimal (4-7)',min:4,max:7},{l:'Wide (8+)',min:8,max:99}].map(r => {
+            const c = managers.filter(m => { const s = children(m.id).length; return s >= r.min && s <= r.max; }).length;
+            return `<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--fg2)">${r.l}</span><span style="font-weight:600">${c} manager${c !== 1 ? 's' : ''}</span></div>`;
+          }).join('')}
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:12px">Depth Analysis</div>
+          ${Array.from({length: treeDepth}, (_, i) => {
+            const atLevel = pp.filter(p => depth(p.id) === i);
+            return `<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--fg2)">Level ${i}</span><span style="font-weight:600">${atLevel.length} people</span></div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ═══ Modal ═══
+function openModal(mode, id) {
+  if (mode === 'root') {
+    S.modal = { mode: 'add', parentId: null, person: { name: '', title: '', dept: 'Executive', emoji: '👩‍💼' }};
+  } else if (mode === 'add') {
+    S.modal = { mode: 'add', parentId: id, person: { name: '', title: '', dept: find(id)?.dept || 'Engineering', emoji: '👤' }};
+  } else if (mode === 'edit') {
+    const p = find(id);
+    S.modal = { mode: 'edit', personId: id, person: { ...p }};
+  } else if (mode === 'move') {
+    S.modal = { mode: 'move', personId: id };
+  }
+  renderModal();
+}
+
+function renderModal() {
+  const mr = document.getElementById('modal-root');
+  if (!S.modal) { mr.innerHTML = ''; return; }
+
+  if (S.modal.mode === 'move') {
+    const p = find(S.modal.personId);
+    const descIds = new Set([S.modal.personId, ...descendants(S.modal.personId).map(d => d.id)]);
+    const candidates = people().filter(c => !descIds.has(c.id));
+
+    mr.innerHTML = `
+      <div class="modal-overlay" onclick="closeModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+          <div class="modal-header"><h2>🔀 Reassign ${esc(p.name)}</h2><button onclick="closeModal()">✕</button></div>
+          <div class="modal-body">
+            <p style="font-size:13px;color:var(--fg2);margin-bottom:16px">Select new manager for ${esc(p.name)}:</p>
+            ${candidates.map(c => `
+              <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;margin-bottom:4px;border:1px solid ${c.id === p.parentId ? 'var(--accent)' : 'transparent'};transition:all .15s" 
+                   onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''"
+                   onclick="movePerson('${S.modal.personId}','${c.id}');closeModal()">
+                <span style="font-size:22px">${c.emoji}</span>
+                <div><div style="font-weight:600;font-size:13px">${esc(c.name)}</div><div style="font-size:11px;color:var(--fg3)">${esc(c.title)} · ${esc(c.dept)}</div></div>
+                ${c.id === p.parentId ? '<span style="margin-left:auto;font-size:11px;color:var(--accent)">Current</span>' : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const d = S.modal.person;
+  const isEdit = S.modal.mode === 'edit';
+
+  mr.innerHTML = `
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header"><h2>${isEdit ? '✏️ Edit Person' : '➕ Add Person'}</h2><button onclick="closeModal()">✕</button></div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="m-name" value="${esc(d.name)}" placeholder="Full name" autofocus onkeydown="if(event.key==='Enter')saveModal()">
+          </div>
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="m-title" value="${esc(d.title)}" placeholder="Job title" onkeydown="if(event.key==='Enter')saveModal()">
+          </div>
+          <div class="form-group">
+            <label>Department</label>
+            <div class="dept-select">
+              ${Object.entries(DEPTS).map(([name, color]) => `
+                <div class="dept-chip${d.dept === name ? ' active' : ''}" style="background:${color}" onclick="document.querySelectorAll('.dept-chip').forEach(c=>c.classList.remove('active'));this.classList.add('active');this.dataset.dept='${name}'" data-dept="${name}">${name}</div>
+              `).join('')}
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Avatar</label>
+            <div class="emoji-grid">
+              ${EMOJIS.map(e => `<button class="${d.emoji === e ? 'active' : ''}" onclick="document.querySelectorAll('.emoji-grid button').forEach(b=>b.classList.remove('active'));this.classList.add('active');this.dataset.emoji='${e}'" data-emoji="${e}">${e}</button>`).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" style="background:var(--bg3)" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveModal()">${isEdit ? 'Save Changes' : 'Add Person'}</button>
+        </div>
+      </div>
+    </div>`;
+
+  setTimeout(() => document.getElementById('m-name')?.focus(), 50);
+}
+
+function saveModal() {
+  const name = document.getElementById('m-name')?.value.trim();
+  const title = document.getElementById('m-title')?.value.trim();
+  const activeDept = document.querySelector('.dept-chip.active');
+  const activeEmoji = document.querySelector('.emoji-grid button.active');
+  if (!name) { toast('Name is required'); return; }
+
+  const dept = activeDept?.dataset.dept || 'Engineering';
+  const emoji = activeEmoji?.dataset.emoji || '👤';
+
+  if (S.modal.mode === 'add') {
+    addPerson({ name, title: title || 'Team Member', dept, emoji, parentId: S.modal.parentId });
+    toast(`Added ${name}`);
+  } else {
+    editPerson(S.modal.personId, { name, title: title || 'Team Member', dept, emoji });
+    toast(`Updated ${name}`);
+  }
+  closeModal();
+}
+
+function closeModal() { S.modal = null; renderModal(); }
+
+// ═══ Context Menu ═══
+function showCtx(e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  const p = find(id);
+  const kids = children(id);
+  S.ctx = { id, x: e.clientX, y: e.clientY };
+  const cr = document.getElementById('ctx-root');
+  cr.innerHTML = `
+    <div class="ctx-menu" style="left:${e.clientX}px;top:${e.clientY}px">
+      <button onclick="openModal('add','${id}');hideCtx()">➕ Add Report</button>
+      <button onclick="openModal('edit','${id}');hideCtx()">✏️ Edit</button>
+      <button onclick="openModal('move','${id}');hideCtx()">🔀 Reassign Manager</button>
+      ${kids.length ? `<button onclick="toggleCollapse('${id}');hideCtx()">${p.collapsed ? '▶ Expand' : '▼ Collapse'} Team</button>` : ''}
+      <hr>
+      ${p.parentId ? `<button style="color:var(--danger)" onclick="deletePerson('${id}');hideCtx()">🗑️ Delete</button>` : '<button disabled style="opacity:.4">Cannot delete root</button>'}
+    </div>`;
+  setTimeout(() => document.addEventListener('click', hideCtx, { once: true }), 0);
+}
+
+function hideCtx() { document.getElementById('ctx-root').innerHTML = ''; S.ctx = null; }
+
+// ═══ Canvas Pan & Zoom ═══
+function startPan(e) {
+  if (e.target.closest('.node') || e.target.closest('button')) return;
+  isPanning = true;
+  panStart = { x: e.clientX, y: e.clientY };
+  panOrig = { ...S.pan };
+  const wrap = document.getElementById('canvas-wrap');
+  if (wrap) wrap.classList.add('grabbing');
+
+  const onMove = (e2) => {
+    S.pan.x = panOrig.x + (e2.clientX - panStart.x);
+    S.pan.y = panOrig.y + (e2.clientY - panStart.y);
+    const canvas = document.getElementById('canvas');
+    if (canvas) canvas.style.transform = `translate(${S.pan.x}px,${S.pan.y}px) scale(${S.zoom})`;
+  };
+  const onUp = () => {
+    isPanning = false;
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    const wrap = document.getElementById('canvas-wrap');
+    if (wrap) wrap.classList.remove('grabbing');
+  };
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+function onWheel(e) {
+  e.preventDefault();
+  adjustZoom(e.deltaY < 0 ? 0.08 : -0.08);
+}
+
+function adjustZoom(delta) {
+  S.zoom = Math.max(0.2, Math.min(3, S.zoom + delta));
+  const canvas = document.getElementById('canvas');
+  if (canvas) canvas.style.transform = `translate(${S.pan.x}px,${S.pan.y}px) scale(${S.zoom})`;
+  const label = document.getElementById('zoom-label');
+  if (label) label.textContent = Math.round(S.zoom * 100) + '%';
+}
+
+function fitToView() {
+  doLayout();
+  const wrap = document.getElementById('canvas-wrap');
+  if (!wrap) return;
+  const wrapRect = wrap.getBoundingClientRect();
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const pos of Object.values(positions)) {
+    minX = Math.min(minX, pos.x);
+    minY = Math.min(minY, pos.y);
+    maxX = Math.max(maxX, pos.x + NODE_W);
+    maxY = Math.max(maxY, pos.y + NODE_H);
+  }
+  if (minX === Infinity) return;
+
+  const cw = maxX - minX + 80;
+  const ch = maxY - minY + 80;
+  S.zoom = Math.min(1.5, Math.min(wrapRect.width / cw, wrapRect.height / ch) * 0.9);
+  S.pan.x = (wrapRect.width - cw * S.zoom) / 2 - minX * S.zoom + 40 * S.zoom;
+  S.pan.y = (wrapRect.height - ch * S.zoom) / 2 - minY * S.zoom + 40 * S.zoom;
+  render();
+}
+
+function expandAll() { people().forEach(p => p.collapsed = false); save(); render(); }
+function collapseAll() { people().forEach(p => { if (children(p.id).length) p.collapsed = true; }); const r = root(); if (r) r.collapsed = false; save(); render(); }
+function selectNode(id) { S.selected = S.selected === id ? null : id; render(); }
+
+// ═══ Import / Export ═══
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(S.orgs, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `org-chart-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  toast('Exported!');
+}
+
+function importJSON(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) {
+        data.forEach(o => {
+          if (o.name && Array.isArray(o.people)) S.orgs.push(o);
+        });
+      }
+      save(); render();
+      toast('Imported!');
+    } catch (err) { toast('Invalid JSON'); }
+  };
+  reader.readAsText(f);
+  e.target.value = '';
+}
+
+// ═══ Help ═══
+function renderHelp() {
+  document.getElementById('help-root').innerHTML = S.help ? `
+    <div class="help-overlay" onclick="S.help=false;renderHelp()">
+      <div class="help-box" onclick="event.stopPropagation()">
+        <h2>⌨️ Keyboard Shortcuts</h2>
+        <table>
+          ${[
+            ['N','Add person to selected / root'],
+            ['E','Edit selected person'],
+            ['Delete','Delete selected person'],
+            ['Space','Toggle collapse/expand'],
+            ['/','Focus search'],
+            ['Escape','Close modal / deselect'],
+            ['1 / 2 / 3','Switch views'],
+            ['F','Fit to view'],
+            ['+ / −','Zoom in / out'],
+            ['⌘Enter','Save modal form'],
+            ['?','Toggle this help'],
+          ].map(([k, d]) => `<tr><td>${k}</td><td>${d}</td></tr>`).join('')}
+        </table>
+        <div class="close"><button class="btn btn-primary btn-sm" onclick="S.help=false;renderHelp()">Got it</button></div>
+      </div>
+    </div>
+  ` : '';
+}
+
+// ═══ Keyboard ═══
+document.addEventListener('keydown', (e) => {
+  if (S.modal || S.help) {
+    if (e.key === 'Escape') { if (S.modal) closeModal(); if (S.help) { S.help = false; renderHelp(); } }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); saveModal(); }
+    return;
+  }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    if (e.key === 'Escape') { e.target.blur(); S.search = ''; render(); }
+    return;
+  }
+
+  switch (e.key) {
+    case '?': S.help = true; renderHelp(); break;
+    case '/': e.preventDefault(); document.getElementById('search-input')?.focus(); break;
+    case '1': S.view = 'chart'; render(); break;
+    case '2': S.view = 'people'; render(); break;
+    case '3': S.view = 'stats'; render(); break;
+    case 'n': case 'N':
+      if (S.selected) openModal('add', S.selected);
+      else if (root()) openModal('add', root().id);
+      else openModal('root');
+      break;
+    case 'e': case 'E':
+      if (S.selected) openModal('edit', S.selected);
+      break;
+    case ' ':
+      e.preventDefault();
+      if (S.selected && children(S.selected).length) toggleCollapse(S.selected);
+      break;
+    case 'Delete': case 'Backspace':
+      if (S.selected && find(S.selected)?.parentId) deletePerson(S.selected);
+      break;
+    case 'f': case 'F': fitToView(); break;
+    case '=': case '+': adjustZoom(0.1); break;
+    case '-': adjustZoom(-0.1); break;
+    case 'Escape': S.selected = null; S.search = ''; render(); break;
+  }
+});
+
+// ═══ Utility ═══
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══ Demo Data ═══
+function seedDemo() {
+  S.orgs = [{
+    id: 'demo1',
+    name: 'TechCorp Inc.',
+    people: [
+      { id: 'ceo', name: 'Priya Sharma', title: 'CEO & Co-Founder', dept: 'Executive', emoji: '👩‍💼', parentId: null, collapsed: false },
+
+      // C-Suite
+      { id: 'cto', name: 'Ravi Patel', title: 'CTO', dept: 'Engineering', emoji: '👨‍💻', parentId: 'ceo', collapsed: false },
+      { id: 'cpo', name: 'Ananya Gupta', title: 'Chief Product Officer', dept: 'Product', emoji: '👩‍💼', parentId: 'ceo', collapsed: false },
+      { id: 'cmo', name: 'Vikram Singh', title: 'VP Marketing', dept: 'Marketing', emoji: '👨‍💼', parentId: 'ceo', collapsed: false },
+      { id: 'cfo', name: 'Meera Krishnan', title: 'CFO', dept: 'Finance', emoji: '👩‍💼', parentId: 'ceo', collapsed: false },
+      { id: 'vps', name: 'Arjun Reddy', title: 'VP Sales', dept: 'Sales', emoji: '👨‍💼', parentId: 'ceo', collapsed: false },
+
+      // Engineering
+      { id: 'em1', name: 'Deepak Nair', title: 'Engineering Manager — Frontend', dept: 'Engineering', emoji: '👨‍💻', parentId: 'cto', collapsed: false },
+      { id: 'em2', name: 'Kavitha Rao', title: 'Engineering Manager — Backend', dept: 'Engineering', emoji: '👩‍💻', parentId: 'cto', collapsed: false },
+      { id: 'devops', name: 'Suresh Kumar', title: 'DevOps Lead', dept: 'Engineering', emoji: '🧑‍💻', parentId: 'cto', collapsed: false },
+      { id: 'fe1', name: 'Neha Joshi', title: 'Senior Frontend Engineer', dept: 'Engineering', emoji: '👩‍💻', parentId: 'em1', collapsed: false },
+      { id: 'fe2', name: 'Amit Tiwari', title: 'Frontend Engineer', dept: 'Engineering', emoji: '👨‍💻', parentId: 'em1', collapsed: false },
+      { id: 'fe3', name: 'Isha Verma', title: 'Frontend Engineer', dept: 'Engineering', emoji: '👩‍💻', parentId: 'em1', collapsed: false },
+      { id: 'be1', name: 'Rahul Mehta', title: 'Senior Backend Engineer', dept: 'Engineering', emoji: '👨‍💻', parentId: 'em2', collapsed: false },
+      { id: 'be2', name: 'Pooja Shetty', title: 'Backend Engineer', dept: 'Engineering', emoji: '👩‍💻', parentId: 'em2', collapsed: false },
+      { id: 'be3', name: 'Karthik Iyer', title: 'Backend Engineer', dept: 'Engineering', emoji: '👨‍💻', parentId: 'em2', collapsed: false },
+      { id: 'sre1', name: 'Anil Deshmukh', title: 'SRE Engineer', dept: 'Engineering', emoji: '🧑‍💻', parentId: 'devops', collapsed: false },
+
+      // Product
+      { id: 'pm1', name: 'Sneha Kapoor', title: 'Senior Product Manager', dept: 'Product', emoji: '👩‍💼', parentId: 'cpo', collapsed: false },
+      { id: 'pm2', name: 'Rohit Bose', title: 'Product Manager', dept: 'Product', emoji: '👨‍💼', parentId: 'cpo', collapsed: false },
+      { id: 'ux1', name: 'Divya Menon', title: 'UX Design Lead', dept: 'Design', emoji: '👩‍🎨', parentId: 'cpo', collapsed: false },
+      { id: 'ux2', name: 'Farhan Ali', title: 'UI Designer', dept: 'Design', emoji: '👨‍🎨', parentId: 'ux1', collapsed: false },
+      { id: 'ux3', name: 'Tara Sen', title: 'UX Researcher', dept: 'Design', emoji: '👩‍🔬', parentId: 'ux1', collapsed: false },
+
+      // Marketing
+      { id: 'mk1', name: 'Pallavi Jain', title: 'Content Marketing Lead', dept: 'Marketing', emoji: '👩‍💼', parentId: 'cmo', collapsed: false },
+      { id: 'mk2', name: 'Nikhil Sharma', title: 'Growth Marketing Manager', dept: 'Marketing', emoji: '👨‍💼', parentId: 'cmo', collapsed: false },
+      { id: 'mk3', name: 'Rina Das', title: 'SEO Specialist', dept: 'Marketing', emoji: '👩‍💻', parentId: 'mk1', collapsed: false },
+
+      // Sales
+      { id: 'sl1', name: 'Manish Agarwal', title: 'Sales Manager — Enterprise', dept: 'Sales', emoji: '👨‍💼', parentId: 'vps', collapsed: false },
+      { id: 'sl2', name: 'Swati Pillai', title: 'Sales Manager — SMB', dept: 'Sales', emoji: '👩‍💼', parentId: 'vps', collapsed: false },
+      { id: 'sl3', name: 'Arun Saxena', title: 'Account Executive', dept: 'Sales', emoji: '👨‍💼', parentId: 'sl1', collapsed: false },
+      { id: 'sl4', name: 'Nisha Thapar', title: 'SDR', dept: 'Sales', emoji: '👩‍💼', parentId: 'sl2', collapsed: false },
+
+      // Finance
+      { id: 'fn1', name: 'Rajesh Pandey', title: 'Finance Manager', dept: 'Finance', emoji: '👨‍💼', parentId: 'cfo', collapsed: false },
+      { id: 'hr1', name: 'Sunita Desai', title: 'HR Manager', dept: 'HR', emoji: '👩‍💼', parentId: 'ceo', collapsed: false },
+      { id: 'hr2', name: 'Vinay Bhatt', title: 'Talent Acquisition', dept: 'HR', emoji: '👨‍💼', parentId: 'hr1', collapsed: false },
+
+      // Data
+      { id: 'da1', name: 'Siddharth Mohan', title: 'Data Lead', dept: 'Data', emoji: '🧑‍💻', parentId: 'cto', collapsed: false },
+      { id: 'da2', name: 'Anjali Verma', title: 'Data Analyst', dept: 'Data', emoji: '👩‍💻', parentId: 'da1', collapsed: false },
+    ]
+  }, {
+    id: 'demo2',
+    name: 'BSL — FleetRobo Team',
+    people: [
+      { id: 'bsl1', name: 'Mandeep', title: 'Business Head', dept: 'Executive', emoji: '👨‍💼', parentId: null, collapsed: false },
+      { id: 'bsl2', name: 'Aman Jha', title: 'Head of Product', dept: 'Product', emoji: '👨‍💻', parentId: 'bsl1', collapsed: false },
+      { id: 'bsl3', name: 'Vaibhav', title: 'Tech Lead', dept: 'Engineering', emoji: '👨‍💻', parentId: 'bsl1', collapsed: false },
+      { id: 'bsl4', name: 'Yatin', title: 'Operations', dept: 'Operations', emoji: '👨‍💼', parentId: 'bsl1', collapsed: false },
+      { id: 'bsl5', name: 'PM 1', title: 'Product Manager', dept: 'Product', emoji: '👤', parentId: 'bsl2', collapsed: false },
+      { id: 'bsl6', name: 'Designer', title: 'UI/UX Designer', dept: 'Design', emoji: '👩‍🎨', parentId: 'bsl2', collapsed: false },
+      { id: 'bsl7', name: 'Dev 1', title: 'Full Stack Developer', dept: 'Engineering', emoji: '👨‍💻', parentId: 'bsl3', collapsed: false },
+      { id: 'bsl8', name: 'Dev 2', title: 'Backend Developer', dept: 'Engineering', emoji: '👩‍💻', parentId: 'bsl3', collapsed: false },
+      { id: 'bsl9', name: 'Dev 3', title: 'Mobile Developer', dept: 'Engineering', emoji: '🧑‍💻', parentId: 'bsl3', collapsed: false },
+      { id: 'bsl10', name: 'QA', title: 'QA Engineer', dept: 'Engineering', emoji: '👤', parentId: 'bsl3', collapsed: false },
+      { id: 'bsl11', name: 'Support 1', title: 'Customer Support', dept: 'Support', emoji: '👤', parentId: 'bsl4', collapsed: false },
+    ]
+  }];
+}
+
+// ═══ Init ═══
+load();
+render();
+setTimeout(fitToView, 100);
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

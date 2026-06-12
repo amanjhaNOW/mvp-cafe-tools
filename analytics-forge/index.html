@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics Forge — Website Analytics Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#3fb950;--red:#f85149;--orange:#d29922;--purple:#bc8cff;--pink:#f778ba;--cyan:#39d2c0;--radius:10px;--shadow:0 2px 8px rgba(0,0,0,.3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+button{cursor:pointer;border:none;font:inherit;color:var(--text)}
+input,select,textarea{font:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;outline:none}
+input:focus,select:focus{border-color:var(--accent)}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Sidebar */
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:15px;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:18px}
+.sidebar-sites{flex:1;overflow-y:auto;padding:8px}
+.site-item{padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:2px;transition:.15s}
+.site-item:hover{background:var(--surface2)}
+.site-item.active{background:var(--accent);color:#fff}
+.site-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sidebar-bottom{padding:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.sidebar-bottom button{padding:6px 10px;border-radius:6px;font-size:12px;background:var(--surface2);display:flex;align-items:center;gap:6px;justify-content:center}
+.sidebar-bottom button:hover{background:var(--border)}
+.sidebar-bottom .primary{background:var(--accent);color:#fff}
+.sidebar-bottom .primary:hover{opacity:.9}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.topbar .site-name{font-size:16px;font-weight:600;flex:1}
+.range-btns{display:flex;gap:4px}
+.range-btns button{padding:4px 10px;border-radius:6px;font-size:12px;background:var(--surface2);color:var(--text2)}
+.range-btns button:hover{background:var(--border)}
+.range-btns button.active{background:var(--accent);color:#fff}
+.view-tabs{display:flex;gap:4px}
+.view-tabs button{padding:4px 10px;border-radius:6px;font-size:12px;background:transparent;color:var(--text2)}
+.view-tabs button:hover{background:var(--surface2)}
+.view-tabs button.active{background:var(--surface2);color:var(--text)}
+
+.content{flex:1;overflow-y:auto;padding:20px}
+
+/* Stats cards */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-card .label{font-size:12px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.stat-card .value{font-size:26px;font-weight:700}
+.stat-card .change{font-size:12px;margin-top:4px;display:flex;align-items:center;gap:4px}
+.stat-card .change.up{color:var(--accent2)}.stat-card .change.down{color:var(--red)}
+
+/* Charts */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-row.full{grid-template-columns:1fr}
+@media(max-width:900px){.chart-row{grid-template-columns:1fr}}
+.chart-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.chart-box h3{font-size:13px;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+
+/* SVG charts */
+svg text{font-family:inherit}
+.bar-label{fill:var(--text2);font-size:11px}
+.bar-value{fill:var(--text);font-size:11px;font-weight:600}
+.line-area{opacity:.15}
+.grid-line{stroke:var(--border);stroke-dasharray:4 4}
+
+/* Tables */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{text-align:left;padding:8px 12px;color:var(--text2);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.data-table td{padding:8px 12px;border-bottom:1px solid var(--border)}
+.data-table tr:hover td{background:var(--surface2)}
+.data-table .bar-cell{display:flex;align-items:center;gap:8px}
+.data-table .mini-bar{height:6px;border-radius:3px;background:var(--accent);min-width:2px}
+.data-table .pct{color:var(--text2);font-size:11px;min-width:36px;text-align:right}
+
+/* Donut */
+.donut-legend{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.donut-legend-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.donut-legend-item .swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.donut-legend-item .dl-name{flex:1;color:var(--text2)}
+.donut-legend-item .dl-val{font-weight:600}
+
+/* Live badge */
+.live-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(63,185,80,.15);border:1px solid rgba(63,185,80,.3);border-radius:20px;font-size:12px;color:var(--accent2)}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Realtime view */
+.realtime-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.rt-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.rt-card .rt-val{font-size:36px;font-weight:700;color:var(--accent)}
+.rt-card .rt-label{font-size:11px;color:var(--text2);text-transform:uppercase;margin-top:4px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:.2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto;padding:24px}
+.modal h2{font-size:16px;margin-bottom:16px}
+.modal label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;margin-top:12px}
+.modal input,.modal select{width:100%}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.modal-actions button{padding:8px 16px;border-radius:6px;font-size:13px}
+.btn-cancel{background:var(--surface2)}.btn-cancel:hover{background:var(--border)}
+.btn-save{background:var(--accent);color:#fff}.btn-save:hover{opacity:.9}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{opacity:.9}
+
+/* UTM table */
+.utm-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;background:var(--surface2);color:var(--text2);margin-right:4px}
+
+/* Geo map placeholder */
+.geo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.geo-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:6px;font-size:13px}
+.geo-flag{font-size:18px}
+.geo-name{flex:1}.geo-val{font-weight:600}.geo-pct{color:var(--text2);font-size:11px;min-width:40px;text-align:right}
+
+/* Help */
+.help-section{margin-bottom:20px}
+.help-section h3{font-size:14px;margin-bottom:8px;color:var(--accent)}
+.kbd{display:inline-block;padding:2px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:monospace;margin:0 2px}
+
+/* Compare period */
+.compare-toggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer}
+.compare-toggle input{width:auto}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span>📊</span> Analytics Forge</h1>
+  </div>
+  <div class="sidebar-sites" id="siteList"></div>
+  <div class="sidebar-bottom">
+    <button class="primary" onclick="showSiteModal()">+ Add Site</button>
+    <button onclick="exportAll()">📦 Export</button>
+    <button onclick="importAll()">📥 Import</button>
+    <button onclick="showView('help')">? Help</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="site-name" id="siteName">Select a site</div>
+    <div class="live-badge" id="liveBadge" style="display:none"><div class="live-dot"></div><span id="liveCount">0</span> live</div>
+    <label class="compare-toggle"><input type="checkbox" id="compareToggle" onchange="render()"> Compare</label>
+    <div class="range-btns" id="rangeBtns">
+      <button onclick="setRange('today')" data-r="today">Today</button>
+      <button onclick="setRange('7d')" data-r="7d" class="active">7 Days</button>
+      <button onclick="setRange('30d')" data-r="30d">30 Days</button>
+      <button onclick="setRange('90d')" data-r="90d">90 Days</button>
+      <button onclick="setRange('all')" data-r="all">All</button>
+    </div>
+    <div class="view-tabs" id="viewTabs">
+      <button onclick="showView('overview')" data-v="overview" class="active">Overview</button>
+      <button onclick="showView('pages')" data-v="pages">Pages</button>
+      <button onclick="showView('sources')" data-v="sources">Sources</button>
+      <button onclick="showView('utm')" data-v="utm">UTM</button>
+      <button onclick="showView('geo')" data-v="geo">Countries</button>
+      <button onclick="showView('tech')" data-v="tech">Tech</button>
+      <button onclick="showView('realtime')" data-v="realtime">Realtime</button>
+    </div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+// ===== State =====
+let sites = JSON.parse(localStorage.getItem('af_sites') || '[]');
+let activeSiteId = localStorage.getItem('af_active') || '';
+let currentRange = '7d';
+let currentView = 'overview';
+let liveInterval = null;
+
+const COLORS = ['#58a6ff','#3fb950','#f85149','#d29922','#bc8cff','#f778ba','#39d2c0','#f0883e','#7ee787','#a5d6ff'];
+const PAGES = ['/','/pricing','/features','/blog','/docs','/about','/contact','/blog/getting-started','/blog/utm-tracking-guide','/changelog','/signup','/login','/dashboard','/integrations','/templates','/api','/blog/email-signatures-101','/case-studies','/careers','/privacy'];
+const SOURCES = [{name:'Google',type:'search'},{name:'Direct',type:'direct'},{name:'Twitter/X',type:'social'},{name:'LinkedIn',type:'social'},{name:'GitHub',type:'referral'},{name:'Product Hunt',type:'referral'},{name:'Hacker News',type:'referral'},{name:'Reddit',type:'social'},{name:'Facebook',type:'social'},{name:'Bing',type:'search'},{name:'DuckDuckGo',type:'search'},{name:'Newsletter',type:'email'},{name:'Dev.to',type:'referral'},{name:'YouTube',type:'social'},{name:'Medium',type:'referral'}];
+const COUNTRIES = [{name:'India',flag:'🇮🇳',code:'IN'},{name:'United States',flag:'🇺🇸',code:'US'},{name:'United Kingdom',flag:'🇬🇧',code:'GB'},{name:'Germany',flag:'🇩🇪',code:'DE'},{name:'Canada',flag:'🇨🇦',code:'CA'},{name:'France',flag:'🇫🇷',code:'FR'},{name:'Australia',flag:'🇦🇺',code:'AU'},{name:'Japan',flag:'🇯🇵',code:'JP'},{name:'Brazil',flag:'🇧🇷',code:'BR'},{name:'Netherlands',flag:'🇳🇱',code:'NL'},{name:'Singapore',flag:'🇸🇬',code:'SG'},{name:'South Korea',flag:'🇰🇷',code:'KR'},{name:'Sweden',flag:'🇸🇪',code:'SE'},{name:'Israel',flag:'🇮🇱',code:'IL'},{name:'UAE',flag:'🇦🇪',code:'AE'}];
+const BROWSERS = ['Chrome','Safari','Firefox','Edge','Brave','Arc','Opera','Samsung Internet'];
+const OS_LIST = ['macOS','Windows','iOS','Android','Linux','ChromeOS'];
+const DEVICES = ['Desktop','Mobile','Tablet'];
+const UTM_SOURCES = ['google','linkedin','twitter','newsletter','producthunt','reddit','facebook','partner','blog'];
+const UTM_MEDIUMS = ['cpc','social','email','referral','organic','display','affiliate'];
+const UTM_CAMPAIGNS = ['launch-week','summer-2026','utm-tracking-guide','feature-release','black-friday','webinar-june','partner-collab','product-hunt-launch','linkedin-thought-leadership','retargeting-q2'];
+
+// ===== Helpers =====
+const rng = (seed) => { let s=seed; return()=>{s=(s*16807+0)%2147483647; return s/2147483647}};
+const pick = (arr,r) => arr[Math.floor(r()*arr.length)];
+const randInt = (min,max,r) => Math.floor(r()*(max-min+1))+min;
+const fmt = n => n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':n.toString();
+const fmtPct = n => (n*100).toFixed(1)+'%';
+const dayStr = d => d.toISOString().split('T')[0];
+const daysBetween = (a,b) => Math.round((b-a)/864e5);
+
+function generateSiteData(site) {
+  const r = rng(hashStr(site.id));
+  const baseDaily = site.baseTraffic || 500;
+  const startDate = new Date(site.created || '2026-01-01');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = daysBetween(startDate, today) + 1;
+  
+  const dailyData = [];
+  let growthFactor = 1;
+  
+  for (let i = 0; i < days; i++) {
+    const d = new Date(startDate); d.setDate(d.getDate() + i);
+    const dow = d.getDay();
+    const weekendDip = (dow === 0 || dow === 6) ? 0.6 : 1;
+    growthFactor = 1 + (i / days) * 0.5 + Math.sin(i/14)*0.1;
+    const noise = 0.8 + r() * 0.4;
+    const views = Math.round(baseDaily * growthFactor * weekendDip * noise);
+    const uniqueRatio = 0.55 + r() * 0.15;
+    const visitors = Math.round(views * uniqueRatio);
+    const bounceRate = 0.35 + r() * 0.25;
+    const avgDuration = 45 + r() * 180;
+    
+    // Page distribution
+    const pageViews = {};
+    for (let p = 0; p < views; p++) {
+      const weights = PAGES.map((_, idx) => Math.max(1, 20 - idx * 1.2));
+      const total = weights.reduce((a, b) => a + b, 0);
+      let rr = r() * total, acc = 0;
+      for (let j = 0; j < PAGES.length; j++) { acc += weights[j]; if (rr <= acc) { pageViews[PAGES[j]] = (pageViews[PAGES[j]]||0)+1; break; } }
+    }
+    
+    // Source distribution
+    const sourceViews = {};
+    const srcWeights = [30,20,10,10,8,5,4,3,3,2,2,1,1,0.5,0.5];
+    for (let s = 0; s < visitors; s++) {
+      const total = srcWeights.reduce((a,b) => a+b, 0);
+      let rr = r()*total, acc = 0;
+      for (let j = 0; j < SOURCES.length; j++) { acc += srcWeights[j]; if (rr <= acc) { sourceViews[SOURCES[j].name] = (sourceViews[SOURCES[j].name]||0)+1; break; } }
+    }
+    
+    // Country distribution
+    const countryViews = {};
+    const cWeights = [25,20,10,8,6,5,4,3,3,3,2,2,2,1,1];
+    for (let c = 0; c < visitors; c++) {
+      const total = cWeights.reduce((a,b) => a+b, 0);
+      let rr = r()*total, acc = 0;
+      for (let j = 0; j < COUNTRIES.length; j++) { acc += cWeights[j]; if (rr <= acc) { countryViews[COUNTRIES[j].code] = (countryViews[COUNTRIES[j].code]||0)+1; break; } }
+    }
+    
+    // Browser distribution
+    const browserViews = {};
+    const bWeights = [40,20,10,10,6,5,4,3];
+    for (let b = 0; b < visitors; b++) {
+      const total = bWeights.reduce((a,b) => a+b, 0);
+      let rr = r()*total, acc = 0;
+      for (let j = 0; j < BROWSERS.length; j++) { acc += bWeights[j]; if (rr <= acc) { browserViews[BROWSERS[j]] = (browserViews[BROWSERS[j]]||0)+1; break; } }
+    }
+    
+    // OS distribution
+    const osViews = {};
+    const oWeights = [30,25,20,15,8,2];
+    for (let o = 0; o < visitors; o++) {
+      const total = oWeights.reduce((a,b) => a+b, 0);
+      let rr = r()*total, acc = 0;
+      for (let j = 0; j < OS_LIST.length; j++) { acc += oWeights[j]; if (rr <= acc) { osViews[OS_LIST[j]] = (osViews[OS_LIST[j]]||0)+1; break; } }
+    }
+    
+    // Device distribution
+    const deviceViews = {};
+    const dWeights = [55,38,7];
+    for (let dd = 0; dd < visitors; dd++) {
+      const total = dWeights.reduce((a,b) => a+b, 0);
+      let rr = r()*total, acc = 0;
+      for (let j = 0; j < DEVICES.length; j++) { acc += dWeights[j]; if (rr <= acc) { deviceViews[DEVICES[j]] = (deviceViews[DEVICES[j]]||0)+1; break; } }
+    }
+    
+    // UTM campaigns (30% of traffic has UTM)
+    const utmData = [];
+    const utmVisitors = Math.round(visitors * 0.3);
+    for (let u = 0; u < utmVisitors; u++) {
+      utmData.push({
+        source: pick(UTM_SOURCES, r),
+        medium: pick(UTM_MEDIUMS, r),
+        campaign: pick(UTM_CAMPAIGNS, r)
+      });
+    }
+    
+    dailyData.push({
+      date: dayStr(d), views, visitors, bounceRate, avgDuration,
+      pages: pageViews, sources: sourceViews, countries: countryViews,
+      browsers: browserViews, os: osViews, devices: deviceViews, utm: utmData
+    });
+  }
+  return dailyData;
+}
+
+function hashStr(s) { let h=0; for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0} return Math.abs(h)+1; }
+
+function filterByRange(data, range) {
+  if (range === 'all') return data;
+  const today = new Date(); today.setHours(0,0,0,0);
+  let start;
+  if (range === 'today') { start = new Date(today); }
+  else if (range === '7d') { start = new Date(today); start.setDate(start.getDate()-6); }
+  else if (range === '30d') { start = new Date(today); start.setDate(start.getDate()-29); }
+  else if (range === '90d') { start = new Date(today); start.setDate(start.getDate()-89); }
+  const startStr = dayStr(start);
+  return data.filter(d => d.date >= startStr);
+}
+
+function getPrevPeriod(data, range) {
+  if (range === 'all' || range === 'today') return [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
+  const end = new Date(today); end.setDate(end.getDate()-days);
+  const start = new Date(end); start.setDate(start.getDate()-days+1);
+  const startStr = dayStr(start); const endStr = dayStr(end);
+  return data.filter(d => d.date >= startStr && d.date <= endStr);
+}
+
+function aggregate(filtered) {
+  const totalViews = filtered.reduce((s,d) => s+d.views, 0);
+  const totalVisitors = filtered.reduce((s,d) => s+d.visitors, 0);
+  const avgBounce = filtered.length ? filtered.reduce((s,d) => s+d.bounceRate, 0)/filtered.length : 0;
+  const avgDuration = filtered.length ? filtered.reduce((s,d) => s+d.avgDuration, 0)/filtered.length : 0;
+  const viewsPerVisitor = totalVisitors ? totalViews/totalVisitors : 0;
+  
+  const pages = {}; filtered.forEach(d => Object.entries(d.pages).forEach(([k,v]) => pages[k]=(pages[k]||0)+v));
+  const sources = {}; filtered.forEach(d => Object.entries(d.sources).forEach(([k,v]) => sources[k]=(sources[k]||0)+v));
+  const countries = {}; filtered.forEach(d => Object.entries(d.countries).forEach(([k,v]) => countries[k]=(countries[k]||0)+v));
+  const browsers = {}; filtered.forEach(d => Object.entries(d.browsers).forEach(([k,v]) => browsers[k]=(browsers[k]||0)+v));
+  const os = {}; filtered.forEach(d => Object.entries(d.os).forEach(([k,v]) => os[k]=(os[k]||0)+v));
+  const devices = {}; filtered.forEach(d => Object.entries(d.devices).forEach(([k,v]) => devices[k]=(devices[k]||0)+v));
+  
+  // UTM aggregation
+  const utmCampaigns = {}; const utmSources = {}; const utmMediums = {};
+  filtered.forEach(d => d.utm.forEach(u => {
+    utmCampaigns[u.campaign] = (utmCampaigns[u.campaign]||0)+1;
+    utmSources[u.source] = (utmSources[u.source]||0)+1;
+    utmMediums[u.medium] = (utmMediums[u.medium]||0)+1;
+  }));
+  
+  return { totalViews, totalVisitors, avgBounce, avgDuration, viewsPerVisitor,
+    pages, sources, countries, browsers, os, devices, utmCampaigns, utmSources, utmMediums };
+}
+
+function changeStr(curr, prev) {
+  if (!prev) return '';
+  const pct = prev === 0 ? 100 : ((curr - prev) / prev * 100);
+  const up = pct >= 0;
+  return `<span class="change ${up?'up':'down'}">${up?'↑':'↓'} ${Math.abs(pct).toFixed(1)}%</span>`;
+}
+
+// ===== SVG Helpers =====
+function lineChart(data, key, w=560, h=180) {
+  if (!data.length) return '<div style="color:var(--text2);text-align:center;padding:40px">No data</div>';
+  const maxVal = Math.max(...data.map(d => d[key]), 1);
+  const padL=50, padR=10, padT=10, padB=30;
+  const cw=w-padL-padR, ch=h-padT-padB;
+  
+  const points = data.map((d,i) => {
+    const x = padL + (data.length>1 ? i/(data.length-1)*cw : cw/2);
+    const y = padT + ch - (d[key]/maxVal*ch);
+    return {x,y,d};
+  });
+  
+  const line = points.map((p,i) => `${i===0?'M':'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const area = line + ` L${points[points.length-1].x.toFixed(1)},${padT+ch} L${points[0].x.toFixed(1)},${padT+ch} Z`;
+  
+  // Grid lines
+  const gridCount = 4;
+  let grids = '';
+  for (let i = 0; i <= gridCount; i++) {
+    const y = padT + (i/gridCount)*ch;
+    const val = maxVal - (i/gridCount)*maxVal;
+    grids += `<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" class="grid-line"/>`;
+    grids += `<text x="${padL-8}" y="${y+4}" text-anchor="end" class="bar-label">${fmt(Math.round(val))}</text>`;
+  }
+  
+  // X labels
+  let xlabels = '';
+  const step = Math.max(1, Math.floor(data.length / 7));
+  for (let i = 0; i < data.length; i += step) {
+    const x = points[i].x;
+    const label = data[i].date.slice(5); // MM-DD
+    xlabels += `<text x="${x}" y="${h-4}" text-anchor="middle" class="bar-label">${label}</text>`;
+  }
+  
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-height:200px">
+    ${grids}${xlabels}
+    <path d="${area}" fill="var(--accent)" class="line-area"/>
+    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+  </svg>`;
+}
+
+function barChart(items, w=280, h=200) {
+  if (!items.length) return '';
+  const maxVal = Math.max(...items.map(i => i.value), 1);
+  const barH = 24, gap = 4;
+  const padL = 100, padR = 60;
+  const totalH = items.length * (barH + gap);
+  
+  return `<svg viewBox="0 0 ${w} ${totalH}" width="100%" style="max-height:${Math.min(totalH, 400)}px">
+    ${items.map((item, i) => {
+      const y = i * (barH + gap);
+      const bw = Math.max(2, (item.value / maxVal) * (w - padL - padR));
+      return `
+        <text x="${padL-8}" y="${y+barH/2+4}" text-anchor="end" class="bar-label">${item.name.length>12?item.name.slice(0,12)+'…':item.name}</text>
+        <rect x="${padL}" y="${y}" width="${bw}" height="${barH}" rx="4" fill="${item.color || 'var(--accent)'}" opacity="0.8"/>
+        <text x="${padL+bw+6}" y="${y+barH/2+4}" class="bar-value">${fmt(item.value)}</text>
+      `;
+    }).join('')}
+  </svg>`;
+}
+
+function donutChart(items, size=140) {
+  const total = items.reduce((s,i) => s+i.value, 0);
+  if (!total) return '';
+  const cx=size/2, cy=size/2, r=size/2-10, inner=r*0.6;
+  let angle = -Math.PI/2;
+  let paths = '';
+  
+  items.forEach((item, idx) => {
+    const pct = item.value / total;
+    const endAngle = angle + pct * 2 * Math.PI;
+    const large = pct > 0.5 ? 1 : 0;
+    const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
+    const x2 = cx + r * Math.cos(endAngle), y2 = cy + r * Math.sin(endAngle);
+    const ix1 = cx + inner * Math.cos(endAngle), iy1 = cy + inner * Math.sin(endAngle);
+    const ix2 = cx + inner * Math.cos(angle), iy2 = cy + inner * Math.sin(angle);
+    paths += `<path d="M${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} L${ix1},${iy1} A${inner},${inner} 0 ${large} 0 ${ix2},${iy2} Z" fill="${COLORS[idx%COLORS.length]}" opacity="0.85"/>`;
+    angle = endAngle;
+  });
+  
+  const legend = items.map((item,i) => `
+    <div class="donut-legend-item">
+      <div class="swatch" style="background:${COLORS[i%COLORS.length]}"></div>
+      <span class="dl-name">${item.name}</span>
+      <span class="dl-val">${fmt(item.value)}</span>
+      <span style="color:var(--text2);font-size:11px">${fmtPct(item.value/total)}</span>
+    </div>
+  `).join('');
+  
+  return `<div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+    <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">${paths}
+      <text x="${cx}" y="${cy-4}" text-anchor="middle" fill="var(--text)" font-size="18" font-weight="700">${fmt(total)}</text>
+      <text x="${cx}" y="${cy+14}" text-anchor="middle" fill="var(--text2)" font-size="10">total</text>
+    </svg>
+    <div class="donut-legend">${legend}</div>
+  </div>`;
+}
+
+function sparkline(data, key, w=120, h=32) {
+  if (!data.length) return '';
+  const maxVal = Math.max(...data.map(d => d[key]), 1);
+  const points = data.map((d,i) => {
+    const x = (data.length>1?i/(data.length-1):0.5)*w;
+    const y = h - (d[key]/maxVal*h*0.8) - h*0.1;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg>`;
+}
+
+// ===== Render Views =====
+function render() {
+  const site = sites.find(s => s.id === activeSiteId);
+  if (!site) { document.getElementById('content').innerHTML = '<div style="text-align:center;padding:60px;color:var(--text2)"><p style="font-size:48px;margin-bottom:16px">📊</p><p>Add a site to get started</p></div>'; return; }
+  
+  document.getElementById('siteName').textContent = site.name;
+  document.getElementById('liveBadge').style.display = currentView === 'realtime' ? 'inline-flex' : 'none';
+  
+  const allData = generateSiteData(site);
+  const filtered = filterByRange(allData, currentRange);
+  const compare = document.getElementById('compareToggle').checked;
+  const prev = compare ? getPrevPeriod(allData, currentRange) : [];
+  const agg = aggregate(filtered);
+  const prevAgg = prev.length ? aggregate(prev) : null;
+  
+  const views = { overview: renderOverview, pages: renderPages, sources: renderSources, utm: renderUTM, geo: renderGeo, tech: renderTech, realtime: renderRealtime, help: renderHelp };
+  const fn = views[currentView] || renderOverview;
+  document.getElementById('content').innerHTML = fn(filtered, agg, prevAgg, site);
+}
+
+function renderOverview(filtered, agg, prevAgg) {
+  const compare = !!prevAgg;
+  return `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">Pageviews</div><div class="value">${fmt(agg.totalViews)}</div>${compare?changeStr(agg.totalViews,prevAgg.totalViews):''} ${sparkline(filtered,'views')}</div>
+      <div class="stat-card"><div class="label">Visitors</div><div class="value">${fmt(agg.totalVisitors)}</div>${compare?changeStr(agg.totalVisitors,prevAgg.totalVisitors):''} ${sparkline(filtered,'visitors')}</div>
+      <div class="stat-card"><div class="label">Bounce Rate</div><div class="value">${(agg.avgBounce*100).toFixed(1)}%</div>${compare?changeStr(agg.avgBounce,prevAgg.avgBounce):''}</div>
+      <div class="stat-card"><div class="label">Avg Duration</div><div class="value">${Math.round(agg.avgDuration)}s</div>${compare?changeStr(agg.avgDuration,prevAgg.avgDuration):''}</div>
+      <div class="stat-card"><div class="label">Views/Visitor</div><div class="value">${agg.viewsPerVisitor.toFixed(1)}</div></div>
+      <div class="stat-card"><div class="label">Days</div><div class="value">${filtered.length}</div></div>
+    </div>
+    <div class="chart-row full">
+      <div class="chart-box"><h3>Traffic Over Time</h3>${lineChart(filtered, 'views')}</div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3>Top Pages</h3>${barChart(sortedEntries(agg.pages).slice(0,8).map((e,i) => ({name:e[0],value:e[1],color:COLORS[i%COLORS.length]})))}</div>
+      <div class="chart-box"><h3>Top Sources</h3>${barChart(sortedEntries(agg.sources).slice(0,8).map((e,i) => ({name:e[0],value:e[1],color:COLORS[i%COLORS.length]})))}</div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3>Devices</h3>${donutChart(sortedEntries(agg.devices).map(e => ({name:e[0],value:e[1]})))}</div>
+      <div class="chart-box"><h3>Browsers</h3>${donutChart(sortedEntries(agg.browsers).slice(0,6).map(e => ({name:e[0],value:e[1]})))}</div>
+    </div>
+  `;
+}
+
+function renderPages(filtered, agg) {
+  const sorted = sortedEntries(agg.pages);
+  const maxVal = sorted.length ? sorted[0][1] : 1;
+  return `
+    <div class="chart-box"><h3>All Pages — ${sorted.length} pages, ${fmt(agg.totalViews)} total views</h3>
+      <table class="data-table">
+        <thead><tr><th>Page</th><th>Views</th><th>% of Total</th><th></th></tr></thead>
+        <tbody>${sorted.map(([page, views]) => `
+          <tr>
+            <td style="font-family:monospace;font-size:12px">${page}</td>
+            <td>${fmt(views)}</td>
+            <td class="pct">${(views/agg.totalViews*100).toFixed(1)}%</td>
+            <td style="width:120px"><div class="mini-bar" style="width:${views/maxVal*100}%"></div></td>
+          </tr>
+        `).join('')}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderSources(filtered, agg) {
+  const sorted = sortedEntries(agg.sources);
+  const maxVal = sorted.length ? sorted[0][1] : 1;
+  // Group by type
+  const byType = {};
+  SOURCES.forEach(s => { byType[s.type] = byType[s.type] || 0; if (agg.sources[s.name]) byType[s.type] += agg.sources[s.name]; });
+  
+  return `
+    <div class="chart-row">
+      <div class="chart-box"><h3>Source Type</h3>${donutChart(sortedEntries(byType).map(e => ({name:e[0],value:e[1]})))}</div>
+      <div class="chart-box"><h3>Top Sources</h3>${barChart(sorted.slice(0,10).map((e,i) => ({name:e[0],value:e[1],color:COLORS[i%COLORS.length]})))}</div>
+    </div>
+    <div class="chart-box"><h3>All Sources</h3>
+      <table class="data-table">
+        <thead><tr><th>Source</th><th>Type</th><th>Visitors</th><th>%</th><th></th></tr></thead>
+        <tbody>${sorted.map(([name, views]) => {
+          const src = SOURCES.find(s => s.name === name);
+          return `<tr><td>${name}</td><td><span class="utm-badge">${src?src.type:'other'}</span></td><td>${fmt(views)}</td><td class="pct">${(views/agg.totalVisitors*100).toFixed(1)}%</td><td style="width:100px"><div class="mini-bar" style="width:${views/maxVal*100}%"></div></td></tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderUTM(filtered, agg) {
+  const totalUTM = Object.values(agg.utmCampaigns).reduce((s,v) => s+v, 0);
+  return `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">UTM Visitors</div><div class="value">${fmt(totalUTM)}</div></div>
+      <div class="stat-card"><div class="label">Campaigns</div><div class="value">${Object.keys(agg.utmCampaigns).length}</div></div>
+      <div class="stat-card"><div class="label">Sources</div><div class="value">${Object.keys(agg.utmSources).length}</div></div>
+      <div class="stat-card"><div class="label">Mediums</div><div class="value">${Object.keys(agg.utmMediums).length}</div></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3>UTM Campaigns</h3>${barChart(sortedEntries(agg.utmCampaigns).map((e,i) => ({name:e[0],value:e[1],color:COLORS[i%COLORS.length]})))}</div>
+      <div class="chart-box"><h3>UTM Sources</h3>${donutChart(sortedEntries(agg.utmSources).map(e => ({name:e[0],value:e[1]})))}</div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3>UTM Mediums</h3>${donutChart(sortedEntries(agg.utmMediums).map(e => ({name:e[0],value:e[1]})))}</div>
+      <div class="chart-box"><h3>Campaign Performance</h3>
+        <table class="data-table">
+          <thead><tr><th>Campaign</th><th>Source</th><th>Medium</th><th>Visitors</th></tr></thead>
+          <tbody>${sortedEntries(agg.utmCampaigns).slice(0,10).map(([campaign, count]) => `
+            <tr><td><strong>${campaign}</strong></td><td><span class="utm-badge">${sortedEntries(agg.utmSources)[0]?sortedEntries(agg.utmSources)[0][0]:'-'}</span></td><td><span class="utm-badge">${sortedEntries(agg.utmMediums)[0]?sortedEntries(agg.utmMediums)[0][0]:'-'}</span></td><td>${fmt(count)}</td></tr>
+          `).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderGeo(filtered, agg) {
+  const sorted = sortedEntries(agg.countries);
+  return `
+    <div class="chart-box" style="margin-bottom:16px"><h3>Visitors by Country — ${sorted.length} countries</h3>
+      <div class="geo-grid" style="margin-top:12px">
+        ${sorted.map(([code, count]) => {
+          const c = COUNTRIES.find(cc => cc.code === code) || {flag:'🌍',name:code};
+          return `<div class="geo-item">
+            <span class="geo-flag">${c.flag}</span>
+            <span class="geo-name">${c.name}</span>
+            <span class="geo-val">${fmt(count)}</span>
+            <span class="geo-pct">${(count/agg.totalVisitors*100).toFixed(1)}%</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3>Top Countries</h3>${barChart(sorted.slice(0,10).map((e,i) => {
+        const c = COUNTRIES.find(cc => cc.code === e[0]) || {name:e[0]};
+        return {name:c.name,value:e[1],color:COLORS[i%COLORS.length]};
+      }))}</div>
+      <div class="chart-box"><h3>Distribution</h3>${donutChart(sorted.slice(0,8).map(e => {
+        const c = COUNTRIES.find(cc => cc.code === e[0]) || {name:e[0]};
+        return {name:c.name,value:e[1]};
+      }))}</div>
+    </div>
+  `;
+}
+
+function renderTech(filtered, agg) {
+  return `
+    <div class="chart-row">
+      <div class="chart-box"><h3>Browsers</h3>${donutChart(sortedEntries(agg.browsers).map(e => ({name:e[0],value:e[1]})))}</div>
+      <div class="chart-box"><h3>Operating Systems</h3>${donutChart(sortedEntries(agg.os).map(e => ({name:e[0],value:e[1]})))}</div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3>Devices</h3>${donutChart(sortedEntries(agg.devices).map(e => ({name:e[0],value:e[1]})))}</div>
+      <div class="chart-box"><h3>Browser Share</h3>
+        ${barChart(sortedEntries(agg.browsers).map((e,i) => ({name:e[0],value:e[1],color:COLORS[i%COLORS.length]})))}
+      </div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3>OS Breakdown</h3>
+        <table class="data-table">
+          <thead><tr><th>OS</th><th>Visitors</th><th>Share</th><th></th></tr></thead>
+          <tbody>${sortedEntries(agg.os).map(([name,val]) => `
+            <tr><td>${name}</td><td>${fmt(val)}</td><td class="pct">${(val/agg.totalVisitors*100).toFixed(1)}%</td>
+            <td style="width:100px"><div class="mini-bar" style="width:${val/Math.max(...Object.values(agg.os))*100}%"></div></td></tr>
+          `).join('')}</tbody>
+        </table>
+      </div>
+      <div class="chart-box"><h3>Device Breakdown</h3>
+        <table class="data-table">
+          <thead><tr><th>Device</th><th>Visitors</th><th>Share</th><th></th></tr></thead>
+          <tbody>${sortedEntries(agg.devices).map(([name,val]) => `
+            <tr><td>${name}</td><td>${fmt(val)}</td><td class="pct">${(val/agg.totalVisitors*100).toFixed(1)}%</td>
+            <td style="width:100px"><div class="mini-bar" style="width:${val/Math.max(...Object.values(agg.devices))*100}%"></div></td></tr>
+          `).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderRealtime(filtered, agg, prevAgg, site) {
+  const r = rng(Date.now());
+  const liveNow = Math.round((site.baseTraffic || 500) / 24 * (0.5 + r() * 1.5));
+  const last5min = Math.round(liveNow * 3.5);
+  const last30min = Math.round(liveNow * 18);
+  document.getElementById('liveCount').textContent = liveNow;
+  
+  // Simulate real-time page activity
+  const activePages = PAGES.slice(0,8).map(p => ({
+    page: p, visitors: Math.max(1, Math.round(liveNow * (0.3 + r() * 0.7) / 3))
+  })).sort((a,b) => b.visitors - a.visitors);
+  
+  const activeSources = SOURCES.slice(0,6).map(s => ({
+    source: s.name, visitors: Math.max(1, Math.round(liveNow * (0.2 + r() * 0.8) / 4))
+  })).sort((a,b) => b.visitors - a.visitors);
+  
+  const activeCountries = COUNTRIES.slice(0,8).map(c => ({
+    ...c, visitors: Math.max(1, Math.round(liveNow * (0.1 + r()) / 4))
+  })).sort((a,b) => b.visitors - a.visitors);
+  
+  return `
+    <div class="realtime-grid">
+      <div class="rt-card"><div class="rt-val" style="color:var(--accent2)">${liveNow}</div><div class="rt-label">Right Now</div></div>
+      <div class="rt-card"><div class="rt-val">${last5min}</div><div class="rt-label">Last 5 min</div></div>
+      <div class="rt-card"><div class="rt-val">${last30min}</div><div class="rt-label">Last 30 min</div></div>
+      <div class="rt-card"><div class="rt-val">${fmt(agg.totalViews)}</div><div class="rt-label">Today Total</div></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3>Active Pages</h3>
+        <table class="data-table">
+          <thead><tr><th>Page</th><th>Active Visitors</th></tr></thead>
+          <tbody>${activePages.map(p => `<tr><td style="font-family:monospace;font-size:12px">${p.page}</td><td><strong>${p.visitors}</strong></td></tr>`).join('')}</tbody>
+        </table>
+      </div>
+      <div class="chart-box"><h3>Active Sources</h3>
+        <table class="data-table">
+          <thead><tr><th>Source</th><th>Active Visitors</th></tr></thead>
+          <tbody>${activeSources.map(s => `<tr><td>${s.source}</td><td><strong>${s.visitors}</strong></td></tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="chart-box"><h3>Active Countries</h3>
+      <div class="geo-grid" style="margin-top:8px">
+        ${activeCountries.map(c => `<div class="geo-item"><span class="geo-flag">${c.flag}</span><span class="geo-name">${c.name}</span><span class="geo-val">${c.visitors}</span></div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderHelp() {
+  return `
+    <div class="chart-box">
+      <h3 style="font-size:18px;margin-bottom:16px">📊 Analytics Forge — Help</h3>
+      <div class="help-section">
+        <h3>What is this?</h3>
+        <p style="color:var(--text2);line-height:1.6">A privacy-first website analytics dashboard. Track pageviews, visitors, sources, UTM campaigns, countries, browsers, devices — all with simulated data based on your site config. Perfect for demos, learning analytics, and prototyping dashboards.</p>
+      </div>
+      <div class="help-section">
+        <h3>Keyboard Shortcuts</h3>
+        <table class="data-table">
+          <tbody>
+            <tr><td><kbd class="kbd">N</kbd></td><td>Add new site</td></tr>
+            <tr><td><kbd class="kbd">/</kbd></td><td>Focus search (if available)</td></tr>
+            <tr><td><kbd class="kbd">1</kbd>-<kbd class="kbd">7</kbd></td><td>Switch views (Overview, Pages, Sources, UTM, Countries, Tech, Realtime)</td></tr>
+            <tr><td><kbd class="kbd">T</kbd></td><td>Today range</td></tr>
+            <tr><td><kbd class="kbd">W</kbd></td><td>7-day range</td></tr>
+            <tr><td><kbd class="kbd">M</kbd></td><td>30-day range</td></tr>
+            <tr><td><kbd class="kbd">Q</kbd></td><td>90-day range</td></tr>
+            <tr><td><kbd class="kbd">A</kbd></td><td>All time range</td></tr>
+            <tr><td><kbd class="kbd">C</kbd></td><td>Toggle period comparison</td></tr>
+            <tr><td><kbd class="kbd">E</kbd></td><td>Export all data</td></tr>
+            <tr><td><kbd class="kbd">I</kbd></td><td>Import data</td></tr>
+            <tr><td><kbd class="kbd">?</kbd></td><td>Show help</td></tr>
+            <tr><td><kbd class="kbd">Esc</kbd></td><td>Close modal</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="help-section">
+        <h3>Views</h3>
+        <ul style="color:var(--text2);line-height:1.8;padding-left:20px">
+          <li><strong>Overview</strong> — Dashboard with all key stats, charts, top pages & sources</li>
+          <li><strong>Pages</strong> — All pages ranked by views with percentage bars</li>
+          <li><strong>Sources</strong> — Traffic sources grouped by type (search, social, referral, email, direct)</li>
+          <li><strong>UTM</strong> — UTM campaign, source, and medium breakdown</li>
+          <li><strong>Countries</strong> — Geographic distribution with flag indicators</li>
+          <li><strong>Tech</strong> — Browser, OS, and device breakdowns with donut charts</li>
+          <li><strong>Realtime</strong> — Simulated live visitor count with active pages and sources</li>
+        </ul>
+      </div>
+      <div class="help-section">
+        <h3>Features</h3>
+        <ul style="color:var(--text2);line-height:1.8;padding-left:20px">
+          <li>Multi-site management — track multiple websites</li>
+          <li>Date range selection — Today, 7d, 30d, 90d, All time</li>
+          <li>Period-over-period comparison with percentage changes</li>
+          <li>Sparkline trends in stat cards</li>
+          <li>Interactive line, bar, and donut charts (pure SVG)</li>
+          <li>UTM campaign tracking for marketing attribution</li>
+          <li>Realtime visitor simulation</li>
+          <li>JSON import/export for backup</li>
+          <li>Zero dependencies, fully local storage</li>
+        </ul>
+      </div>
+    </div>
+  `;
+}
+
+// ===== Utility =====
+function sortedEntries(obj) { return Object.entries(obj).sort((a,b) => b[1]-a[1]); }
+
+// ===== Site Management =====
+function showSiteModal(editId) {
+  const site = editId ? sites.find(s => s.id === editId) : null;
+  document.getElementById('modalContent').innerHTML = `
+    <h2>${site ? 'Edit' : 'Add'} Site</h2>
+    <label>Site Name</label>
+    <input id="mName" value="${site?site.name:''}" placeholder="My Website">
+    <label>URL</label>
+    <input id="mUrl" value="${site?site.url:''}" placeholder="https://example.com">
+    <label>Base Daily Traffic</label>
+    <input id="mTraffic" type="number" value="${site?site.baseTraffic:500}" min="10" max="100000">
+    <label>Tracking Since</label>
+    <input id="mCreated" type="date" value="${site?site.created:'2026-01-01'}">
+    <label>Color</label>
+    <div style="display:flex;gap:6px;margin-top:4px" id="mColors">
+      ${COLORS.map(c => `<div onclick="document.querySelectorAll('#mColors div').forEach(d=>d.style.outline='none');this.style.outline='2px solid white'" style="width:24px;height:24px;border-radius:4px;background:${c};cursor:pointer;${site&&site.color===c?'outline:2px solid white':''}" data-color="${c}"></div>`).join('')}
+    </div>
+    <div class="modal-actions">
+      ${site ? `<button class="btn-danger" onclick="deleteSite('${site.id}')">Delete</button>` : ''}
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveSite('${editId||''}')">${site?'Save':'Add'}</button>
+    </div>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('mName').focus(), 100);
+}
+
+function saveSite(editId) {
+  const name = document.getElementById('mName').value.trim();
+  if (!name) return;
+  const url = document.getElementById('mUrl').value.trim();
+  const baseTraffic = parseInt(document.getElementById('mTraffic').value) || 500;
+  const created = document.getElementById('mCreated').value || '2026-01-01';
+  const colorEl = document.querySelector('#mColors div[style*="outline: 2px"]') || document.querySelector('#mColors div[style*="outline:2px"]');
+  const color = colorEl ? colorEl.dataset.color : COLORS[0];
+  
+  if (editId) {
+    const site = sites.find(s => s.id === editId);
+    if (site) { Object.assign(site, {name,url,baseTraffic,created,color}); }
+  } else {
+    sites.push({id: 'site_'+Date.now(), name, url, baseTraffic, created, color});
+    activeSiteId = sites[sites.length-1].id;
+  }
+  save(); closeModal(); renderSidebar(); render();
+}
+
+function deleteSite(id) {
+  if (!confirm('Delete this site?')) return;
+  sites = sites.filter(s => s.id !== id);
+  if (activeSiteId === id) activeSiteId = sites.length ? sites[0].id : '';
+  save(); closeModal(); renderSidebar(); render();
+}
+
+function selectSite(id) {
+  activeSiteId = id;
+  localStorage.setItem('af_active', id);
+  renderSidebar(); render();
+}
+
+function setRange(r) {
+  currentRange = r;
+  document.querySelectorAll('.range-btns button').forEach(b => b.classList.toggle('active', b.dataset.r === r));
+  render();
+}
+
+function showView(v) {
+  currentView = v;
+  document.querySelectorAll('.view-tabs button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  if (v === 'realtime') startLiveUpdate(); else stopLiveUpdate();
+  render();
+}
+
+function startLiveUpdate() { stopLiveUpdate(); liveInterval = setInterval(render, 5000); }
+function stopLiveUpdate() { if (liveInterval) { clearInterval(liveInterval); liveInterval = null; } }
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+
+function renderSidebar() {
+  const el = document.getElementById('siteList');
+  el.innerHTML = sites.map(s => `
+    <div class="site-item ${s.id===activeSiteId?'active':''}" onclick="selectSite('${s.id}')" ondblclick="showSiteModal('${s.id}')">
+      <div class="dot" style="background:${s.color||COLORS[0]}"></div>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name}</span>
+    </div>
+  `).join('');
+}
+
+function save() { localStorage.setItem('af_sites', JSON.stringify(sites)); localStorage.setItem('af_active', activeSiteId); }
+
+function exportAll() {
+  const blob = new Blob([JSON.stringify({sites, activeSiteId}, null, 2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `analytics-forge-${new Date().toISOString().split('T')[0]}.json`; a.click();
+}
+
+function importAll() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.sites) {
+          const existing = new Set(sites.map(s => s.id));
+          data.sites.forEach(s => { if (!existing.has(s.id)) sites.push(s); });
+          if (data.activeSiteId) activeSiteId = data.activeSiteId;
+          save(); renderSidebar(); render();
+        }
+      } catch(e) { alert('Invalid file'); }
+    };
+    reader.readAsText(e.target.files[0]);
+  };
+  input.click();
+}
+
+// ===== Keyboard Shortcuts =====
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (document.getElementById('modalOverlay').classList.contains('open')) {
+    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      const saveBtn = document.querySelector('.modal .btn-save');
+      if (saveBtn) saveBtn.click();
+    }
+    return;
+  }
+  const views = ['overview','pages','sources','utm','geo','tech','realtime'];
+  if (e.key >= '1' && e.key <= '7') { showView(views[parseInt(e.key)-1]); e.preventDefault(); }
+  else if (e.key === 'n' || e.key === 'N') { showSiteModal(); e.preventDefault(); }
+  else if (e.key === 't') { setRange('today'); e.preventDefault(); }
+  else if (e.key === 'w') { setRange('7d'); e.preventDefault(); }
+  else if (e.key === 'm') { setRange('30d'); e.preventDefault(); }
+  else if (e.key === 'q') { setRange('90d'); e.preventDefault(); }
+  else if (e.key === 'a') { setRange('all'); e.preventDefault(); }
+  else if (e.key === 'c') { const cb = document.getElementById('compareToggle'); cb.checked = !cb.checked; render(); e.preventDefault(); }
+  else if (e.key === 'e') { exportAll(); e.preventDefault(); }
+  else if (e.key === 'i') { importAll(); e.preventDefault(); }
+  else if (e.key === '?') { showView('help'); e.preventDefault(); }
+  else if (e.key === 'Escape') { closeModal(); }
+});
+
+// ===== Seed Data =====
+function seedData() {
+  if (sites.length) return;
+  sites = [
+    { id:'site_utmstamp', name:'UTMStamp', url:'https://utmstamp.com', baseTraffic:800, created:'2026-01-15', color:COLORS[0] },
+    { id:'site_mvpcafe', name:'MVP Cafe', url:'https://mvp.cafe', baseTraffic:300, created:'2026-02-01', color:COLORS[1] },
+    { id:'site_portfolio', name:'helloaman.com', url:'https://helloaman.com', baseTraffic:150, created:'2026-03-01', color:COLORS[3] }
+  ];
+  activeSiteId = 'site_utmstamp';
+  save();
+}
+
+// ===== Init =====
+seedData();
+renderSidebar();
+render();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

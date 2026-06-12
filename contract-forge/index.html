@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contract Forge — Freelance & Business Agreement Generator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#1f6feb;--green:#3fb950;--red:#f85149;--yellow:#d29922;--orange:#db6d28;--purple:#bc8cff;--radius:8px;--shadow:0 2px 8px rgba(0,0,0,.3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden;font-size:14px}
+button{cursor:pointer;font-family:inherit;font-size:13px;border:none;background:none;color:var(--text)}
+input,textarea,select{font-family:inherit;font-size:13px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;outline:none;width:100%}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+select{appearance:auto}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h2{font-size:15px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.sidebar-search{position:relative}
+.sidebar-search input{padding-left:30px;font-size:12px}
+.sidebar-search::before{content:'🔍';position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px}
+.sidebar-list{flex:1;overflow-y:auto;padding:8px}
+.sidebar-item{padding:10px 12px;border-radius:var(--radius);cursor:pointer;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center}
+.sidebar-item:hover{background:var(--surface2)}
+.sidebar-item.active{background:var(--accent2);color:#fff}
+.sidebar-item .name{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.sidebar-item .badge{font-size:10px;padding:2px 6px;border-radius:10px;background:var(--surface2)}
+.sidebar-item.active .badge{background:rgba(255,255,255,.2)}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border);display:flex;gap:6px}
+.sidebar-footer button{flex:1;padding:8px;border-radius:var(--radius);background:var(--accent2);color:#fff;font-size:12px}
+.sidebar-footer button:hover{background:var(--accent)}
+.sidebar-footer button.secondary{background:var(--surface2)}
+.sidebar-footer button.secondary:hover{background:var(--border)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surface)}
+.topbar .tabs{display:flex;gap:4px}
+.topbar .tab{padding:6px 14px;border-radius:var(--radius);font-size:13px;color:var(--text2)}
+.topbar .tab:hover{background:var(--surface2);color:var(--text)}
+.topbar .tab.active{background:var(--accent2);color:#fff}
+.topbar .spacer{flex:1}
+.topbar .btn{padding:6px 12px;border-radius:var(--radius);font-size:12px;background:var(--surface2);color:var(--text2)}
+.topbar .btn:hover{background:var(--border);color:var(--text)}
+.topbar .btn.primary{background:var(--accent2);color:#fff}
+.topbar .btn.primary:hover{background:var(--accent)}
+
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* Forms */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+.form-group label{font-size:12px;color:var(--text2);font-weight:500}
+.form-group .hint{font-size:11px;color:var(--text2);opacity:.7}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card h3{font-size:14px;margin-bottom:8px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+
+/* Clause editor */
+.clause-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;position:relative}
+.clause-item .clause-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.clause-item .clause-title{font-weight:600;font-size:13px}
+.clause-item .clause-body{font-size:13px;color:var(--text2);line-height:1.6}
+.clause-item .clause-actions{display:flex;gap:4px}
+.clause-item .clause-actions button{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--surface);border:1px solid var(--border)}
+.clause-item .clause-actions button:hover{border-color:var(--accent)}
+.clause-item .clause-actions button.danger:hover{border-color:var(--red);color:var(--red)}
+
+/* Variable chips */
+.var-chip{display:inline-block;background:var(--accent2);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;margin:2px;cursor:pointer}
+.var-chip:hover{background:var(--accent)}
+
+/* Preview */
+.preview-container{max-width:800px;margin:0 auto;background:#fff;color:#1a1a1a;padding:48px;border-radius:var(--radius);box-shadow:var(--shadow);font-family:'Georgia','Times New Roman',serif;line-height:1.8}
+.preview-container h1{font-size:22px;text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
+.preview-container .subtitle{text-align:center;color:#666;margin-bottom:32px;font-size:14px}
+.preview-container h2{font-size:16px;margin:24px 0 12px;border-bottom:1px solid #ddd;padding-bottom:4px}
+.preview-container p{margin-bottom:12px;font-size:14px;text-align:justify}
+.preview-container .signature-block{display:flex;justify-content:space-between;margin-top:48px;gap:60px}
+.preview-container .sig-party{flex:1}
+.preview-container .sig-line{border-top:1px solid #333;margin-top:60px;padding-top:8px;font-size:13px}
+.preview-container .sig-label{font-size:12px;color:#666}
+.preview-container .highlight{background:#fff3cd;padding:0 4px;border-radius:2px}
+.preview-container ul{margin:0 0 12px 20px;font-size:14px}
+.preview-container li{margin-bottom:4px}
+
+/* Dashboard */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-card .value{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-card .label{font-size:12px;color:var(--text2);margin-top:4px}
+
+/* Clause library */
+.lib-category{margin-bottom:20px}
+.lib-category h4{font-size:13px;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.lib-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--surface2);border-radius:var(--radius);margin-bottom:4px;cursor:pointer}
+.lib-item:hover{border:1px solid var(--accent);margin:-1px;padding:7px 11px}
+.lib-item .lib-name{font-size:13px;flex:1}
+.lib-item .lib-add{font-size:11px;padding:3px 10px;border-radius:4px;background:var(--accent2);color:#fff}
+
+/* Status badges */
+.status{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.status.draft{background:#30363d;color:var(--text2)}
+.status.review{background:#1f3a5f;color:var(--accent)}
+.status.sent{background:#1a3a2a;color:var(--green)}
+.status.signed{background:#2d1f3d;color:var(--purple)}
+.status.expired{background:#3d1f1f;color:var(--red)}
+
+/* Template gallery */
+.template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.template-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:border-color .2s}
+.template-card:hover{border-color:var(--accent)}
+.template-card .emoji{font-size:32px;margin-bottom:8px}
+.template-card h3{font-size:15px;margin-bottom:6px}
+.template-card p{font-size:12px;color:var(--text2);line-height:1.5}
+.template-card .tag{display:inline-block;font-size:10px;padding:2px 6px;background:var(--surface2);border-radius:4px;margin-top:8px;margin-right:4px;color:var(--text2)}
+
+/* Modal */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:560px;max-height:80vh;overflow-y:auto;padding:24px}
+.modal h3{font-size:16px;margin-bottom:16px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.modal-actions button{padding:8px 16px;border-radius:var(--radius);font-size:13px}
+.modal-actions .cancel{background:var(--surface2);color:var(--text2)}
+.modal-actions .cancel:hover{background:var(--border)}
+.modal-actions .save{background:var(--accent2);color:#fff}
+.modal-actions .save:hover{background:var(--accent)}
+
+/* Print */
+@media print{.sidebar,.topbar{display:none!important}.main{width:100%}.content{padding:0}.preview-container{box-shadow:none;border-radius:0;padding:24px}}
+
+/* Help */
+.help-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:200}
+.help-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:480px;max-height:80vh;overflow-y:auto}
+.help-box h3{margin-bottom:16px}
+.help-box table{width:100%;border-collapse:collapse}
+.help-box td{padding:6px 8px;font-size:13px;border-bottom:1px solid var(--border)}
+.help-box td:first-child{font-family:monospace;color:var(--accent);width:100px}
+</style>
+</head>
+<body>
+<div class="sidebar">
+<div class="sidebar-header">
+<h2>📜 Contract Forge</h2>
+<div class="sidebar-search"><input id="sideSearch" placeholder="Search contracts..." oninput="renderSidebar()"></div>
+</div>
+<div class="sidebar-list" id="sidebarList"></div>
+<div class="sidebar-footer">
+<button onclick="newContract()">+ New</button>
+<button class="secondary" onclick="showTemplates()">📋 Templates</button>
+</div>
+</div>
+<div class="main">
+<div class="topbar">
+<div class="tabs">
+<button class="tab active" data-view="editor" onclick="switchView('editor')">✏️ Editor</button>
+<button class="tab" data-view="clauses" onclick="switchView('clauses')">📑 Clauses</button>
+<button class="tab" data-view="preview" onclick="switchView('preview')">👁️ Preview</button>
+<button class="tab" data-view="library" onclick="switchView('library')">📚 Library</button>
+<button class="tab" data-view="dashboard" onclick="switchView('dashboard')">📊 Dashboard</button>
+</div>
+<div class="spacer"></div>
+<button class="btn" onclick="exportMarkdown()">📄 Markdown</button>
+<button class="btn" onclick="printContract()">🖨️ Print</button>
+<button class="btn" onclick="exportJSON()">💾 Export</button>
+<button class="btn" onclick="importJSON()">📥 Import</button>
+<button class="btn" onclick="showHelp()">?</button>
+</div>
+<div class="content" id="content"></div>
+</div>
+
+<script>
+// ===== DATA =====
+const STATUSES = ['draft','review','sent','signed','expired'];
+const STATUS_LABELS = {draft:'Draft',review:'Under Review',sent:'Sent',signed:'Signed',expired:'Expired'};
+
+const CLAUSE_LIBRARY = {
+  'Confidentiality': [
+    {title:'Mutual NDA',body:'Both parties agree to keep confidential all proprietary information, trade secrets, technical data, business strategies, customer lists, and any other non-public information disclosed during the term of this agreement. This obligation shall survive termination for a period of {{nda_years}} years.'},
+    {title:'One-Way NDA',body:'The Receiving Party agrees not to disclose, publish, or otherwise reveal any Confidential Information of the Disclosing Party to any third party without prior written consent. Confidential Information includes but is not limited to business plans, technical specifications, customer data, pricing information, and proprietary methodologies.'},
+    {title:'Exceptions to Confidentiality',body:'Confidential Information does not include information that: (a) is or becomes publicly available through no fault of the Receiving Party; (b) was known to the Receiving Party prior to disclosure; (c) is independently developed without use of Confidential Information; (d) is disclosed pursuant to court order or legal requirement.'},
+  ],
+  'Payment': [
+    {title:'Fixed Fee Payment',body:'The Client shall pay the Service Provider a total fixed fee of {{currency}} {{total_amount}} for the services described herein. Payment shall be made in {{payment_schedule}}: {{payment_details}}.'},
+    {title:'Hourly Rate',body:'The Service Provider shall be compensated at a rate of {{currency}} {{hourly_rate}} per hour. Invoices shall be submitted {{invoice_frequency}} with an itemized breakdown of hours worked. Payment is due within {{payment_terms}} days of invoice receipt.'},
+    {title:'Milestone Payments',body:'Payments shall be tied to the following milestones: {{milestone_details}}. Each milestone payment is due within {{payment_terms}} days of the Client\'s written acceptance of the deliverable.'},
+    {title:'Late Payment',body:'Any payment not received within {{late_days}} days of the due date shall accrue interest at a rate of {{interest_rate}}% per month. The Service Provider reserves the right to suspend work if payment is overdue by more than {{suspend_days}} days.'},
+    {title:'Retainer Fee',body:'The Client shall pay a monthly retainer of {{currency}} {{retainer_amount}} due on the {{retainer_day}} of each month. The retainer covers up to {{retainer_hours}} hours of work. Additional hours shall be billed at {{currency}} {{overage_rate}} per hour.'},
+  ],
+  'Intellectual Property': [
+    {title:'Work for Hire (Client Owns)',body:'All work product, deliverables, inventions, and intellectual property created by the Service Provider in the course of performing services under this Agreement shall be considered "work for hire" and shall be the sole and exclusive property of the Client upon full payment.'},
+    {title:'IP License (Provider Retains)',body:'The Service Provider retains all intellectual property rights to the deliverables. Upon full payment, the Client is granted a perpetual, non-exclusive, worldwide license to use, modify, and distribute the deliverables for their business purposes.'},
+    {title:'Pre-Existing IP',body:'Each party retains ownership of its pre-existing intellectual property. Any pre-existing tools, frameworks, libraries, or methodologies used by the Service Provider shall remain the property of the Service Provider. The Client receives a license to use such components solely as part of the delivered work.'},
+  ],
+  'Termination': [
+    {title:'Termination for Convenience',body:'Either party may terminate this Agreement at any time by providing {{notice_days}} days written notice. Upon termination, the Client shall pay for all work completed up to the termination date.'},
+    {title:'Termination for Cause',body:'Either party may terminate this Agreement immediately if the other party: (a) materially breaches any term and fails to cure within {{cure_days}} days of written notice; (b) becomes insolvent or files for bankruptcy; (c) engages in fraud or misconduct.'},
+    {title:'Effect of Termination',body:'Upon termination: (a) all outstanding invoices become immediately due; (b) the Service Provider shall deliver all completed work product; (c) each party shall return or destroy the other party\'s Confidential Information; (d) Sections {{surviving_sections}} shall survive termination.'},
+  ],
+  'Liability & Indemnification': [
+    {title:'Limitation of Liability',body:'In no event shall either party\'s total aggregate liability exceed the total fees paid or payable under this Agreement during the {{liability_period}} months preceding the claim. Neither party shall be liable for any indirect, incidental, special, consequential, or punitive damages.'},
+    {title:'Indemnification',body:'Each party shall indemnify, defend, and hold harmless the other party from and against any claims, damages, losses, and expenses arising from: (a) breach of this Agreement; (b) negligence or willful misconduct; (c) violation of applicable laws or regulations.'},
+    {title:'Warranty Disclaimer',body:'Services are provided "AS IS" without warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement. The Service Provider does not guarantee specific business outcomes or results.'},
+  ],
+  'Scope & Deliverables': [
+    {title:'Scope of Work',body:'The Service Provider shall perform the following services: {{scope_description}}. Any work requested outside this scope shall require a written change order signed by both parties, which may result in additional fees and timeline adjustments.'},
+    {title:'Change Orders',body:'Any changes to the scope, timeline, or deliverables must be documented in a written Change Order signed by both parties. Change Orders shall specify the revised scope, additional fees (if any), and updated timeline. Work on changes shall not begin until the Change Order is executed.'},
+    {title:'Acceptance Criteria',body:'The Client shall have {{review_days}} business days to review each deliverable and provide written acceptance or a detailed list of deficiencies. If no response is received within the review period, the deliverable shall be deemed accepted. The Service Provider shall address reasonable deficiencies within {{fix_days}} business days.'},
+  ],
+  'General': [
+    {title:'Governing Law',body:'This Agreement shall be governed by and construed in accordance with the laws of {{jurisdiction}}, without regard to its conflict of law provisions. Any disputes arising under this Agreement shall be resolved through {{dispute_method}} in {{dispute_location}}.'},
+    {title:'Non-Solicitation',body:'During the term of this Agreement and for {{non_solicit_months}} months following its termination, neither party shall directly solicit or hire any employee or contractor of the other party who was involved in the performance of this Agreement without prior written consent.'},
+    {title:'Force Majeure',body:'Neither party shall be liable for delays or failure to perform due to circumstances beyond their reasonable control, including but not limited to natural disasters, pandemics, government actions, war, terrorism, labor disputes, or internet/telecommunications failures.'},
+    {title:'Entire Agreement',body:'This Agreement constitutes the entire agreement between the parties and supersedes all prior negotiations, representations, warranties, commitments, offers, contracts, and discussions, whether written or oral. No modification shall be effective unless in writing and signed by both parties.'},
+    {title:'Assignment',body:'Neither party may assign or transfer this Agreement without the prior written consent of the other party, except in connection with a merger, acquisition, or sale of all or substantially all of its assets.'},
+    {title:'Severability',body:'If any provision of this Agreement is held to be invalid, illegal, or unenforceable, the remaining provisions shall continue in full force and effect. The invalid provision shall be modified to the minimum extent necessary to make it valid and enforceable.'},
+    {title:'Notices',body:'All notices under this Agreement shall be in writing and delivered via email with read receipt, registered mail, or recognized courier service. Notices to the Client shall be sent to {{client_email}}. Notices to the Service Provider shall be sent to {{provider_email}}.'},
+  ],
+  'Non-Compete': [
+    {title:'Non-Compete Clause',body:'During the term of this Agreement and for {{non_compete_months}} months following its termination, the Service Provider agrees not to provide similar services to {{competitors}} or any direct competitor of the Client within {{non_compete_geo}}.'},
+  ],
+  'Data & Privacy': [
+    {title:'Data Protection',body:'Both parties shall comply with all applicable data protection laws including {{data_laws}}. Personal data shared under this Agreement shall be processed only for the purposes of performing the services and shall not be transferred to third parties without prior written consent.'},
+    {title:'Data Breach Notification',body:'In the event of a data breach affecting information shared under this Agreement, the affected party shall notify the other party within {{breach_notify_hours}} hours of becoming aware of the breach, including details of the breach, data affected, and remedial actions taken.'},
+  ],
+};
+
+const TEMPLATES = [
+  {
+    name:'Freelance Service Agreement',emoji:'💼',desc:'Standard freelance/consulting agreement with scope, payment, IP, and termination terms. Perfect for project-based work.',
+    tags:['Freelance','Consulting','Services'],
+    type:'Freelance Agreement',
+    parties:{provider:{label:'Service Provider'},client:{label:'Client'}},
+    clauseKeys:[
+      ['Scope & Deliverables','Scope of Work'],['Scope & Deliverables','Acceptance Criteria'],
+      ['Payment','Fixed Fee Payment'],['Payment','Late Payment'],
+      ['Intellectual Property','Work for Hire (Client Owns)'],['Intellectual Property','Pre-Existing IP'],
+      ['Confidentiality','Mutual NDA'],['Confidentiality','Exceptions to Confidentiality'],
+      ['Termination','Termination for Convenience'],['Termination','Termination for Cause'],['Termination','Effect of Termination'],
+      ['Liability & Indemnification','Limitation of Liability'],['Liability & Indemnification','Warranty Disclaimer'],
+      ['General','Governing Law'],['General','Force Majeure'],['General','Entire Agreement'],['General','Severability'],
+    ]
+  },
+  {
+    name:'Non-Disclosure Agreement (NDA)',emoji:'🔒',desc:'Mutual or one-way confidentiality agreement. Use before sharing sensitive business information with potential partners or contractors.',
+    tags:['NDA','Confidentiality','Legal'],
+    type:'NDA',
+    parties:{discloser:{label:'Disclosing Party'},receiver:{label:'Receiving Party'}},
+    clauseKeys:[
+      ['Confidentiality','Mutual NDA'],['Confidentiality','Exceptions to Confidentiality'],
+      ['Termination','Termination for Convenience'],['Termination','Effect of Termination'],
+      ['Liability & Indemnification','Indemnification'],
+      ['General','Governing Law'],['General','Entire Agreement'],['General','Severability'],['General','Notices'],
+    ]
+  },
+  {
+    name:'Consulting Retainer',emoji:'🤝',desc:'Monthly retainer agreement for ongoing consulting, advisory, or fractional leadership roles. Includes hours and overage billing.',
+    tags:['Retainer','Consulting','Monthly'],
+    type:'Consulting Retainer',
+    parties:{consultant:{label:'Consultant'},client:{label:'Client'}},
+    clauseKeys:[
+      ['Scope & Deliverables','Scope of Work'],
+      ['Payment','Retainer Fee'],['Payment','Late Payment'],
+      ['Intellectual Property','IP License (Provider Retains)'],['Intellectual Property','Pre-Existing IP'],
+      ['Confidentiality','Mutual NDA'],
+      ['Non-Compete','Non-Compete Clause'],
+      ['Termination','Termination for Convenience'],['Termination','Termination for Cause'],
+      ['Liability & Indemnification','Limitation of Liability'],
+      ['General','Non-Solicitation'],['General','Governing Law'],['General','Entire Agreement'],
+    ]
+  },
+  {
+    name:'Statement of Work (SOW)',emoji:'📋',desc:'Detailed project scope document with milestones, deliverables, timeline, and acceptance criteria. Attach to a master agreement.',
+    tags:['SOW','Project','Milestones'],
+    type:'Statement of Work',
+    parties:{vendor:{label:'Vendor'},client:{label:'Client'}},
+    clauseKeys:[
+      ['Scope & Deliverables','Scope of Work'],['Scope & Deliverables','Change Orders'],['Scope & Deliverables','Acceptance Criteria'],
+      ['Payment','Milestone Payments'],['Payment','Late Payment'],
+      ['Termination','Termination for Cause'],
+      ['General','Force Majeure'],['General','Entire Agreement'],
+    ]
+  },
+  {
+    name:'SaaS Terms of Service',emoji:'☁️',desc:'Terms of service for a SaaS product. Covers usage rights, data handling, SLA, and subscription billing.',
+    tags:['SaaS','ToS','Product'],
+    type:'SaaS Terms of Service',
+    parties:{provider:{label:'Service Provider'},customer:{label:'Customer'}},
+    clauseKeys:[
+      ['Scope & Deliverables','Scope of Work'],['Scope & Deliverables','Acceptance Criteria'],
+      ['Payment','Fixed Fee Payment'],['Payment','Late Payment'],
+      ['Intellectual Property','IP License (Provider Retains)'],
+      ['Data & Privacy','Data Protection'],['Data & Privacy','Data Breach Notification'],
+      ['Confidentiality','Mutual NDA'],
+      ['Liability & Indemnification','Limitation of Liability'],['Liability & Indemnification','Warranty Disclaimer'],['Liability & Indemnification','Indemnification'],
+      ['Termination','Termination for Cause'],['Termination','Effect of Termination'],
+      ['General','Governing Law'],['General','Force Majeure'],['General','Entire Agreement'],['General','Assignment'],['General','Severability'],
+    ]
+  },
+  {
+    name:'Partnership Agreement',emoji:'🤲',desc:'Revenue-share or equity partnership agreement. Covers contributions, profit sharing, decision-making, and exit terms.',
+    tags:['Partnership','Equity','Business'],
+    type:'Partnership Agreement',
+    parties:{partner_a:{label:'Partner A'},partner_b:{label:'Partner B'}},
+    clauseKeys:[
+      ['Scope & Deliverables','Scope of Work'],
+      ['Payment','Fixed Fee Payment'],
+      ['Intellectual Property','Work for Hire (Client Owns)'],['Intellectual Property','Pre-Existing IP'],
+      ['Confidentiality','Mutual NDA'],
+      ['Non-Compete','Non-Compete Clause'],
+      ['Termination','Termination for Convenience'],['Termination','Termination for Cause'],['Termination','Effect of Termination'],
+      ['Liability & Indemnification','Indemnification'],
+      ['General','Non-Solicitation'],['General','Governing Law'],['General','Entire Agreement'],['General','Notices'],
+    ]
+  },
+];
+
+// ===== STATE =====
+let state = {contracts:[],activeId:null,view:'editor',clauseEditIdx:null};
+
+function loadState(){
+  try{const s=localStorage.getItem('contract-forge');if(s){state={...state,...JSON.parse(s)}};}catch(e){}
+  if(!state.contracts.length) seedData();
+}
+function saveState(){localStorage.setItem('contract-forge',JSON.stringify(state));}
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+
+function getActive(){return state.contracts.find(c=>c.id===state.activeId)}
+
+// ===== SEED =====
+function seedData(){
+  const c1 = createFromTemplate(TEMPLATES[0]);
+  c1.name = 'UTMStamp — Freelance Developer Agreement';
+  c1.variables = {...c1.variables, provider_name:'Aman Jha', provider_company:'MVP Cafe', client_name:'Acme Corp', client_company:'Acme Corp Ltd', effective_date:'2026-06-15', end_date:'2026-09-15', currency:'INR', total_amount:'3,00,000', payment_schedule:'three milestones', payment_details:'₹1,00,000 on signing, ₹1,00,000 on mid-project review, ₹1,00,000 on final delivery', notice_days:'15', jurisdiction:'Maharashtra, India', dispute_method:'arbitration', dispute_location:'Mumbai', nda_years:'3', late_days:'15', interest_rate:'1.5', suspend_days:'30', review_days:'5', fix_days:'10', scope_description:'Design and development of UTMStamp Chrome Extension, email signature editor, click analytics dashboard, and team management module', liability_period:'12'};
+  c1.status = 'signed';
+  c1.createdAt = '2026-05-01T10:00:00Z';
+
+  const c2 = createFromTemplate(TEMPLATES[1]);
+  c2.name = 'MVP Cafe — Client NDA';
+  c2.variables = {...c2.variables, discloser_name:'Rahul Sharma', discloser_company:'TechStart Inc', receiver_name:'Aman Jha', receiver_company:'MVP Cafe', effective_date:'2026-06-01', nda_years:'2', notice_days:'30', jurisdiction:'Delhi, India', dispute_method:'mediation', dispute_location:'New Delhi', client_email:'rahul@techstart.io', provider_email:'aj@mvp.cafe'};
+  c2.status = 'sent';
+  c2.createdAt = '2026-05-20T14:00:00Z';
+
+  const c3 = createFromTemplate(TEMPLATES[2]);
+  c3.name = 'Advisory Retainer — SaaS Startup';
+  c3.variables = {...c3.variables, consultant_name:'Aman Jha', consultant_company:'MVP Cafe', client_name:'InnovateTech', client_company:'InnovateTech Pvt Ltd', effective_date:'2026-07-01', currency:'INR', retainer_amount:'1,50,000', retainer_day:'1st', retainer_hours:'40', overage_rate:'5,000', notice_days:'30', non_compete_months:'6', competitors:'listed direct competitors', non_compete_geo:'India', jurisdiction:'Karnataka, India', nda_years:'3', late_days:'10', interest_rate:'2', suspend_days:'15', scope_description:'Product strategy advisory, roadmap reviews, team mentoring, and go-to-market planning', liability_period:'6', non_solicit_months:'12'};
+  c3.status = 'draft';
+  c3.createdAt = '2026-06-05T09:00:00Z';
+
+  state.contracts = [c1, c2, c3];
+  state.activeId = c1.id;
+  saveState();
+}
+
+function createFromTemplate(tpl){
+  const clauses = tpl.clauseKeys.map(([cat,title],i)=>{
+    const lib = CLAUSE_LIBRARY[cat]?.find(c=>c.title===title);
+    return lib ? {id:uid(),title:lib.title,body:lib.body,category:cat,order:i} : null;
+  }).filter(Boolean);
+  const vars = {};
+  clauses.forEach(c=>{(c.body.match(/\{\{(\w+)\}\}/g)||[]).forEach(v=>{const k=v.slice(2,-2);if(!vars[k])vars[k]='';})});
+  return {
+    id:uid(), name:tpl.name+' — '+new Date().toLocaleDateString(), type:tpl.type,
+    parties:JSON.parse(JSON.stringify(tpl.parties)),
+    clauses, variables:vars, notes:'', status:'draft',
+    createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
+  };
+}
+
+// ===== VIEWS =====
+function switchView(v){
+  state.view=v;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
+  render();
+}
+
+function render(){
+  const c = getActive();
+  const el = document.getElementById('content');
+  if(state.view==='dashboard'){el.innerHTML=renderDashboard();return;}
+  if(state.view==='library'){el.innerHTML=renderLibrary();return;}
+  if(!c){el.innerHTML='<div style="text-align:center;padding:80px;color:var(--text2)"><p style="font-size:48px;margin-bottom:16px">📜</p><p>Select a contract or create a new one</p></div>';return;}
+  switch(state.view){
+    case 'editor':el.innerHTML=renderEditor(c);break;
+    case 'clauses':el.innerHTML=renderClauses(c);break;
+    case 'preview':el.innerHTML=renderPreview(c);break;
+  }
+}
+
+function renderEditor(c){
+  const partyKeys = Object.keys(c.parties);
+  let html = `<div style="max-width:800px">`;
+  html += `<div class="card"><div class="card-header"><h3>Contract Details</h3><div style="display:flex;gap:8px;align-items:center"><select onchange="updateField('status',this.value)" style="width:auto;padding:4px 8px;font-size:12px">${STATUSES.map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('')}</select><button class="topbar btn" style="font-size:11px;color:var(--red)" onclick="deleteContract()">🗑️ Delete</button></div></div>`;
+  html += `<div class="form-grid">
+    <div class="form-group full"><label>Contract Name</label><input value="${esc(c.name)}" onchange="updateField('name',this.value)"></div>
+    <div class="form-group"><label>Type</label><input value="${esc(c.type)}" onchange="updateField('type',this.value)"></div>
+    <div class="form-group"><label>Notes</label><input value="${esc(c.notes||'')}" onchange="updateField('notes',this.value)"></div>
+  </div></div>`;
+
+  // Parties
+  html += `<div class="card"><div class="card-header"><h3>Parties</h3><button class="topbar btn" onclick="addParty()">+ Add Party</button></div>`;
+  html += `<div class="form-grid">`;
+  partyKeys.forEach(pk=>{
+    html += `<div class="card" style="margin:0"><div class="card-header"><h3 style="font-size:13px">${esc(c.parties[pk].label)}</h3><button style="font-size:11px;color:var(--red)" onclick="removeParty('${pk}')">✕</button></div>
+    <div class="form-group"><label>Label</label><input value="${esc(c.parties[pk].label)}" onchange="updateParty('${pk}','label',this.value)"></div>
+    <div class="form-group" style="margin-top:8px"><label>Name ({{${pk}_name}})</label><input value="${esc(c.variables[pk+'_name']||'')}" onchange="updateVar('${pk}_name',this.value)"></div>
+    <div class="form-group" style="margin-top:8px"><label>Company ({{${pk}_company}})</label><input value="${esc(c.variables[pk+'_company']||'')}" onchange="updateVar('${pk}_company',this.value)"></div>
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // Variables
+  const allVars = extractVariables(c);
+  const partyVars = new Set();
+  partyKeys.forEach(pk=>{partyVars.add(pk+'_name');partyVars.add(pk+'_company');});
+  const otherVars = allVars.filter(v=>!partyVars.has(v));
+  if(otherVars.length){
+    html += `<div class="card"><h3 style="margin-bottom:12px">Variables</h3><div class="form-grid">`;
+    otherVars.forEach(v=>{
+      html += `<div class="form-group"><label>{{${v}}}</label><input value="${esc(c.variables[v]||'')}" onchange="updateVar('${v}',this.value)" placeholder="${v.replace(/_/g,' ')}"></div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function renderClauses(c){
+  let html = `<div style="max-width:800px"><div class="card-header"><h3>${c.clauses.length} Clauses</h3><div style="display:flex;gap:6px"><button class="topbar btn primary" onclick="addClauseModal()">+ Add Clause</button><button class="topbar btn" onclick="addFromLibrary()">📚 From Library</button></div></div>`;
+  c.clauses.forEach((cl,i)=>{
+    html += `<div class="clause-item">
+      <div class="clause-header">
+        <div><span class="clause-title">${i+1}. ${esc(cl.title)}</span><span class="status draft" style="margin-left:8px;font-size:10px">${esc(cl.category)}</span></div>
+        <div class="clause-actions">
+          ${i>0?`<button onclick="moveClause(${i},-1)">↑</button>`:''}
+          ${i<c.clauses.length-1?`<button onclick="moveClause(${i},1)">↓</button>`:''}
+          <button onclick="editClause(${i})">✏️</button>
+          <button class="danger" onclick="removeClause(${i})">✕</button>
+        </div>
+      </div>
+      <div class="clause-body">${highlightVars(esc(cl.body))}</div>
+    </div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function renderPreview(c){
+  let html = `<div class="preview-container">`;
+  html += `<h1>${esc(c.type||c.name)}</h1>`;
+  html += `<div class="subtitle">${esc(c.name)}</div>`;
+
+  // Preamble
+  const partyKeys = Object.keys(c.parties);
+  const effDate = c.variables.effective_date || '[DATE]';
+  html += `<p>This ${esc(c.type)} ("Agreement") is entered into as of <strong>${esc(effDate)}</strong> by and between:</p>`;
+  partyKeys.forEach((pk,i)=>{
+    const name = c.variables[pk+'_name'] || `[${c.parties[pk].label} Name]`;
+    const company = c.variables[pk+'_company'] || '';
+    html += `<p><strong>${c.parties[pk].label}:</strong> ${esc(name)}${company?', '+esc(company):''}</p>`;
+  });
+  html += `<p>Collectively referred to as the "Parties."</p>`;
+
+  // Clauses
+  c.clauses.forEach((cl,i)=>{
+    html += `<h2>${i+1}. ${esc(cl.title)}</h2>`;
+    html += `<p>${substituteVars(esc(cl.body), c.variables)}</p>`;
+  });
+
+  // Signatures
+  html += `<div class="signature-block">`;
+  partyKeys.forEach(pk=>{
+    const name = c.variables[pk+'_name'] || `[${c.parties[pk].label}]`;
+    html += `<div class="sig-party"><strong>${esc(c.parties[pk].label)}</strong><div class="sig-line">${esc(name)}</div><div class="sig-label">Signature</div><div class="sig-line" style="margin-top:24px">Date: _______________</div></div>`;
+  });
+  html += `</div></div>`;
+  return html;
+}
+
+function renderLibrary(){
+  let html = `<div style="max-width:800px"><h3 style="margin-bottom:16px">📚 Clause Library</h3><p style="color:var(--text2);margin-bottom:20px;font-size:13px">Click "Add" to insert a clause into the active contract.</p>`;
+  Object.entries(CLAUSE_LIBRARY).forEach(([cat,clauses])=>{
+    html += `<div class="lib-category"><h4>${cat} (${clauses.length})</h4>`;
+    clauses.forEach(cl=>{
+      html += `<div class="lib-item"><span class="lib-name">${esc(cl.title)}</span><button class="lib-add" onclick="addLibClause('${esc(cat)}','${esc(cl.title)}')">+ Add</button></div>`;
+    });
+    html += `</div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function renderDashboard(){
+  const cs = state.contracts;
+  const byStatus = {};
+  STATUSES.forEach(s=>byStatus[s]=cs.filter(c=>c.status===s).length);
+  const totalClauses = cs.reduce((s,c)=>s+c.clauses.length,0);
+  const types = [...new Set(cs.map(c=>c.type))];
+
+  let html = `<div style="max-width:900px">`;
+  html += `<h3 style="margin-bottom:16px">📊 Dashboard</h3>`;
+  html += `<div class="stats-grid">
+    <div class="stat-card"><div class="value">${cs.length}</div><div class="label">Total Contracts</div></div>
+    <div class="stat-card"><div class="value" style="color:var(--green)">${byStatus.signed||0}</div><div class="label">Signed</div></div>
+    <div class="stat-card"><div class="value" style="color:var(--yellow)">${byStatus.draft||0}</div><div class="label">Drafts</div></div>
+    <div class="stat-card"><div class="value">${totalClauses}</div><div class="label">Total Clauses</div></div>
+    <div class="stat-card"><div class="value">${types.length}</div><div class="label">Contract Types</div></div>
+    <div class="stat-card"><div class="value" style="color:var(--orange)">${byStatus.sent||0}</div><div class="label">Sent / Pending</div></div>
+  </div>`;
+
+  // Status bars
+  html += `<div class="card"><h3>Status Distribution</h3><div style="margin-top:12px">`;
+  STATUSES.forEach(s=>{
+    const pct = cs.length?(byStatus[s]/cs.length*100):0;
+    html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span style="width:100px;font-size:12px">${STATUS_LABELS[s]}</span>
+      <div style="flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--accent2);border-radius:4px;transition:width .3s"></div></div>
+      <span style="font-size:12px;color:var(--text2);width:30px;text-align:right">${byStatus[s]}</span>
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // All contracts table
+  html += `<div class="card"><h3>All Contracts</h3><table style="width:100%;border-collapse:collapse;margin-top:12px"><thead><tr>
+    <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2)">Name</th>
+    <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2)">Type</th>
+    <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2)">Clauses</th>
+    <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2)">Status</th>
+    <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2)">Created</th>
+  </tr></thead><tbody>`;
+  cs.forEach(c=>{
+    html += `<tr style="cursor:pointer" onclick="selectContract('${c.id}')">
+      <td style="padding:8px;border-bottom:1px solid var(--border);font-size:13px">${esc(c.name)}</td>
+      <td style="padding:8px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2)">${esc(c.type)}</td>
+      <td style="padding:8px;border-bottom:1px solid var(--border);font-size:13px">${c.clauses.length}</td>
+      <td style="padding:8px;border-bottom:1px solid var(--border)"><span class="status ${c.status}">${STATUS_LABELS[c.status]}</span></td>
+      <td style="padding:8px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2)">${new Date(c.createdAt).toLocaleDateString()}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div></div>`;
+  return html;
+}
+
+// ===== SIDEBAR =====
+function renderSidebar(){
+  const q = document.getElementById('sideSearch')?.value?.toLowerCase()||'';
+  const list = document.getElementById('sidebarList');
+  const filtered = state.contracts.filter(c=>!q||c.name.toLowerCase().includes(q)||c.type.toLowerCase().includes(q));
+  list.innerHTML = filtered.map(c=>`
+    <div class="sidebar-item ${c.id===state.activeId?'active':''}" onclick="selectContract('${c.id}')">
+      <span class="name">${esc(c.name)}</span>
+      <span class="badge status ${c.status}">${STATUS_LABELS[c.status]}</span>
+    </div>
+  `).join('');
+}
+
+function selectContract(id){
+  state.activeId=id;
+  if(state.view==='dashboard'||state.view==='library') state.view='editor';
+  saveState();renderSidebar();
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===state.view));
+  render();
+}
+
+// ===== ACTIONS =====
+function newContract(){
+  const c = {id:uid(),name:'New Contract',type:'Custom',parties:{party_a:{label:'Party A'},party_b:{label:'Party B'}},clauses:[],variables:{effective_date:'',party_a_name:'',party_a_company:'',party_b_name:'',party_b_company:''},notes:'',status:'draft',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  state.contracts.unshift(c);state.activeId=c.id;state.view='editor';
+  saveState();renderSidebar();
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===state.view));
+  render();
+}
+
+function showTemplates(){
+  let html = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal" style="width:720px">
+    <h3>📋 Choose a Template</h3>
+    <div class="template-grid">`;
+  TEMPLATES.forEach((t,i)=>{
+    html += `<div class="template-card" onclick="useTemplate(${i})">
+      <div class="emoji">${t.emoji}</div><h3>${esc(t.name)}</h3><p>${esc(t.desc)}</p>
+      <div>${t.tags.map(tg=>`<span class="tag">${tg}</span>`).join('')}</div>
+    </div>`;
+  });
+  html += `</div><div class="modal-actions"><button class="cancel" onclick="closeModal()">Cancel</button></div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+function useTemplate(i){
+  const c = createFromTemplate(TEMPLATES[i]);
+  state.contracts.unshift(c);state.activeId=c.id;state.view='editor';
+  closeModal();saveState();renderSidebar();
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===state.view));
+  render();
+}
+
+function deleteContract(){
+  if(!confirm('Delete this contract?'))return;
+  state.contracts=state.contracts.filter(c=>c.id!==state.activeId);
+  state.activeId=state.contracts[0]?.id||null;
+  saveState();renderSidebar();render();
+}
+
+function updateField(f,v){const c=getActive();if(!c)return;c[f]=v;c.updatedAt=new Date().toISOString();saveState();renderSidebar();render();}
+function updateVar(k,v){const c=getActive();if(!c)return;c.variables[k]=v;c.updatedAt=new Date().toISOString();saveState();}
+function updateParty(pk,f,v){const c=getActive();if(!c)return;c.parties[pk][f]=v;c.updatedAt=new Date().toISOString();saveState();render();}
+
+function addParty(){
+  const c=getActive();if(!c)return;
+  const key='party_'+uid().slice(0,4);
+  c.parties[key]={label:'New Party'};
+  c.variables[key+'_name']='';c.variables[key+'_company']='';
+  c.updatedAt=new Date().toISOString();saveState();render();
+}
+function removeParty(pk){
+  const c=getActive();if(!c)return;
+  if(Object.keys(c.parties).length<=2){alert('Need at least 2 parties');return;}
+  delete c.parties[pk];delete c.variables[pk+'_name'];delete c.variables[pk+'_company'];
+  c.updatedAt=new Date().toISOString();saveState();render();
+}
+
+// Clauses
+function addClauseModal(){
+  const c=getActive();if(!c)return;
+  const cats = Object.keys(CLAUSE_LIBRARY);
+  let html = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <h3>Add New Clause</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Title</label><input id="mc_title" placeholder="Clause title"></div>
+      <div class="form-group"><label>Category</label><select id="mc_cat">${cats.map(c=>`<option>${c}</option>`).join('')}<option>Custom</option></select></div>
+      <div class="form-group full"><label>Body</label><textarea id="mc_body" rows="6" placeholder="Use {{variable_name}} for dynamic fields..."></textarea></div>
+    </div>
+    <div class="modal-actions"><button class="cancel" onclick="closeModal()">Cancel</button><button class="save" onclick="saveNewClause()">Add Clause</button></div>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+function saveNewClause(){
+  const c=getActive();if(!c)return;
+  const title=document.getElementById('mc_title').value.trim();
+  const cat=document.getElementById('mc_cat').value;
+  const body=document.getElementById('mc_body').value.trim();
+  if(!title||!body){alert('Title and body required');return;}
+  c.clauses.push({id:uid(),title,body,category:cat,order:c.clauses.length});
+  // Extract new variables
+  (body.match(/\{\{(\w+)\}\}/g)||[]).forEach(v=>{const k=v.slice(2,-2);if(!(k in c.variables))c.variables[k]='';});
+  c.updatedAt=new Date().toISOString();closeModal();saveState();render();
+}
+
+function addLibClause(cat,title){
+  const c=getActive();
+  if(!c){alert('Select a contract first');return;}
+  const lib=CLAUSE_LIBRARY[cat]?.find(cl=>cl.title===title);
+  if(!lib)return;
+  c.clauses.push({id:uid(),title:lib.title,body:lib.body,category:cat,order:c.clauses.length});
+  (lib.body.match(/\{\{(\w+)\}\}/g)||[]).forEach(v=>{const k=v.slice(2,-2);if(!(k in c.variables))c.variables[k]='';});
+  c.updatedAt=new Date().toISOString();saveState();render();
+  if(state.view==='library'){/* stay */}
+}
+
+function addFromLibrary(){switchView('library');}
+
+function editClause(i){
+  const c=getActive();if(!c)return;
+  const cl=c.clauses[i];
+  const cats=Object.keys(CLAUSE_LIBRARY);
+  let html=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <h3>Edit Clause</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Title</label><input id="ec_title" value="${esc(cl.title)}"></div>
+      <div class="form-group"><label>Category</label><select id="ec_cat">${cats.map(c=>`<option ${c===cl.category?'selected':''}>${c}</option>`).join('')}<option ${!cats.includes(cl.category)?'selected':''}>Custom</option></select></div>
+      <div class="form-group full"><label>Body</label><textarea id="ec_body" rows="8">${esc(cl.body)}</textarea></div>
+    </div>
+    <div class="modal-actions"><button class="cancel" onclick="closeModal()">Cancel</button><button class="save" onclick="saveEditClause(${i})">Save</button></div>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+function saveEditClause(i){
+  const c=getActive();if(!c)return;
+  c.clauses[i].title=document.getElementById('ec_title').value.trim();
+  c.clauses[i].category=document.getElementById('ec_cat').value;
+  c.clauses[i].body=document.getElementById('ec_body').value.trim();
+  (c.clauses[i].body.match(/\{\{(\w+)\}\}/g)||[]).forEach(v=>{const k=v.slice(2,-2);if(!(k in c.variables))c.variables[k]='';});
+  c.updatedAt=new Date().toISOString();closeModal();saveState();render();
+}
+
+function removeClause(i){const c=getActive();if(!c)return;c.clauses.splice(i,1);c.updatedAt=new Date().toISOString();saveState();render();}
+function moveClause(i,dir){const c=getActive();if(!c)return;const j=i+dir;if(j<0||j>=c.clauses.length)return;[c.clauses[i],c.clauses[j]]=[c.clauses[j],c.clauses[i]];c.updatedAt=new Date().toISOString();saveState();render();}
+
+// ===== EXPORT =====
+function exportMarkdown(){
+  const c=getActive();if(!c)return;
+  const partyKeys=Object.keys(c.parties);
+  let md=`# ${c.type}\n\n**${c.name}**\n\n`;
+  md+=`**Effective Date:** ${c.variables.effective_date||'[DATE]'}\n\n`;
+  md+=`## Parties\n\n`;
+  partyKeys.forEach(pk=>{
+    md+=`- **${c.parties[pk].label}:** ${c.variables[pk+'_name']||'[Name]'}${c.variables[pk+'_company']?', '+c.variables[pk+'_company']:''}\n`;
+  });
+  md+=`\n---\n\n`;
+  c.clauses.forEach((cl,i)=>{
+    md+=`## ${i+1}. ${cl.title}\n\n${subVarsPlain(cl.body,c.variables)}\n\n`;
+  });
+  md+=`---\n\n## Signatures\n\n`;
+  partyKeys.forEach(pk=>{
+    md+=`**${c.parties[pk].label}**\n\nName: ${c.variables[pk+'_name']||'_______________'}\n\nSignature: _______________\n\nDate: _______________\n\n`;
+  });
+  const blob=new Blob([md],{type:'text/markdown'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=c.name.replace(/[^a-zA-Z0-9-_ ]/g,'')+'.md';a.click();
+}
+
+function printContract(){
+  if(state.view!=='preview'){switchView('preview');}
+  setTimeout(()=>window.print(),300);
+}
+
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(state.contracts,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='contract-forge-backup.json';a.click();
+}
+
+function importJSON(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{
+    try{const data=JSON.parse(ev.target.result);
+    if(Array.isArray(data)){
+      const ids=new Set(state.contracts.map(c=>c.id));
+      data.forEach(c=>{if(!ids.has(c.id)){state.contracts.push(c);ids.add(c.id);}});
+    }
+    saveState();renderSidebar();render();}catch(e){alert('Invalid JSON');}
+  };r.readAsText(f);};inp.click();
+}
+
+// ===== HELPERS =====
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function extractVariables(c){
+  const vars = new Set();
+  c.clauses.forEach(cl=>{(cl.body.match(/\{\{(\w+)\}\}/g)||[]).forEach(v=>vars.add(v.slice(2,-2)));});
+  Object.keys(c.parties).forEach(pk=>{vars.add(pk+'_name');vars.add(pk+'_company');});
+  vars.add('effective_date');
+  return [...vars];
+}
+
+function highlightVars(text){
+  return text.replace(/\{\{(\w+)\}\}/g,'<span class="var-chip">{{$1}}</span>');
+}
+
+function substituteVars(text,vars){
+  return text.replace(/\{\{(\w+)\}\}/g,(m,k)=>{
+    const v=vars[k];
+    return v?`<strong>${v}</strong>`:`<span class="highlight">[${k.replace(/_/g,' ')}]</span>`;
+  });
+}
+
+function subVarsPlain(text,vars){
+  return text.replace(/\{\{(\w+)\}\}/g,(m,k)=>{
+    return vars[k]||`[${k.replace(/_/g,' ')}]`;
+  });
+}
+
+function closeModal(){document.querySelectorAll('.modal-overlay').forEach(m=>m.remove());}
+
+// ===== HELP =====
+function showHelp(){
+  let html=`<div class="help-overlay" onclick="if(event.target===this)this.remove()"><div class="help-box">
+    <h3>⌨️ Keyboard Shortcuts</h3>
+    <table>
+      <tr><td>N</td><td>New contract</td></tr>
+      <tr><td>/</td><td>Focus search</td></tr>
+      <tr><td>1-5</td><td>Switch views (Editor/Clauses/Preview/Library/Dashboard)</td></tr>
+      <tr><td>E</td><td>Export JSON</td></tr>
+      <tr><td>I</td><td>Import JSON</td></tr>
+      <tr><td>M</td><td>Export Markdown</td></tr>
+      <tr><td>P</td><td>Print / PDF</td></tr>
+      <tr><td>T</td><td>Templates gallery</td></tr>
+      <tr><td>Esc</td><td>Close modal/dialog</td></tr>
+      <tr><td>?</td><td>This help</td></tr>
+    </table>
+    <h3 style="margin-top:16px">📝 Variables</h3>
+    <p style="font-size:13px;color:var(--text2);margin-top:8px">Use <code>{{variable_name}}</code> in clause text. Variables are auto-detected and appear in the Editor for filling. They're substituted in Preview and Markdown export.</p>
+    <h3 style="margin-top:16px">📚 Clause Library</h3>
+    <p style="font-size:13px;color:var(--text2);margin-top:8px">${Object.keys(CLAUSE_LIBRARY).length} categories with ${Object.values(CLAUSE_LIBRARY).reduce((s,a)=>s+a.length,0)} pre-written clauses covering Confidentiality, Payment, IP, Termination, Liability, Scope, General, Non-Compete, and Data Privacy.</p>
+    <div class="modal-actions"><button class="cancel" onclick="this.closest('.help-overlay').remove()">Close</button></div>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+// ===== KEYBOARD =====
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT'){
+    if(e.key==='Escape')e.target.blur();
+    return;
+  }
+  if(document.querySelector('.modal-overlay')||document.querySelector('.help-overlay')){
+    if(e.key==='Escape'){closeModal();document.querySelectorAll('.help-overlay').forEach(h=>h.remove());}
+    return;
+  }
+  const views=['editor','clauses','preview','library','dashboard'];
+  if(e.key>='1'&&e.key<='5'){e.preventDefault();switchView(views[+e.key-1]);return;}
+  switch(e.key){
+    case 'n':case 'N':e.preventDefault();newContract();break;
+    case '/':e.preventDefault();document.getElementById('sideSearch')?.focus();break;
+    case 'e':e.preventDefault();exportJSON();break;
+    case 'i':e.preventDefault();importJSON();break;
+    case 'm':e.preventDefault();exportMarkdown();break;
+    case 'p':e.preventDefault();printContract();break;
+    case 't':e.preventDefault();showTemplates();break;
+    case '?':e.preventDefault();showHelp();break;
+  }
+});
+
+// ===== INIT =====
+loadState();renderSidebar();
+document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===state.view));
+render();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Draft Studio — Distraction-Free Writing</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#1a1a2e;--surface:#16213e;--surface2:#0f3460;--text:#e8e8e8;--text2:#8892b0;
+--accent:#e94560;--accent2:#533483;--border:#233554;--hover:#1a1a3e;
+--editor-bg:#0d1117;--editor-text:#c9d1d9;--editor-line:#161b22;
+--heading:#e94560;--bold:#ffffff;--italic:#cba6f7;--link:#58a6ff;
+--code-bg:#161b22;--code-text:#f97583;--blockquote:#8b949e;
+--selection:rgba(233,69,96,0.3)
+}
+[data-theme="paper"]{
+--bg:#f5f0e8;--surface:#ffffff;--surface2:#f0ebe3;--text:#2d2d2d;--text2:#6b6b6b;
+--accent:#c0392b;--accent2:#8e44ad;--border:#e0d5c5;--hover:#faf5ed;
+--editor-bg:#fffef9;--editor-text:#2d2d2d;--editor-line:#f9f4ec;
+--heading:#c0392b;--bold:#1a1a1a;--italic:#6c3483;--link:#2980b9;
+--code-bg:#f4efe7;--code-text:#c0392b;--blockquote:#7f8c8d;
+--selection:rgba(192,57,43,0.2)
+}
+[data-theme="sepia"]{
+--bg:#f4ecd8;--surface:#faf3e0;--surface2:#efe4cc;--text:#433422;--text2:#8b7355;
+--accent:#b45309;--accent2:#92400e;--border:#ddd0b4;--hover:#f9f2de;
+--editor-bg:#fdf6e3;--editor-text:#433422;--editor-line:#f5edda;
+--heading:#b45309;--bold:#2c1f10;--italic:#92400e;--link:#1e6091;
+--code-bg:#f0e6ce;--code-text:#b45309;--blockquote:#8b7355;
+--selection:rgba(180,83,9,0.2)
+}
+[data-theme="nord"]{
+--bg:#2e3440;--surface:#3b4252;--surface2:#434c5e;--text:#eceff4;--text2:#d8dee9;
+--accent:#88c0d0;--accent2:#81a1c1;--border:#4c566a;--hover:#3b4252;
+--editor-bg:#2e3440;--editor-text:#d8dee9;--editor-line:#3b4252;
+--heading:#88c0d0;--bold:#eceff4;--italic:#b48ead;--link:#5e81ac;
+--code-bg:#3b4252;--code-text:#a3be8c;--blockquote:#81a1c1;
+--selection:rgba(136,192,208,0.2)
+}
+[data-theme="forest"]{
+--bg:#1b2a1b;--surface:#243324;--surface2:#2d3f2d;--text:#d4e4d4;--text2:#8aaa8a;
+--accent:#4caf50;--accent2:#2e7d32;--border:#3a5a3a;--hover:#2a3f2a;
+--editor-bg:#1b2a1b;--editor-text:#c8dcc8;--editor-line:#243324;
+--heading:#66bb6a;--bold:#e8f5e9;--italic:#a5d6a7;--link:#81c784;
+--code-bg:#243324;--code-text:#a5d6a7;--blockquote:#8aaa8a;
+--selection:rgba(76,175,80,0.2)
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;transition:all .3s}
+::selection{background:var(--selection)}
+.app{display:flex;height:100vh}
+/* SIDEBAR */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width .2s,opacity .2s}
+.sidebar.hidden{width:0;overflow:hidden;opacity:0;border:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:16px;color:var(--accent);display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:20px}
+.sidebar-search{width:100%;padding:8px 12px;background:var(--editor-bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;margin-top:10px;outline:none}
+.sidebar-search:focus{border-color:var(--accent)}
+.sidebar-actions{display:flex;gap:6px;margin-top:10px}
+.sidebar-actions button{flex:1;padding:6px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600}
+.sidebar-actions button:hover{opacity:.9}
+.sidebar-actions button.sec{background:var(--surface2);color:var(--text2)}
+.doc-list{flex:1;overflow-y:auto;padding:8px}
+.doc-list::-webkit-scrollbar{width:4px}
+.doc-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.folder-group{margin-bottom:4px}
+.folder-label{display:flex;align-items:center;gap:6px;padding:6px 8px;font-size:12px;color:var(--text2);cursor:pointer;border-radius:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.folder-label:hover{background:var(--hover)}
+.folder-label .arrow{transition:transform .2s;font-size:10px}
+.folder-label .arrow.collapsed{transform:rotate(-90deg)}
+.folder-docs{padding-left:8px}
+.folder-docs.collapsed{display:none}
+.doc-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;transition:background .15s;position:relative}
+.doc-item:hover{background:var(--hover)}
+.doc-item.active{background:var(--surface2);font-weight:600}
+.doc-item .doc-icon{font-size:14px}
+.doc-item .doc-info{flex:1;min-width:0}
+.doc-item .doc-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-item .doc-meta{font-size:11px;color:var(--text2);margin-top:2px}
+.doc-item .doc-actions{display:none;gap:4px}
+.doc-item:hover .doc-actions{display:flex}
+.doc-item .doc-actions button{background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:3px}
+.doc-item .doc-actions button:hover{color:var(--accent);background:var(--hover)}
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.toolbar{display:flex;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface);gap:8px;flex-shrink:0}
+.toolbar button{background:none;border:none;color:var(--text2);cursor:pointer;padding:6px 8px;border-radius:4px;font-size:13px;display:flex;align-items:center;gap:4px}
+.toolbar button:hover{background:var(--hover);color:var(--text)}
+.toolbar button.active{color:var(--accent);background:rgba(233,69,96,.1)}
+.toolbar .sep{width:1px;height:20px;background:var(--border)}
+.toolbar .spacer{flex:1}
+.toolbar .stats{font-size:12px;color:var(--text2);display:flex;gap:12px}
+.toolbar .stats span{display:flex;align-items:center;gap:4px}
+.toolbar select{background:var(--editor-bg);border:1px solid var(--border);color:var(--text);font-size:12px;padding:4px 8px;border-radius:4px;cursor:pointer;outline:none}
+/* EDITOR AREA */
+.editor-container{flex:1;display:flex;overflow:hidden;position:relative}
+.editor-pane{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.preview-pane{flex:1;overflow-y:auto;padding:40px 60px;border-left:1px solid var(--border);display:none;background:var(--editor-bg)}
+.preview-pane.visible{display:block}
+.editor-wrap{flex:1;position:relative;overflow:hidden}
+.editor{width:100%;height:100%;resize:none;background:var(--editor-bg);color:var(--editor-text);border:none;outline:none;font-family:'JetBrains Mono','Fira Code','SF Mono',Consolas,'Courier New',monospace;font-size:16px;line-height:1.8;padding:40px 60px;tab-size:2;overflow-y:auto}
+.editor::placeholder{color:var(--text2);opacity:.5}
+.editor::-webkit-scrollbar{width:6px}
+.editor::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+/* Focus mode */
+.focus-mode .editor{color:var(--text2);opacity:.5}
+/* Typewriter mode */
+.typewriter-mode .editor{padding-top:40vh;padding-bottom:40vh}
+/* Zen mode */
+.zen-mode .sidebar{display:none!important}
+.zen-mode .toolbar{display:none!important}
+.zen-mode .editor{padding:60px calc(50% - 360px)}
+.zen-mode .status-bar{display:none!important}
+/* Preview markdown */
+.preview-pane h1{font-size:28px;color:var(--heading);margin:24px 0 12px;font-weight:700;border-bottom:1px solid var(--border);padding-bottom:8px}
+.preview-pane h2{font-size:22px;color:var(--heading);margin:20px 0 10px;font-weight:600}
+.preview-pane h3{font-size:18px;color:var(--heading);margin:16px 0 8px;font-weight:600}
+.preview-pane p{margin:8px 0;line-height:1.8}
+.preview-pane strong{color:var(--bold);font-weight:700}
+.preview-pane em{color:var(--italic);font-style:italic}
+.preview-pane a{color:var(--link);text-decoration:none}
+.preview-pane code{background:var(--code-bg);color:var(--code-text);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:14px}
+.preview-pane pre{background:var(--code-bg);padding:16px;border-radius:8px;overflow-x:auto;margin:12px 0}
+.preview-pane pre code{background:none;padding:0}
+.preview-pane blockquote{border-left:3px solid var(--blockquote);padding:8px 16px;margin:12px 0;color:var(--blockquote);font-style:italic}
+.preview-pane ul,.preview-pane ol{padding-left:24px;margin:8px 0}
+.preview-pane li{margin:4px 0;line-height:1.7}
+.preview-pane hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+.preview-pane img{max-width:100%;border-radius:8px}
+.preview-pane table{border-collapse:collapse;margin:12px 0;width:100%}
+.preview-pane th,.preview-pane td{border:1px solid var(--border);padding:8px 12px;text-align:left}
+.preview-pane th{background:var(--surface2);font-weight:600}
+/* STATUS BAR */
+.status-bar{display:flex;align-items:center;padding:4px 16px;background:var(--surface);border-top:1px solid var(--border);font-size:11px;color:var(--text2);gap:16px;flex-shrink:0}
+.status-bar .goal-bar{width:100px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.status-bar .goal-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+.status-bar .streak{color:var(--accent);font-weight:600}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-overlay.active{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:90%;max-width:560px;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:18px;margin-bottom:16px;color:var(--accent)}
+.modal label{display:block;font-size:13px;color:var(--text2);margin:12px 0 4px}
+.modal input,.modal select,.modal textarea{width:100%;padding:8px 12px;background:var(--editor-bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;outline:none}
+.modal input:focus,.modal textarea:focus{border-color:var(--accent)}
+.modal textarea{resize:vertical;min-height:80px;font-family:inherit}
+.modal-actions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end}
+.modal-actions button{padding:8px 16px;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600}
+.modal-actions .primary{background:var(--accent);color:#fff}
+.modal-actions .secondary{background:var(--surface2);color:var(--text2)}
+/* DASHBOARD */
+.dashboard{display:none;flex:1;overflow-y:auto;padding:32px}
+.dashboard.visible{display:block}
+.dashboard h2{font-size:20px;color:var(--accent);margin-bottom:20px}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px}
+.dash-card .label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.dash-card .value{font-size:28px;font-weight:700;margin-top:4px;color:var(--text)}
+.dash-card .sub{font-size:12px;color:var(--text2);margin-top:4px}
+.dash-chart{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.dash-chart h3{font-size:14px;color:var(--text2);margin-bottom:12px}
+.bar-row{display:flex;align-items:center;gap:8px;margin:6px 0}
+.bar-row .bar-label{width:80px;font-size:12px;color:var(--text2);text-align:right;flex-shrink:0}
+.bar-row .bar-track{flex:1;height:20px;background:var(--editor-bg);border-radius:4px;overflow:hidden}
+.bar-row .bar-fill{height:100%;background:var(--accent);border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:11px;color:#fff;font-weight:600;min-width:30px;transition:width .3s}
+.heatmap{display:flex;gap:2px;flex-wrap:wrap}
+.heatmap-cell{width:12px;height:12px;border-radius:2px;background:var(--editor-bg)}
+.heatmap-cell.l1{background:rgba(233,69,96,.2)}
+.heatmap-cell.l2{background:rgba(233,69,96,.4)}
+.heatmap-cell.l3{background:rgba(233,69,96,.6)}
+.heatmap-cell.l4{background:rgba(233,69,96,.9)}
+/* HELP */
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:200}
+.help-overlay.active{display:flex}
+.help-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto}
+.help-box h2{font-size:18px;color:var(--accent);margin-bottom:16px}
+.help-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.help-row .key{color:var(--accent);font-family:monospace;font-weight:600}
+/* AMBIENT */
+.ambient-panel{position:absolute;bottom:40px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;display:none;z-index:50;width:240px}
+.ambient-panel.visible{display:block}
+.ambient-panel h3{font-size:13px;color:var(--text2);margin-bottom:10px}
+.ambient-btn{display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text);border:none;background:none;width:100%}
+.ambient-btn:hover{background:var(--hover)}
+.ambient-btn.playing{color:var(--accent)}
+.ambient-btn .vol{width:60px;height:3px;background:var(--border);border-radius:2px;margin-left:auto}
+.ambient-btn .vol-fill{height:100%;background:var(--accent);border-radius:2px;width:50%}
+/* Session timer */
+.session-timer{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px}
+.session-timer .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface2);color:var(--text);padding:10px 20px;border-radius:8px;font-size:13px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none;border:1px solid var(--border)}
+.toast.show{opacity:1}
+/* goal modal extras */
+.goal-setting{display:flex;align-items:center;gap:8px;margin:8px 0}
+.goal-setting input[type=number]{width:100px}
+.goal-setting span{font-size:13px;color:var(--text2)}
+/* export btns */
+.export-btns{display:flex;gap:8px;flex-wrap:wrap}
+.export-btns button{padding:8px 14px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;cursor:pointer;font-size:12px}
+.export-btns button:hover{border-color:var(--accent);color:var(--accent)}
+</style>
+</head>
+<body data-theme="default">
+<div class="app" id="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h1><span>✍️</span> Draft Studio</h1>
+      <input type="text" class="sidebar-search" id="searchInput" placeholder="Search docs… ( / )">
+      <div class="sidebar-actions">
+        <button onclick="createDoc()">+ New</button>
+        <button class="sec" onclick="createFolder()">📁 Folder</button>
+      </div>
+    </div>
+    <div class="doc-list" id="docList"></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="toolbar" id="toolbar">
+      <button onclick="toggleSidebar()" title="Toggle sidebar (⌘\\)">☰</button>
+      <div class="sep"></div>
+      <button id="btnEditor" class="active" onclick="setView('editor')">📝 Write</button>
+      <button id="btnPreview" onclick="togglePreview()">👁 Preview</button>
+      <button id="btnDash" onclick="setView('dashboard')">📊 Stats</button>
+      <div class="sep"></div>
+      <button id="btnFocus" onclick="toggleFocus()" title="Focus mode">🎯</button>
+      <button id="btnTypewriter" onclick="toggleTypewriter()" title="Typewriter mode">⌨️</button>
+      <button id="btnZen" onclick="toggleZen()" title="Zen mode (F11)">🧘</button>
+      <button id="btnAmbient" onclick="toggleAmbient()" title="Ambient sounds">🔊</button>
+      <div class="sep"></div>
+      <select id="themeSelect" onchange="setTheme(this.value)">
+        <option value="default">🌙 Midnight</option>
+        <option value="paper">📄 Paper</option>
+        <option value="sepia">📜 Sepia</option>
+        <option value="nord">❄️ Nord</option>
+        <option value="forest">🌲 Forest</option>
+      </select>
+      <div class="spacer"></div>
+      <div class="stats" id="statsBar">
+        <span id="statWords">0 words</span>
+        <span id="statChars">0 chars</span>
+        <span id="statRead">0 min read</span>
+      </div>
+      <div class="sep"></div>
+      <button onclick="showExport()" title="Export">📤</button>
+      <button onclick="showHelp()" title="Keyboard shortcuts (?)">⌨️ ?</button>
+    </div>
+
+    <!-- Editor area -->
+    <div class="editor-container" id="editorContainer">
+      <div class="editor-pane">
+        <div class="editor-wrap">
+          <textarea class="editor" id="editor" placeholder="Start writing…&#10;&#10;Markdown supported. Just write.&#10;&#10;Press ? for keyboard shortcuts." spellcheck="true"></textarea>
+        </div>
+      </div>
+      <div class="preview-pane" id="previewPane"></div>
+      <!-- Ambient panel -->
+      <div class="ambient-panel" id="ambientPanel">
+        <h3>🔊 Ambient Sounds</h3>
+        <button class="ambient-btn" data-sound="rain" onclick="toggleSound('rain')">🌧 Rain<div class="vol"><div class="vol-fill"></div></div></button>
+        <button class="ambient-btn" data-sound="cafe" onclick="toggleSound('cafe')">☕ Coffee Shop<div class="vol"><div class="vol-fill"></div></div></button>
+        <button class="ambient-btn" data-sound="fire" onclick="toggleSound('fire')">🔥 Fireplace<div class="vol"><div class="vol-fill"></div></div></button>
+        <button class="ambient-btn" data-sound="waves" onclick="toggleSound('waves')">🌊 Ocean Waves<div class="vol"><div class="vol-fill"></div></div></button>
+        <button class="ambient-btn" data-sound="wind" onclick="toggleSound('wind')">💨 Wind<div class="vol"><div class="vol-fill"></div></div></button>
+        <button class="ambient-btn" data-sound="birds" onclick="toggleSound('birds')">🐦 Birds<div class="vol"><div class="vol-fill"></div></div></button>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard"></div>
+
+    <!-- Status bar -->
+    <div class="status-bar" id="statusBar">
+      <div class="session-timer"><div class="dot"></div><span id="sessionTime">0:00</span></div>
+      <span id="sessionWords">+0 words this session</span>
+      <div class="spacer" style="flex:1"></div>
+      <span id="goalLabel">Goal: 0/500</span>
+      <div class="goal-bar"><div class="goal-fill" id="goalFill" style="width:0%"></div></div>
+      <span class="streak" id="streakLabel">🔥 0 day streak</span>
+      <span style="cursor:pointer" onclick="showGoalModal()">⚙️</span>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="docModal">
+  <div class="modal">
+    <h2 id="docModalTitle">New Document</h2>
+    <label>Title</label>
+    <input id="docTitleInput" placeholder="Untitled">
+    <label>Folder</label>
+    <select id="docFolderSelect"></select>
+    <label>Tags (comma separated)</label>
+    <input id="docTagsInput" placeholder="blog, draft, linkedin">
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeModal('docModal')">Cancel</button>
+      <button class="primary" id="docModalSave">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="folderModal">
+  <div class="modal">
+    <h2>New Folder</h2>
+    <label>Name</label>
+    <input id="folderNameInput" placeholder="Blog Posts">
+    <label>Emoji</label>
+    <input id="folderEmojiInput" placeholder="📁" maxlength="4" style="width:60px">
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeModal('folderModal')">Cancel</button>
+      <button class="primary" onclick="saveFolder()">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="goalModal">
+  <div class="modal">
+    <h2>⚙️ Writing Goals</h2>
+    <label>Daily Word Goal</label>
+    <div class="goal-setting">
+      <input type="number" id="goalInput" min="0" step="50" value="500">
+      <span>words / day</span>
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeModal('goalModal')">Cancel</button>
+      <button class="primary" onclick="saveGoal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <h2>📤 Export</h2>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:16px">Export current document in your preferred format.</p>
+    <div class="export-btns">
+      <button onclick="exportAs('md')">📝 Markdown (.md)</button>
+      <button onclick="exportAs('txt')">📄 Plain Text (.txt)</button>
+      <button onclick="exportAs('html')">🌐 HTML (.html)</button>
+      <button onclick="exportAs('json')">💾 JSON Backup (all docs)</button>
+      <button onclick="importJSON()">📥 Import JSON</button>
+    </div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="secondary" onclick="closeModal('exportModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-box">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="help-row"><span>New document</span><span class="key">⌘ N</span></div>
+    <div class="help-row"><span>Search docs</span><span class="key">/</span></div>
+    <div class="help-row"><span>Toggle sidebar</span><span class="key">⌘ \</span></div>
+    <div class="help-row"><span>Toggle preview</span><span class="key">⌘ P</span></div>
+    <div class="help-row"><span>Focus mode</span><span class="key">⌘ D</span></div>
+    <div class="help-row"><span>Typewriter mode</span><span class="key">⌘ J</span></div>
+    <div class="help-row"><span>Zen mode</span><span class="key">F11</span></div>
+    <div class="help-row"><span>Stats dashboard</span><span class="key">⌘ 3</span></div>
+    <div class="help-row"><span>Export</span><span class="key">⌘ E</span></div>
+    <div class="help-row"><span>Bold</span><span class="key">⌘ B</span></div>
+    <div class="help-row"><span>Italic</span><span class="key">⌘ I</span></div>
+    <div class="help-row"><span>Heading</span><span class="key">⌘ H</span></div>
+    <div class="help-row"><span>Link</span><span class="key">⌘ K</span></div>
+    <div class="help-row"><span>Strikethrough</span><span class="key">⌘ Shift D</span></div>
+    <div class="help-row"><span>Show shortcuts</span><span class="key">?</span></div>
+    <div class="help-row"><span>Close modal</span><span class="key">Esc</span></div>
+    <div style="margin-top:16px;text-align:center">
+      <button onclick="closeHelp()" style="padding:8px 24px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="fileImport" accept=".json" style="display:none" onchange="handleImport(event)">
+
+<script>
+// ==================== STATE ====================
+const LS_KEY = 'draft-studio';
+let state = loadState();
+let activeDocId = null;
+let sessionStartTime = Date.now();
+let sessionStartWords = 0;
+let previewVisible = false;
+let focusMode = false;
+let typewriterMode = false;
+let zenMode = false;
+let currentView = 'editor';
+let audioCtx = null;
+let activeSounds = {};
+let saveTimeout = null;
+
+function defaultState() {
+  return {
+    docs: [],
+    folders: [
+      { id: 'general', name: 'General', emoji: '📝' },
+      { id: 'blog', name: 'Blog Posts', emoji: '✍️' },
+      { id: 'linkedin', name: 'LinkedIn', emoji: '💼' },
+      { id: 'ideas', name: 'Ideas', emoji: '💡' }
+    ],
+    dailyGoal: 500,
+    dailyWords: {},
+    theme: 'default',
+    version: 1
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return seedData();
+}
+
+function save() {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+  }, 300);
+}
+
+function seedData() {
+  const s = defaultState();
+  const now = Date.now();
+  const day = 86400000;
+  s.docs = [
+    {
+      id: 'demo1', title: 'Why I Shipped UTMStamp in 13 Days',
+      folder: 'blog', tags: ['build-in-public', 'utmstamp', 'shipping'],
+      content: `# Why I Shipped UTMStamp in 13 Days\n\nMost founders spend months planning. I spent 13 days building.\n\n## The Insight\n\nEvery company sends emails. Every email has a signature. But nobody tracks which signatures drive clicks.\n\nThat's the gap UTMStamp fills — **email signatures that track clicks**.\n\n## The Rules I Set\n\n1. **No feature creep** — MVP means minimum. Ship the core, nothing else.\n2. **No perfection** — Good enough beats perfect every time.\n3. **Build in public** — Share the journey, attract early users.\n4. **Prototype to validate** — Test fast, scale what works.\n\n## Day by Day\n\n### Days 1-3: Foundation\nAuth, signature editor, basic templates. Nothing fancy.\n\n### Days 4-7: Core Features\nUTM tracking engine, click analytics, team deployment.\n\n### Days 8-10: Polish\nTemplate gallery, dashboard, onboarding flow.\n\n### Days 11-13: Launch Prep\nLanding page, documentation, Product Hunt listing.\n\n## The Result\n\nA working product. Real users. Real feedback. In 13 days.\n\n> "Ship fast, learn faster, iterate always."\n\n## What I Learned\n\n- **Speed is a competitive advantage** — while competitors plan, you ship.\n- **Constraints breed creativity** — 13 days forced ruthless prioritization.\n- **Building in public creates accountability** — when people watch, you deliver.\n\n---\n\n*This is how I build. Not with months of planning, but with weeks of shipping.*`,
+      created: now - day * 5, updated: now - day * 2, wordCount: 198
+    },
+    {
+      id: 'demo2', title: 'The 50-Line Code That Saved $180K',
+      folder: 'linkedin', tags: ['zyod', 'product', 'impact'],
+      content: `# The 50-Line Code That Saved $180K/Year\n\nAt ZYOD, we had ₹11-12 Cr ($1.4M) in working capital stuck in fabric inventory.\n\nThe problem wasn't the fabric. It was **visibility**.\n\nNobody knew where anything was. Fabric rolls disappeared into the factory floor like socks into a washing machine.\n\n## The Solution\n\n50 lines of code. A QR-based warehouse management system.\n\nScan in. Scan out. Track everything.\n\n## The Impact\n\n- **$1.4M working capital unlocked** — we could finally see what we had\n- **70% fabric cycle time reduction** — 23 days → <7 days\n- **Zero manual counting** — the system knew, so humans didn't have to\n\n## The Lesson\n\nThe best product solutions aren't the most complex. They're the most practical.\n\nSometimes 50 lines of code beat 50,000.\n\n---\n\n*What's the simplest solution you've shipped that had outsized impact?*\n\n#product #manufacturing #startup #building`,
+      created: now - day * 3, updated: now - day * 1, wordCount: 157
+    },
+    {
+      id: 'demo3', title: 'Head of Product — Interview Prep Notes',
+      folder: 'general', tags: ['job-hunt', 'interview', 'prep'],
+      content: `# HoP Interview Prep\n\n## Key Stories to Tell\n\n### 1. Scale Story — ZYOD Manufacturing OS\n- Built from scratch, 700+ IoT machines\n- $15M revenue impact\n- Managing 30+ people across product, design, eng\n\n### 2. Speed Story — UTMStamp in 13 Days\n- 0 to shipped product\n- Building in public\n- Product-led growth\n\n### 3. Growth Story — GoMechanic\n- 200% membership growth\n- 70% CAC reduction via referral\n- WhatsApp bot rebuild\n\n### 4. IoT/Technical Story — Fortunekit\n- Custom RTOS hardware\n- 5M+ API hits/day\n- 20K+ vehicles tracked\n\n## Frameworks to Reference\n- RICE for prioritization\n- North Star Metric thinking\n- Jobs-to-be-Done\n- Hypothesis-driven development\n\n## Questions to Ask Them\n- What does success look like in 6 months?\n- How does product interact with engineering?\n- What's the biggest product challenge right now?\n- How do you measure product success?\n\n## Salary Research\n- HoP India range: ₹35-55L base\n- Remote US companies: $120-180K\n- Factor in equity, variable pay\n\n---\n\n*Update after each interview with new learnings.*`,
+      created: now - day * 7, updated: now - day * 4, wordCount: 182
+    },
+    {
+      id: 'demo4', title: 'Thread: Building in Public — Week 1',
+      folder: 'linkedin', tags: ['thread', 'build-in-public'],
+      content: `# Building in Public — Week 1 Thread\n\n**Tweet 1 (Hook):**\nI quit my job to build in public.\n\nWeek 1 update: shipped a full product, built 7 tools, and learned more than I did in 6 months at my last job.\n\nHere's what happened 🧵\n\n---\n\n**Tweet 2:**\nDay 1: Set up the workspace.\nDay 2: Shipped the landing page.\nDay 3: First user signed up.\n\nSpeed > perfection. Always.\n\n---\n\n**Tweet 3:**\nThe biggest lesson from Week 1:\n\nNobody cares about your product until they care about your story.\n\nBuilding in public isn't about the product. It's about the journey.\n\n---\n\n**Tweet 4:**\nTools I used:\n- Cursor for coding\n- Vercel for deployment\n- Supabase for backend\n- Twitter for distribution\n\nTotal cost: $0\nTotal learning: priceless\n\n---\n\n**Tweet 5 (CTA):**\nWeek 2 goal: 100 users.\n\nFollow along if you want to see how it goes.\n\nRT if you've ever wanted to build in public but didn't know where to start. 🔄`,
+      created: now - day * 2, updated: now - day * 1, wordCount: 168
+    },
+    {
+      id: 'demo5', title: 'Product Thinking: Features vs Problems',
+      folder: 'ideas', tags: ['philosophy', 'product', 'thinking'],
+      content: `# Features vs Problems — A Product Leader's Dilemma\n\n## The Trap\n\nEvery PM falls into it at some point:\n\n> "We need to build X because competitor Y has it."\n\nThat's feature thinking. It's reactive, it's shallow, and it leads to bloated products nobody loves.\n\n## The Alternative\n\nProblem thinking asks different questions:\n\n- What job is the user trying to do?\n- What's preventing them from doing it?\n- What's the minimum we can build to remove that barrier?\n\n## A Framework\n\n| Feature Thinking | Problem Thinking |\n|---|---|\n| "Add dark mode" | "Users complain about eye strain at night" |\n| "Build an API" | "Power users want to automate workflows" |\n| "Add social login" | "30% of users abandon signup at password step" |\n\n## The Test\n\nBefore adding any feature, ask:\n\n1. **What problem does this solve?**\n2. **For whom?**\n3. **How will we know it worked?**\n\nIf you can't answer all three clearly, you're building features, not solving problems.\n\n---\n\n*10 years of product leadership distilled into one rule: solve problems, don't ship features.*`,
+      created: now - day * 10, updated: now - day * 6, wordCount: 180
+    }
+  ];
+  // Seed some daily word counts
+  const today = dateKey(new Date());
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(now - day * i);
+    const k = dateKey(d);
+    if (i < 12) s.dailyWords[k] = Math.floor(Math.random() * 800) + 100;
+  }
+  s.dailyWords[today] = 342;
+  return s;
+}
+
+function dateKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// ==================== RENDER ====================
+function renderDocList() {
+  const list = document.getElementById('docList');
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const folders = state.folders;
+  const unfiled = state.docs.filter(d => !d.folder || !folders.find(f=>f.id===d.folder));
+  let html = '';
+  folders.forEach(f => {
+    const docs = state.docs.filter(d => d.folder === f.id).filter(d => !q || d.title.toLowerCase().includes(q) || (d.tags||[]).some(t=>t.toLowerCase().includes(q)));
+    if (q && docs.length === 0) return;
+    html += `<div class="folder-group">
+      <div class="folder-label" onclick="toggleFolder('${f.id}')">
+        <span class="arrow ${getFolderState(f.id)?'collapsed':''}">▼</span>
+        ${f.emoji} ${f.name} <span style="margin-left:auto;font-size:11px;opacity:.5">${docs.length}</span>
+      </div>
+      <div class="folder-docs ${getFolderState(f.id)?'collapsed':''}">
+        ${docs.sort((a,b)=>b.updated-a.updated).map(d => docItemHTML(d)).join('')}
+      </div>
+    </div>`;
+  });
+  const uDocs = unfiled.filter(d => !q || d.title.toLowerCase().includes(q));
+  if (uDocs.length) {
+    html += `<div class="folder-group">
+      <div class="folder-label" onclick="toggleFolder('_unfiled')">
+        <span class="arrow ${getFolderState('_unfiled')?'collapsed':''}">▼</span>
+        📎 Unfiled <span style="margin-left:auto;font-size:11px;opacity:.5">${uDocs.length}</span>
+      </div>
+      <div class="folder-docs ${getFolderState('_unfiled')?'collapsed':''}">
+        ${uDocs.sort((a,b)=>b.updated-a.updated).map(d => docItemHTML(d)).join('')}
+      </div>
+    </div>`;
+  }
+  list.innerHTML = html;
+}
+
+const folderStates = {};
+function getFolderState(id) { return folderStates[id] || false; }
+function toggleFolder(id) { folderStates[id] = !folderStates[id]; renderDocList(); }
+
+function docItemHTML(d) {
+  const active = d.id === activeDocId ? 'active' : '';
+  const words = countWords(d.content);
+  const ago = timeAgo(d.updated);
+  return `<div class="doc-item ${active}" onclick="openDoc('${d.id}')">
+    <span class="doc-icon">📄</span>
+    <div class="doc-info">
+      <div class="doc-title">${esc(d.title || 'Untitled')}</div>
+      <div class="doc-meta">${words} words · ${ago}</div>
+    </div>
+    <div class="doc-actions">
+      <button onclick="event.stopPropagation();editDocMeta('${d.id}')" title="Edit">✏️</button>
+      <button onclick="event.stopPropagation();duplicateDoc('${d.id}')" title="Duplicate">📋</button>
+      <button onclick="event.stopPropagation();deleteDoc('${d.id}')" title="Delete">🗑</button>
+    </div>
+  </div>`;
+}
+
+function timeAgo(ts) {
+  const s = Math.floor((Date.now()-ts)/1000);
+  if (s<60) return 'just now';
+  if (s<3600) return Math.floor(s/60)+'m ago';
+  if (s<86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+
+function countWords(text) {
+  if (!text) return 0;
+  return text.trim().split(/\s+/).filter(w=>w.length>0).length;
+}
+
+function esc(s) { return s.replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ==================== DOCUMENT OPERATIONS ====================
+function createDoc() {
+  const modal = document.getElementById('docModal');
+  document.getElementById('docModalTitle').textContent = 'New Document';
+  document.getElementById('docTitleInput').value = '';
+  document.getElementById('docTagsInput').value = '';
+  populateFolderSelect();
+  document.getElementById('docModalSave').textContent = 'Create';
+  document.getElementById('docModalSave').onclick = () => {
+    const title = document.getElementById('docTitleInput').value || 'Untitled';
+    const folder = document.getElementById('docFolderSelect').value;
+    const tags = document.getElementById('docTagsInput').value.split(',').map(t=>t.trim()).filter(Boolean);
+    const doc = { id: 'doc_'+Date.now(), title, folder, tags, content: '', created: Date.now(), updated: Date.now(), wordCount: 0 };
+    state.docs.push(doc);
+    save();
+    openDoc(doc.id);
+    closeModal('docModal');
+    renderDocList();
+    toast('Document created');
+  };
+  modal.classList.add('active');
+  setTimeout(()=>document.getElementById('docTitleInput').focus(), 50);
+}
+
+function editDocMeta(id) {
+  const doc = state.docs.find(d=>d.id===id);
+  if (!doc) return;
+  const modal = document.getElementById('docModal');
+  document.getElementById('docModalTitle').textContent = 'Edit Document';
+  document.getElementById('docTitleInput').value = doc.title;
+  document.getElementById('docTagsInput').value = (doc.tags||[]).join(', ');
+  populateFolderSelect(doc.folder);
+  document.getElementById('docModalSave').textContent = 'Save';
+  document.getElementById('docModalSave').onclick = () => {
+    doc.title = document.getElementById('docTitleInput').value || 'Untitled';
+    doc.folder = document.getElementById('docFolderSelect').value;
+    doc.tags = document.getElementById('docTagsInput').value.split(',').map(t=>t.trim()).filter(Boolean);
+    doc.updated = Date.now();
+    save();
+    renderDocList();
+    closeModal('docModal');
+    toast('Document updated');
+  };
+  modal.classList.add('active');
+  setTimeout(()=>document.getElementById('docTitleInput').focus(), 50);
+}
+
+function duplicateDoc(id) {
+  const doc = state.docs.find(d=>d.id===id);
+  if (!doc) return;
+  const dup = { ...doc, id: 'doc_'+Date.now(), title: doc.title + ' (copy)', created: Date.now(), updated: Date.now(), tags: [...(doc.tags||[])] };
+  state.docs.push(dup);
+  save();
+  openDoc(dup.id);
+  renderDocList();
+  toast('Document duplicated');
+}
+
+function deleteDoc(id) {
+  if (!confirm('Delete this document?')) return;
+  state.docs = state.docs.filter(d=>d.id!==id);
+  if (activeDocId === id) {
+    activeDocId = state.docs.length ? state.docs[0].id : null;
+    loadActiveDoc();
+  }
+  save();
+  renderDocList();
+  toast('Document deleted');
+}
+
+function openDoc(id) {
+  // Save current doc first
+  saveCurrentDoc();
+  activeDocId = id;
+  loadActiveDoc();
+  renderDocList();
+  if (currentView !== 'editor') setView('editor');
+}
+
+function loadActiveDoc() {
+  const editor = document.getElementById('editor');
+  const doc = state.docs.find(d=>d.id===activeDocId);
+  if (doc) {
+    editor.value = doc.content || '';
+    sessionStartWords = countWords(doc.content);
+    updateStats();
+    updatePreview();
+  } else {
+    editor.value = '';
+  }
+}
+
+function saveCurrentDoc() {
+  if (!activeDocId) return;
+  const doc = state.docs.find(d=>d.id===activeDocId);
+  if (!doc) return;
+  const content = document.getElementById('editor').value;
+  if (doc.content !== content) {
+    doc.content = content;
+    doc.updated = Date.now();
+    doc.wordCount = countWords(content);
+    save();
+  }
+}
+
+// ==================== FOLDERS ====================
+function createFolder() {
+  document.getElementById('folderNameInput').value = '';
+  document.getElementById('folderEmojiInput').value = '📁';
+  document.getElementById('folderModal').classList.add('active');
+  setTimeout(()=>document.getElementById('folderNameInput').focus(), 50);
+}
+
+function saveFolder() {
+  const name = document.getElementById('folderNameInput').value || 'New Folder';
+  const emoji = document.getElementById('folderEmojiInput').value || '📁';
+  state.folders.push({ id: 'folder_'+Date.now(), name, emoji });
+  save();
+  renderDocList();
+  closeModal('folderModal');
+  toast('Folder created');
+}
+
+function populateFolderSelect(selected) {
+  const sel = document.getElementById('docFolderSelect');
+  sel.innerHTML = state.folders.map(f => `<option value="${f.id}" ${f.id===selected?'selected':''}>${f.emoji} ${f.name}</option>`).join('');
+}
+
+// ==================== STATS ====================
+function updateStats() {
+  const text = document.getElementById('editor').value;
+  const words = countWords(text);
+  const chars = text.length;
+  const readMin = Math.max(1, Math.ceil(words / 238));
+  document.getElementById('statWords').textContent = words + ' words';
+  document.getElementById('statChars').textContent = chars.toLocaleString() + ' chars';
+  document.getElementById('statRead').textContent = readMin + ' min read';
+  // Session words
+  const sessionW = Math.max(0, words - sessionStartWords);
+  document.getElementById('sessionWords').textContent = '+' + sessionW + ' words this session';
+  // Daily goal
+  const today = dateKey(new Date());
+  const todayWords = (state.dailyWords[today] || 0) + sessionW;
+  const goal = state.dailyGoal || 500;
+  const pct = Math.min(100, Math.round(todayWords / goal * 100));
+  document.getElementById('goalLabel').textContent = `Goal: ${todayWords}/${goal}`;
+  document.getElementById('goalFill').style.width = pct + '%';
+  // Streak
+  const streak = calcStreak();
+  document.getElementById('streakLabel').textContent = '🔥 ' + streak + ' day streak';
+}
+
+function calcStreak() {
+  let streak = 0;
+  const day = 86400000;
+  let d = new Date();
+  const goal = state.dailyGoal || 500;
+  // Check today first (partial OK if > 0)
+  for (let i = 0; i < 365; i++) {
+    const k = dateKey(d);
+    const w = state.dailyWords[k] || 0;
+    if (i === 0 && w > 0) { streak++; }
+    else if (i > 0 && w >= goal * 0.5) { streak++; }
+    else if (i > 0) break;
+    d = new Date(d.getTime() - day);
+  }
+  return streak;
+}
+
+// ==================== SESSION TIMER ====================
+setInterval(() => {
+  const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  document.getElementById('sessionTime').textContent = m + ':' + String(s).padStart(2, '0');
+}, 1000);
+
+// ==================== MARKDOWN PREVIEW ====================
+function updatePreview() {
+  if (!previewVisible) return;
+  const text = document.getElementById('editor').value;
+  document.getElementById('previewPane').innerHTML = renderMarkdown(text);
+}
+
+function renderMarkdown(md) {
+  let html = md;
+  // Code blocks
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => `<pre><code>${esc(code.trim())}</code></pre>`);
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Headings
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  // Bold + italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Strikethrough
+  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  // Links + images
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+  // Blockquotes
+  html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+  // HR
+  html = html.replace(/^---+$/gm, '<hr>');
+  // Tables
+  html = html.replace(/^(\|.+\|)\n(\|[-| :]+\|)\n((?:\|.+\|\n?)*)/gm, (_, header, sep, body) => {
+    const ths = header.split('|').filter(Boolean).map(h=>`<th>${h.trim()}</th>`).join('');
+    const rows = body.trim().split('\n').map(r => {
+      const tds = r.split('|').filter(Boolean).map(c=>`<td>${c.trim()}</td>`).join('');
+      return `<tr>${tds}</tr>`;
+    }).join('');
+    return `<table><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table>`;
+  });
+  // Unordered lists
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`);
+  // Ordered lists
+  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  // Paragraphs
+  html = html.split('\n\n').map(p => {
+    p = p.trim();
+    if (!p) return '';
+    if (p.startsWith('<h') || p.startsWith('<pre') || p.startsWith('<blockquote') || p.startsWith('<ul') || p.startsWith('<ol') || p.startsWith('<table') || p.startsWith('<hr') || p.startsWith('<img')) return p;
+    return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+  }).join('\n');
+  return html;
+}
+
+// ==================== VIEWS ====================
+function setView(v) {
+  currentView = v;
+  document.getElementById('editorContainer').style.display = v === 'editor' ? 'flex' : 'none';
+  document.getElementById('dashboard').classList.toggle('visible', v === 'dashboard');
+  document.getElementById('btnEditor').classList.toggle('active', v === 'editor');
+  document.getElementById('btnDash').classList.toggle('active', v === 'dashboard');
+  if (v === 'dashboard') renderDashboard();
+}
+
+function togglePreview() {
+  previewVisible = !previewVisible;
+  document.getElementById('previewPane').classList.toggle('visible', previewVisible);
+  document.getElementById('btnPreview').classList.toggle('active', previewVisible);
+  if (previewVisible) updatePreview();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('hidden');
+}
+
+function toggleFocus() {
+  focusMode = !focusMode;
+  document.getElementById('app').classList.toggle('focus-mode', focusMode);
+  document.getElementById('btnFocus').classList.toggle('active', focusMode);
+  toast(focusMode ? 'Focus mode on' : 'Focus mode off');
+}
+
+function toggleTypewriter() {
+  typewriterMode = !typewriterMode;
+  document.getElementById('app').classList.toggle('typewriter-mode', typewriterMode);
+  document.getElementById('btnTypewriter').classList.toggle('active', typewriterMode);
+  toast(typewriterMode ? 'Typewriter mode on' : 'Typewriter mode off');
+}
+
+function toggleZen() {
+  zenMode = !zenMode;
+  document.getElementById('app').classList.toggle('zen-mode', zenMode);
+  document.getElementById('btnZen').classList.toggle('active', zenMode);
+  if (zenMode) { setView('editor'); previewVisible = false; document.getElementById('previewPane').classList.remove('visible'); document.getElementById('btnPreview').classList.remove('active'); }
+}
+
+// ==================== THEMES ====================
+function setTheme(t) {
+  document.body.setAttribute('data-theme', t === 'default' ? '' : t);
+  state.theme = t;
+  save();
+}
+
+// ==================== AMBIENT SOUNDS ====================
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function toggleAmbient() {
+  document.getElementById('ambientPanel').classList.toggle('visible');
+}
+
+function toggleSound(name) {
+  const btn = document.querySelector(`[data-sound="${name}"]`);
+  if (activeSounds[name]) {
+    activeSounds[name].stop();
+    delete activeSounds[name];
+    btn.classList.remove('playing');
+    return;
+  }
+  const ctx = getAudioCtx();
+  // Generate ambient noise with oscillators + filters
+  const configs = {
+    rain: { type: 'brown', freq: 400, Q: 0.7, gain: 0.15 },
+    cafe: { type: 'pink', freq: 1200, Q: 0.5, gain: 0.08 },
+    fire: { type: 'brown', freq: 200, Q: 1.5, gain: 0.12 },
+    waves: { type: 'brown', freq: 150, Q: 0.3, gain: 0.18 },
+    wind: { type: 'pink', freq: 600, Q: 0.4, gain: 0.1 },
+    birds: { type: 'white', freq: 3000, Q: 2, gain: 0.04 }
+  };
+  const c = configs[name];
+  const bufferSize = 2 * ctx.sampleRate;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  // Generate colored noise
+  if (c.type === 'brown') {
+    let last = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      data[i] = (last + (0.02 * white)) / 1.02;
+      last = data[i];
+      data[i] *= 3.5;
+    }
+  } else if (c.type === 'pink') {
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99886*b0 + white*0.0555179;
+      b1 = 0.99332*b1 + white*0.0750759;
+      b2 = 0.96900*b2 + white*0.1538520;
+      b3 = 0.86650*b3 + white*0.3104856;
+      b4 = 0.55000*b4 + white*0.5329522;
+      b5 = -0.7616*b5 - white*0.0168980;
+      data[i] = b0+b1+b2+b3+b4+b5+b6+white*0.5362;
+      data[i] *= 0.11;
+      b6 = white * 0.115926;
+    }
+  } else {
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  }
+
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = c.freq;
+  filter.Q.value = c.Q;
+  const gain = ctx.createGain();
+  gain.gain.value = c.gain;
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  source.start();
+  activeSounds[name] = { stop: () => { source.stop(); gain.disconnect(); } };
+  btn.classList.add('playing');
+}
+
+// ==================== DASHBOARD ====================
+function renderDashboard() {
+  const d = document.getElementById('dashboard');
+  const totalDocs = state.docs.length;
+  const totalWords = state.docs.reduce((s, d) => s + countWords(d.content), 0);
+  const today = dateKey(new Date());
+  const todayWords = state.dailyWords[today] || 0;
+  const streak = calcStreak();
+  const avgWords = Object.keys(state.dailyWords).length ? Math.round(Object.values(state.dailyWords).reduce((a,b)=>a+b,0) / Object.keys(state.dailyWords).length) : 0;
+  const tags = {};
+  state.docs.forEach(doc => (doc.tags||[]).forEach(t => tags[t] = (tags[t]||0) + 1));
+  const topTags = Object.entries(tags).sort((a,b)=>b[1]-a[1]).slice(0, 8);
+
+  // 7-day chart data
+  const days7 = [];
+  for (let i = 6; i >= 0; i--) {
+    const dt = new Date(Date.now() - i * 86400000);
+    const k = dateKey(dt);
+    days7.push({ label: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()], words: state.dailyWords[k] || 0 });
+  }
+  const max7 = Math.max(...days7.map(d=>d.words), 1);
+
+  // 90-day heatmap
+  const heatCells = [];
+  for (let i = 89; i >= 0; i--) {
+    const dt = new Date(Date.now() - i * 86400000);
+    const k = dateKey(dt);
+    const w = state.dailyWords[k] || 0;
+    const goal = state.dailyGoal || 500;
+    let lvl = '';
+    if (w > 0) lvl = w >= goal ? 'l4' : w >= goal*0.66 ? 'l3' : w >= goal*0.33 ? 'l2' : 'l1';
+    heatCells.push(`<div class="heatmap-cell ${lvl}" title="${k}: ${w} words"></div>`);
+  }
+
+  // Folder breakdown
+  const folderStats = state.folders.map(f => {
+    const docs = state.docs.filter(d => d.folder === f.id);
+    const words = docs.reduce((s,d) => s + countWords(d.content), 0);
+    return { name: f.emoji + ' ' + f.name, docs: docs.length, words };
+  }).filter(f => f.docs > 0);
+  const maxFolderWords = Math.max(...folderStats.map(f=>f.words), 1);
+
+  d.innerHTML = `
+    <h2>📊 Writing Dashboard</h2>
+    <div class="dash-grid">
+      <div class="dash-card"><div class="label">Total Documents</div><div class="value">${totalDocs}</div></div>
+      <div class="dash-card"><div class="label">Total Words</div><div class="value">${totalWords.toLocaleString()}</div></div>
+      <div class="dash-card"><div class="label">Today</div><div class="value">${todayWords}</div><div class="sub">${state.dailyGoal ? Math.round(todayWords/state.dailyGoal*100)+'% of goal' : ''}</div></div>
+      <div class="dash-card"><div class="label">Writing Streak</div><div class="value" style="color:var(--accent)">🔥 ${streak}</div><div class="sub">days</div></div>
+      <div class="dash-card"><div class="label">Avg Words/Day</div><div class="value">${avgWords}</div></div>
+      <div class="dash-card"><div class="label">Tags Used</div><div class="value">${Object.keys(tags).length}</div></div>
+    </div>
+
+    <div class="dash-chart">
+      <h3>📈 Last 7 Days</h3>
+      ${days7.map(d => `<div class="bar-row">
+        <span class="bar-label">${d.label}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(d.words/max7*100)}%">${d.words}</div></div>
+      </div>`).join('')}
+    </div>
+
+    <div class="dash-chart">
+      <h3>🔥 90-Day Activity</h3>
+      <div class="heatmap">${heatCells.join('')}</div>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center;font-size:11px;color:var(--text2)">
+        <span>Less</span>
+        <div class="heatmap-cell" style="display:inline-block"></div>
+        <div class="heatmap-cell l1" style="display:inline-block"></div>
+        <div class="heatmap-cell l2" style="display:inline-block"></div>
+        <div class="heatmap-cell l3" style="display:inline-block"></div>
+        <div class="heatmap-cell l4" style="display:inline-block"></div>
+        <span>More</span>
+      </div>
+    </div>
+
+    <div class="dash-chart">
+      <h3>📁 Words by Folder</h3>
+      ${folderStats.map(f => `<div class="bar-row">
+        <span class="bar-label">${f.name}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(f.words/maxFolderWords*100)}%">${f.words}</div></div>
+      </div>`).join('')}
+    </div>
+
+    ${topTags.length ? `<div class="dash-chart">
+      <h3>🏷 Top Tags</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${topTags.map(([t,c]) => `<span style="background:var(--surface2);padding:4px 10px;border-radius:12px;font-size:12px;color:var(--text)">#${t} <span style="color:var(--text2)">(${c})</span></span>`).join('')}
+      </div>
+    </div>` : ''}
+  `;
+}
+
+// ==================== EXPORT / IMPORT ====================
+function showExport() { document.getElementById('exportModal').classList.add('active'); }
+
+function exportAs(format) {
+  const doc = state.docs.find(d=>d.id===activeDocId);
+  if (format === 'json') {
+    download('draft-studio-backup.json', JSON.stringify(state, null, 2), 'application/json');
+    toast('JSON backup downloaded');
+    closeModal('exportModal');
+    return;
+  }
+  if (!doc) { toast('No document selected'); return; }
+  const content = doc.content || '';
+  const title = doc.title || 'Untitled';
+  if (format === 'md') {
+    download(title.replace(/\s+/g,'-').toLowerCase()+'.md', content, 'text/markdown');
+  } else if (format === 'txt') {
+    download(title.replace(/\s+/g,'-').toLowerCase()+'.txt', content.replace(/[#*_~`>|]/g,''), 'text/plain');
+  } else if (format === 'html') {
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(title)}</title><style>body{max-width:700px;margin:40px auto;font-family:Georgia,serif;line-height:1.8;color:#333;padding:0 20px}h1,h2,h3{color:#1a1a2e}code{background:#f4f4f4;padding:2px 6px;border-radius:4px}pre{background:#f4f4f4;padding:16px;border-radius:8px;overflow-x:auto}blockquote{border-left:3px solid #ccc;padding-left:16px;color:#666;font-style:italic}</style></head><body>${renderMarkdown(content)}</body></html>`;
+    download(title.replace(/\s+/g,'-').toLowerCase()+'.html', html, 'text/html');
+  }
+  toast('Exported as ' + format.toUpperCase());
+  closeModal('exportModal');
+}
+
+function importJSON() {
+  document.getElementById('fileImport').click();
+}
+
+function handleImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.docs) {
+        data.docs.forEach(d => {
+          if (!state.docs.find(e=>e.id===d.id)) state.docs.push(d);
+        });
+      }
+      if (data.folders) {
+        data.folders.forEach(f => {
+          if (!state.folders.find(e=>e.id===f.id)) state.folders.push(f);
+        });
+      }
+      if (data.dailyWords) Object.assign(state.dailyWords, data.dailyWords);
+      save();
+      renderDocList();
+      toast('Imported successfully');
+    } catch(err) { toast('Invalid JSON file'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function download(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ==================== MODALS / TOASTS ====================
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+function showHelp() { document.getElementById('helpOverlay').classList.add('active'); }
+function closeHelp() { document.getElementById('helpOverlay').classList.remove('active'); }
+function showGoalModal() {
+  document.getElementById('goalInput').value = state.dailyGoal || 500;
+  document.getElementById('goalModal').classList.add('active');
+}
+function saveGoal() {
+  state.dailyGoal = parseInt(document.getElementById('goalInput').value) || 500;
+  save();
+  updateStats();
+  closeModal('goalModal');
+  toast('Goal updated to ' + state.dailyGoal + ' words/day');
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ==================== MARKDOWN FORMATTING HELPERS ====================
+function wrapSelection(before, after) {
+  const ed = document.getElementById('editor');
+  const start = ed.selectionStart;
+  const end = ed.selectionEnd;
+  const text = ed.value;
+  const selected = text.substring(start, end);
+  ed.value = text.substring(0, start) + before + selected + (after || before) + text.substring(end);
+  ed.selectionStart = start + before.length;
+  ed.selectionEnd = end + before.length;
+  ed.focus();
+  onEditorInput();
+}
+
+function insertAtCursor(text) {
+  const ed = document.getElementById('editor');
+  const start = ed.selectionStart;
+  ed.value = ed.value.substring(0, start) + text + ed.value.substring(start);
+  ed.selectionStart = ed.selectionEnd = start + text.length;
+  ed.focus();
+  onEditorInput();
+}
+
+// ==================== KEYBOARD SHORTCUTS ====================
+document.addEventListener('keydown', (e) => {
+  const mod = e.metaKey || e.ctrlKey;
+  const inEditor = document.activeElement === document.getElementById('editor');
+  const inInput = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT';
+
+  // Close modals on Esc
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    document.getElementById('helpOverlay').classList.remove('active');
+    document.getElementById('ambientPanel').classList.remove('visible');
+    if (zenMode) toggleZen();
+    return;
+  }
+
+  // ? for help (not in inputs)
+  if (e.key === '?' && !inInput) { e.preventDefault(); showHelp(); return; }
+
+  // / for search (not in editor)
+  if (e.key === '/' && !inEditor && !inInput) {
+    e.preventDefault();
+    document.getElementById('sidebar').classList.remove('hidden');
+    document.getElementById('searchInput').focus();
+    return;
+  }
+
+  if (mod) {
+    if (e.key === 'n' || e.key === 'N') { e.preventDefault(); createDoc(); return; }
+    if (e.key === '\\') { e.preventDefault(); toggleSidebar(); return; }
+    if (e.key === 'p') { e.preventDefault(); togglePreview(); return; }
+    if (e.key === 'd' && !e.shiftKey) { e.preventDefault(); toggleFocus(); return; }
+    if (e.key === 'j') { e.preventDefault(); toggleTypewriter(); return; }
+    if (e.key === 'e') { e.preventDefault(); showExport(); return; }
+    if (e.key === '3') { e.preventDefault(); setView('dashboard'); return; }
+    // Formatting
+    if (inEditor) {
+      if (e.key === 'b') { e.preventDefault(); wrapSelection('**'); return; }
+      if (e.key === 'i') { e.preventDefault(); wrapSelection('*'); return; }
+      if (e.key === 'h') { e.preventDefault(); insertAtCursor('\n## '); return; }
+      if (e.key === 'k') { e.preventDefault(); wrapSelection('[', '](url)'); return; }
+      if (e.key === 'd' && e.shiftKey) { e.preventDefault(); wrapSelection('~~'); return; }
+    }
+  }
+
+  if (e.key === 'F11') { e.preventDefault(); toggleZen(); }
+});
+
+// ==================== EDITOR EVENTS ====================
+const editor = document.getElementById('editor');
+editor.addEventListener('input', onEditorInput);
+editor.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = editor.selectionStart;
+    editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(editor.selectionEnd);
+    editor.selectionStart = editor.selectionEnd = start + 2;
+    onEditorInput();
+  }
+});
+
+let inputDebounce;
+function onEditorInput() {
+  clearTimeout(inputDebounce);
+  inputDebounce = setTimeout(() => {
+    saveCurrentDoc();
+    updateStats();
+    updatePreview();
+    renderDocList();
+  }, 500);
+}
+
+// Search
+document.getElementById('searchInput').addEventListener('input', renderDocList);
+
+// ==================== INIT ====================
+function init() {
+  // Apply theme
+  if (state.theme && state.theme !== 'default') {
+    document.body.setAttribute('data-theme', state.theme);
+    document.getElementById('themeSelect').value = state.theme;
+  }
+  renderDocList();
+  // Open first doc
+  if (state.docs.length) {
+    activeDocId = state.docs.sort((a,b)=>b.updated-a.updated)[0].id;
+    loadActiveDoc();
+  }
+  updateStats();
+
+  // Record daily words on unload
+  window.addEventListener('beforeunload', () => {
+    saveCurrentDoc();
+    const words = countWords(document.getElementById('editor').value);
+    const sessionW = Math.max(0, words - sessionStartWords);
+    if (sessionW > 0) {
+      const today = dateKey(new Date());
+      state.dailyWords[today] = (state.dailyWords[today] || 0) + sessionW;
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    }
+  });
+}
+
+init();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

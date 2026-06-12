@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dialogue Tree — Conversation Flow Builder</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--surface3:#21283b;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#388bfd;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#bc8cff;--teal:#39d2c0;--pink:#f778ba;--yellow:#e3b341;--node-start:#238636;--node-msg:#1f6feb;--node-choice:#8b5cf6;--node-cond:#d97706;--node-action:#0d9488;--node-end:#da3633;--radius:8px;--shadow:0 4px 12px rgba(0,0,0,.4)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:var(--text)}
+input,textarea,select{font-family:inherit;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical}
+::placeholder{color:var(--text2)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Layout */
+.app{display:flex;flex:1;overflow:hidden}
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:12px;border-bottom:1px solid var(--border)}
+.sidebar-header h2{font-size:14px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.sidebar-search{width:100%;padding:6px 10px;font-size:12px}
+.sidebar-list{flex:1;overflow-y:auto;padding:6px}
+.sidebar-item{padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.sidebar-item:hover{background:var(--surface2)}
+.sidebar-item.active{background:var(--accent);color:#fff}
+.sidebar-item .count{font-size:11px;color:var(--text2);background:var(--surface3);padding:1px 6px;border-radius:10px}
+.sidebar-item.active .count{background:rgba(255,255,255,.2);color:#fff}
+.sidebar-actions{padding:8px 12px;border-top:1px solid var(--border);display:flex;gap:6px}
+.sidebar-actions button{flex:1;padding:6px;border-radius:6px;font-size:12px;font-weight:500}
+.btn-primary{background:var(--accent);color:#fff!important}
+.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{background:var(--surface2);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--surface3)}
+.btn-danger{background:var(--red);color:#fff!important}
+.btn-danger:hover{opacity:.85}
+.btn-sm{padding:4px 8px;font-size:11px;border-radius:4px}
+
+/* Main area */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.toolbar{display:flex;align-items:center;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);gap:8px;flex-shrink:0;flex-wrap:wrap}
+.toolbar .sep{width:1px;height:20px;background:var(--border)}
+.toolbar button{padding:4px 10px;border-radius:6px;font-size:12px;display:flex;align-items:center;gap:4px}
+.toolbar button:hover{background:var(--surface2)}
+.toolbar button.active{background:var(--accent);color:#fff}
+.toolbar .info{font-size:11px;color:var(--text2);margin-left:auto}
+
+/* Canvas */
+.canvas-wrap{flex:1;position:relative;overflow:hidden;background:var(--bg)}
+.canvas-wrap svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.canvas-wrap svg path{pointer-events:stroke;cursor:pointer}
+.canvas-wrap svg path:hover{stroke-width:3}
+.canvas-inner{position:absolute;top:0;left:0;transform-origin:0 0}
+
+/* Grid */
+.grid-bg{position:absolute;top:0;left:0;width:100%;height:100%;background-image:radial-gradient(circle,var(--border) 1px,transparent 1px);background-size:20px 20px;opacity:.3;pointer-events:none}
+
+/* Nodes */
+.node{position:absolute;min-width:180px;max-width:280px;background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);cursor:grab;z-index:2;user-select:none}
+.node.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent),var(--shadow)}
+.node.dragging{opacity:.8;cursor:grabbing;z-index:100}
+.node-header{padding:6px 10px;border-radius:6px 6px 0 0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#fff;display:flex;align-items:center;justify-content:space-between}
+.node-type-start .node-header{background:var(--node-start)}
+.node-type-message .node-header{background:var(--node-msg)}
+.node-type-choice .node-header{background:var(--node-choice)}
+.node-type-condition .node-header{background:var(--node-cond)}
+.node-type-action .node-header{background:var(--node-action)}
+.node-type-end .node-header{background:var(--node-end)}
+.node-body{padding:8px 10px;font-size:12px}
+.node-body .speaker{font-size:10px;color:var(--text2);margin-bottom:2px}
+.node-body .text{line-height:1.4;max-height:60px;overflow:hidden}
+.node-body .choices{margin-top:4px}
+.node-body .choice-item{padding:2px 6px;margin:2px 0;background:var(--surface2);border-radius:4px;font-size:11px;display:flex;align-items:center;gap:4px}
+.node-body .choice-item .dot{width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0}
+.node-body .var-name{color:var(--orange);font-family:monospace;font-size:11px}
+.node-body .action-text{color:var(--teal);font-size:11px}
+.node-ports{display:flex;justify-content:center;padding:4px}
+.port{width:12px;height:12px;border-radius:50%;background:var(--border);border:2px solid var(--surface);cursor:crosshair;position:relative;z-index:5;transition:all .15s}
+.port:hover,.port.connecting{background:var(--accent);transform:scale(1.3)}
+.port-out{margin:0 3px}
+.port-in{position:absolute;top:-6px;left:50%;transform:translateX(-50%);z-index:5}
+
+/* Connection labels */
+.conn-label{position:absolute;z-index:3;font-size:10px;background:var(--surface2);color:var(--text2);padding:1px 6px;border-radius:8px;pointer-events:all;cursor:pointer;white-space:nowrap}
+.conn-label:hover{color:var(--text);border:1px solid var(--border)}
+
+/* Views tabs */
+.view-tabs{display:flex;gap:2px}
+.view-tab{padding:4px 10px;border-radius:6px;font-size:12px;color:var(--text2)}
+.view-tab:hover{color:var(--text);background:var(--surface2)}
+.view-tab.active{color:#fff;background:var(--accent)}
+
+/* Panels */
+.panel{display:none;flex:1;overflow-y:auto;padding:20px}
+.panel.active{display:block}
+
+/* Properties panel */
+.props-panel{width:300px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.props-panel.hidden{display:none}
+.props-header{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.props-header h3{font-size:13px;font-weight:600}
+.props-body{padding:12px;overflow-y:auto;flex:1}
+.props-field{margin-bottom:12px}
+.props-field label{display:block;font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:500}
+.props-field input,.props-field textarea,.props-field select{width:100%}
+.props-field textarea{min-height:60px}
+
+/* Character list */
+.char-item{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px}
+.char-avatar{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.char-name{font-size:12px;flex:1}
+.char-actions{display:flex;gap:4px}
+
+/* Simulate overlay */
+.sim-overlay{position:absolute;inset:0;background:rgba(0,0,0,.85);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px}
+.sim-overlay.active{display:flex}
+.sim-card{background:var(--surface);border-radius:12px;padding:24px;max-width:500px;width:100%;box-shadow:var(--shadow)}
+.sim-speaker{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.sim-speaker .avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px}
+.sim-speaker .name{font-weight:600;font-size:14px}
+.sim-text{font-size:15px;line-height:1.6;margin-bottom:16px;white-space:pre-wrap}
+.sim-choices{display:flex;flex-direction:column;gap:8px}
+.sim-choice-btn{padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:14px;text-align:left;transition:all .15s}
+.sim-choice-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sim-controls{margin-top:16px;display:flex;gap:8px;justify-content:center}
+.sim-history{max-width:500px;width:100%;margin-bottom:16px;max-height:200px;overflow-y:auto}
+.sim-history-item{padding:6px 10px;margin-bottom:4px;border-radius:6px;font-size:12px;background:var(--surface2)}
+.sim-history-item .sh-speaker{font-weight:600;color:var(--accent)}
+.sim-history-item .sh-choice{color:var(--purple);font-style:italic}
+.sim-end-msg{text-align:center;font-size:16px;color:var(--green);margin-bottom:16px}
+
+/* Dashboard */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-card .label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.stat-card .value{font-size:28px;font-weight:700;margin-top:4px}
+.stat-card .sub{font-size:11px;color:var(--text2);margin-top:2px}
+.section-title{font-size:14px;font-weight:600;margin:16px 0 8px;display:flex;align-items:center;gap:6px}
+.bar-chart{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.bar-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.bar-label{width:100px;text-align:right;color:var(--text2);flex-shrink:0}
+.bar-track{flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:10px;font-weight:600;color:#fff;min-width:fit-content;transition:width .3s}
+.bar-val{width:40px;font-size:11px;color:var(--text2)}
+
+/* Template cards */
+.template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.template-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all .15s}
+.template-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.template-card h3{font-size:14px;margin-bottom:4px}
+.template-card p{font-size:12px;color:var(--text2);line-height:1.4}
+.template-card .meta{margin-top:8px;font-size:11px;color:var(--text2)}
+
+/* Characters view */
+.chars-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.char-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.char-card .big-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 8px}
+.char-card .char-card-name{font-size:14px;font-weight:600}
+.char-card .char-card-role{font-size:12px;color:var(--text2);margin-top:2px}
+.char-card .char-card-actions{margin-top:8px;display:flex;gap:6px;justify-content:center}
+
+/* Modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:none;align-items:center;justify-content:center}
+.modal-backdrop.active{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;width:90%;max-width:480px;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal h2{font-size:16px;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.modal-actions button{padding:6px 16px;border-radius:6px;font-size:13px;font-weight:500}
+
+/* Export view */
+.export-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-family:monospace;font-size:12px;white-space:pre-wrap;max-height:400px;overflow:auto;margin-bottom:12px}
+
+/* Help */
+.help-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.help-item{display:flex;gap:8px;font-size:12px;padding:4px 0}
+.help-key{background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:4px;font-family:monospace;font-size:11px;white-space:nowrap;min-width:60px;text-align:center}
+
+/* Zoom controls */
+.zoom-controls{position:absolute;bottom:12px;right:12px;z-index:10;display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px}
+.zoom-controls button{padding:4px 8px;border-radius:4px;font-size:12px}
+.zoom-controls button:hover{background:var(--surface2)}
+.zoom-controls .zoom-level{font-size:11px;padding:4px 6px;color:var(--text2);min-width:40px;text-align:center}
+
+/* Node palette (drag from) */
+.palette{position:absolute;top:8px;left:8px;z-index:10;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px;display:flex;flex-direction:column;gap:4px;box-shadow:var(--shadow)}
+.palette.hidden{display:none}
+.palette-item{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s}
+.palette-item:hover{transform:translateX(4px)}
+.palette-item .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* Connection drawing temp line */
+.temp-line{stroke:var(--accent);stroke-width:2;stroke-dasharray:6,4;fill:none;pointer-events:none}
+
+/* Minimap removed for simplicity */
+
+/* Responsive */
+@media(max-width:900px){.sidebar{width:200px}.props-panel{width:240px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>🌳 Dialogue Trees</h2>
+      <input class="sidebar-search" placeholder="Search trees... (/)" id="treeSearch">
+    </div>
+    <div class="sidebar-list" id="treeList"></div>
+    <div class="sidebar-actions">
+      <button class="btn-primary" onclick="newTree()">+ New Tree</button>
+      <button class="btn-secondary" onclick="showTemplates()">📋</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="toolbar">
+      <div class="view-tabs">
+        <button class="view-tab active" data-view="canvas" onclick="switchView('canvas')">🎨 Canvas</button>
+        <button class="view-tab" data-view="characters" onclick="switchView('characters')">👤 Characters</button>
+        <button class="view-tab" data-view="dashboard" onclick="switchView('dashboard')">📊 Dashboard</button>
+        <button class="view-tab" data-view="export" onclick="switchView('export')">📤 Export</button>
+      </div>
+      <div class="sep"></div>
+      <button onclick="togglePalette()" id="paletteBtn" title="Node Palette (A)">🧩 Palette</button>
+      <button onclick="startSimulation()" title="Simulate (S)">▶️ Simulate</button>
+      <button onclick="autoLayout()" title="Auto Layout (L)">📐 Layout</button>
+      <button onclick="fitView()" title="Fit View (F)">🔲 Fit</button>
+      <div class="sep"></div>
+      <button onclick="undo()" title="Undo (⌘Z)">↩️</button>
+      <button onclick="redo()" title="Redo (⌘⇧Z)">↪️</button>
+      <div class="sep"></div>
+      <button onclick="showHelp()" title="Help (?)">❓</button>
+      <span class="info" id="statusInfo">No tree selected</span>
+    </div>
+
+    <!-- Canvas View -->
+    <div class="canvas-wrap" id="canvasView" style="display:flex;flex:1">
+      <div class="grid-bg" id="gridBg"></div>
+      <div class="canvas-inner" id="canvasInner"></div>
+      <svg id="connSvg"></svg>
+
+      <!-- Node Palette -->
+      <div class="palette" id="palette">
+        <div class="palette-item" onclick="addNode('start')"><div class="dot" style="background:var(--node-start)"></div>Start</div>
+        <div class="palette-item" onclick="addNode('message')"><div class="dot" style="background:var(--node-msg)"></div>Message</div>
+        <div class="palette-item" onclick="addNode('choice')"><div class="dot" style="background:var(--node-choice)"></div>Choice</div>
+        <div class="palette-item" onclick="addNode('condition')"><div class="dot" style="background:var(--node-cond)"></div>Condition</div>
+        <div class="palette-item" onclick="addNode('action')"><div class="dot" style="background:var(--node-action)"></div>Action</div>
+        <div class="palette-item" onclick="addNode('end')"><div class="dot" style="background:var(--node-end)"></div>End</div>
+      </div>
+
+      <!-- Zoom -->
+      <div class="zoom-controls">
+        <button onclick="zoomIn()">+</button>
+        <span class="zoom-level" id="zoomLevel">100%</span>
+        <button onclick="zoomOut()">−</button>
+        <button onclick="fitView()">⊡</button>
+      </div>
+    </div>
+
+    <!-- Characters View -->
+    <div class="panel" id="charsView">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2>👤 Characters / Speakers</h2>
+        <button class="btn-primary btn-sm" onclick="addCharacter()">+ Add Character</button>
+      </div>
+      <div class="chars-grid" id="charsGrid"></div>
+    </div>
+
+    <!-- Dashboard View -->
+    <div class="panel" id="dashView"></div>
+
+    <!-- Export View -->
+    <div class="panel" id="exportView"></div>
+  </div>
+
+  <!-- Properties Panel -->
+  <div class="props-panel hidden" id="propsPanel">
+    <div class="props-header">
+      <h3 id="propsTitle">Properties</h3>
+      <button onclick="closeProps()" style="font-size:16px">✕</button>
+    </div>
+    <div class="props-body" id="propsBody"></div>
+  </div>
+</div>
+
+<!-- Simulation Overlay -->
+<div class="sim-overlay" id="simOverlay">
+  <div class="sim-history" id="simHistory"></div>
+  <div class="sim-card" id="simCard"></div>
+  <div class="sim-controls">
+    <button class="btn-secondary" onclick="restartSim()" style="padding:8px 16px;border-radius:8px">🔄 Restart</button>
+    <button class="btn-danger" onclick="stopSim()" style="padding:8px 16px;border-radius:8px">✕ Exit</button>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="event.target===this&&closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+// ─── State ───
+let trees = [], activeTreeId = null, selectedNodeId = null, selectedConnId = null;
+let zoom = 1, panX = 0, panY = 0;
+let undoStack = [], redoStack = [];
+let connecting = { active: false, fromNodeId: null, fromPortIdx: -1 };
+let dragging = { active: false, nodeId: null, startX: 0, startY: 0, nodeStartX: 0, nodeStartY: 0 };
+let panning = { active: false, startX: 0, startY: 0, panStartX: 0, panStartY: 0 };
+let tempLine = null;
+
+const COLORS = ['#58a6ff','#3fb950','#f85149','#d29922','#bc8cff','#39d2c0','#f778ba','#e3b341','#ff7b72','#79c0ff','#a5d6ff','#56d364'];
+const EMOJIS = ['🧑','👩','👨','🤖','👸','🦸','🧙','👽','🐱','🦊','🐻','🎭','💼','🎯','📞','🏢','👑','🦹','🧝','🐶'];
+
+function uid(){ return 'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+function getTree(){ return trees.find(t=>t.id===activeTreeId); }
+
+function save(){
+  localStorage.setItem('dialogue-tree-data', JSON.stringify({trees, activeTreeId}));
+}
+
+function load(){
+  try{
+    const d=JSON.parse(localStorage.getItem('dialogue-tree-data'));
+    if(d&&d.trees){trees=d.trees;activeTreeId=d.activeTreeId||null;}
+  }catch(e){}
+  if(!trees.length) seedData();
+}
+
+// ─── Tree CRUD ───
+function newTree(name){
+  const t={id:uid(),name:name||'Untitled Tree',nodes:[],connections:[],characters:[],variables:[],created:Date.now()};
+  trees.push(t);
+  activeTreeId=t.id;
+  save();renderSidebar();renderCanvas();
+}
+
+function deleteTree(id){
+  trees=trees.filter(t=>t.id!==id);
+  if(activeTreeId===id) activeTreeId=trees[0]?.id||null;
+  save();renderSidebar();renderCanvas();
+}
+
+function selectTree(id){
+  activeTreeId=id;selectedNodeId=null;selectedConnId=null;
+  closeProps();save();renderSidebar();renderCanvas();
+}
+
+// ─── Node CRUD ───
+function addNode(type, x, y){
+  const tree=getTree(); if(!tree) return;
+  pushUndo();
+  const cx = (canvasView.clientWidth/2 - panX)/zoom;
+  const cy = (canvasView.clientHeight/2 - panY)/zoom;
+  const node={
+    id:uid(), type, x: x||cx+Math.random()*40-20, y: y||cy+Math.random()*40-20,
+    text: type==='start'?'Start':type==='end'?'End':type==='message'?'Hello!':type==='choice'?'What would you like?':type==='condition'?'Variable Check':'Do Something',
+    speaker: type==='message'||type==='choice'? (tree.characters[0]?.id||''):'',
+    choices: type==='choice'?[{id:uid(),text:'Option A'},{id:uid(),text:'Option B'}]:[],
+    variable: type==='condition'?'score':'',
+    operator: type==='condition'?'>=':'',
+    value: type==='condition'?'10':'',
+    actionType: type==='action'?'set':'',
+    actionVar: type==='action'?'score':'',
+    actionVal: type==='action'?'0':'',
+    notes:''
+  };
+  tree.nodes.push(node);
+  save();renderCanvas();selectNode(node.id);
+}
+
+function deleteNode(id){
+  const tree=getTree();if(!tree)return;
+  pushUndo();
+  tree.nodes=tree.nodes.filter(n=>n.id!==id);
+  tree.connections=tree.connections.filter(c=>c.from!==id&&c.to!==id);
+  if(selectedNodeId===id){selectedNodeId=null;closeProps();}
+  save();renderCanvas();
+}
+
+function duplicateNode(id){
+  const tree=getTree();if(!tree)return;
+  const src=tree.nodes.find(n=>n.id===id);if(!src)return;
+  pushUndo();
+  const n={...JSON.parse(JSON.stringify(src)),id:uid(),x:src.x+30,y:src.y+30};
+  n.choices=n.choices.map(c=>({...c,id:uid()}));
+  tree.nodes.push(n);
+  save();renderCanvas();selectNode(n.id);
+}
+
+// ─── Connection CRUD ───
+function addConnection(fromId, toId, fromPort, label){
+  const tree=getTree();if(!tree)return;
+  if(fromId===toId)return;
+  // prevent duplicate
+  if(tree.connections.find(c=>c.from===fromId&&c.to===toId&&c.fromPort===fromPort))return;
+  pushUndo();
+  tree.connections.push({id:uid(),from:fromId,to:toId,fromPort:fromPort||0,label:label||''});
+  save();renderCanvas();
+}
+
+function deleteConnection(id){
+  const tree=getTree();if(!tree)return;
+  pushUndo();
+  tree.connections=tree.connections.filter(c=>c.id!==id);
+  if(selectedConnId===id){selectedConnId=null;closeProps();}
+  save();renderCanvas();
+}
+
+// ─── Character CRUD ───
+function addCharacter(){
+  const tree=getTree();if(!tree)return;
+  showCharModal();
+}
+
+function saveCharacter(data){
+  const tree=getTree();if(!tree)return;
+  if(data.id){
+    const c=tree.characters.find(ch=>ch.id===data.id);
+    if(c)Object.assign(c,data);
+  }else{
+    tree.characters.push({...data,id:uid()});
+  }
+  save();renderChars();closeModal();
+}
+
+function deleteCharacter(id){
+  const tree=getTree();if(!tree)return;
+  tree.characters=tree.characters.filter(c=>c.id!==id);
+  tree.nodes.forEach(n=>{if(n.speaker===id)n.speaker='';});
+  save();renderChars();renderCanvas();
+}
+
+// ─── Undo/Redo ───
+function pushUndo(){
+  const tree=getTree();if(!tree)return;
+  undoStack.push(JSON.stringify(tree));
+  if(undoStack.length>50)undoStack.shift();
+  redoStack=[];
+}
+function undo(){
+  if(!undoStack.length)return;
+  const tree=getTree();if(!tree)return;
+  redoStack.push(JSON.stringify(tree));
+  const prev=JSON.parse(undoStack.pop());
+  const idx=trees.findIndex(t=>t.id===tree.id);
+  trees[idx]=prev;
+  selectedNodeId=null;selectedConnId=null;closeProps();
+  save();renderCanvas();
+}
+function redo(){
+  if(!redoStack.length)return;
+  const tree=getTree();if(!tree)return;
+  undoStack.push(JSON.stringify(tree));
+  const next=JSON.parse(redoStack.pop());
+  const idx=trees.findIndex(t=>t.id===tree.id);
+  trees[idx]=next;
+  selectedNodeId=null;selectedConnId=null;closeProps();
+  save();renderCanvas();
+}
+
+// ─── Rendering ───
+function renderSidebar(){
+  const q=document.getElementById('treeSearch').value.toLowerCase();
+  const list=document.getElementById('treeList');
+  const filtered=trees.filter(t=>t.name.toLowerCase().includes(q));
+  list.innerHTML=filtered.map(t=>`
+    <div class="sidebar-item ${t.id===activeTreeId?'active':''}" onclick="selectTree('${t.id}')" ondblclick="renameTree('${t.id}')">
+      <span>🌳 ${esc(t.name)}</span>
+      <span class="count">${t.nodes.length}</span>
+    </div>
+  `).join('');
+}
+
+function renameTree(id){
+  const t=trees.find(x=>x.id===id);if(!t)return;
+  const name=prompt('Rename tree:',t.name);
+  if(name&&name.trim()){t.name=name.trim();save();renderSidebar();}
+}
+
+function renderCanvas(){
+  const tree=getTree();
+  const inner=document.getElementById('canvasInner');
+  const svg=document.getElementById('connSvg');
+  if(!tree){inner.innerHTML='<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--text2);font-size:14px">Select or create a tree to begin</div>';svg.innerHTML='';updateStatus();return;}
+
+  inner.innerHTML='';
+  // Render nodes
+  tree.nodes.forEach(n=>{
+    const el=document.createElement('div');
+    el.className=`node node-type-${n.type} ${n.id===selectedNodeId?'selected':''}`;
+    el.id='node-'+n.id;
+    el.style.left=n.x+'px';
+    el.style.top=n.y+'px';
+    el.dataset.nodeId=n.id;
+
+    const speaker=n.speaker?tree.characters.find(c=>c.id===n.speaker):null;
+    let bodyHtml='';
+    if(n.type==='message'){
+      bodyHtml=`${speaker?`<div class="speaker">${speaker.emoji||'🧑'} ${esc(speaker.name)}</div>`:''}
+        <div class="text">${esc(n.text)}</div>`;
+    }else if(n.type==='choice'){
+      bodyHtml=`${speaker?`<div class="speaker">${speaker.emoji||'🧑'} ${esc(speaker.name)}</div>`:''}
+        <div class="text">${esc(n.text)}</div>
+        <div class="choices">${n.choices.map(c=>`<div class="choice-item"><div class="dot"></div>${esc(c.text)}</div>`).join('')}</div>`;
+    }else if(n.type==='condition'){
+      bodyHtml=`<div class="var-name">${esc(n.variable)} ${esc(n.operator)} ${esc(n.value)}</div><div class="text" style="margin-top:2px;font-size:11px;color:var(--text2)">True → / False →</div>`;
+    }else if(n.type==='action'){
+      bodyHtml=`<div class="action-text">${esc(n.actionType)} ${esc(n.actionVar)} = ${esc(n.actionVal)}</div>`;
+    }else if(n.type==='start'||n.type==='end'){
+      bodyHtml=`<div class="text">${esc(n.text)}</div>`;
+    }
+
+    // Ports
+    let portsHtml='';
+    if(n.type==='choice'){
+      portsHtml=`<div class="node-ports">${n.choices.map((_,i)=>`<div class="port port-out" data-node="${n.id}" data-port="${i}" title="${esc(n.choices[i]?.text||'Output '+(i+1))}"></div>`).join('')}</div>`;
+    }else if(n.type==='condition'){
+      portsHtml=`<div class="node-ports"><div class="port port-out" data-node="${n.id}" data-port="0" title="True" style="background:var(--green)"></div><div class="port port-out" data-node="${n.id}" data-port="1" title="False" style="background:var(--red)"></div></div>`;
+    }else if(n.type!=='end'){
+      portsHtml=`<div class="node-ports"><div class="port port-out" data-node="${n.id}" data-port="0" title="Next"></div></div>`;
+    }
+
+    // Input port
+    const inPort = n.type!=='start'?`<div class="port port-in" data-node="${n.id}" data-port="in"></div>`:'';
+
+    el.innerHTML=`
+      ${inPort}
+      <div class="node-header"><span>${typeLabel(n.type)}</span><span style="font-size:10px;opacity:.7">${n.id.slice(0,6)}</span></div>
+      <div class="node-body">${bodyHtml}</div>
+      ${portsHtml}
+    `;
+    inner.appendChild(el);
+  });
+
+  updateTransform();
+  renderConnections();
+  updateStatus();
+}
+
+function renderConnections(){
+  const tree=getTree();if(!tree)return;
+  const svg=document.getElementById('connSvg');
+  const inner=document.getElementById('canvasInner');
+  // Remove old labels
+  inner.querySelectorAll('.conn-label').forEach(el=>el.remove());
+
+  let paths='';
+  tree.connections.forEach(conn=>{
+    const fromNode=tree.nodes.find(n=>n.id===conn.from);
+    const toNode=tree.nodes.find(n=>n.id===conn.to);
+    if(!fromNode||!toNode)return;
+
+    const fromEl=document.getElementById('node-'+conn.from);
+    const toEl=document.getElementById('node-'+conn.to);
+    if(!fromEl||!toEl)return;
+
+    // Get port positions
+    const ports=fromEl.querySelectorAll('.port-out');
+    const port=ports[conn.fromPort]||ports[0];
+    if(!port)return;
+
+    const fx=fromNode.x+port.offsetLeft+port.parentElement.offsetLeft+6;
+    const fy=fromNode.y+port.offsetTop+port.parentElement.offsetTop+6;
+    const tx=toNode.x+toEl.clientWidth/2;
+    const ty=toNode.y;
+
+    const dy=ty-fy;
+    const cp=Math.max(40,Math.abs(dy)/2);
+
+    const color=conn.id===selectedConnId?'var(--accent)':getConnColor(fromNode,conn.fromPort);
+    paths+=`<path d="M${fx},${fy} C${fx},${fy+cp} ${tx},${ty-cp} ${tx},${ty}" 
+      stroke="${color}" stroke-width="2" fill="none" 
+      data-conn-id="${conn.id}" onclick="selectConn('${conn.id}')"
+      marker-end="url(#arrow-${conn.id===selectedConnId?'sel':'def'})"/>`;
+
+    // Label
+    if(conn.label){
+      const lbl=document.createElement('div');
+      lbl.className='conn-label';
+      lbl.textContent=conn.label;
+      lbl.style.left=((fx+tx)/2-20)+'px';
+      lbl.style.top=((fy+ty)/2-8)+'px';
+      lbl.onclick=()=>selectConn(conn.id);
+      inner.appendChild(lbl);
+    }
+  });
+
+  svg.innerHTML=`<defs>
+    <marker id="arrow-def" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--text2)"/></marker>
+    <marker id="arrow-sel" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+  </defs>${paths}`;
+}
+
+function getConnColor(node, portIdx){
+  if(node.type==='condition') return portIdx===0?'var(--green)':'var(--red)';
+  if(node.type==='choice') return 'var(--purple)';
+  return 'var(--text2)';
+}
+
+function typeLabel(t){
+  return {start:'▶ Start',message:'💬 Message',choice:'🔀 Choice',condition:'❓ Condition',action:'⚡ Action',end:'🏁 End'}[t]||t;
+}
+
+function updateTransform(){
+  const inner=document.getElementById('canvasInner');
+  inner.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`;
+  document.getElementById('zoomLevel').textContent=Math.round(zoom*100)+'%';
+}
+
+function updateStatus(){
+  const tree=getTree();
+  const info=document.getElementById('statusInfo');
+  if(!tree){info.textContent='No tree selected';return;}
+  info.textContent=`${tree.name} · ${tree.nodes.length} nodes · ${tree.connections.length} connections`;
+}
+
+// ─── Canvas Interactions ───
+const canvasView=document.getElementById('canvasView');
+
+canvasView.addEventListener('mousedown',e=>{
+  if(e.target.classList.contains('port')){
+    // Start connecting
+    const nodeId=e.target.dataset.node;
+    const portStr=e.target.dataset.port;
+    if(portStr==='in'){
+      // Can't start from input
+      return;
+    }
+    connecting.active=true;
+    connecting.fromNodeId=nodeId;
+    connecting.fromPortIdx=parseInt(portStr);
+    e.target.classList.add('connecting');
+    // Create temp line
+    const svg=document.getElementById('connSvg');
+    tempLine=document.createElementNS('http://www.w3.org/2000/svg','path');
+    tempLine.classList.add('temp-line');
+    svg.appendChild(tempLine);
+    e.preventDefault();
+    return;
+  }
+
+  const nodeEl=e.target.closest('.node');
+  if(nodeEl&&!e.target.classList.contains('port')){
+    const nodeId=nodeEl.dataset.nodeId;
+    selectNode(nodeId);
+    // Start drag
+    dragging.active=true;
+    dragging.nodeId=nodeId;
+    const tree=getTree();
+    const node=tree.nodes.find(n=>n.id===nodeId);
+    dragging.startX=e.clientX;
+    dragging.startY=e.clientY;
+    dragging.nodeStartX=node.x;
+    dragging.nodeStartY=node.y;
+    nodeEl.classList.add('dragging');
+    e.preventDefault();
+    return;
+  }
+
+  // Click on empty canvas = deselect or start panning
+  if(!nodeEl&&e.target.closest('.canvas-wrap')&&!e.target.closest('.palette')&&!e.target.closest('.zoom-controls')){
+    if(!e.target.closest('path')){
+      selectedNodeId=null;selectedConnId=null;closeProps();renderCanvas();
+    }
+    panning.active=true;
+    panning.startX=e.clientX;
+    panning.startY=e.clientY;
+    panning.panStartX=panX;
+    panning.panStartY=panY;
+    canvasView.style.cursor='grabbing';
+  }
+});
+
+window.addEventListener('mousemove',e=>{
+  if(connecting.active&&tempLine){
+    const tree=getTree();if(!tree)return;
+    const fromNode=tree.nodes.find(n=>n.id===connecting.fromNodeId);
+    const fromEl=document.getElementById('node-'+connecting.fromNodeId);
+    if(!fromEl||!fromNode)return;
+    const ports=fromEl.querySelectorAll('.port-out');
+    const port=ports[connecting.fromPortIdx]||ports[0];
+    if(!port)return;
+    const fx=fromNode.x+port.offsetLeft+port.parentElement.offsetLeft+6;
+    const fy=fromNode.y+port.offsetTop+port.parentElement.offsetTop+6;
+    const rect=canvasView.getBoundingClientRect();
+    const mx=(e.clientX-rect.left-panX)/zoom;
+    const my=(e.clientY-rect.top-panY)/zoom;
+    const cp=Math.max(40,Math.abs(my-fy)/2);
+    tempLine.setAttribute('d',`M${fx},${fy} C${fx},${fy+cp} ${mx},${my-cp} ${mx},${my}`);
+  }
+
+  if(dragging.active){
+    const tree=getTree();if(!tree)return;
+    const node=tree.nodes.find(n=>n.id===dragging.nodeId);if(!node)return;
+    const dx=(e.clientX-dragging.startX)/zoom;
+    const dy=(e.clientY-dragging.startY)/zoom;
+    node.x=Math.round((dragging.nodeStartX+dx)/20)*20;
+    node.y=Math.round((dragging.nodeStartY+dy)/20)*20;
+    const el=document.getElementById('node-'+node.id);
+    if(el){el.style.left=node.x+'px';el.style.top=node.y+'px';}
+    renderConnections();
+  }
+
+  if(panning.active){
+    panX=panning.panStartX+(e.clientX-panning.startX);
+    panY=panning.panStartY+(e.clientY-panning.startY);
+    updateTransform();
+  }
+});
+
+window.addEventListener('mouseup',e=>{
+  if(connecting.active){
+    // Check if we're over an input port
+    const target=document.elementFromPoint(e.clientX,e.clientY);
+    if(target&&target.classList.contains('port-in')){
+      const toNodeId=target.dataset.node;
+      addConnection(connecting.fromNodeId,toNodeId,connecting.fromPortIdx);
+    }
+    connecting.active=false;
+    if(tempLine){tempLine.remove();tempLine=null;}
+    document.querySelectorAll('.port.connecting').forEach(p=>p.classList.remove('connecting'));
+  }
+
+  if(dragging.active){
+    const el=document.getElementById('node-'+dragging.nodeId);
+    if(el)el.classList.remove('dragging');
+    if(dragging.startX!==e.clientX||dragging.startY!==e.clientY){
+      // Moved — save
+      save();
+    }
+    dragging.active=false;
+  }
+
+  if(panning.active){
+    panning.active=false;
+    canvasView.style.cursor='';
+  }
+});
+
+canvasView.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const rect=canvasView.getBoundingClientRect();
+  const mx=e.clientX-rect.left;
+  const my=e.clientY-rect.top;
+  const oldZoom=zoom;
+  zoom*=e.deltaY<0?1.1:0.9;
+  zoom=Math.max(0.15,Math.min(3,zoom));
+  panX=mx-(mx-panX)*(zoom/oldZoom);
+  panY=my-(my-panY)*(zoom/oldZoom);
+  updateTransform();
+},{passive:false});
+
+function selectNode(id){
+  selectedNodeId=id;selectedConnId=null;
+  renderCanvas();showNodeProps(id);
+}
+
+function selectConn(id){
+  selectedConnId=id;selectedNodeId=null;
+  renderCanvas();showConnProps(id);
+}
+
+// ─── Properties ───
+function showNodeProps(id){
+  const tree=getTree();if(!tree)return;
+  const node=tree.nodes.find(n=>n.id===id);if(!node)return;
+  const panel=document.getElementById('propsPanel');
+  const body=document.getElementById('propsBody');
+  const title=document.getElementById('propsTitle');
+  panel.classList.remove('hidden');
+  title.textContent=typeLabel(node.type);
+
+  let html=`<div class="props-field"><label>Text / Label</label>
+    <textarea id="propText" oninput="updateNodeProp('${id}','text',this.value)">${esc(node.text)}</textarea></div>`;
+
+  if(node.type==='message'||node.type==='choice'){
+    const opts=tree.characters.map(c=>`<option value="${c.id}" ${c.id===node.speaker?'selected':''}>${c.emoji} ${esc(c.name)}</option>`).join('');
+    html+=`<div class="props-field"><label>Speaker</label>
+      <select onchange="updateNodeProp('${id}','speaker',this.value)"><option value="">— None —</option>${opts}</select></div>`;
+  }
+
+  if(node.type==='choice'){
+    html+=`<div class="props-field"><label>Choices</label>`;
+    node.choices.forEach((c,i)=>{
+      html+=`<div style="display:flex;gap:4px;margin-bottom:4px">
+        <input value="${esc(c.text)}" oninput="updateChoice('${id}',${i},this.value)" style="flex:1">
+        <button class="btn-sm btn-danger" onclick="removeChoice('${id}',${i})">✕</button></div>`;
+    });
+    html+=`<button class="btn-sm btn-secondary" onclick="addChoice('${id}')" style="margin-top:4px">+ Add Choice</button></div>`;
+  }
+
+  if(node.type==='condition'){
+    html+=`<div class="props-field"><label>Variable</label><input value="${esc(node.variable)}" oninput="updateNodeProp('${id}','variable',this.value)"></div>
+    <div class="props-field"><label>Operator</label>
+      <select onchange="updateNodeProp('${id}','operator',this.value)">
+        ${['==','!=','>','<','>=','<=','contains'].map(o=>`<option ${o===node.operator?'selected':''}>${o}</option>`).join('')}
+      </select></div>
+    <div class="props-field"><label>Value</label><input value="${esc(node.value)}" oninput="updateNodeProp('${id}','value',this.value)"></div>`;
+  }
+
+  if(node.type==='action'){
+    html+=`<div class="props-field"><label>Action Type</label>
+      <select onchange="updateNodeProp('${id}','actionType',this.value)">
+        ${['set','increment','decrement','toggle','append'].map(o=>`<option ${o===node.actionType?'selected':''}>${o}</option>`).join('')}
+      </select></div>
+    <div class="props-field"><label>Variable</label><input value="${esc(node.actionVar)}" oninput="updateNodeProp('${id}','actionVar',this.value)"></div>
+    <div class="props-field"><label>Value</label><input value="${esc(node.actionVal)}" oninput="updateNodeProp('${id}','actionVal',this.value)"></div>`;
+  }
+
+  html+=`<div class="props-field"><label>Notes</label>
+    <textarea oninput="updateNodeProp('${id}','notes',this.value)" placeholder="Internal notes...">${esc(node.notes)}</textarea></div>`;
+
+  // Connections from/to this node
+  const outConns=tree.connections.filter(c=>c.from===id);
+  const inConns=tree.connections.filter(c=>c.to===id);
+  if(outConns.length||inConns.length){
+    html+=`<div class="section-title">Connections</div>`;
+    outConns.forEach(c=>{
+      const to=tree.nodes.find(n=>n.id===c.to);
+      html+=`<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;font-size:11px">
+        <span style="color:var(--green)">→</span> ${to?esc(to.text).slice(0,20):'?'}
+        <button class="btn-sm btn-danger" onclick="deleteConnection('${c.id}')" style="margin-left:auto">✕</button></div>`;
+    });
+    inConns.forEach(c=>{
+      const from=tree.nodes.find(n=>n.id===c.from);
+      html+=`<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;font-size:11px">
+        <span style="color:var(--accent)">←</span> ${from?esc(from.text).slice(0,20):'?'}</div>`;
+    });
+  }
+
+  html+=`<div style="margin-top:16px;display:flex;gap:6px">
+    <button class="btn-sm btn-secondary" onclick="duplicateNode('${id}')">📋 Duplicate</button>
+    <button class="btn-sm btn-danger" onclick="deleteNode('${id}')">🗑 Delete</button></div>`;
+
+  body.innerHTML=html;
+}
+
+function showConnProps(id){
+  const tree=getTree();if(!tree)return;
+  const conn=tree.connections.find(c=>c.id===id);if(!conn)return;
+  const panel=document.getElementById('propsPanel');
+  const body=document.getElementById('propsBody');
+  const title=document.getElementById('propsTitle');
+  panel.classList.remove('hidden');
+  title.textContent='Connection';
+  const from=tree.nodes.find(n=>n.id===conn.from);
+  const to=tree.nodes.find(n=>n.id===conn.to);
+  body.innerHTML=`
+    <div class="props-field"><label>From</label><div style="font-size:12px">${from?esc(from.text):'?'}</div></div>
+    <div class="props-field"><label>To</label><div style="font-size:12px">${to?esc(to.text):'?'}</div></div>
+    <div class="props-field"><label>Label</label><input value="${esc(conn.label)}" oninput="updateConnProp('${id}','label',this.value)"></div>
+    <div style="margin-top:16px"><button class="btn-sm btn-danger" onclick="deleteConnection('${id}')">🗑 Delete Connection</button></div>`;
+}
+
+function closeProps(){
+  document.getElementById('propsPanel').classList.add('hidden');
+}
+
+function updateNodeProp(id,prop,val){
+  const tree=getTree();if(!tree)return;
+  const node=tree.nodes.find(n=>n.id===id);if(!node)return;
+  node[prop]=val;
+  save();renderCanvas();
+  // Re-select to keep props panel in sync (but don't re-render props to avoid losing focus)
+}
+
+function updateConnProp(id,prop,val){
+  const tree=getTree();if(!tree)return;
+  const conn=tree.connections.find(c=>c.id===id);if(!conn)return;
+  conn[prop]=val;save();renderConnections();
+}
+
+function updateChoice(nodeId,idx,val){
+  const tree=getTree();if(!tree)return;
+  const node=tree.nodes.find(n=>n.id===nodeId);if(!node)return;
+  node.choices[idx].text=val;save();renderCanvas();
+}
+
+function addChoice(nodeId){
+  const tree=getTree();if(!tree)return;
+  const node=tree.nodes.find(n=>n.id===nodeId);if(!node)return;
+  pushUndo();
+  node.choices.push({id:uid(),text:'Option '+(node.choices.length+1)});
+  save();renderCanvas();showNodeProps(nodeId);
+}
+
+function removeChoice(nodeId,idx){
+  const tree=getTree();if(!tree)return;
+  const node=tree.nodes.find(n=>n.id===nodeId);if(!node)return;
+  if(node.choices.length<=1)return;
+  pushUndo();
+  // Remove connections from this port
+  tree.connections=tree.connections.filter(c=>!(c.from===nodeId&&c.fromPort===idx));
+  // Shift down port indices
+  tree.connections.forEach(c=>{if(c.from===nodeId&&c.fromPort>idx)c.fromPort--;});
+  node.choices.splice(idx,1);
+  save();renderCanvas();showNodeProps(nodeId);
+}
+
+// ─── Views ───
+function switchView(view){
+  document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
+  document.getElementById('canvasView').style.display=view==='canvas'?'flex':'none';
+  document.getElementById('charsView').classList.toggle('active',view==='characters');
+  document.getElementById('dashView').classList.toggle('active',view==='dashboard');
+  document.getElementById('exportView').classList.toggle('active',view==='export');
+  if(view==='characters')renderChars();
+  if(view==='dashboard')renderDashboard();
+  if(view==='export')renderExport();
+}
+
+// ─── Characters View ───
+function renderChars(){
+  const tree=getTree();
+  const grid=document.getElementById('charsGrid');
+  if(!tree){grid.innerHTML='<p style="color:var(--text2)">Select a tree first</p>';return;}
+  if(!tree.characters.length){
+    grid.innerHTML=`<div style="text-align:center;padding:40px;color:var(--text2)">
+      <p style="font-size:32px;margin-bottom:8px">👤</p>
+      <p>No characters yet. Add speakers for your dialogue.</p></div>`;
+    return;
+  }
+  grid.innerHTML=tree.characters.map(c=>{
+    const nodeCount=tree.nodes.filter(n=>n.speaker===c.id).length;
+    return `<div class="char-card">
+      <div class="big-avatar" style="background:${c.color||'var(--surface2)'}">${c.emoji||'🧑'}</div>
+      <div class="char-card-name">${esc(c.name)}</div>
+      <div class="char-card-role">${esc(c.role||'Speaker')} · ${nodeCount} lines</div>
+      <div class="char-card-actions">
+        <button class="btn-sm btn-secondary" onclick="showCharModal('${c.id}')">✏️ Edit</button>
+        <button class="btn-sm btn-danger" onclick="deleteCharacter('${c.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showCharModal(editId){
+  const tree=getTree();if(!tree)return;
+  const char=editId?tree.characters.find(c=>c.id===editId):null;
+  const mc=document.getElementById('modalContent');
+  mc.innerHTML=`<h2>${char?'Edit':'Add'} Character</h2>
+    <div class="props-field"><label>Name</label><input id="charName" value="${char?esc(char.name):''}" placeholder="Character name"></div>
+    <div class="props-field"><label>Role / Description</label><input id="charRole" value="${char?esc(char.role||''):''}" placeholder="e.g., Customer, Agent, Bot"></div>
+    <div class="props-field"><label>Emoji</label>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${EMOJIS.map(e=>`<span style="font-size:20px;cursor:pointer;padding:2px 4px;border-radius:4px;${char&&char.emoji===e?'background:var(--accent)':''}" onclick="document.getElementById('charEmoji').value='${e}';this.parentElement.querySelectorAll('span').forEach(s=>s.style.background='');this.style.background='var(--accent)'">${e}</span>`).join('')}</div>
+      <input id="charEmoji" value="${char?char.emoji||'🧑':'🧑'}" style="margin-top:4px" placeholder="Or type an emoji"></div>
+    <div class="props-field"><label>Color</label>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${COLORS.map(c=>`<div style="width:24px;height:24px;border-radius:50%;background:${c};cursor:pointer;border:2px solid ${char&&char.color===c?'#fff':'transparent'}" onclick="document.getElementById('charColor').value='${c}';this.parentElement.querySelectorAll('div').forEach(d=>d.style.borderColor='transparent');this.style.borderColor='#fff'"></div>`).join('')}</div>
+      <input id="charColor" value="${char?char.color||COLORS[0]:COLORS[0]}" style="margin-top:4px"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveCharacter({id:'${editId||''}',name:document.getElementById('charName').value,role:document.getElementById('charRole').value,emoji:document.getElementById('charEmoji').value,color:document.getElementById('charColor').value})">Save</button>
+    </div>`;
+  document.getElementById('modalBackdrop').classList.add('active');
+  setTimeout(()=>document.getElementById('charName').focus(),100);
+}
+
+// ─── Dashboard ───
+function renderDashboard(){
+  const dash=document.getElementById('dashView');
+  if(!trees.length){dash.innerHTML='<p style="color:var(--text2)">No trees yet</p>';return;}
+  const tree=getTree();
+  const allNodes=trees.reduce((a,t)=>a+t.nodes.length,0);
+  const allConns=trees.reduce((a,t)=>a+t.connections.length,0);
+  const allChars=trees.reduce((a,t)=>a+t.characters.length,0);
+
+  let html=`<h2 style="margin-bottom:16px">📊 Dashboard</h2>
+    <div class="dash-grid">
+      <div class="stat-card"><div class="label">Trees</div><div class="value">${trees.length}</div></div>
+      <div class="stat-card"><div class="label">Total Nodes</div><div class="value">${allNodes}</div></div>
+      <div class="stat-card"><div class="label">Total Connections</div><div class="value">${allConns}</div></div>
+      <div class="stat-card"><div class="label">Characters</div><div class="value">${allChars}</div></div>
+      ${tree?`<div class="stat-card"><div class="label">Current Tree Nodes</div><div class="value">${tree.nodes.length}</div><div class="sub">${tree.name}</div></div>`:''}
+      ${tree?`<div class="stat-card"><div class="label">Current Tree Depth</div><div class="value">${calcDepth(tree)}</div><div class="sub">longest path</div></div>`:''}
+    </div>`;
+
+  if(tree){
+    // Node type distribution
+    const types={start:0,message:0,choice:0,condition:0,action:0,end:0};
+    tree.nodes.forEach(n=>types[n.type]=(types[n.type]||0)+1);
+    const maxT=Math.max(...Object.values(types),1);
+    const typeColors={start:'var(--node-start)',message:'var(--node-msg)',choice:'var(--node-choice)',condition:'var(--node-cond)',action:'var(--node-action)',end:'var(--node-end)'};
+    html+=`<div class="section-title">Node Types — ${tree.name}</div><div class="bar-chart">`;
+    Object.entries(types).forEach(([t,c])=>{
+      html+=`<div class="bar-row"><div class="bar-label">${typeLabel(t)}</div><div class="bar-track"><div class="bar-fill" style="width:${c/maxT*100}%;background:${typeColors[t]}">${c}</div></div><div class="bar-val">${c}</div></div>`;
+    });
+    html+=`</div>`;
+
+    // Characters usage
+    if(tree.characters.length){
+      const charUse=tree.characters.map(c=>({name:c.emoji+' '+c.name,count:tree.nodes.filter(n=>n.speaker===c.id).length}));
+      const maxC=Math.max(...charUse.map(c=>c.count),1);
+      html+=`<div class="section-title">Character Lines</div><div class="bar-chart">`;
+      charUse.forEach(c=>{
+        html+=`<div class="bar-row"><div class="bar-label">${esc(c.name)}</div><div class="bar-track"><div class="bar-fill" style="width:${c.count/maxC*100}%;background:var(--accent)">${c.count}</div></div><div class="bar-val">${c.count}</div></div>`;
+      });
+      html+=`</div>`;
+    }
+  }
+
+  // All trees overview
+  html+=`<div class="section-title">All Trees</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+      <tr style="color:var(--text2);border-bottom:1px solid var(--border)"><th style="text-align:left;padding:6px">Tree</th><th>Nodes</th><th>Connections</th><th>Characters</th><th>Depth</th></tr>
+      ${trees.map(t=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px">${esc(t.name)}</td><td style="text-align:center">${t.nodes.length}</td><td style="text-align:center">${t.connections.length}</td><td style="text-align:center">${t.characters.length}</td><td style="text-align:center">${calcDepth(t)}</td></tr>`).join('')}
+    </table></div>`;
+
+  dash.innerHTML=html;
+}
+
+function calcDepth(tree){
+  const starts=tree.nodes.filter(n=>n.type==='start');
+  let maxD=0;
+  starts.forEach(s=>{
+    const visited=new Set();
+    function dfs(id,d){
+      if(visited.has(id))return;
+      visited.add(id);
+      maxD=Math.max(maxD,d);
+      tree.connections.filter(c=>c.from===id).forEach(c=>dfs(c.to,d+1));
+    }
+    dfs(s.id,0);
+  });
+  return maxD;
+}
+
+// ─── Export ───
+function renderExport(){
+  const tree=getTree();
+  const el=document.getElementById('exportView');
+  if(!tree){el.innerHTML='<p style="color:var(--text2)">Select a tree to export</p>';return;}
+  
+  const jsonStr=JSON.stringify(tree,null,2);
+  const mermaid=exportMermaid(tree);
+  const md=exportMarkdown(tree);
+
+  el.innerHTML=`<h2 style="margin-bottom:16px">📤 Export — ${esc(tree.name)}</h2>
+    <div class="section-title">JSON</div>
+    <div class="export-box">${esc(jsonStr).slice(0,3000)}${jsonStr.length>3000?'\n...':''}  </div>
+    <div style="display:flex;gap:6px;margin-bottom:20px">
+      <button class="btn-sm btn-primary" onclick="copyText(JSON.stringify(getTree(),null,2))">📋 Copy JSON</button>
+      <button class="btn-sm btn-secondary" onclick="downloadFile('${esc(tree.name)}.json',JSON.stringify(getTree(),null,2),'application/json')">💾 Download</button>
+    </div>
+    <div class="section-title">Mermaid Diagram</div>
+    <div class="export-box">${esc(mermaid)}</div>
+    <button class="btn-sm btn-primary" onclick="copyText(exportMermaid(getTree()))" style="margin-bottom:20px">📋 Copy Mermaid</button>
+    <div class="section-title">Markdown Script</div>
+    <div class="export-box">${esc(md)}</div>
+    <button class="btn-sm btn-primary" onclick="copyText(exportMarkdown(getTree()))" style="margin-bottom:20px">📋 Copy Markdown</button>
+    <div class="section-title">Bulk Operations</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn-sm btn-primary" onclick="exportAll()">📦 Export All Trees</button>
+      <button class="btn-sm btn-secondary" onclick="importAll()">📥 Import JSON</button>
+    </div>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">`;
+}
+
+function exportMermaid(tree){
+  let out='flowchart TD\n';
+  tree.nodes.forEach(n=>{
+    const label=n.text.replace(/"/g,"'").slice(0,40);
+    if(n.type==='start')out+=`  ${n.id}([${label}])\n`;
+    else if(n.type==='end')out+=`  ${n.id}((${label}))\n`;
+    else if(n.type==='condition')out+=`  ${n.id}{${label}}\n`;
+    else if(n.type==='choice')out+=`  ${n.id}[/${label}\\]\n`;
+    else out+=`  ${n.id}["${label}"]\n`;
+  });
+  tree.connections.forEach(c=>{
+    const fromNode=tree.nodes.find(n=>n.id===c.from);
+    let label=c.label||'';
+    if(!label&&fromNode?.type==='choice'&&fromNode.choices[c.fromPort])label=fromNode.choices[c.fromPort].text;
+    if(!label&&fromNode?.type==='condition')label=c.fromPort===0?'True':'False';
+    out+=`  ${c.from} --${label?`"${label.replace(/"/g,"'")}"`:''}-->${c.to}\n`;
+  });
+  return out;
+}
+
+function exportMarkdown(tree){
+  let out=`# ${tree.name}\n\n`;
+  if(tree.characters.length){
+    out+=`## Characters\n`;
+    tree.characters.forEach(c=>{out+=`- ${c.emoji} **${c.name}** — ${c.role||'Speaker'}\n`;});
+    out+='\n';
+  }
+  out+=`## Dialogue Flow\n\n`;
+  const starts=tree.nodes.filter(n=>n.type==='start');
+  const visited=new Set();
+  starts.forEach(s=>{
+    function walk(id,indent){
+      if(visited.has(id))return;
+      visited.add(id);
+      const node=tree.nodes.find(n=>n.id===id);if(!node)return;
+      const pad='  '.repeat(indent);
+      const speaker=node.speaker?tree.characters.find(c=>c.id===node.speaker):null;
+      if(node.type==='start')out+=`${pad}**[START]** ${node.text}\n\n`;
+      else if(node.type==='end')out+=`${pad}**[END]** ${node.text}\n\n`;
+      else if(node.type==='message')out+=`${pad}**${speaker?speaker.name:'???'}:** ${node.text}\n\n`;
+      else if(node.type==='choice'){
+        out+=`${pad}**${speaker?speaker.name:'???'}:** ${node.text}\n`;
+        node.choices.forEach((c,i)=>{
+          out+=`${pad}- *${c.text}*\n`;
+          const conn=tree.connections.find(cn=>cn.from===id&&cn.fromPort===i);
+          if(conn)walk(conn.to,indent+1);
+        });
+        out+='\n';return;
+      }else if(node.type==='condition'){
+        out+=`${pad}**[IF ${node.variable} ${node.operator} ${node.value}]**\n`;
+        const trueConn=tree.connections.find(cn=>cn.from===id&&cn.fromPort===0);
+        const falseConn=tree.connections.find(cn=>cn.from===id&&cn.fromPort===1);
+        if(trueConn){out+=`${pad}  ✅ True:\n`;walk(trueConn.to,indent+2);}
+        if(falseConn){out+=`${pad}  ❌ False:\n`;walk(falseConn.to,indent+2);}
+        return;
+      }else if(node.type==='action'){
+        out+=`${pad}**[ACTION]** ${node.actionType} ${node.actionVar} = ${node.actionVal}\n\n`;
+      }
+      const conns=tree.connections.filter(c=>c.from===id);
+      conns.forEach(c=>walk(c.to,indent));
+    }
+    walk(s.id,0);
+  });
+  return out;
+}
+
+// ─── Simulation ───
+let simState={nodeId:null,vars:{},history:[]};
+
+function startSimulation(){
+  const tree=getTree();if(!tree)return;
+  const start=tree.nodes.find(n=>n.type==='start');
+  if(!start){alert('No Start node found');return;}
+  simState={nodeId:start.id,vars:{},history:[]};
+  document.getElementById('simOverlay').classList.add('active');
+  stepSim();
+}
+
+function stepSim(choiceIdx){
+  const tree=getTree();if(!tree)return;
+  const node=tree.nodes.find(n=>n.id===simState.nodeId);if(!node)return;
+  const overlay=document.getElementById('simOverlay');
+  const card=document.getElementById('simCard');
+  const histEl=document.getElementById('simHistory');
+  const speaker=node.speaker?tree.characters.find(c=>c.id===node.speaker):null;
+
+  if(node.type==='end'){
+    card.innerHTML=`<div class="sim-end-msg">🏁 ${esc(node.text)}</div>`;
+    renderSimHistory();
+    return;
+  }
+
+  if(node.type==='action'){
+    // Execute action silently and move on
+    execAction(node);
+    simState.history.push({type:'action',text:`${node.actionType} ${node.actionVar} = ${node.actionVal}`});
+    const conn=tree.connections.find(c=>c.from===node.id);
+    if(conn){simState.nodeId=conn.to;stepSim();}
+    else{card.innerHTML=`<div class="sim-end-msg">⚠️ Dead end (no connection from action)</div>`;renderSimHistory();}
+    return;
+  }
+
+  if(node.type==='condition'){
+    const result=evalCondition(node);
+    simState.history.push({type:'condition',text:`${node.variable} ${node.operator} ${node.value} → ${result?'True':'False'}`});
+    const conn=tree.connections.find(c=>c.from===node.id&&c.fromPort===(result?0:1));
+    if(conn){simState.nodeId=conn.to;stepSim();}
+    else{card.innerHTML=`<div class="sim-end-msg">⚠️ No ${result?'True':'False'} branch connected</div>`;renderSimHistory();}
+    return;
+  }
+
+  if(node.type==='start'){
+    simState.history.push({type:'system',text:'Conversation started'});
+    const conn=tree.connections.find(c=>c.from===node.id);
+    if(conn){simState.nodeId=conn.to;stepSim();}
+    else{card.innerHTML=`<div class="sim-end-msg">⚠️ Start node has no connection</div>`;renderSimHistory();}
+    return;
+  }
+
+  if(node.type==='message'){
+    simState.history.push({type:'message',speaker:speaker?.name||'???',emoji:speaker?.emoji||'🧑',text:node.text});
+    card.innerHTML=`
+      <div class="sim-speaker"><div class="avatar" style="background:${speaker?.color||'var(--surface2)'}">${speaker?.emoji||'🧑'}</div><div class="name">${esc(speaker?.name||'Unknown')}</div></div>
+      <div class="sim-text">${esc(node.text)}</div>
+      <button class="btn-primary" style="padding:8px 20px;border-radius:8px;width:100%" onclick="advanceSim()">Continue →</button>`;
+    renderSimHistory();
+    return;
+  }
+
+  if(node.type==='choice'){
+    simState.history.push({type:'message',speaker:speaker?.name||'???',emoji:speaker?.emoji||'🧑',text:node.text});
+    card.innerHTML=`
+      <div class="sim-speaker"><div class="avatar" style="background:${speaker?.color||'var(--surface2)'}">${speaker?.emoji||'🧑'}</div><div class="name">${esc(speaker?.name||'Unknown')}</div></div>
+      <div class="sim-text">${esc(node.text)}</div>
+      <div class="sim-choices">${node.choices.map((c,i)=>`<button class="sim-choice-btn" onclick="pickChoice(${i})">${esc(c.text)}</button>`).join('')}</div>`;
+    renderSimHistory();
+  }
+}
+
+function advanceSim(){
+  const tree=getTree();if(!tree)return;
+  const conn=tree.connections.find(c=>c.from===simState.nodeId);
+  if(conn){simState.nodeId=conn.to;stepSim();}
+  else{document.getElementById('simCard').innerHTML=`<div class="sim-end-msg">⚠️ Dead end</div>`;}
+}
+
+function pickChoice(idx){
+  const tree=getTree();if(!tree)return;
+  const node=tree.nodes.find(n=>n.id===simState.nodeId);
+  if(node&&node.choices[idx]){
+    simState.history.push({type:'choice',text:node.choices[idx].text});
+  }
+  const conn=tree.connections.find(c=>c.from===simState.nodeId&&c.fromPort===idx);
+  if(conn){simState.nodeId=conn.to;stepSim();}
+  else{document.getElementById('simCard').innerHTML=`<div class="sim-end-msg">⚠️ This choice leads nowhere</div>`;}
+}
+
+function execAction(node){
+  const v=node.actionVar;
+  switch(node.actionType){
+    case'set':simState.vars[v]=node.actionVal;break;
+    case'increment':simState.vars[v]=(parseFloat(simState.vars[v])||0)+parseFloat(node.actionVal||1);break;
+    case'decrement':simState.vars[v]=(parseFloat(simState.vars[v])||0)-parseFloat(node.actionVal||1);break;
+    case'toggle':simState.vars[v]=!simState.vars[v];break;
+    case'append':simState.vars[v]=(simState.vars[v]||'')+node.actionVal;break;
+  }
+}
+
+function evalCondition(node){
+  const val=simState.vars[node.variable];
+  const cmp=node.value;
+  switch(node.operator){
+    case'==':return String(val)===String(cmp);
+    case'!=':return String(val)!==String(cmp);
+    case'>':return parseFloat(val)>parseFloat(cmp);
+    case'<':return parseFloat(val)<parseFloat(cmp);
+    case'>=':return parseFloat(val)>=parseFloat(cmp);
+    case'<=':return parseFloat(val)<=parseFloat(cmp);
+    case'contains':return String(val||'').includes(cmp);
+  }
+  return false;
+}
+
+function renderSimHistory(){
+  const el=document.getElementById('simHistory');
+  el.innerHTML=simState.history.map(h=>{
+    if(h.type==='message')return`<div class="sim-history-item"><span class="sh-speaker">${h.emoji} ${esc(h.speaker)}:</span> ${esc(h.text)}</div>`;
+    if(h.type==='choice')return`<div class="sim-history-item"><span class="sh-choice">→ ${esc(h.text)}</span></div>`;
+    if(h.type==='condition')return`<div class="sim-history-item" style="color:var(--orange)">❓ ${esc(h.text)}</div>`;
+    if(h.type==='action')return`<div class="sim-history-item" style="color:var(--teal)">⚡ ${esc(h.text)}</div>`;
+    return`<div class="sim-history-item" style="color:var(--text2)">${esc(h.text)}</div>`;
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+
+function restartSim(){startSimulation();}
+function stopSim(){document.getElementById('simOverlay').classList.remove('active');}
+
+// ─── Auto Layout ───
+function autoLayout(){
+  const tree=getTree();if(!tree||!tree.nodes.length)return;
+  pushUndo();
+  const starts=tree.nodes.filter(n=>n.type==='start');
+  if(!starts.length){
+    // Just grid them
+    tree.nodes.forEach((n,i)=>{n.x=100+(i%5)*220;n.y=100+Math.floor(i/5)*160;});
+    save();renderCanvas();return;
+  }
+
+  const layers=[];
+  const visited=new Set();
+  const queue=starts.map(s=>({id:s.id,depth:0}));
+  starts.forEach(s=>visited.add(s.id));
+
+  while(queue.length){
+    const{id,depth}=queue.shift();
+    if(!layers[depth])layers[depth]=[];
+    layers[depth].push(id);
+    tree.connections.filter(c=>c.from===id).forEach(c=>{
+      if(!visited.has(c.to)){visited.add(c.to);queue.push({id:c.to,depth:depth+1});}
+    });
+  }
+
+  // Add orphans
+  tree.nodes.forEach(n=>{
+    if(!visited.has(n.id)){
+      if(!layers[layers.length])layers.push([]);
+      layers[layers.length-1].push(n.id);
+    }
+  });
+
+  const xGap=240, yGap=140;
+  layers.forEach((layer,y)=>{
+    const startX=100-(layer.length-1)*xGap/2+400;
+    layer.forEach((id,x)=>{
+      const node=tree.nodes.find(n=>n.id===id);
+      if(node){node.x=startX+x*xGap;node.y=80+y*yGap;}
+    });
+  });
+
+  save();renderCanvas();fitView();
+}
+
+// ─── Zoom & Fit ───
+function zoomIn(){zoom=Math.min(3,zoom*1.2);updateTransform();}
+function zoomOut(){zoom=Math.max(0.15,zoom/1.2);updateTransform();}
+function fitView(){
+  const tree=getTree();if(!tree||!tree.nodes.length)return;
+  const xs=tree.nodes.map(n=>n.x);
+  const ys=tree.nodes.map(n=>n.y);
+  const minX=Math.min(...xs)-40,maxX=Math.max(...xs)+280;
+  const minY=Math.min(...ys)-40,maxY=Math.max(...ys)+200;
+  const w=maxX-minX, h=maxY-minY;
+  const cw=canvasView.clientWidth, ch=canvasView.clientHeight;
+  zoom=Math.min(cw/w,ch/h,2)*0.9;
+  panX=cw/2-((minX+maxX)/2)*zoom;
+  panY=ch/2-((minY+maxY)/2)*zoom;
+  updateTransform();
+}
+
+function togglePalette(){
+  document.getElementById('palette').classList.toggle('hidden');
+}
+
+// ─── Templates ───
+function showTemplates(){
+  const mc=document.getElementById('modalContent');
+  mc.innerHTML=`<h2>📋 Templates</h2>
+    <div class="template-grid">
+      <div class="template-card" onclick="loadTemplate('support')"><h3>🎧 Customer Support</h3><p>Triage flow with greeting, issue routing, escalation, and resolution paths.</p><div class="meta">8 nodes · 3 characters</div></div>
+      <div class="template-card" onclick="loadTemplate('onboarding')"><h3>🚀 User Onboarding</h3><p>Welcome flow that guides new users through setup, feature highlights, and activation.</p><div class="meta">10 nodes · 2 characters</div></div>
+      <div class="template-card" onclick="loadTemplate('sales')"><h3>💰 Sales Conversation</h3><p>Discovery call script with qualification, demo offer, objection handling, and close.</p><div class="meta">12 nodes · 2 characters</div></div>
+      <div class="template-card" onclick="loadTemplate('chatbot')"><h3>🤖 FAQ Chatbot</h3><p>Automated FAQ bot with topic selection, answers, and human handoff.</p><div class="meta">11 nodes · 2 characters</div></div>
+      <div class="template-card" onclick="loadTemplate('interview')"><h3>🎤 User Interview</h3><p>Structured user research interview with warm-up, deep-dive, and wrap-up.</p><div class="meta">9 nodes · 2 characters</div></div>
+      <div class="template-card" onclick="loadTemplate('nps')"><h3>📊 NPS Survey Flow</h3><p>Net Promoter Score collection with conditional follow-up based on score range.</p><div class="meta">10 nodes · 2 characters</div></div>
+    </div>
+    <div class="modal-actions"><button class="btn-secondary" onclick="closeModal()">Close</button></div>`;
+  document.getElementById('modalBackdrop').classList.add('active');
+}
+
+function loadTemplate(type){
+  closeModal();
+  const t={id:uid(),nodes:[],connections:[],characters:[],variables:[],created:Date.now()};
+  
+  if(type==='support'){
+    t.name='Customer Support Flow';
+    const bot={id:uid(),name:'Support Bot',role:'Automated Agent',emoji:'🤖',color:'var(--accent)'};
+    const agent={id:uid(),name:'Human Agent',role:'Support Rep',emoji:'🧑‍💼',color:'var(--green)'};
+    const cust={id:uid(),name:'Customer',role:'User',emoji:'👤',color:'var(--purple)'};
+    t.characters=[bot,agent,cust];
+    const n=[
+      {id:uid(),type:'start',x:400,y:40,text:'Support Request Received'},
+      {id:uid(),type:'message',x:400,y:180,text:'Hi there! 👋 Welcome to support. How can I help you today?',speaker:bot.id},
+      {id:uid(),type:'choice',x:400,y:340,text:'Please select your issue:',speaker:bot.id,choices:[{id:uid(),text:'Billing Issue'},{id:uid(),text:'Technical Problem'},{id:uid(),text:'Feature Request'},{id:uid(),text:'Talk to Human'}]},
+      {id:uid(),type:'message',x:100,y:520,text:"I can help with billing. Could you describe the issue?",speaker:bot.id},
+      {id:uid(),type:'message',x:340,y:520,text:"Let me troubleshoot that. Have you tried restarting?",speaker:bot.id},
+      {id:uid(),type:'message',x:560,y:520,text:"Thanks for the feedback! I'll log this for our product team.",speaker:bot.id},
+      {id:uid(),type:'message',x:780,y:520,text:"Connecting you to a human agent now...",speaker:bot.id},
+      {id:uid(),type:'message',x:780,y:660,text:"Hi! I'm here to help. Let me look into this for you.",speaker:agent.id},
+      {id:uid(),type:'end',x:400,y:800,text:'Issue Resolved'}
+    ];
+    t.nodes=n.map(x=>({...x,choices:x.choices||[],variable:'',operator:'',value:'',actionType:'',actionVar:'',actionVal:'',notes:''}));
+    t.connections=[
+      {id:uid(),from:n[0].id,to:n[1].id,fromPort:0,label:''},
+      {id:uid(),from:n[1].id,to:n[2].id,fromPort:0,label:''},
+      {id:uid(),from:n[2].id,to:n[3].id,fromPort:0,label:''},
+      {id:uid(),from:n[2].id,to:n[4].id,fromPort:1,label:''},
+      {id:uid(),from:n[2].id,to:n[5].id,fromPort:2,label:''},
+      {id:uid(),from:n[2].id,to:n[6].id,fromPort:3,label:''},
+      {id:uid(),from:n[6].id,to:n[7].id,fromPort:0,label:''},
+      {id:uid(),from:n[3].id,to:n[8].id,fromPort:0,label:''},
+      {id:uid(),from:n[4].id,to:n[8].id,fromPort:0,label:''},
+      {id:uid(),from:n[5].id,to:n[8].id,fromPort:0,label:''},
+      {id:uid(),from:n[7].id,to:n[8].id,fromPort:0,label:''}
+    ];
+  }else if(type==='onboarding'){
+    t.name='User Onboarding Flow';
+    const app={id:uid(),name:'App',role:'Onboarding Bot',emoji:'🚀',color:'var(--accent)'};
+    const user={id:uid(),name:'New User',role:'Just signed up',emoji:'👤',color:'var(--green)'};
+    t.characters=[app,user];
+    const n=[
+      {id:uid(),type:'start',x:400,y:40,text:'User Signs Up'},
+      {id:uid(),type:'message',x:400,y:160,text:"Welcome aboard! 🎉 Let's get you set up in 2 minutes.",speaker:app.id},
+      {id:uid(),type:'choice',x:400,y:300,text:"What's your main goal?",speaker:app.id,choices:[{id:uid(),text:'Personal use'},{id:uid(),text:'Team use'},{id:uid(),text:'Just exploring'}]},
+      {id:uid(),type:'message',x:160,y:460,text:"Great! Let's personalize your workspace.",speaker:app.id},
+      {id:uid(),type:'message',x:400,y:460,text:"Perfect! Let's invite your team members first.",speaker:app.id},
+      {id:uid(),type:'message',x:640,y:460,text:"No pressure! Here's a quick tour of the highlights.",speaker:app.id},
+      {id:uid(),type:'action',x:400,y:600,text:'Set onboarding path',actionType:'set',actionVar:'path',actionVal:'active'},
+      {id:uid(),type:'message',x:400,y:720,text:"You're all set! Here are 3 things to try first:\n1. Create your first project\n2. Customize your dashboard\n3. Connect integrations",speaker:app.id},
+      {id:uid(),type:'choice',x:400,y:900,text:"Need help with anything else?",speaker:app.id,choices:[{id:uid(),text:'Show me more'},{id:uid(),text:"I'm good, thanks!"}]},
+      {id:uid(),type:'end',x:400,y:1060,text:'Onboarding Complete'}
+    ];
+    t.nodes=n.map(x=>({...x,choices:x.choices||[],variable:x.variable||'',operator:x.operator||'',value:x.value||'',actionType:x.actionType||'',actionVar:x.actionVar||'',actionVal:x.actionVal||'',notes:''}));
+    t.connections=[
+      {id:uid(),from:n[0].id,to:n[1].id,fromPort:0,label:''},
+      {id:uid(),from:n[1].id,to:n[2].id,fromPort:0,label:''},
+      {id:uid(),from:n[2].id,to:n[3].id,fromPort:0,label:''},
+      {id:uid(),from:n[2].id,to:n[4].id,fromPort:1,label:''},
+      {id:uid(),from:n[2].id,to:n[5].id,fromPort:2,label:''},
+      {id:uid(),from:n[3].id,to:n[6].id,fromPort:0,label:''},
+      {id:uid(),from:n[4].id,to:n[6].id,fromPort:0,label:''},
+      {id:uid(),from:n[5].id,to:n[6].id,fromPort:0,label:''},
+      {id:uid(),from:n[6].id,to:n[7].id,fromPort:0,label:''},
+      {id:uid(),from:n[7].id,to:n[8].id,fromPort:0,label:''},
+      {id:uid(),from:n[8].id,to:n[9].id,fromPort:0,label:''},
+      {id:uid(),from:n[8].id,to:n[9].id,fromPort:1,label:''}
+    ];
+  }else if(type==='sales'){
+    t.name='Sales Discovery Call';
+    const rep={id:uid(),name:'Sales Rep',role:'Account Executive',emoji:'💼',color:'var(--accent)'};
+    const lead={id:uid(),name:'Lead',role:'Potential Customer',emoji:'🏢',color:'var(--orange)'};
+    t.characters=[rep,lead];
+    const n=[
+      {id:uid(),type:'start',x:400,y:40,text:'Call Connected'},
+      {id:uid(),type:'message',x:400,y:160,text:"Hi! Thanks for taking the time. I'd love to understand your current challenges. What made you book this call?",speaker:rep.id},
+      {id:uid(),type:'choice',x:400,y:340,text:"What's your biggest pain point right now?",speaker:rep.id,choices:[{id:uid(),text:'Scaling issues'},{id:uid(),text:'Cost reduction'},{id:uid(),text:'Not sure yet'}]},
+      {id:uid(),type:'message',x:160,y:520,text:"I hear that a lot. How many users are you managing currently?",speaker:rep.id},
+      {id:uid(),type:'message',x:400,y:520,text:"Makes sense. What are you spending monthly on your current solution?",speaker:rep.id},
+      {id:uid(),type:'message',x:640,y:520,text:"No worries! Let me show you what's possible. Would a quick demo help?",speaker:rep.id},
+      {id:uid(),type:'condition',x:400,y:680,text:'Budget check',variable:'budget',operator:'>=',value:'5000'},
+      {id:uid(),type:'message',x:240,y:840,text:"Great fit! I'd love to show you our enterprise tier. Can we schedule a demo this week?",speaker:rep.id},
+      {id:uid(),type:'message',x:560,y:840,text:"We have a starter plan that could work. Let me send you our pricing page.",speaker:rep.id},
+      {id:uid(),type:'choice',x:400,y:1000,text:"What's your timeline for making a decision?",speaker:rep.id,choices:[{id:uid(),text:'This month'},{id:uid(),text:'This quarter'},{id:uid(),text:'Just researching'}]},
+      {id:uid(),type:'end',x:400,y:1160,text:'Follow-up Scheduled'}
+    ];
+    t.nodes=n.map(x=>({...x,choices:x.choices||[],variable:x.variable||'',operator:x.operator||'',value:x.value||'',actionType:x.actionType||'',actionVar:x.actionVar||'',actionVal:x.actionVal||'',notes:''}));
+    t.connections=[
+      {id:uid(),from:n[0].id,to:n[1].id,fromPort:0,label:''},
+      {id:uid(),from:n[1].id,to:n[2].id,fromPort:0,label:''},
+      {id:uid(),from:n[2].id,to:n[3].id,fromPort:0,label:''},
+      {id:uid(),from:n[2].id,to:n[4].id,fromPort:1,label:''},
+      {id:uid(),from:n[2].id,to:n[5].id,fromPort:2,label:''},
+      {id:uid(),from:n[3].id,to:n[6].id,fromPort:0,label:''},
+      {id:uid(),from:n[4].id,to:n[6].id,fromPort:0,label:''},
+      {id:uid(),from:n[5].id,to:n[6].id,fromPort:0,label:''},
+      {id:uid(),from:n[6].id,to:n[7].id,fromPort:0,label:'True'},
+      {id:uid(),from:n[6].id,to:n[8].id,fromPort:1,label:'False'},
+      {id:uid(),from:n[7].id,to:n[9].id,fromPort:0,label:''},
+      {id:uid(),from:n[8].id,to:n[9].id,fromPort:0,label:''},
+      {id:uid(),from:n[9].id,to:n[10].id,fromPort:0,label:''},
+      {id:uid(),from:n[9].id,to:n[10].id,fromPort:1,label:''},
+      {id:uid(),from:n[9].id,to:n[10].id,fromPort:2,label:''}
+    ];
+  }else if(type==='chatbot'){
+    t.name='FAQ Chatbot';
+    const bot={id:uid(),name:'HelpBot',role:'FAQ Bot',emoji:'🤖',color:'var(--accent)'};
+    const user={id:uid(),name:'Visitor',role:'Website visitor',emoji:'👤',color:'var(--green)'};
+    t.characters=[bot,user];
+    const n=[
+      {id:uid(),type:'start',x:400,y:40,text:'Chat Widget Opened'},
+      {id:uid(),type:'message',x:400,y:160,text:"Hey! 👋 I'm HelpBot. I can answer your questions instantly.",speaker:bot.id},
+      {id:uid(),type:'choice',x:400,y:310,text:"What would you like to know?",speaker:bot.id,choices:[{id:uid(),text:'Pricing'},{id:uid(),text:'Features'},{id:uid(),text:'Getting Started'},{id:uid(),text:'Talk to a human'}]},
+      {id:uid(),type:'message',x:80,y:500,text:"We offer 3 plans:\n• Free: Up to 5 users\n• Pro: $29/mo unlimited\n• Enterprise: Custom",speaker:bot.id},
+      {id:uid(),type:'message',x:300,y:500,text:"Key features include:\n• Real-time analytics\n• Team collaboration\n• API access\n• Custom integrations",speaker:bot.id},
+      {id:uid(),type:'message',x:520,y:500,text:"Getting started is easy:\n1. Sign up (free)\n2. Create your workspace\n3. Invite your team\n\nTakes about 2 minutes!",speaker:bot.id},
+      {id:uid(),type:'message',x:740,y:500,text:"Connecting you to our team now. Average wait: 2 minutes.",speaker:bot.id},
+      {id:uid(),type:'choice',x:400,y:680,text:"Was this helpful?",speaker:bot.id,choices:[{id:uid(),text:'Yes, thanks!'},{id:uid(),text:'I have more questions'}]},
+      {id:uid(),type:'action',x:240,y:840,text:'Log satisfaction',actionType:'set',actionVar:'satisfied',actionVal:'true'},
+      {id:uid(),type:'end',x:400,y:980,text:'Chat Ended'},
+      {id:uid(),type:'end',x:740,y:680,text:'Handed to Human'}
+    ];
+    t.nodes=n.map(x=>({...x,choices:x.choices||[],variable:x.variable||'',operator:x.operator||'',value:x.value||'',actionType:x.actionType||'',actionVar:x.actionVar||'',actionVal:x.actionVal||'',notes:''}));
+    t.connections=[
+      {id:uid(),from:n[0].id,to:n[1].id,fromPort:0,label:''},
+      {id:uid(),from:n[1].id,to:n[2].id,fromPort:0,label:''},
+      {id:uid(),from:n[2].id,to:n[3].id,fromPort:0,label:''},
+      {id:uid(),from:n[2].id,to:n[4].id,fromPort:1,label:''},
+      {id:uid(),from:n[2].id,to:n[5].id,fromPort:2,label:''},
+      {id:uid(),from:n[2].id,to:n[6].id,fromPort:3,label:''},
+      {id:uid(),from:n[3].id,to:n[7].id,fromPort:0,label:''},
+      {id:uid(),from:n[4].id,to:n[7].id,fromPort:0,label:''},
+      {id:uid(),from:n[5].id,to:n[7].id,fromPort:0,label:''},
+      {id:uid(),from:n[6].id,to:n[10].id,fromPort:0,label:''},
+      {id:uid(),from:n[7].id,to:n[8].id,fromPort:0,label:''},
+      {id:uid(),from:n[7].id,to:n[2].id,fromPort:1,label:'loop back'},
+      {id:uid(),from:n[8].id,to:n[9].id,fromPort:0,label:''}
+    ];
+  }else if(type==='interview'){
+    t.name='User Research Interview';
+    const r={id:uid(),name:'Researcher',role:'UX Researcher',emoji:'🎤',color:'var(--accent)'};
+    const p={id:uid(),name:'Participant',role:'User',emoji:'👤',color:'var(--green)'};
+    t.characters=[r,p];
+    const n=[
+      {id:uid(),type:'start',x:400,y:40,text:'Interview Begins'},
+      {id:uid(),type:'message',x:400,y:160,text:"Thanks for joining! This will take about 30 minutes. There are no wrong answers — I'm just here to learn from you.",speaker:r.id},
+      {id:uid(),type:'message',x:400,y:320,text:"First, can you tell me about your role and how you typically work?",speaker:r.id},
+      {id:uid(),type:'message',x:400,y:460,text:"Interesting! Now, walk me through the last time you faced [problem we're solving]. What happened?",speaker:r.id},
+      {id:uid(),type:'choice',x:400,y:620,text:"How did that make you feel?",speaker:r.id,choices:[{id:uid(),text:'Frustrated — dig deeper'},{id:uid(),text:'Neutral — explore more'}]},
+      {id:uid(),type:'message',x:240,y:780,text:"Tell me more about what was frustrating. What would the ideal solution look like?",speaker:r.id},
+      {id:uid(),type:'message',x:560,y:780,text:"What tools or workarounds do you currently use for this?",speaker:r.id},
+      {id:uid(),type:'message',x:400,y:920,text:"If you could wave a magic wand and fix one thing about this process, what would it be?",speaker:r.id},
+      {id:uid(),type:'end',x:400,y:1060,text:'Interview Complete — Thank participant'}
+    ];
+    t.nodes=n.map(x=>({...x,choices:x.choices||[],variable:x.variable||'',operator:x.operator||'',value:x.value||'',actionType:x.actionType||'',actionVar:x.actionVar||'',actionVal:x.actionVal||'',notes:''}));
+    t.connections=[
+      {id:uid(),from:n[0].id,to:n[1].id,fromPort:0,label:''},
+      {id:uid(),from:n[1].id,to:n[2].id,fromPort:0,label:''},
+      {id:uid(),from:n[2].id,to:n[3].id,fromPort:0,label:''},
+      {id:uid(),from:n[3].id,to:n[4].id,fromPort:0,label:''},
+      {id:uid(),from:n[4].id,to:n[5].id,fromPort:0,label:''},
+      {id:uid(),from:n[4].id,to:n[6].id,fromPort:1,label:''},
+      {id:uid(),from:n[5].id,to:n[7].id,fromPort:0,label:''},
+      {id:uid(),from:n[6].id,to:n[7].id,fromPort:0,label:''},
+      {id:uid(),from:n[7].id,to:n[8].id,fromPort:0,label:''}
+    ];
+  }else if(type==='nps'){
+    t.name='NPS Survey Flow';
+    const bot={id:uid(),name:'Survey Bot',role:'Automated',emoji:'📊',color:'var(--accent)'};
+    const user={id:uid(),name:'Customer',role:'Active user',emoji:'👤',color:'var(--green)'};
+    t.characters=[bot,user];
+    const n=[
+      {id:uid(),type:'start',x:400,y:40,text:'Survey Triggered'},
+      {id:uid(),type:'message',x:400,y:160,text:"Quick question — on a scale of 0-10, how likely are you to recommend us to a friend?",speaker:bot.id},
+      {id:uid(),type:'action',x:400,y:310,text:'Record score',actionType:'set',actionVar:'nps_score',actionVal:'response'},
+      {id:uid(),type:'condition',x:400,y:440,text:'Score check',variable:'nps_score',operator:'>=',value:'9'},
+      {id:uid(),type:'message',x:200,y:600,text:"Wow, thank you! 🎉 We'd love to know — what do you love most about us?",speaker:bot.id},
+      {id:uid(),type:'condition',x:580,y:600,text:'Passive check',variable:'nps_score',operator:'>=',value:'7'},
+      {id:uid(),type:'message',x:420,y:760,text:"Thanks! What's one thing we could do better to earn that 10?",speaker:bot.id},
+      {id:uid(),type:'message',x:700,y:760,text:"We're sorry to hear that. What's the #1 thing we need to fix?",speaker:bot.id},
+      {id:uid(),type:'action',x:400,y:920,text:'Save feedback',actionType:'set',actionVar:'feedback_collected',actionVal:'true'},
+      {id:uid(),type:'end',x:400,y:1060,text:'Survey Complete — Thank You!'}
+    ];
+    t.nodes=n.map(x=>({...x,choices:x.choices||[],variable:x.variable||'',operator:x.operator||'',value:x.value||'',actionType:x.actionType||'',actionVar:x.actionVar||'',actionVal:x.actionVal||'',notes:''}));
+    t.connections=[
+      {id:uid(),from:n[0].id,to:n[1].id,fromPort:0,label:''},
+      {id:uid(),from:n[1].id,to:n[2].id,fromPort:0,label:''},
+      {id:uid(),from:n[2].id,to:n[3].id,fromPort:0,label:''},
+      {id:uid(),from:n[3].id,to:n[4].id,fromPort:0,label:'Promoter'},
+      {id:uid(),from:n[3].id,to:n[5].id,fromPort:1,label:'Not promoter'},
+      {id:uid(),from:n[5].id,to:n[6].id,fromPort:0,label:'Passive'},
+      {id:uid(),from:n[5].id,to:n[7].id,fromPort:1,label:'Detractor'},
+      {id:uid(),from:n[4].id,to:n[8].id,fromPort:0,label:''},
+      {id:uid(),from:n[6].id,to:n[8].id,fromPort:0,label:''},
+      {id:uid(),from:n[7].id,to:n[8].id,fromPort:0,label:''},
+      {id:uid(),from:n[8].id,to:n[9].id,fromPort:0,label:''}
+    ];
+  }
+  
+  trees.push(t);activeTreeId=t.id;
+  save();renderSidebar();renderCanvas();
+  setTimeout(fitView,100);
+}
+
+// ─── Import/Export ───
+function exportAll(){
+  downloadFile('dialogue-trees-all.json',JSON.stringify({trees},null,2),'application/json');
+}
+
+function importAll(){document.getElementById('importFile').click();}
+
+function handleImport(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(data.trees){
+        data.trees.forEach(t=>{
+          if(!trees.find(x=>x.id===t.id))trees.push(t);
+        });
+      }else if(data.id&&data.nodes){
+        if(!trees.find(x=>x.id===data.id))trees.push(data);
+      }
+      save();renderSidebar();renderCanvas();
+    }catch(err){alert('Invalid JSON file');}
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+function downloadFile(name,content,type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name;a.click();URL.revokeObjectURL(a.href);
+}
+
+function copyText(text){
+  navigator.clipboard.writeText(text).then(()=>{}).catch(()=>{});
+}
+
+// ─── Help Modal ───
+function showHelp(){
+  const mc=document.getElementById('modalContent');
+  mc.innerHTML=`<h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="help-grid">
+      <div class="help-item"><span class="help-key">N</span> New tree</div>
+      <div class="help-item"><span class="help-key">A</span> Toggle palette</div>
+      <div class="help-item"><span class="help-key">S</span> Simulate</div>
+      <div class="help-item"><span class="help-key">L</span> Auto layout</div>
+      <div class="help-item"><span class="help-key">F</span> Fit view</div>
+      <div class="help-item"><span class="help-key">Del</span> Delete selected</div>
+      <div class="help-item"><span class="help-key">⌘D</span> Duplicate node</div>
+      <div class="help-item"><span class="help-key">⌘Z</span> Undo</div>
+      <div class="help-item"><span class="help-key">⌘⇧Z</span> Redo</div>
+      <div class="help-item"><span class="help-key">/</span> Search trees</div>
+      <div class="help-item"><span class="help-key">1-4</span> Switch views</div>
+      <div class="help-item"><span class="help-key">+/-</span> Zoom in/out</div>
+      <div class="help-item"><span class="help-key">E</span> Export</div>
+      <div class="help-item"><span class="help-key">I</span> Import</div>
+      <div class="help-item"><span class="help-key">?</span> This help</div>
+      <div class="help-item"><span class="help-key">Esc</span> Close/deselect</div>
+    </div>
+    <div style="margin-top:16px">
+      <div class="section-title">Canvas Controls</div>
+      <ul style="font-size:12px;color:var(--text2);padding-left:16px;line-height:1.8">
+        <li><b>Click node</b> — select and show properties</li>
+        <li><b>Drag node</b> — move (snaps to grid)</li>
+        <li><b>Drag output port → input port</b> — create connection</li>
+        <li><b>Click empty canvas + drag</b> — pan</li>
+        <li><b>Scroll wheel</b> — zoom</li>
+        <li><b>Click connection line</b> — select connection</li>
+      </ul>
+    </div>
+    <div class="modal-actions"><button class="btn-primary" onclick="closeModal()">Got it!</button></div>`;
+  document.getElementById('modalBackdrop').classList.add('active');
+}
+
+// ─── Close Modal ───
+function closeModal(){
+  document.getElementById('modalBackdrop').classList.remove('active');
+}
+
+// ─── Keyboard Shortcuts ───
+document.addEventListener('keydown',e=>{
+  const tag=e.target.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
+  
+  const isCmd=e.metaKey||e.ctrlKey;
+  
+  if(e.key==='?'){e.preventDefault();showHelp();return;}
+  if(e.key==='Escape'){
+    if(document.getElementById('simOverlay').classList.contains('active')){stopSim();return;}
+    if(document.getElementById('modalBackdrop').classList.contains('active')){closeModal();return;}
+    selectedNodeId=null;selectedConnId=null;closeProps();renderCanvas();return;
+  }
+  if(e.key==='n'&&!isCmd){newTree();return;}
+  if(e.key==='a'){togglePalette();return;}
+  if(e.key==='s'&&!isCmd){startSimulation();return;}
+  if(e.key==='l'){autoLayout();return;}
+  if(e.key==='f'&&!isCmd){fitView();return;}
+  if(e.key==='e'&&!isCmd){switchView('export');return;}
+  if(e.key==='i'&&!isCmd){importAll();return;}
+  if(e.key==='/'||e.key==='\\'){e.preventDefault();document.getElementById('treeSearch').focus();return;}
+  if(e.key==='1'){switchView('canvas');return;}
+  if(e.key==='2'){switchView('characters');return;}
+  if(e.key==='3'){switchView('dashboard');return;}
+  if(e.key==='4'){switchView('export');return;}
+  if(e.key==='='||e.key==='+'){zoomIn();return;}
+  if(e.key==='-'){zoomOut();return;}
+  if(e.key==='Delete'||e.key==='Backspace'){
+    if(selectedNodeId){deleteNode(selectedNodeId);}
+    else if(selectedConnId){deleteConnection(selectedConnId);}
+    return;
+  }
+  if(isCmd&&e.key==='z'&&!e.shiftKey){e.preventDefault();undo();return;}
+  if(isCmd&&e.key==='z'&&e.shiftKey){e.preventDefault();redo();return;}
+  if(isCmd&&e.key==='Z'){e.preventDefault();redo();return;}
+  if(isCmd&&e.key==='d'){e.preventDefault();if(selectedNodeId)duplicateNode(selectedNodeId);return;}
+});
+
+document.getElementById('treeSearch').addEventListener('input',renderSidebar);
+
+// ─── Utility ───
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ─── Seed Data ───
+function seedData(){
+  // UTMStamp Chatbot Flow
+  const t1={id:uid(),name:'UTMStamp Onboarding Bot',nodes:[],connections:[],characters:[],variables:[],created:Date.now()};
+  const bot={id:uid(),name:'UTMBot',role:'Onboarding Assistant',emoji:'🤖',color:'#58a6ff'};
+  const user={id:uid(),name:'New User',role:'Marketing Manager',emoji:'👩‍💼',color:'#bc8cff'};
+  t1.characters=[bot,user];
+
+  const nodes=[
+    {id:uid(),type:'start',x:400,y:40,text:'User visits UTMStamp'},
+    {id:uid(),type:'message',x:400,y:180,text:"Hey! 👋 Welcome to UTMStamp — every signature, every click, tracked. Let's get you set up in 60 seconds.",speaker:bot.id},
+    {id:uid(),type:'choice',x:400,y:360,text:"What brought you here today?",speaker:bot.id,choices:[{id:uid(),text:'Track email signature clicks'},{id:uid(),text:'Manage team signatures'},{id:uid(),text:'Just exploring'}]},
+    {id:uid(),type:'message',x:120,y:560,text:"Smart move! UTM tracking on email signatures is the most underused growth channel. Let's create your first tracked signature.",speaker:bot.id},
+    {id:uid(),type:'message',x:400,y:560,text:"Team signatures = brand consistency + tracking. How many team members?",speaker:bot.id},
+    {id:uid(),type:'message',x:680,y:560,text:"No pressure! Here's what makes UTMStamp different: beautiful templates, built-in UTM tracking, click analytics — all free to start.",speaker:bot.id},
+    {id:uid(),type:'condition',x:400,y:720,text:'Team size check',variable:'team_size',operator:'>',value:'10'},
+    {id:uid(),type:'message',x:220,y:880,text:"With 10+ people, you'll love our team deployment feature. One click to push signatures to everyone via Google Workspace.",speaker:bot.id},
+    {id:uid(),type:'message',x:580,y:880,text:"Perfect size to get started! Our free plan covers up to 5 users. Let's create your first signature.",speaker:bot.id},
+    {id:uid(),type:'choice',x:400,y:1040,text:"Ready to create your first signature?",speaker:bot.id,choices:[{id:uid(),text:"Let's do it! 🚀"},{id:uid(),text:'Show me examples first'}]},
+    {id:uid(),type:'action',x:400,y:1200,text:'Start onboarding',actionType:'set',actionVar:'onboarding_started',actionVal:'true'},
+    {id:uid(),type:'end',x:400,y:1340,text:'Onboarding Complete! 🎉'}
+  ];
+  t1.nodes=nodes.map(x=>({...x,choices:x.choices||[],variable:x.variable||'',operator:x.operator||'',value:x.value||'',actionType:x.actionType||'',actionVar:x.actionVar||'',actionVal:x.actionVal||'',notes:''}));
+  t1.connections=[
+    {id:uid(),from:nodes[0].id,to:nodes[1].id,fromPort:0,label:''},
+    {id:uid(),from:nodes[1].id,to:nodes[2].id,fromPort:0,label:''},
+    {id:uid(),from:nodes[2].id,to:nodes[3].id,fromPort:0,label:''},
+    {id:uid(),from:nodes[2].id,to:nodes[4].id,fromPort:1,label:''},
+    {id:uid(),from:nodes[2].id,to:nodes[5].id,fromPort:2,label:''},
+    {id:uid(),from:nodes[3].id,to:nodes[6].id,fromPort:0,label:''},
+    {id:uid(),from:nodes[4].id,to:nodes[6].id,fromPort:0,label:''},
+    {id:uid(),from:nodes[5].id,to:nodes[9].id,fromPort:0,label:''},
+    {id:uid(),from:nodes[6].id,to:nodes[7].id,fromPort:0,label:'Enterprise'},
+    {id:uid(),from:nodes[6].id,to:nodes[8].id,fromPort:1,label:'Starter'},
+    {id:uid(),from:nodes[7].id,to:nodes[9].id,fromPort:0,label:''},
+    {id:uid(),from:nodes[8].id,to:nodes[9].id,fromPort:0,label:''},
+    {id:uid(),from:nodes[9].id,to:nodes[10].id,fromPort:0,label:''},
+    {id:uid(),from:nodes[9].id,to:nodes[5].id,fromPort:1,label:'examples'},
+    {id:uid(),from:nodes[10].id,to:nodes[11].id,fromPort:0,label:''}
+  ];
+
+  // Customer Support Tree
+  const t2={id:uid(),name:'Support Triage Bot',nodes:[],connections:[],characters:[],variables:[],created:Date.now()};
+  const agent={id:uid(),name:'Support Agent',role:'Level 1 Support',emoji:'🧑‍💼',color:'#3fb950'};
+  const customer={id:uid(),name:'Customer',role:'Paying user',emoji:'😟',color:'#f85149'};
+  t2.characters=[agent,customer];
+  const sn=[
+    {id:uid(),type:'start',x:400,y:40,text:'Ticket Created'},
+    {id:uid(),type:'message',x:400,y:180,text:"Thanks for reaching out! I'll help resolve this quickly. Can you describe the issue?",speaker:agent.id},
+    {id:uid(),type:'choice',x:400,y:340,text:'What type of issue are you experiencing?',speaker:agent.id,choices:[{id:uid(),text:'Cannot log in'},{id:uid(),text:'Signatures not showing'},{id:uid(),text:'Billing question'},{id:uid(),text:'Other'}]},
+    {id:uid(),type:'message',x:120,y:520,text:"Let's fix that. Have you tried resetting your password via the login page?",speaker:agent.id},
+    {id:uid(),type:'message',x:360,y:520,text:'Which email client are you using? Gmail, Outlook, or Apple Mail?',speaker:agent.id},
+    {id:uid(),type:'message',x:600,y:520,text:"I can help with that. What's the email associated with your account?",speaker:agent.id},
+    {id:uid(),type:'message',x:840,y:520,text:"I'll create a ticket for our team. Can you describe the issue in detail?",speaker:agent.id},
+    {id:uid(),type:'end',x:400,y:700,text:'Issue Resolved — Send CSAT Survey'}
+  ];
+  t2.nodes=sn.map(x=>({...x,choices:x.choices||[],variable:x.variable||'',operator:x.operator||'',value:x.value||'',actionType:x.actionType||'',actionVar:x.actionVar||'',actionVal:x.actionVal||'',notes:''}));
+  t2.connections=[
+    {id:uid(),from:sn[0].id,to:sn[1].id,fromPort:0,label:''},
+    {id:uid(),from:sn[1].id,to:sn[2].id,fromPort:0,label:''},
+    {id:uid(),from:sn[2].id,to:sn[3].id,fromPort:0,label:''},
+    {id:uid(),from:sn[2].id,to:sn[4].id,fromPort:1,label:''},
+    {id:uid(),from:sn[2].id,to:sn[5].id,fromPort:2,label:''},
+    {id:uid(),from:sn[2].id,to:sn[6].id,fromPort:3,label:''},
+    {id:uid(),from:sn[3].id,to:sn[7].id,fromPort:0,label:''},
+    {id:uid(),from:sn[4].id,to:sn[7].id,fromPort:0,label:''},
+    {id:uid(),from:sn[5].id,to:sn[7].id,fromPort:0,label:''},
+    {id:uid(),from:sn[6].id,to:sn[7].id,fromPort:0,label:''}
+  ];
+
+  trees=[t1,t2];
+  activeTreeId=t1.id;
+  save();
+}
+
+// ─── Init ───
+load();
+renderSidebar();
+renderCanvas();
+setTimeout(fitView,200);
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

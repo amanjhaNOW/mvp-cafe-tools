@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Forge — Fake Data Generator & Dataset Builder</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#388bfd;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff;--orange:#f0883e;--pink:#f778ba;--cyan:#39d353;--radius:8px;--font:'SF Mono',SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:var(--text)}
+input,select,textarea{font-family:inherit;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;outline:none;font-size:13px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select{cursor:pointer}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--text2)}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:20px}
+.sidebar-search{margin-top:10px;position:relative}
+.sidebar-search input{width:100%;padding-left:32px;font-size:12px}
+.sidebar-search::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px}
+.schema-list{flex:1;overflow-y:auto;padding:8px}
+.schema-item{padding:10px 12px;border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;font-size:13px}
+.schema-item:hover{background:var(--surface2)}
+.schema-item.active{background:var(--accent);color:#fff}
+.schema-item .count{font-size:11px;color:var(--text2);background:var(--bg);padding:2px 7px;border-radius:10px}
+.schema-item.active .count{background:rgba(0,0,0,.3);color:#fff}
+.sidebar-actions{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px}
+.sidebar-actions button{flex:1;padding:8px;border-radius:var(--radius);font-size:12px;font-weight:600}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{background:var(--surface2);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--border)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface)}
+.view-tabs{display:flex;gap:4px}
+.view-tab{padding:6px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;color:var(--text2)}
+.view-tab:hover{background:var(--surface2);color:var(--text)}
+.view-tab.active{background:var(--accent);color:#fff}
+.topbar-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.topbar-right button{padding:6px 12px;border-radius:var(--radius);font-size:12px;background:var(--surface2);border:1px solid var(--border)}
+.topbar-right button:hover{background:var(--border)}
+.content{flex:1;overflow-y:auto;padding:20px}
+
+/* Schema Editor */
+.schema-editor{max-width:900px}
+.schema-name{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.schema-name input{font-size:18px;font-weight:700;flex:1;background:transparent;border:1px solid transparent;padding:8px}
+.schema-name input:focus{border-color:var(--accent);background:var(--surface)}
+.field-header{display:grid;grid-template-columns:180px 150px 1fr 60px 40px;gap:10px;padding:8px 12px;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.field-row{display:grid;grid-template-columns:180px 150px 1fr 60px 40px;gap:10px;padding:8px 12px;border-radius:var(--radius);align-items:center;margin-bottom:2px}
+.field-row:hover{background:var(--surface2)}
+.field-row input,.field-row select{font-size:13px;padding:6px 10px}
+.field-row .del-btn{color:var(--red);font-size:16px;width:32px;height:32px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center}
+.field-row .del-btn:hover{background:rgba(248,81,73,.15)}
+.add-field-btn{margin-top:8px;padding:10px 16px;border-radius:var(--radius);border:1px dashed var(--border);color:var(--text2);font-size:13px;width:100%}
+.add-field-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,.05)}
+.req-toggle{width:36px;height:20px;border-radius:10px;background:var(--border);position:relative;cursor:pointer;border:none;transition:background .2s}
+.req-toggle.on{background:var(--green)}
+.req-toggle::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .2s}
+.req-toggle.on::after{left:18px}
+
+/* Generate bar */
+.generate-bar{margin-top:20px;padding:16px;background:var(--surface2);border-radius:var(--radius);display:flex;align-items:center;gap:16px;border:1px solid var(--border)}
+.generate-bar label{font-size:13px;color:var(--text2)}
+.generate-bar input[type=number]{width:100px}
+.generate-btn{padding:10px 24px;border-radius:var(--radius);font-size:14px;font-weight:700;background:var(--green);color:#fff}
+.generate-btn:hover{filter:brightness(1.1)}
+
+/* Preview */
+.preview-area{max-width:100%}
+.preview-toolbar{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.preview-toolbar button{padding:6px 12px;border-radius:var(--radius);font-size:12px;background:var(--surface2);border:1px solid var(--border)}
+.preview-toolbar button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.preview-toolbar button:hover:not(.active){background:var(--border)}
+.preview-count{margin-left:auto;font-size:12px;color:var(--text2)}
+.data-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{background:var(--surface2);padding:10px 14px;text-align:left;font-weight:600;white-space:nowrap;border-bottom:1px solid var(--border);position:sticky;top:0}
+.data-table td{padding:8px 14px;border-bottom:1px solid var(--border);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.data-table tr:hover td{background:var(--surface2)}
+.code-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:var(--font);font-size:12px;line-height:1.6;overflow:auto;max-height:calc(100vh - 240px);white-space:pre;tab-size:2}
+.code-block .k{color:var(--purple)}
+.code-block .s{color:var(--green)}
+.code-block .n{color:var(--orange)}
+.code-block .c{color:var(--text2)}
+
+/* Dashboard */
+.dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.stat-card .value{font-size:28px;font-weight:800;margin-top:4px}
+.stat-card .label{font-size:12px;color:var(--text2)}
+.dash-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.dash-section h3{font-size:14px;margin-bottom:16px;color:var(--text2)}
+.bar-row{display:flex;align-items:center;gap:12px;margin-bottom:8px;font-size:13px}
+.bar-row .bar-label{width:120px;text-align:right;color:var(--text2);flex-shrink:0}
+.bar-row .bar-track{flex:1;height:20px;background:var(--bg);border-radius:4px;overflow:hidden}
+.bar-row .bar-fill{height:100%;border-radius:4px;transition:width .3s}
+.bar-row .bar-val{width:40px;font-size:12px;color:var(--text2)}
+
+/* Templates */
+.template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.template-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:border-color .2s}
+.template-card:hover{border-color:var(--accent)}
+.template-card h3{font-size:15px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.template-card p{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px}
+.template-card .tags{display:flex;flex-wrap:wrap;gap:4px}
+.template-card .tag{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text2)}
+
+/* Relationships */
+.rel-section{margin-top:20px;padding:16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2)}
+.rel-section h3{font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.rel-row{display:grid;grid-template-columns:160px 160px 160px 40px;gap:10px;align-items:center;margin-bottom:8px}
+.rel-row select,.rel-row input{font-size:12px;padding:6px 8px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:480px;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:16px;margin-bottom:16px}
+.modal .form-group{margin-bottom:14px}
+.modal .form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px}
+.modal .form-group input,.modal .form-group select,.modal .form-group textarea{width:100%}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.modal-actions button{padding:8px 20px;border-radius:var(--radius);font-size:13px;font-weight:600}
+
+/* Presets dropdown */
+.field-type-info{font-size:11px;color:var(--text2);font-style:italic}
+.field-options{display:flex;gap:4px;align-items:center}
+.field-options input{width:100%;font-size:12px}
+.field-options select{font-size:12px;max-width:160px}
+
+/* Help */
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center}
+.help-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;width:520px;max-height:80vh;overflow-y:auto}
+.help-box h2{margin-bottom:16px;font-size:18px}
+.help-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border)}
+.help-row kbd{background:var(--bg);padding:2px 8px;border-radius:4px;font-family:var(--font);font-size:12px;border:1px solid var(--border)}
+.type-badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="sidebar">
+ <div class="sidebar-header">
+  <h1><span>🏭</span> Data Forge</h1>
+  <div class="sidebar-search"><input type="text" id="schemaSearch" placeholder="Search schemas... ( / )"></div>
+ </div>
+ <div class="schema-list" id="schemaList"></div>
+ <div class="sidebar-actions">
+  <button class="btn-primary" onclick="newSchema()">+ New</button>
+  <button class="btn-secondary" onclick="showTemplates()">📋 Templates</button>
+ </div>
+</div>
+<div class="main">
+ <div class="topbar">
+  <div class="view-tabs" id="viewTabs"></div>
+  <div class="topbar-right">
+   <button onclick="exportAll()" title="Export all schemas">📦 Export</button>
+   <button onclick="importAll()" title="Import schemas">📥 Import</button>
+   <button onclick="showHelp()" title="Keyboard shortcuts">❓ Help</button>
+  </div>
+ </div>
+ <div class="content" id="content"></div>
+</div>
+<input type="file" id="importFile" accept=".json" style="display:none">
+
+<script>
+// ========== Data ==========
+const FIELD_TYPES = {
+  // Identity
+  'UUID': { gen: () => crypto.randomUUID(), cat: 'Identity' },
+  'Auto ID': { gen: (i) => i + 1, cat: 'Identity' },
+  'Short ID': { gen: () => Math.random().toString(36).substring(2, 10), cat: 'Identity' },
+
+  // Personal
+  'First Name': { gen: () => pick(FIRST_NAMES), cat: 'Personal' },
+  'Last Name': { gen: () => pick(LAST_NAMES), cat: 'Personal' },
+  'Full Name': { gen: () => pick(FIRST_NAMES) + ' ' + pick(LAST_NAMES), cat: 'Personal' },
+  'Email': { gen: () => pick(FIRST_NAMES).toLowerCase() + '.' + pick(LAST_NAMES).toLowerCase() + '@' + pick(DOMAINS), cat: 'Personal' },
+  'Phone': { gen: () => '+' + rint(1,99) + rint(100,999) + rint(1000000,9999999), cat: 'Personal' },
+  'Username': { gen: () => pick(FIRST_NAMES).toLowerCase() + rint(10,999), cat: 'Personal' },
+  'Avatar URL': { gen: () => `https://i.pravatar.cc/150?u=${rint(1,9999)}`, cat: 'Personal' },
+  'Age': { gen: () => rint(18, 75), cat: 'Personal' },
+  'Gender': { gen: () => pick(['Male','Female','Non-binary','Other']), cat: 'Personal' },
+  'Bio': { gen: () => pick(BIOS), cat: 'Personal' },
+
+  // Address
+  'Street': { gen: () => rint(1,9999) + ' ' + pick(STREETS) + ' ' + pick(['St','Ave','Blvd','Dr','Ln','Rd','Way','Ct']), cat: 'Address' },
+  'City': { gen: () => pick(CITIES), cat: 'Address' },
+  'State': { gen: () => pick(STATES), cat: 'Address' },
+  'Country': { gen: () => pick(COUNTRIES), cat: 'Address' },
+  'Zip Code': { gen: () => String(rint(10000,99999)), cat: 'Address' },
+  'Latitude': { gen: () => +(rint(-90,90) + Math.random()).toFixed(6), cat: 'Address' },
+  'Longitude': { gen: () => +(rint(-180,180) + Math.random()).toFixed(6), cat: 'Address' },
+
+  // Business
+  'Company': { gen: () => pick(COMPANIES), cat: 'Business' },
+  'Job Title': { gen: () => pick(JOB_TITLES), cat: 'Business' },
+  'Department': { gen: () => pick(DEPARTMENTS), cat: 'Business' },
+  'Industry': { gen: () => pick(INDUSTRIES), cat: 'Business' },
+  'Website': { gen: () => 'https://' + pick(FIRST_NAMES).toLowerCase() + pick(['.com','.io','.co','.dev','.app']), cat: 'Business' },
+
+  // Numbers
+  'Integer': { gen: (i, opts) => rint(parseInt(opts.min||0), parseInt(opts.max||1000)), cat: 'Numbers', opts: ['min','max'] },
+  'Float': { gen: (i, opts) => +(rint(parseInt(opts.min||0), parseInt(opts.max||1000)) + Math.random()).toFixed(parseInt(opts.decimals||2)), cat: 'Numbers', opts: ['min','max','decimals'] },
+  'Price': { gen: (i, opts) => +(rint(parseInt(opts.min||1), parseInt(opts.max||999)) + Math.random()).toFixed(2), cat: 'Numbers', opts: ['min','max'] },
+  'Percentage': { gen: () => rint(0, 100), cat: 'Numbers' },
+  'Currency': { gen: () => pick(['USD','EUR','GBP','INR','JPY','AUD','CAD']), cat: 'Numbers' },
+
+  // Text
+  'Sentence': { gen: () => pick(SENTENCES), cat: 'Text' },
+  'Paragraph': { gen: () => Array.from({length: rint(3,6)}, () => pick(SENTENCES)).join(' '), cat: 'Text' },
+  'Word': { gen: () => pick(WORDS), cat: 'Text' },
+  'Slug': { gen: () => Array.from({length:rint(2,4)}, ()=>pick(WORDS)).join('-'), cat: 'Text' },
+  'Hex Color': { gen: () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'), cat: 'Text' },
+  'IP Address': { gen: () => `${rint(1,255)}.${rint(0,255)}.${rint(0,255)}.${rint(1,254)}`, cat: 'Text' },
+  'MAC Address': { gen: () => Array.from({length:6},()=>rint(0,255).toString(16).padStart(2,'0')).join(':'), cat: 'Text' },
+  'User Agent': { gen: () => pick(USER_AGENTS), cat: 'Text' },
+
+  // Date & Time
+  'Date': { gen: (i, opts) => { const s=new Date(opts.from||'2023-01-01').getTime(), e=new Date(opts.to||'2026-12-31').getTime(); return new Date(s+Math.random()*(e-s)).toISOString().split('T')[0]; }, cat: 'Date/Time', opts: ['from','to'] },
+  'DateTime': { gen: (i, opts) => { const s=new Date(opts.from||'2023-01-01').getTime(), e=new Date(opts.to||'2026-12-31').getTime(); return new Date(s+Math.random()*(e-s)).toISOString(); }, cat: 'Date/Time', opts: ['from','to'] },
+  'Timestamp': { gen: () => Math.floor(Date.now()/1000 - Math.random()*100000000), cat: 'Date/Time' },
+  'Time': { gen: () => `${String(rint(0,23)).padStart(2,'0')}:${String(rint(0,59)).padStart(2,'0')}:${String(rint(0,59)).padStart(2,'0')}`, cat: 'Date/Time' },
+  'Year': { gen: () => rint(2020, 2026), cat: 'Date/Time' },
+
+  // Boolean & Enum
+  'Boolean': { gen: () => Math.random() > 0.5, cat: 'Boolean/Enum' },
+  'Status': { gen: (i, opts) => pick((opts.values||'Active,Inactive,Pending').split(',')), cat: 'Boolean/Enum', opts: ['values'] },
+  'Enum': { gen: (i, opts) => pick((opts.values||'A,B,C').split(',')), cat: 'Boolean/Enum', opts: ['values'] },
+  'Priority': { gen: () => pick(['Low','Medium','High','Critical']), cat: 'Boolean/Enum' },
+  'Rating': { gen: () => rint(1, 5), cat: 'Boolean/Enum' },
+
+  // Product
+  'Product Name': { gen: () => pick(PRODUCT_ADJ) + ' ' + pick(PRODUCT_NOUNS), cat: 'Product' },
+  'SKU': { gen: () => pick(['SKU','PRD','ITM']) + '-' + rint(1000,9999), cat: 'Product' },
+  'Barcode': { gen: () => String(rint(1000000000000,9999999999999)), cat: 'Product' },
+  'Category': { gen: () => pick(CATEGORIES), cat: 'Product' },
+  'Description': { gen: () => pick(DESCRIPTIONS), cat: 'Product' },
+  'Image URL': { gen: () => `https://picsum.photos/seed/${rint(1,9999)}/400/300`, cat: 'Product' },
+
+  // Technical
+  'JSON Object': { gen: () => ({key: pick(WORDS), value: rint(1,100), active: Math.random()>.5}), cat: 'Technical' },
+  'Array': { gen: () => Array.from({length:rint(2,5)}, ()=>pick(WORDS)), cat: 'Technical' },
+  'Regex Pattern': { gen: () => pick(['^\\w+@\\w+\\.\\w+$', '^[A-Z]{2}\\d{4}$', '^\\+\\d{1,3}\\d{7,12}$', '^#[0-9a-f]{6}$']), cat: 'Technical' },
+  'Null': { gen: () => null, cat: 'Technical' },
+  'Empty': { gen: () => '', cat: 'Technical' }
+};
+
+// Data pools
+const FIRST_NAMES = ['Aman','Priya','Rahul','Neha','Vikram','Ankit','Meera','Arjun','Kavya','Rohan','Sara','Aditya','Ishita','Dev','Zara','Omar','Liam','Emma','Noah','Olivia','James','Ava','Wei','Yuki','Chen','Akira','Fatima','Carlos','Sofia','Lucas','Ming','Hiro','Sanjay','Divya','Raj','Pooja','Kiran','Amit','Nisha','Varun'];
+const LAST_NAMES = ['Jha','Sharma','Patel','Kumar','Singh','Gupta','Mehta','Reddy','Nair','Iyer','Wang','Kim','Tanaka','Garcia','Martinez','Johnson','Williams','Brown','Smith','Jones','Davis','Miller','Wilson','Moore','Taylor','Anderson','Thomas','Jackson','White','Harris','Martin','Thompson','Lee','Chen','Yang','Huang'];
+const DOMAINS = ['gmail.com','outlook.com','protonmail.com','yahoo.com','company.io','startup.dev','work.co','example.com','mail.com','fastmail.com'];
+const STREETS = ['Oak','Maple','Cedar','Elm','Pine','Washington','Main','Park','Lake','Hill','River','Valley','Spring','Forest','Sunset','Highland','Garden','Meadow'];
+const CITIES = ['Mumbai','Bangalore','Delhi','Hyderabad','San Francisco','New York','London','Tokyo','Berlin','Singapore','Dubai','Sydney','Toronto','Paris','Amsterdam','Stockholm','Seoul','Shanghai','São Paulo','Cape Town','Austin','Seattle','Chicago','Boston','Pune','Chennai','Kolkata'];
+const STATES = ['Maharashtra','Karnataka','California','New York','Texas','London','Bavaria','Tokyo','Ontario','NSW','Tamil Nadu','Gujarat','Rajasthan','UP','MP'];
+const COUNTRIES = ['India','USA','UK','Japan','Germany','Singapore','UAE','Australia','Canada','France','Netherlands','Sweden','South Korea','China','Brazil','South Africa'];
+const COMPANIES = ['TechNova','CloudScale','DataPulse','NexGen Labs','Quantum Works','SkyBridge','CoreStack','VeloCity','PixelForge','ByteCraft','InnoVault','StreamLine','CodeCraft','LaunchPad','GrowthOS','ScaleUp.io','BuildFast','ShipQuick','DevForge','MetricLab','FlowState','EdgePeak','ZenithAI','PulseData','StackWorks','ClearView','RapidDev','Elastic Labs'];
+const JOB_TITLES = ['Software Engineer','Product Manager','Designer','Data Analyst','DevOps Engineer','CTO','CEO','VP Engineering','Head of Product','Marketing Manager','Sales Lead','QA Engineer','Full Stack Developer','Frontend Developer','Backend Developer','ML Engineer','SRE','Engineering Manager','Founder','Growth Lead','Content Strategist','UX Researcher'];
+const DEPARTMENTS = ['Engineering','Product','Design','Marketing','Sales','Operations','Finance','HR','Legal','Support','Data','Infrastructure','Security','Growth'];
+const INDUSTRIES = ['SaaS','FinTech','HealthTech','EdTech','E-Commerce','AI/ML','IoT','Logistics','Manufacturing','Real Estate','Gaming','Media','Consulting','Cybersecurity','CleanTech','AgriTech'];
+const SENTENCES = ['The quick brown fox jumps over the lazy dog.','Innovation distinguishes between a leader and a follower.','Ship fast, learn faster, iterate always.','Solve business problems, not just ship features.','Data-driven decisions outperform gut feelings at scale.','Every line of code is a business decision in disguise.','The best product is the one that solves a real problem.','Simplicity is the ultimate sophistication in product design.','Move fast with stable infrastructure.','User feedback is the compass that guides product development.','Great products are built by teams that communicate well.','Premature optimization is the root of all evil.','Write code as if the next maintainer is a psychopath.','Done is better than perfect when learning is the goal.','The only way to go fast is to go well.'];
+const WORDS = ['alpha','beta','gamma','delta','epsilon','zeta','theta','lambda','sigma','omega','phoenix','quantum','vertex','nexus','pulse','flux','prime','core','spark','drift','surge','bloom','swift','forge','craft'];
+const BIOS = ['Passionate about building products that matter.','Full-stack developer with a love for clean code.','Product thinker who ships fast and iterates faster.','10 years in tech, still learning every day.','Builder, thinker, occasional writer.','Turning coffee into code since 2015.','On a mission to simplify complex problems.','Design-minded engineer with a product brain.'];
+const PRODUCT_ADJ = ['Premium','Ultra','Smart','Pro','Elite','Essential','Classic','Modern','Compact','Advanced','Organic','Natural','Handcrafted','Wireless','Portable'];
+const PRODUCT_NOUNS = ['Widget','Gadget','Controller','Sensor','Module','Platform','Dashboard','Toolkit','Engine','Suite','Hub','Studio','Craft','Lab','System'];
+const CATEGORIES = ['Electronics','Clothing','Home & Garden','Sports','Books','Food','Health','Beauty','Toys','Automotive','Office','Pet Supplies','Software','Music','Art'];
+const DESCRIPTIONS = ['A high-quality product designed for modern professionals.','Built with precision and attention to detail.','The perfect solution for everyday challenges.','Engineered for performance and reliability.','Crafted with care using premium materials.','Designed to simplify your workflow and boost productivity.','An innovative approach to a common problem.','Made for teams that move fast and ship often.'];
+const USER_AGENTS = ['Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36','Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)','Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36'];
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function rint(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+// ========== State ==========
+let state = {
+  schemas: [],
+  activeSchema: null,
+  generatedData: {},
+  view: 'editor' // editor, preview, dashboard, templates
+};
+
+const VIEWS = [
+  { id: 'editor', label: '✏️ Editor', key: '1' },
+  { id: 'preview', label: '📊 Preview', key: '2' },
+  { id: 'dashboard', label: '📈 Dashboard', key: '3' },
+  { id: 'templates', label: '📋 Templates', key: '4' }
+];
+
+// ========== Templates ==========
+const TEMPLATES = [
+  {
+    name: 'Users Table',
+    emoji: '👤',
+    desc: 'Standard user accounts with authentication fields. Perfect for any SaaS.',
+    tags: ['SaaS','Auth','Users'],
+    schema: {
+      name: 'Users',
+      fields: [
+        { name: 'id', type: 'UUID', required: true, opts: {} },
+        { name: 'first_name', type: 'First Name', required: true, opts: {} },
+        { name: 'last_name', type: 'Last Name', required: true, opts: {} },
+        { name: 'email', type: 'Email', required: true, opts: {} },
+        { name: 'username', type: 'Username', required: true, opts: {} },
+        { name: 'avatar_url', type: 'Avatar URL', required: false, opts: {} },
+        { name: 'role', type: 'Enum', required: true, opts: { values: 'admin,editor,viewer,member' } },
+        { name: 'is_active', type: 'Boolean', required: true, opts: {} },
+        { name: 'created_at', type: 'DateTime', required: true, opts: {} },
+        { name: 'last_login', type: 'DateTime', required: false, opts: {} }
+      ],
+      rowCount: 50
+    }
+  },
+  {
+    name: 'E-Commerce Products',
+    emoji: '🛍️',
+    desc: 'Product catalog with pricing, categories, and inventory tracking.',
+    tags: ['E-Commerce','Products','Inventory'],
+    schema: {
+      name: 'Products',
+      fields: [
+        { name: 'id', type: 'Auto ID', required: true, opts: {} },
+        { name: 'sku', type: 'SKU', required: true, opts: {} },
+        { name: 'name', type: 'Product Name', required: true, opts: {} },
+        { name: 'description', type: 'Description', required: true, opts: {} },
+        { name: 'category', type: 'Category', required: true, opts: {} },
+        { name: 'price', type: 'Price', required: true, opts: { min: '5', max: '999' } },
+        { name: 'currency', type: 'Currency', required: true, opts: {} },
+        { name: 'stock', type: 'Integer', required: true, opts: { min: '0', max: '500' } },
+        { name: 'rating', type: 'Rating', required: false, opts: {} },
+        { name: 'image_url', type: 'Image URL', required: false, opts: {} },
+        { name: 'is_active', type: 'Boolean', required: true, opts: {} },
+        { name: 'created_at', type: 'Date', required: true, opts: {} }
+      ],
+      rowCount: 100
+    }
+  },
+  {
+    name: 'SaaS Subscriptions',
+    emoji: '💳',
+    desc: 'Subscription billing with plans, MRR tracking, and churn data.',
+    tags: ['SaaS','Billing','Subscriptions'],
+    schema: {
+      name: 'Subscriptions',
+      fields: [
+        { name: 'id', type: 'UUID', required: true, opts: {} },
+        { name: 'customer_name', type: 'Full Name', required: true, opts: {} },
+        { name: 'email', type: 'Email', required: true, opts: {} },
+        { name: 'company', type: 'Company', required: true, opts: {} },
+        { name: 'plan', type: 'Enum', required: true, opts: { values: 'Free,Starter,Pro,Enterprise' } },
+        { name: 'mrr', type: 'Price', required: true, opts: { min: '0', max: '999' } },
+        { name: 'status', type: 'Status', required: true, opts: { values: 'Active,Churned,Trial,Past Due,Cancelled' } },
+        { name: 'trial_ends', type: 'Date', required: false, opts: {} },
+        { name: 'started_at', type: 'Date', required: true, opts: { from: '2024-01-01', to: '2026-05-27' } },
+        { name: 'cancelled_at', type: 'Date', required: false, opts: {} },
+        { name: 'seats', type: 'Integer', required: true, opts: { min: '1', max: '200' } }
+      ],
+      rowCount: 200
+    }
+  },
+  {
+    name: 'Analytics Events',
+    emoji: '📈',
+    desc: 'Click-stream analytics events like UTMStamp would track.',
+    tags: ['Analytics','Events','Tracking'],
+    schema: {
+      name: 'Events',
+      fields: [
+        { name: 'event_id', type: 'UUID', required: true, opts: {} },
+        { name: 'event_type', type: 'Enum', required: true, opts: { values: 'page_view,click,signup,purchase,logout' } },
+        { name: 'user_id', type: 'Short ID', required: true, opts: {} },
+        { name: 'session_id', type: 'Short ID', required: true, opts: {} },
+        { name: 'page_url', type: 'Slug', required: true, opts: {} },
+        { name: 'utm_source', type: 'Enum', required: false, opts: { values: 'google,linkedin,twitter,direct,email,referral' } },
+        { name: 'utm_medium', type: 'Enum', required: false, opts: { values: 'cpc,organic,social,email,referral' } },
+        { name: 'utm_campaign', type: 'Slug', required: false, opts: {} },
+        { name: 'ip_address', type: 'IP Address', required: true, opts: {} },
+        { name: 'user_agent', type: 'User Agent', required: true, opts: {} },
+        { name: 'country', type: 'Country', required: true, opts: {} },
+        { name: 'timestamp', type: 'DateTime', required: true, opts: { from: '2026-05-01', to: '2026-05-27' } }
+      ],
+      rowCount: 500
+    }
+  },
+  {
+    name: 'Team Members',
+    emoji: '👥',
+    desc: 'Employee directory with roles, departments, and contact info.',
+    tags: ['HR','Team','Directory'],
+    schema: {
+      name: 'Team',
+      fields: [
+        { name: 'employee_id', type: 'Auto ID', required: true, opts: {} },
+        { name: 'name', type: 'Full Name', required: true, opts: {} },
+        { name: 'email', type: 'Email', required: true, opts: {} },
+        { name: 'phone', type: 'Phone', required: false, opts: {} },
+        { name: 'title', type: 'Job Title', required: true, opts: {} },
+        { name: 'department', type: 'Department', required: true, opts: {} },
+        { name: 'location', type: 'City', required: true, opts: {} },
+        { name: 'salary', type: 'Integer', required: true, opts: { min: '40000', max: '250000' } },
+        { name: 'start_date', type: 'Date', required: true, opts: { from: '2020-01-01', to: '2026-05-01' } },
+        { name: 'is_remote', type: 'Boolean', required: true, opts: {} },
+        { name: 'avatar', type: 'Avatar URL', required: false, opts: {} }
+      ],
+      rowCount: 30
+    }
+  },
+  {
+    name: 'Blog Posts',
+    emoji: '📝',
+    desc: 'Content management with authors, tags, and publishing workflow.',
+    tags: ['CMS','Blog','Content'],
+    schema: {
+      name: 'Posts',
+      fields: [
+        { name: 'id', type: 'Auto ID', required: true, opts: {} },
+        { name: 'title', type: 'Sentence', required: true, opts: {} },
+        { name: 'slug', type: 'Slug', required: true, opts: {} },
+        { name: 'author', type: 'Full Name', required: true, opts: {} },
+        { name: 'content', type: 'Paragraph', required: true, opts: {} },
+        { name: 'status', type: 'Enum', required: true, opts: { values: 'Draft,Published,Archived,Scheduled' } },
+        { name: 'category', type: 'Enum', required: true, opts: { values: 'Engineering,Product,Design,Growth,Culture,Tutorial' } },
+        { name: 'tags', type: 'Array', required: false, opts: {} },
+        { name: 'views', type: 'Integer', required: false, opts: { min: '0', max: '50000' } },
+        { name: 'featured_image', type: 'Image URL', required: false, opts: {} },
+        { name: 'published_at', type: 'DateTime', required: false, opts: {} },
+        { name: 'created_at', type: 'DateTime', required: true, opts: {} }
+      ],
+      rowCount: 50
+    }
+  },
+  {
+    name: 'IoT Sensor Readings',
+    emoji: '🌡️',
+    desc: 'Time-series IoT data — temperature, humidity, device health. Perfect for ZYOD-style factory data.',
+    tags: ['IoT','Sensors','Time-Series'],
+    schema: {
+      name: 'Sensor_Readings',
+      fields: [
+        { name: 'reading_id', type: 'UUID', required: true, opts: {} },
+        { name: 'device_id', type: 'Short ID', required: true, opts: {} },
+        { name: 'device_type', type: 'Enum', required: true, opts: { values: 'temperature,humidity,pressure,vibration,power_meter' } },
+        { name: 'zone', type: 'Enum', required: true, opts: { values: 'Floor_A,Floor_B,Floor_C,Warehouse,Office' } },
+        { name: 'value', type: 'Float', required: true, opts: { min: '15', max: '85', decimals: '2' } },
+        { name: 'unit', type: 'Enum', required: true, opts: { values: '°C,%RH,kPa,mm/s,kW' } },
+        { name: 'status', type: 'Enum', required: true, opts: { values: 'Normal,Warning,Critical,Offline' } },
+        { name: 'battery_pct', type: 'Integer', required: false, opts: { min: '5', max: '100' } },
+        { name: 'latitude', type: 'Latitude', required: false, opts: {} },
+        { name: 'longitude', type: 'Longitude', required: false, opts: {} },
+        { name: 'recorded_at', type: 'DateTime', required: true, opts: { from: '2026-05-26', to: '2026-05-27' } }
+      ],
+      rowCount: 1000
+    }
+  },
+  {
+    name: 'API Logs',
+    emoji: '🔌',
+    desc: 'HTTP request/response logs for API monitoring and debugging.',
+    tags: ['API','Logs','Monitoring'],
+    schema: {
+      name: 'API_Logs',
+      fields: [
+        { name: 'log_id', type: 'UUID', required: true, opts: {} },
+        { name: 'method', type: 'Enum', required: true, opts: { values: 'GET,POST,PUT,PATCH,DELETE' } },
+        { name: 'endpoint', type: 'Slug', required: true, opts: {} },
+        { name: 'status_code', type: 'Enum', required: true, opts: { values: '200,201,204,301,400,401,403,404,422,429,500,502,503' } },
+        { name: 'response_ms', type: 'Integer', required: true, opts: { min: '12', max: '3000' } },
+        { name: 'request_size', type: 'Integer', required: true, opts: { min: '0', max: '50000' } },
+        { name: 'response_size', type: 'Integer', required: true, opts: { min: '50', max: '200000' } },
+        { name: 'user_id', type: 'Short ID', required: false, opts: {} },
+        { name: 'ip_address', type: 'IP Address', required: true, opts: {} },
+        { name: 'user_agent', type: 'User Agent', required: true, opts: {} },
+        { name: 'timestamp', type: 'DateTime', required: true, opts: {} }
+      ],
+      rowCount: 500
+    }
+  }
+];
+
+// ========== Init ==========
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem('dataforge'));
+    if (d && d.schemas) { state.schemas = d.schemas; state.generatedData = d.generatedData || {}; }
+  } catch(e) {}
+  if (!state.schemas.length) seedDemo();
+  if (!state.activeSchema && state.schemas.length) state.activeSchema = state.schemas[0].id;
+}
+
+function save() {
+  localStorage.setItem('dataforge', JSON.stringify({ schemas: state.schemas, generatedData: state.generatedData }));
+}
+
+function seedDemo() {
+  // Seed with Users and Products
+  const u = createSchemaFromTemplate(TEMPLATES[0]);
+  const p = createSchemaFromTemplate(TEMPLATES[1]);
+  state.schemas = [u, p];
+  // Pre-generate data
+  state.generatedData[u.id] = generateRows(u, u.rowCount);
+  state.generatedData[p.id] = generateRows(p, p.rowCount);
+  save();
+}
+
+function createSchemaFromTemplate(t) {
+  return {
+    id: crypto.randomUUID(),
+    name: t.schema.name,
+    fields: t.schema.fields.map(f => ({ ...f, id: crypto.randomUUID(), opts: { ...f.opts } })),
+    rowCount: t.schema.rowCount,
+    createdAt: new Date().toISOString()
+  };
+}
+
+// ========== Generation ==========
+function generateRows(schema, count) {
+  const rows = [];
+  for (let i = 0; i < count; i++) {
+    const row = {};
+    for (const f of schema.fields) {
+      const ft = FIELD_TYPES[f.type];
+      if (ft) {
+        const val = ft.gen(i, f.opts || {});
+        // Handle required=false → sometimes null
+        if (!f.required && Math.random() < 0.15) {
+          row[f.name] = null;
+        } else {
+          row[f.name] = val;
+        }
+      } else {
+        row[f.name] = null;
+      }
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+// ========== Render ==========
+function render() {
+  renderSidebar();
+  renderTopbar();
+  renderContent();
+}
+
+function renderSidebar() {
+  const search = (document.getElementById('schemaSearch')?.value || '').toLowerCase();
+  const list = document.getElementById('schemaList');
+  const filtered = state.schemas.filter(s => s.name.toLowerCase().includes(search));
+  list.innerHTML = filtered.map(s => `
+    <div class="schema-item ${s.id === state.activeSchema ? 'active' : ''}" onclick="selectSchema('${s.id}')" ondblclick="renameSchema('${s.id}')">
+      <span>${esc(s.name)}</span>
+      <span class="count">${s.fields.length} fields</span>
+    </div>
+  `).join('');
+}
+
+function renderTopbar() {
+  document.getElementById('viewTabs').innerHTML = VIEWS.map(v => `
+    <button class="view-tab ${state.view===v.id?'active':''}" onclick="switchView('${v.id}')">${v.label}</button>
+  `).join('');
+}
+
+function renderContent() {
+  const el = document.getElementById('content');
+  switch (state.view) {
+    case 'editor': renderEditor(el); break;
+    case 'preview': renderPreview(el); break;
+    case 'dashboard': renderDashboard(el); break;
+    case 'templates': renderTemplatesView(el); break;
+  }
+}
+
+// ========== Editor View ==========
+function renderEditor(el) {
+  const schema = getActive();
+  if (!schema) { el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text2)"><p style="font-size:48px">🏭</p><p style="font-size:18px;margin-top:12px">Create a schema to get started</p><button class="btn-primary" style="margin-top:16px;padding:10px 24px;font-size:14px" onclick="newSchema()">+ New Schema</button></div>'; return; }
+
+  const typeCats = {};
+  Object.entries(FIELD_TYPES).forEach(([name, ft]) => {
+    if (!typeCats[ft.cat]) typeCats[ft.cat] = [];
+    typeCats[ft.cat].push(name);
+  });
+
+  const typeOptions = Object.entries(typeCats).map(([cat, types]) =>
+    `<optgroup label="${cat}">${types.map(t => `<option value="${t}">${t}</option>`).join('')}</optgroup>`
+  ).join('');
+
+  el.innerHTML = `
+    <div class="schema-editor">
+      <div class="schema-name">
+        <input value="${esc(schema.name)}" onchange="updateSchemaName(this.value)" placeholder="Schema name">
+        <button class="btn-secondary" style="padding:6px 14px;font-size:12px;white-space:nowrap" onclick="duplicateSchema()">📋 Duplicate</button>
+        <button class="btn-secondary" style="padding:6px 14px;font-size:12px;white-space:nowrap;color:var(--red)" onclick="deleteSchema()">🗑 Delete</button>
+      </div>
+      <div class="field-header">
+        <span>Field Name</span>
+        <span>Type</span>
+        <span>Options</span>
+        <span>Required</span>
+        <span></span>
+      </div>
+      ${schema.fields.map((f, i) => `
+        <div class="field-row" data-idx="${i}">
+          <input value="${esc(f.name)}" onchange="updateField(${i},'name',this.value)" placeholder="field_name">
+          <select onchange="updateField(${i},'type',this.value)">${typeOptions.replace(`value="${f.type}"`, `value="${f.type}" selected`)}</select>
+          <div class="field-options">${renderFieldOpts(f, i)}</div>
+          <button class="req-toggle ${f.required?'on':''}" onclick="toggleRequired(${i})"></button>
+          <button class="del-btn" onclick="deleteField(${i})">×</button>
+        </div>
+      `).join('')}
+      <button class="add-field-btn" onclick="addField()">+ Add Field</button>
+
+      <div class="generate-bar">
+        <label>Rows:</label>
+        <input type="number" value="${schema.rowCount}" min="1" max="10000" onchange="updateRowCount(parseInt(this.value))">
+        <button class="generate-btn" onclick="generateData()">⚡ Generate Data</button>
+        ${state.generatedData[schema.id] ? `<span style="font-size:12px;color:var(--green)">✓ ${state.generatedData[schema.id].length} rows generated</span>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderFieldOpts(field, idx) {
+  const ft = FIELD_TYPES[field.type];
+  if (!ft || !ft.opts) return '<span class="field-type-info">No options</span>';
+  return ft.opts.map(opt => {
+    const val = (field.opts && field.opts[opt]) || '';
+    const ph = opt === 'values' ? 'comma,separated,values' : opt;
+    return `<input value="${esc(val)}" placeholder="${ph}" onchange="updateFieldOpt(${idx},'${opt}',this.value)" style="font-size:12px">`;
+  }).join('');
+}
+
+// ========== Preview View ==========
+let previewFormat = 'table';
+function renderPreview(el) {
+  const schema = getActive();
+  if (!schema) { el.innerHTML = noSchemaMsg(); return; }
+  const data = state.generatedData[schema.id];
+  if (!data || !data.length) { el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text2)"><p style="font-size:48px">📭</p><p style="margin-top:8px">No data generated yet. Go to Editor and click Generate.</p></div>'; return; }
+
+  el.innerHTML = `
+    <div class="preview-area">
+      <div class="preview-toolbar">
+        <button class="${previewFormat==='table'?'active':''}" onclick="previewFormat='table';renderContent()">Table</button>
+        <button class="${previewFormat==='json'?'active':''}" onclick="previewFormat='json';renderContent()">JSON</button>
+        <button class="${previewFormat==='csv'?'active':''}" onclick="previewFormat='csv';renderContent()">CSV</button>
+        <button class="${previewFormat==='sql'?'active':''}" onclick="previewFormat='sql';renderContent()">SQL</button>
+        <button class="${previewFormat==='typescript'?'active':''}" onclick="previewFormat='typescript';renderContent()">TypeScript</button>
+        <span class="preview-count">${data.length} rows · ${schema.fields.length} columns</span>
+        <button onclick="copyData()" style="margin-left:8px">📋 Copy</button>
+        <button onclick="downloadData()">💾 Download</button>
+      </div>
+      ${renderPreviewContent(schema, data)}
+    </div>
+  `;
+}
+
+function renderPreviewContent(schema, data) {
+  switch (previewFormat) {
+    case 'table': return renderTable(schema, data);
+    case 'json': return `<div class="code-block">${syntaxJSON(data)}</div>`;
+    case 'csv': return `<div class="code-block">${esc(toCSV(schema, data))}</div>`;
+    case 'sql': return `<div class="code-block">${esc(toSQL(schema, data))}</div>`;
+    case 'typescript': return `<div class="code-block">${esc(toTypeScript(schema))}</div>`;
+  }
+}
+
+function renderTable(schema, data) {
+  const maxRows = Math.min(data.length, 200);
+  return `
+    <div class="data-table-wrap" style="max-height:calc(100vh - 220px);overflow:auto">
+      <table class="data-table">
+        <thead><tr>${schema.fields.map(f => `<th>${esc(f.name)}</th>`).join('')}</tr></thead>
+        <tbody>${data.slice(0, maxRows).map(row => `<tr>${schema.fields.map(f => {
+          let v = row[f.name];
+          if (v === null || v === undefined) return '<td style="color:var(--text2);font-style:italic">null</td>';
+          if (typeof v === 'object') v = JSON.stringify(v);
+          if (typeof v === 'boolean') return `<td><span class="type-badge" style="background:${v?'var(--green)':'var(--red)'}20;color:${v?'var(--green)':'var(--red)'}">${v}</span></td>`;
+          return `<td title="${esc(String(v))}">${esc(String(v))}</td>`;
+        }).join('')}</tr>`).join('')}</tbody>
+      </table>
+    </div>
+    ${data.length > maxRows ? `<p style="text-align:center;padding:12px;font-size:12px;color:var(--text2)">Showing ${maxRows} of ${data.length} rows</p>` : ''}
+  `;
+}
+
+function syntaxJSON(data) {
+  const json = JSON.stringify(data.slice(0, 100), null, 2);
+  return json.replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span class="k">$1</span>:')
+    .replace(/:\s*("(?:[^"\\]|\\.)*")/g, ': <span class="s">$1</span>')
+    .replace(/:\s*(\d+\.?\d*)/g, ': <span class="n">$1</span>')
+    .replace(/:\s*(true|false|null)/g, ': <span class="n">$1</span>');
+}
+
+function toCSV(schema, data) {
+  const header = schema.fields.map(f => f.name).join(',');
+  const rows = data.map(row => schema.fields.map(f => {
+    let v = row[f.name];
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'object') v = JSON.stringify(v);
+    v = String(v);
+    if (v.includes(',') || v.includes('"') || v.includes('\n')) return '"' + v.replace(/"/g, '""') + '"';
+    return v;
+  }).join(',')).join('\n');
+  return header + '\n' + rows;
+}
+
+function toSQL(schema, data) {
+  const tbl = schema.name.replace(/\s+/g, '_').toLowerCase();
+  // CREATE TABLE
+  let sql = `-- Generated by Data Forge\n-- ${data.length} rows for "${schema.name}"\n\n`;
+  sql += `CREATE TABLE ${tbl} (\n`;
+  sql += schema.fields.map(f => {
+    let sqlType = 'TEXT';
+    const t = f.type;
+    if (t === 'UUID' || t === 'Short ID') sqlType = 'UUID';
+    else if (t === 'Auto ID') sqlType = 'SERIAL PRIMARY KEY';
+    else if (['Integer','Age','Rating','Percentage','Timestamp','Year'].includes(t)) sqlType = 'INTEGER';
+    else if (['Float','Price','Latitude','Longitude'].includes(t)) sqlType = 'NUMERIC';
+    else if (t === 'Boolean') sqlType = 'BOOLEAN';
+    else if (t === 'Date') sqlType = 'DATE';
+    else if (t === 'DateTime') sqlType = 'TIMESTAMP';
+    else if (t === 'Time') sqlType = 'TIME';
+    else if (t === 'JSON Object' || t === 'Array') sqlType = 'JSONB';
+    else if (t === 'Paragraph' || t === 'Bio' || t === 'Description') sqlType = 'TEXT';
+    else sqlType = 'VARCHAR(255)';
+    return `  ${f.name.replace(/\s+/g,'_')} ${sqlType}${f.required ? ' NOT NULL' : ''}`;
+  }).join(',\n');
+  sql += '\n);\n\n';
+
+  // INSERT
+  const maxInsert = Math.min(data.length, 200);
+  sql += `INSERT INTO ${tbl} (${schema.fields.map(f => f.name.replace(/\s+/g,'_')).join(', ')})\nVALUES\n`;
+  sql += data.slice(0, maxInsert).map(row => {
+    const vals = schema.fields.map(f => {
+      let v = row[f.name];
+      if (v === null || v === undefined) return 'NULL';
+      if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+      if (typeof v === 'number') return v;
+      if (typeof v === 'object') return `'${JSON.stringify(v).replace(/'/g,"''")}'`;
+      return `'${String(v).replace(/'/g,"''")}'`;
+    });
+    return `  (${vals.join(', ')})`;
+  }).join(',\n');
+  sql += ';\n';
+  if (data.length > maxInsert) sql += `\n-- ... ${data.length - maxInsert} more rows truncated\n`;
+  return sql;
+}
+
+function toTypeScript(schema) {
+  let ts = `// Generated by Data Forge\n// TypeScript interface for "${schema.name}"\n\n`;
+  ts += `export interface ${schema.name.replace(/\s+/g, '')} {\n`;
+  ts += schema.fields.map(f => {
+    let tsType = 'string';
+    const t = f.type;
+    if (['Integer','Float','Price','Age','Percentage','Rating','Timestamp','Year'].includes(t)) tsType = 'number';
+    else if (t === 'Boolean') tsType = 'boolean';
+    else if (t === 'JSON Object') tsType = 'Record<string, unknown>';
+    else if (t === 'Array') tsType = 'string[]';
+    else if (t === 'Null') tsType = 'null';
+    else if (t === 'Latitude' || t === 'Longitude') tsType = 'number';
+    return `  ${f.name}${f.required ? '' : '?'}: ${tsType};`;
+  }).join('\n');
+  ts += '\n}\n';
+
+  // Also add a Zod schema
+  ts += `\n// Zod schema\nimport { z } from 'zod';\n\nexport const ${schema.name.replace(/\s+/g,'')}Schema = z.object({\n`;
+  ts += schema.fields.map(f => {
+    let zodType = 'z.string()';
+    const t = f.type;
+    if (['Integer','Age','Percentage','Rating','Timestamp','Year'].includes(t)) zodType = 'z.number().int()';
+    else if (['Float','Price','Latitude','Longitude'].includes(t)) zodType = 'z.number()';
+    else if (t === 'Boolean') zodType = 'z.boolean()';
+    else if (t === 'Email') zodType = 'z.string().email()';
+    else if (t === 'UUID') zodType = 'z.string().uuid()';
+    else if (t === 'Date') zodType = 'z.string().date()';
+    else if (t === 'DateTime') zodType = 'z.string().datetime()';
+    else if (t === 'JSON Object') zodType = 'z.record(z.unknown())';
+    else if (t === 'Array') zodType = 'z.array(z.string())';
+    else if (t === 'Null') zodType = 'z.null()';
+    if (!f.required) zodType += '.nullable().optional()';
+    return `  ${f.name}: ${zodType},`;
+  }).join('\n');
+  ts += '\n});\n';
+  return ts;
+}
+
+// ========== Dashboard View ==========
+function renderDashboard(el) {
+  const totalFields = state.schemas.reduce((a, s) => a + s.fields.length, 0);
+  const totalRows = Object.values(state.generatedData).reduce((a, d) => a + (d?.length || 0), 0);
+  const typeCounts = {};
+  state.schemas.forEach(s => s.fields.forEach(f => { typeCounts[f.type] = (typeCounts[f.type] || 0) + 1; }));
+  const topTypes = Object.entries(typeCounts).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  const maxType = topTypes[0]?.[1] || 1;
+
+  const catCounts = {};
+  state.schemas.forEach(s => s.fields.forEach(f => {
+    const cat = FIELD_TYPES[f.type]?.cat || 'Other';
+    catCounts[cat] = (catCounts[cat] || 0) + 1;
+  }));
+  const topCats = Object.entries(catCounts).sort((a,b) => b[1]-a[1]);
+  const maxCat = topCats[0]?.[1] || 1;
+  const catColors = { 'Identity':'var(--purple)', 'Personal':'var(--accent)', 'Address':'var(--green)', 'Business':'var(--orange)', 'Numbers':'var(--yellow)', 'Text':'var(--cyan)', 'Date/Time':'var(--pink)', 'Boolean/Enum':'var(--red)', 'Product':'var(--accent2)', 'Technical':'var(--text2)' };
+
+  el.innerHTML = `
+    <div class="dashboard">
+      <div class="stat-card"><div class="label">Schemas</div><div class="value">${state.schemas.length}</div></div>
+      <div class="stat-card"><div class="label">Total Fields</div><div class="value">${totalFields}</div></div>
+      <div class="stat-card"><div class="label">Total Rows Generated</div><div class="value">${totalRows.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="label">Unique Types Used</div><div class="value">${Object.keys(typeCounts).length}</div></div>
+      <div class="stat-card"><div class="label">Available Types</div><div class="value">${Object.keys(FIELD_TYPES).length}</div></div>
+      <div class="stat-card"><div class="label">Type Categories</div><div class="value">${Object.keys(catCounts).length}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="dash-section">
+        <h3>Most Used Field Types</h3>
+        ${topTypes.map(([t,c]) => `<div class="bar-row"><span class="bar-label">${t}</span><div class="bar-track"><div class="bar-fill" style="width:${c/maxType*100}%;background:var(--accent)"></div></div><span class="bar-val">${c}</span></div>`).join('')}
+      </div>
+      <div class="dash-section">
+        <h3>Fields by Category</h3>
+        ${topCats.map(([cat,c]) => `<div class="bar-row"><span class="bar-label">${cat}</span><div class="bar-track"><div class="bar-fill" style="width:${c/maxCat*100}%;background:${catColors[cat]||'var(--text2)'}"></div></div><span class="bar-val">${c}</span></div>`).join('')}
+      </div>
+    </div>
+    <div class="dash-section" style="margin-top:16px">
+      <h3>All Schemas</h3>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Fields</th><th>Rows Generated</th><th>Created</th></tr></thead>
+          <tbody>${state.schemas.map(s => `<tr style="cursor:pointer" onclick="selectSchema('${s.id}');switchView('editor')">
+            <td style="font-weight:600">${esc(s.name)}</td>
+            <td>${s.fields.length}</td>
+            <td>${(state.generatedData[s.id]?.length || 0).toLocaleString()}</td>
+            <td style="color:var(--text2)">${new Date(s.createdAt).toLocaleDateString()}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ========== Templates View ==========
+function renderTemplatesView(el) {
+  el.innerHTML = `
+    <h2 style="margin-bottom:16px">Schema Templates</h2>
+    <p style="color:var(--text2);margin-bottom:20px;font-size:14px">Click a template to create a new schema with pre-configured fields and demo data.</p>
+    <div class="template-grid">
+      ${TEMPLATES.map((t, i) => `
+        <div class="template-card" onclick="useTemplate(${i})">
+          <h3>${t.emoji} ${t.name}</h3>
+          <p>${t.desc}</p>
+          <div class="tags">
+            ${t.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+            <span class="tag" style="background:var(--accent)20;color:var(--accent)">${t.schema.fields.length} fields</span>
+            <span class="tag" style="background:var(--green)20;color:var(--green)">${t.schema.rowCount} rows</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function showTemplates() { state.view = 'templates'; render(); }
+
+// ========== Actions ==========
+function getActive() { return state.schemas.find(s => s.id === state.activeSchema); }
+
+function selectSchema(id) { state.activeSchema = id; render(); }
+
+function switchView(v) { state.view = v; render(); }
+
+function newSchema() {
+  const schema = {
+    id: crypto.randomUUID(),
+    name: 'New Schema',
+    fields: [
+      { id: crypto.randomUUID(), name: 'id', type: 'UUID', required: true, opts: {} },
+      { id: crypto.randomUUID(), name: 'name', type: 'Full Name', required: true, opts: {} },
+      { id: crypto.randomUUID(), name: 'email', type: 'Email', required: true, opts: {} },
+      { id: crypto.randomUUID(), name: 'created_at', type: 'DateTime', required: true, opts: {} }
+    ],
+    rowCount: 25,
+    createdAt: new Date().toISOString()
+  };
+  state.schemas.push(schema);
+  state.activeSchema = schema.id;
+  state.view = 'editor';
+  save(); render();
+}
+
+function deleteSchema() {
+  const s = getActive();
+  if (!s) return;
+  if (!confirm(`Delete "${s.name}"?`)) return;
+  state.schemas = state.schemas.filter(x => x.id !== s.id);
+  delete state.generatedData[s.id];
+  state.activeSchema = state.schemas[0]?.id || null;
+  save(); render();
+}
+
+function duplicateSchema() {
+  const s = getActive();
+  if (!s) return;
+  const dup = JSON.parse(JSON.stringify(s));
+  dup.id = crypto.randomUUID();
+  dup.name += ' (copy)';
+  dup.fields.forEach(f => f.id = crypto.randomUUID());
+  dup.createdAt = new Date().toISOString();
+  state.schemas.push(dup);
+  state.activeSchema = dup.id;
+  save(); render();
+}
+
+function renameSchema(id) {
+  const s = state.schemas.find(x => x.id === id);
+  if (!s) return;
+  const name = prompt('Rename schema:', s.name);
+  if (name && name.trim()) { s.name = name.trim(); save(); render(); }
+}
+
+function updateSchemaName(val) {
+  const s = getActive();
+  if (s) { s.name = val; save(); renderSidebar(); }
+}
+
+function updateRowCount(val) {
+  const s = getActive();
+  if (s) { s.rowCount = Math.max(1, Math.min(10000, val || 25)); save(); }
+}
+
+function addField() {
+  const s = getActive();
+  if (!s) return;
+  s.fields.push({ id: crypto.randomUUID(), name: 'new_field', type: 'Word', required: false, opts: {} });
+  save(); render();
+}
+
+function deleteField(idx) {
+  const s = getActive();
+  if (!s) return;
+  s.fields.splice(idx, 1);
+  save(); render();
+}
+
+function updateField(idx, key, val) {
+  const s = getActive();
+  if (!s) return;
+  s.fields[idx][key] = val;
+  if (key === 'type') { s.fields[idx].opts = {}; } // Reset opts on type change
+  save(); render();
+}
+
+function updateFieldOpt(idx, opt, val) {
+  const s = getActive();
+  if (!s) return;
+  if (!s.fields[idx].opts) s.fields[idx].opts = {};
+  s.fields[idx].opts[opt] = val;
+  save();
+}
+
+function toggleRequired(idx) {
+  const s = getActive();
+  if (!s) return;
+  s.fields[idx].required = !s.fields[idx].required;
+  save(); render();
+}
+
+function generateData() {
+  const s = getActive();
+  if (!s) return;
+  const t0 = performance.now();
+  state.generatedData[s.id] = generateRows(s, s.rowCount);
+  const ms = (performance.now() - t0).toFixed(1);
+  save(); render();
+  // Brief feedback
+  const el = document.querySelector('.generate-btn');
+  if (el) { el.textContent = `✓ ${s.rowCount} rows in ${ms}ms`; setTimeout(() => { el.textContent = '⚡ Generate Data'; }, 2000); }
+}
+
+function useTemplate(idx) {
+  const t = TEMPLATES[idx];
+  const schema = createSchemaFromTemplate(t);
+  state.schemas.push(schema);
+  state.activeSchema = schema.id;
+  state.generatedData[schema.id] = generateRows(schema, schema.rowCount);
+  state.view = 'editor';
+  save(); render();
+}
+
+// ========== Copy & Download ==========
+function getFormattedData() {
+  const schema = getActive();
+  const data = state.generatedData[schema?.id];
+  if (!schema || !data) return '';
+  switch (previewFormat) {
+    case 'table':
+    case 'json': return JSON.stringify(data, null, 2);
+    case 'csv': return toCSV(schema, data);
+    case 'sql': return toSQL(schema, data);
+    case 'typescript': return toTypeScript(schema);
+  }
+  return '';
+}
+
+function copyData() {
+  navigator.clipboard.writeText(getFormattedData()).then(() => {
+    const btns = document.querySelectorAll('.preview-toolbar button');
+    const copyBtn = [...btns].find(b => b.textContent.includes('Copy'));
+    if (copyBtn) { copyBtn.textContent = '✓ Copied!'; setTimeout(() => copyBtn.textContent = '📋 Copy', 1500); }
+  });
+}
+
+function downloadData() {
+  const schema = getActive();
+  if (!schema) return;
+  const data = getFormattedData();
+  const ext = { table: 'json', json: 'json', csv: 'csv', sql: 'sql', typescript: 'ts' }[previewFormat];
+  const blob = new Blob([data], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${schema.name.replace(/\s+/g,'_').toLowerCase()}.${ext}`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ========== Import/Export ==========
+function exportAll() {
+  const blob = new Blob([JSON.stringify({ schemas: state.schemas, generatedData: state.generatedData }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'data-forge-export.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importAll() { document.getElementById('importFile').click(); }
+
+document.getElementById('importFile')?.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (d.schemas) {
+        // Merge
+        d.schemas.forEach(s => {
+          if (!state.schemas.find(x => x.id === s.id)) state.schemas.push(s);
+        });
+        if (d.generatedData) Object.assign(state.generatedData, d.generatedData);
+        save(); render();
+      }
+    } catch(err) { alert('Invalid JSON file'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// ========== Help ==========
+function showHelp() {
+  const overlay = document.createElement('div');
+  overlay.className = 'help-overlay';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="help-box">
+      <h2>⌨️ Keyboard Shortcuts</h2>
+      <div class="help-row"><span>New schema</span><kbd>N</kbd></div>
+      <div class="help-row"><span>Search schemas</span><kbd>/</kbd></div>
+      <div class="help-row"><span>Editor view</span><kbd>1</kbd></div>
+      <div class="help-row"><span>Preview view</span><kbd>2</kbd></div>
+      <div class="help-row"><span>Dashboard view</span><kbd>3</kbd></div>
+      <div class="help-row"><span>Templates view</span><kbd>4</kbd></div>
+      <div class="help-row"><span>Generate data</span><kbd>G</kbd></div>
+      <div class="help-row"><span>Export all</span><kbd>E</kbd></div>
+      <div class="help-row"><span>Import</span><kbd>I</kbd></div>
+      <div class="help-row"><span>Help</span><kbd>?</kbd></div>
+      <div class="help-row"><span>Close</span><kbd>Esc</kbd></div>
+      <h3 style="margin-top:20px;margin-bottom:12px;font-size:14px">📊 ${Object.keys(FIELD_TYPES).length} Field Types Available</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${Object.entries(FIELD_TYPES).reduce((acc, [name, ft]) => {
+          if (!acc.cats[ft.cat]) { acc.cats[ft.cat] = []; }
+          acc.cats[ft.cat].push(name);
+          return acc;
+        }, { cats: {} }).cats && Object.entries(
+          Object.entries(FIELD_TYPES).reduce((acc, [name, ft]) => { (acc[ft.cat] = acc[ft.cat] || []).push(name); return acc; }, {})
+        ).map(([cat, types]) => `<div style="margin-bottom:8px;width:100%"><strong style="font-size:12px;color:var(--text2)">${cat}</strong><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${types.map(t => `<span class="tag" style="font-size:11px">${t}</span>`).join('')}</div></div>`).join('')}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+// ========== Keyboard ==========
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input,select,textarea')) {
+    if (e.key === 'Escape') e.target.blur();
+    return;
+  }
+  const helpEl = document.querySelector('.help-overlay');
+  if (helpEl && e.key === 'Escape') { helpEl.remove(); return; }
+  if (e.key === '?') { showHelp(); e.preventDefault(); return; }
+
+  switch (e.key) {
+    case 'n': case 'N': if (!e.metaKey&&!e.ctrlKey) { newSchema(); e.preventDefault(); } break;
+    case '/': document.getElementById('schemaSearch')?.focus(); e.preventDefault(); break;
+    case '1': switchView('editor'); e.preventDefault(); break;
+    case '2': switchView('preview'); e.preventDefault(); break;
+    case '3': switchView('dashboard'); e.preventDefault(); break;
+    case '4': switchView('templates'); e.preventDefault(); break;
+    case 'g': case 'G': generateData(); e.preventDefault(); break;
+    case 'e': case 'E': if (!e.metaKey) { exportAll(); e.preventDefault(); } break;
+    case 'i': case 'I': if (!e.metaKey) { importAll(); e.preventDefault(); } break;
+    case 'Escape': break;
+  }
+});
+
+document.getElementById('schemaSearch')?.addEventListener('input', renderSidebar);
+
+function noSchemaMsg() { return '<div style="text-align:center;padding:60px;color:var(--text2)"><p style="font-size:48px">🏭</p><p>Select or create a schema</p></div>'; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ========== Boot ==========
+load();
+render();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

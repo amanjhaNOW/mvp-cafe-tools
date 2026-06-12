@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flag Studio — Feature Flag Manager & Rollout Planner</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--surface3:#21262d;--border:#30363d;--border2:#484f58;--text:#e6edf3;--text2:#8b949e;--text3:#6e7681;--accent:#58a6ff;--accent2:#388bfd;--green:#3fb950;--green2:#238636;--red:#f85149;--red2:#da3633;--orange:#d29922;--purple:#bc8cff;--pink:#f778ba;--cyan:#39d2c0;--yellow:#e3b341;--radius:8px;--radius2:12px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;font-size:14px}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+input,textarea,select,button{font-family:inherit;font-size:inherit}
+input,textarea,select{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 12px;outline:none;width:100%}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+button{cursor:pointer;border:none;border-radius:var(--radius);padding:8px 16px;font-weight:500;transition:all .15s}
+.btn-primary{background:var(--accent2);color:#fff}.btn-primary:hover{background:var(--accent)}
+.btn-secondary{background:var(--surface3);color:var(--text2)}.btn-secondary:hover{background:var(--border);color:var(--text)}
+.btn-danger{background:var(--red2);color:#fff}.btn-danger:hover{background:var(--red)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-icon{background:none;color:var(--text2);padding:4px 8px}.btn-icon:hover{color:var(--text)}
+
+/* Layout */
+.sidebar{width:260px;min-width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:16px;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:20px}
+.sidebar-search{padding:8px 12px}
+.sidebar-search input{font-size:13px;padding:6px 10px}
+.sidebar-nav{padding:8px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;color:var(--text2);transition:all .1s;font-size:13px}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--surface2);color:var(--text);border-left:2px solid var(--accent)}
+.nav-item .badge{margin-left:auto;background:var(--surface3);color:var(--text3);padding:1px 7px;border-radius:10px;font-size:11px}
+.nav-section{padding:4px 16px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-top:12px}
+.sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:6px}
+.sidebar-footer button{flex:1;font-size:11px;padding:6px}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.topbar h2{font-size:16px;font-weight:600}
+.topbar .env-pills{display:flex;gap:6px;margin-left:auto}
+.env-pill{padding:4px 12px;border-radius:16px;font-size:12px;cursor:pointer;border:1px solid var(--border);color:var(--text2);transition:all .15s}
+.env-pill:hover{border-color:var(--text3)}
+.env-pill.active{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,.1)}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;margin-bottom:16px}
+.card-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:600}
+.card-subtitle{font-size:12px;color:var(--text2)}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:16px}
+.stat-card .label{font-size:12px;color:var(--text2);margin-bottom:4px}
+.stat-card .value{font-size:28px;font-weight:700}
+.stat-card .sub{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* Flag list */
+.flag-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:16px;margin-bottom:12px;cursor:pointer;transition:all .15s}
+.flag-card:hover{border-color:var(--border2)}
+.flag-row{display:flex;align-items:center;gap:12px}
+.flag-toggle{width:44px;height:24px;border-radius:12px;position:relative;cursor:pointer;transition:all .2s;flex-shrink:0}
+.flag-toggle.on{background:var(--green2)}.flag-toggle.off{background:var(--surface3);border:1px solid var(--border)}
+.flag-toggle .knob{width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;transition:all .2s}
+.flag-toggle.on .knob{left:22px}.flag-toggle.off .knob{left:2px}
+.flag-name{font-weight:600;font-size:14px}
+.flag-key{font-family:'SF Mono',SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--text3);background:var(--surface2);padding:2px 6px;border-radius:4px}
+.flag-desc{font-size:13px;color:var(--text2);margin-top:6px}
+.flag-meta{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap}
+.flag-tag{font-size:11px;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px}
+.flag-tag.type-release{background:rgba(88,166,255,.15);color:var(--accent)}
+.flag-tag.type-experiment{background:rgba(188,140,255,.15);color:var(--purple)}
+.flag-tag.type-ops{background:rgba(227,179,65,.15);color:var(--yellow)}
+.flag-tag.type-permission{background:rgba(57,210,192,.15);color:var(--cyan)}
+.flag-tag.type-kill-switch{background:rgba(248,81,73,.15);color:var(--red)}
+.flag-tag.env{background:var(--surface3);color:var(--text3)}
+.flag-tag.rollout{background:rgba(63,185,80,.15);color:var(--green)}
+.flag-tag.stale{background:rgba(248,81,73,.1);color:var(--red)}
+
+/* Rollout bar */
+.rollout-bar{height:6px;background:var(--surface3);border-radius:3px;margin-top:8px;overflow:hidden}
+.rollout-bar .fill{height:100%;border-radius:3px;transition:width .3s}
+
+/* Detail view */
+.detail-section{margin-bottom:24px}
+.detail-section h3{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.detail-field{display:flex;flex-direction:column;gap:4px}
+.detail-field label{font-size:12px;color:var(--text2);font-weight:500}
+.detail-field .val{font-size:14px}
+
+/* Rules */
+.rule-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
+.rule-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.rule-type{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600}
+.rule-type.percentage{background:rgba(63,185,80,.15);color:var(--green)}
+.rule-type.user-list{background:rgba(88,166,255,.15);color:var(--accent)}
+.rule-type.segment{background:rgba(188,140,255,.15);color:var(--purple)}
+.rule-type.schedule{background:rgba(227,179,65,.15);color:var(--yellow)}
+
+/* Rollout stages */
+.stage-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.stage-dot{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.stage-dot.done{background:var(--green2);color:#fff}
+.stage-dot.active{background:var(--accent2);color:#fff;animation:pulse 2s infinite}
+.stage-dot.pending{background:var(--surface3);color:var(--text3);border:1px solid var(--border)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(56,139,253,.4)}50%{box-shadow:0 0 0 6px rgba(56,139,253,0)}}
+.stage-line{flex:1;height:2px;background:var(--border)}
+.stage-line.done{background:var(--green2)}
+.stage-info{display:flex;justify-content:space-between;font-size:11px;color:var(--text3)}
+
+/* Audit log */
+.audit-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.audit-item:last-child{border:none}
+.audit-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.audit-dot.created{background:var(--green)}
+.audit-dot.toggled{background:var(--accent)}
+.audit-dot.rollout{background:var(--purple)}
+.audit-dot.rule{background:var(--orange)}
+.audit-dot.archived{background:var(--text3)}
+.audit-text{font-size:13px;color:var(--text2)}
+.audit-text strong{color:var(--text)}
+.audit-time{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);width:560px;max-width:90vw;max-height:85vh;overflow-y:auto;padding:24px}
+.modal h3{font-size:16px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:500}
+.form-row{display:flex;gap:12px}
+.form-row>*{flex:1}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.chip-input{display:flex;flex-wrap:wrap;gap:4px;padding:6px;min-height:38px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);cursor:text}
+.chip-input:focus-within{border-color:var(--accent)}
+.chip-input input{border:none;background:none;padding:2px 4px;flex:1;min-width:80px;outline:none;color:var(--text)}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--surface3);border-radius:10px;font-size:12px;color:var(--text2)}
+.chip .x{cursor:pointer;opacity:.6}.chip .x:hover{opacity:1}
+
+/* Dashboard charts */
+.chart-container{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;margin-bottom:16px}
+.chart-container h3{font-size:14px;font-weight:600;margin-bottom:16px}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:140px}
+.bar-col{display:flex;flex-direction:column;align-items:center;flex:1;height:100%}
+.bar{width:100%;border-radius:4px 4px 0 0;transition:height .3s;min-height:2px;margin-top:auto}
+.bar-label{font-size:10px;color:var(--text3);margin-top:6px;text-align:center;white-space:nowrap}
+.bar-value{font-size:10px;color:var(--text2);margin-bottom:4px}
+.donut-wrap{display:flex;align-items:center;gap:24px}
+.donut-legend{display:flex;flex-direction:column;gap:6px}
+.donut-legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)}
+.donut-legend-item .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.heatmap{display:flex;gap:2px;flex-wrap:wrap}
+.heatmap-cell{width:12px;height:12px;border-radius:2px;background:var(--surface3)}
+
+/* Empty state */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--text3)}
+.empty .icon{font-size:48px;margin-bottom:16px}
+.empty p{margin-bottom:16px}
+
+/* Dependency graph */
+.dep-node{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;display:inline-flex;align-items:center;gap:8px;font-size:13px;margin:4px}
+.dep-arrow{color:var(--text3);font-size:16px}
+
+/* Code snippet */
+.code-block{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-family:'SF Mono',SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.6;overflow-x:auto;position:relative;white-space:pre}
+.code-block .copy-btn{position:absolute;top:8px;right:8px;background:var(--surface3);color:var(--text2);border:1px solid var(--border);padding:4px 10px;font-size:11px;border-radius:var(--radius);cursor:pointer}
+.code-block .copy-btn:hover{background:var(--border);color:var(--text)}
+.code-kw{color:var(--purple)}.code-str{color:var(--green)}.code-cm{color:var(--text3)}.code-fn{color:var(--accent)}.code-num{color:var(--orange)}
+
+/* Help */
+.shortcut-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.shortcut-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.shortcut-item kbd{background:var(--surface3);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;font-family:inherit;color:var(--text)}
+.tab-row{display:flex;gap:2px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:-1px}
+.tab-btn{padding:8px 16px;font-size:13px;color:var(--text2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .15s}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.inline-toggle{display:flex;align-items:center;gap:8px}
+.inline-toggle label{font-size:13px;color:var(--text2)}
+</style>
+</head>
+<body>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1><span>🚩</span> Flag Studio</h1>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px">Feature Flag Manager</div>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" id="searchInput" placeholder="Search flags... ( / )" />
+  </div>
+  <div class="sidebar-nav" id="sidebarNav"></div>
+  <div class="sidebar-footer">
+    <button class="btn-secondary btn-sm" onclick="exportJSON()">Export</button>
+    <button class="btn-secondary btn-sm" onclick="importJSON()">Import</button>
+    <button class="btn-secondary btn-sm" onclick="showHelp()">? Help</button>
+  </div>
+</div>
+<div class="main">
+  <div class="topbar">
+    <h2 id="viewTitle">All Flags</h2>
+    <div class="env-pills" id="envPills"></div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+<div id="modalRoot"></div>
+
+<script>
+// ─── Data ───
+const ENVS = ['Development','Staging','Production'];
+const FLAG_TYPES = ['release','experiment','ops','permission','kill-switch'];
+const FLAG_TYPE_LABELS = {'release':'Release','experiment':'Experiment','ops':'Ops','permission':'Permission','kill-switch':'Kill Switch'};
+const FLAG_TYPE_COLORS = {'release':'var(--accent)','experiment':'var(--purple)','ops':'var(--yellow)','permission':'var(--cyan)','kill-switch':'var(--red)'};
+const RULE_TYPES = ['percentage','user-list','segment','schedule'];
+
+function getStore() {
+  try { return JSON.parse(localStorage.getItem('flag-studio-data')) || null; } catch { return null; }
+}
+function setStore(d) { localStorage.setItem('flag-studio-data', JSON.stringify(d)); }
+
+let state = getStore() || seedData();
+let currentView = 'flags';
+let currentEnv = 'Production';
+let selectedFlagId = null;
+let searchQuery = '';
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function now() { return new Date().toISOString(); }
+function relTime(iso) {
+  const d = new Date(iso), n = Date.now(), diff = n - d.getTime();
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+  if (diff < 2592000000) return Math.floor(diff/86400000) + 'd ago';
+  return d.toLocaleDateString();
+}
+function fmtDate(iso) { return new Date(iso).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
+
+function save() { setStore(state); }
+
+// ─── Seed Data ───
+function seedData() {
+  const base = Date.now();
+  const d = (days) => new Date(base - days * 86400000).toISOString();
+  const flags = [
+    {
+      id:'f1', name:'Video Signatures', key:'video_signatures', description:'Enable video signature support in the template editor. Allows users to embed short video clips in email signatures.',
+      type:'release', tags:['v2.0','signatures','premium'],
+      envState:{ Development:{enabled:true,rollout:100}, Staging:{enabled:true,rollout:100}, Production:{enabled:true,rollout:25} },
+      rules:[
+        {id:'r1',type:'percentage',env:'Production',value:25,description:'Gradual rollout to 25% of users'},
+        {id:'r2',type:'user-list',env:'Production',value:['aj@mvp.cafe','beta@utmstamp.com','early-access@utmstamp.com'],description:'Beta testers always see this'},
+        {id:'r3',type:'segment',env:'Production',value:{attribute:'plan',operator:'equals',val:'pro'},description:'All Pro plan users'}
+      ],
+      rolloutPlan:{
+        stages:[
+          {name:'Internal',percentage:5,status:'done',date:d(14)},
+          {name:'Beta',percentage:25,status:'active',date:d(3)},
+          {name:'50%',percentage:50,status:'pending',date:null},
+          {name:'GA',percentage:100,status:'pending',date:null}
+        ]
+      },
+      dependencies:['f3'],
+      createdAt:d(21), updatedAt:d(3), createdBy:'AJ',
+      audit:[
+        {action:'created',by:'AJ',at:d(21),detail:'Flag created'},
+        {action:'toggled',by:'AJ',at:d(14),detail:'Enabled in Development'},
+        {action:'toggled',by:'AJ',at:d(10),detail:'Enabled in Staging'},
+        {action:'rollout',by:'AJ',at:d(3),detail:'Production rollout started at 25%'},
+        {action:'rule',by:'AJ',at:d(3),detail:'Added beta tester user list rule'}
+      ]
+    },
+    {
+      id:'f2', name:'Dark Mode', key:'dark_mode_v2', description:'New dark mode with improved contrast ratios and WCAG AA compliance. Replaces the legacy dark theme.',
+      type:'release', tags:['v2.0','ui','accessibility'],
+      envState:{ Development:{enabled:true,rollout:100}, Staging:{enabled:true,rollout:100}, Production:{enabled:true,rollout:100} },
+      rules:[],
+      rolloutPlan:{stages:[
+        {name:'Internal',percentage:10,status:'done',date:d(30)},
+        {name:'Beta',percentage:50,status:'done',date:d(20)},
+        {name:'GA',percentage:100,status:'done',date:d(7)}
+      ]},
+      dependencies:[],
+      createdAt:d(35), updatedAt:d(7), createdBy:'AJ',
+      audit:[
+        {action:'created',by:'AJ',at:d(35),detail:'Flag created'},
+        {action:'rollout',by:'AJ',at:d(30),detail:'10% internal rollout'},
+        {action:'rollout',by:'AJ',at:d(20),detail:'50% beta rollout'},
+        {action:'rollout',by:'AJ',at:d(7),detail:'100% GA — full rollout complete'}
+      ]
+    },
+    {
+      id:'f3', name:'New Template Editor', key:'template_editor_v2', description:'Rebuilt template editor with drag-and-drop blocks, real-time preview, and undo/redo. Foundation for video signatures and advanced layouts.',
+      type:'release', tags:['v2.0','editor','core'],
+      envState:{ Development:{enabled:true,rollout:100}, Staging:{enabled:true,rollout:100}, Production:{enabled:true,rollout:75} },
+      rules:[
+        {id:'r4',type:'percentage',env:'Production',value:75,description:'Rolling out gradually'}
+      ],
+      rolloutPlan:{stages:[
+        {name:'Alpha',percentage:5,status:'done',date:d(28)},
+        {name:'Beta',percentage:25,status:'done',date:d(18)},
+        {name:'75%',percentage:75,status:'active',date:d(5)},
+        {name:'GA',percentage:100,status:'pending',date:null}
+      ]},
+      dependencies:[],
+      createdAt:d(35), updatedAt:d(5), createdBy:'AJ',
+      audit:[
+        {action:'created',by:'AJ',at:d(35),detail:'Flag created'},
+        {action:'rollout',by:'AJ',at:d(18),detail:'25% beta rollout'},
+        {action:'rollout',by:'AJ',at:d(5),detail:'Expanded to 75%'}
+      ]
+    },
+    {
+      id:'f4', name:'AI Subject Lines', key:'ai_subject_lines', description:'Experiment: AI-generated email subject line suggestions based on signature content and campaign context.',
+      type:'experiment', tags:['ai','experiment','growth'],
+      envState:{ Development:{enabled:true,rollout:100}, Staging:{enabled:true,rollout:100}, Production:{enabled:true,rollout:50} },
+      rules:[
+        {id:'r5',type:'percentage',env:'Production',value:50,description:'50/50 A/B test'},
+        {id:'r6',type:'segment',env:'Production',value:{attribute:'signatures_created',operator:'gte',val:'3'},description:'Users with 3+ signatures only'}
+      ],
+      rolloutPlan:{stages:[
+        {name:'Control Setup',percentage:0,status:'done',date:d(10)},
+        {name:'50% Test',percentage:50,status:'active',date:d(7)},
+        {name:'Analyze',percentage:50,status:'pending',date:null},
+        {name:'Ship or Kill',percentage:100,status:'pending',date:null}
+      ]},
+      dependencies:[],
+      createdAt:d(12), updatedAt:d(7), createdBy:'AJ',
+      audit:[
+        {action:'created',by:'AJ',at:d(12),detail:'Experiment flag created'},
+        {action:'rollout',by:'AJ',at:d(7),detail:'A/B test started at 50%'}
+      ]
+    },
+    {
+      id:'f5', name:'Rate Limiter', key:'api_rate_limiter', description:'Enhanced API rate limiting with per-plan quotas. Kill switch to disable if causing issues.',
+      type:'kill-switch', tags:['infrastructure','api','safety'],
+      envState:{ Development:{enabled:true,rollout:100}, Staging:{enabled:true,rollout:100}, Production:{enabled:true,rollout:100} },
+      rules:[],
+      rolloutPlan:{stages:[
+        {name:'Dev',percentage:100,status:'done',date:d(15)},
+        {name:'Production',percentage:100,status:'done',date:d(8)}
+      ]},
+      dependencies:[],
+      createdAt:d(20), updatedAt:d(8), createdBy:'AJ',
+      audit:[
+        {action:'created',by:'AJ',at:d(20),detail:'Kill switch created'},
+        {action:'toggled',by:'AJ',at:d(8),detail:'Enabled in Production'}
+      ]
+    },
+    {
+      id:'f6', name:'Team Admin Panel', key:'team_admin_panel', description:'Admin panel for team managers to manage members, roles, and signature deployment.',
+      type:'permission', tags:['teams','admin','enterprise'],
+      envState:{ Development:{enabled:true,rollout:100}, Staging:{enabled:true,rollout:100}, Production:{enabled:true,rollout:100} },
+      rules:[
+        {id:'r7',type:'segment',env:'Production',value:{attribute:'role',operator:'equals',val:'admin'},description:'Only team admins see this'},
+        {id:'r8',type:'segment',env:'Production',value:{attribute:'plan',operator:'in',val:'team,enterprise'},description:'Team or Enterprise plans only'}
+      ],
+      rolloutPlan:{stages:[
+        {name:'Launch',percentage:100,status:'done',date:d(25)}
+      ]},
+      dependencies:[],
+      createdAt:d(30), updatedAt:d(25), createdBy:'AJ',
+      audit:[
+        {action:'created',by:'AJ',at:d(30),detail:'Permission flag created'},
+        {action:'toggled',by:'AJ',at:d(25),detail:'Enabled for admin users'}
+      ]
+    },
+    {
+      id:'f7', name:'Maintenance Mode', key:'maintenance_mode', description:'Global maintenance mode. When enabled, shows maintenance page to all users except admins.',
+      type:'ops', tags:['ops','maintenance','global'],
+      envState:{ Development:{enabled:false,rollout:0}, Staging:{enabled:false,rollout:0}, Production:{enabled:false,rollout:0} },
+      rules:[
+        {id:'r9',type:'user-list',env:'Production',value:['admin@utmstamp.com'],description:'Admins bypass maintenance'}
+      ],
+      rolloutPlan:{stages:[]},
+      dependencies:[],
+      createdAt:d(40), updatedAt:d(40), createdBy:'AJ',
+      audit:[
+        {action:'created',by:'AJ',at:d(40),detail:'Ops flag created — dormant until needed'}
+      ]
+    },
+    {
+      id:'f8', name:'Google Workspace Push', key:'google_workspace_push', description:'One-click signature deployment to Google Workspace via Admin SDK. Enterprise flagship feature.',
+      type:'release', tags:['v2.1','enterprise','google','integration'],
+      envState:{ Development:{enabled:true,rollout:100}, Staging:{enabled:false,rollout:0}, Production:{enabled:false,rollout:0} },
+      rules:[],
+      rolloutPlan:{stages:[
+        {name:'Internal',percentage:5,status:'active',date:d(2)},
+        {name:'Private Beta',percentage:10,status:'pending',date:null},
+        {name:'Open Beta',percentage:50,status:'pending',date:null},
+        {name:'GA',percentage:100,status:'pending',date:null}
+      ]},
+      dependencies:['f3','f6'],
+      createdAt:d(5), updatedAt:d(2), createdBy:'AJ',
+      audit:[
+        {action:'created',by:'AJ',at:d(5),detail:'Flag created for Workspace integration'},
+        {action:'toggled',by:'AJ',at:d(2),detail:'Enabled in Development only'}
+      ]
+    },
+    {
+      id:'f9', name:'Click Heatmaps', key:'click_heatmaps', description:'Visual heatmap overlays on signature analytics showing where recipients click most.',
+      type:'experiment', tags:['analytics','ux','experiment'],
+      envState:{ Development:{enabled:true,rollout:100}, Staging:{enabled:false,rollout:0}, Production:{enabled:false,rollout:0} },
+      rules:[],
+      rolloutPlan:{stages:[
+        {name:'Prototype',percentage:0,status:'active',date:d(1)},
+        {name:'Alpha',percentage:10,status:'pending',date:null},
+        {name:'Test',percentage:50,status:'pending',date:null},
+        {name:'Decide',percentage:100,status:'pending',date:null}
+      ]},
+      dependencies:['f3'],
+      createdAt:d(3), updatedAt:d(1), createdBy:'AJ',
+      audit:[
+        {action:'created',by:'AJ',at:d(3),detail:'Experiment flag created'},
+        {action:'toggled',by:'AJ',at:d(1),detail:'Enabled in Development for prototyping'}
+      ]
+    },
+    {
+      id:'f10', name:'Legacy API Deprecation', key:'legacy_api_v1_deprecation', description:'Gradually redirect v1 API calls to v2 endpoints. Final step before v1 shutdown.',
+      type:'ops', tags:['api','migration','deprecation'],
+      envState:{ Development:{enabled:true,rollout:100}, Staging:{enabled:true,rollout:100}, Production:{enabled:true,rollout:30} },
+      rules:[
+        {id:'r10',type:'percentage',env:'Production',value:30,description:'30% of v1 traffic redirected to v2'},
+        {id:'r11',type:'schedule',env:'Production',value:{start:'2026-06-01',end:'2026-08-01'},description:'Full migration window Q3 2026'}
+      ],
+      rolloutPlan:{stages:[
+        {name:'Logging',percentage:0,status:'done',date:d(20)},
+        {name:'30% Redirect',percentage:30,status:'active',date:d(4)},
+        {name:'70% Redirect',percentage:70,status:'pending',date:null},
+        {name:'Full Cutover',percentage:100,status:'pending',date:null}
+      ]},
+      dependencies:[],
+      createdAt:d(25), updatedAt:d(4), createdBy:'AJ',
+      audit:[
+        {action:'created',by:'AJ',at:d(25),detail:'Deprecation flag created'},
+        {action:'rollout',by:'AJ',at:d(4),detail:'30% redirect started'}
+      ]
+    }
+  ];
+  const data = { flags, environments: ENVS.map(e=>({name:e})), projects:[{id:'p1',name:'UTMStamp',key:'utmstamp'}] };
+  setStore(data);
+  return data;
+}
+
+// ─── Render ───
+function render() {
+  renderSidebar();
+  renderTopbar();
+  if (selectedFlagId) { renderFlagDetail(); return; }
+  const views = { flags: renderFlags, dashboard: renderDashboard, rollouts: renderRollouts, stale: renderStale, code: renderCode };
+  (views[currentView] || renderFlags)();
+}
+
+function renderSidebar() {
+  const counts = {
+    flags: state.flags.length,
+    active: state.flags.filter(f => f.envState.Production?.enabled).length,
+    rollouts: state.flags.filter(f => f.rolloutPlan?.stages?.some(s => s.status === 'active')).length,
+    stale: state.flags.filter(f => isStale(f)).length
+  };
+  const items = [
+    {id:'flags',icon:'🚩',label:'All Flags',badge:counts.flags},
+    {id:'dashboard',icon:'📊',label:'Dashboard',badge:''},
+    {id:'rollouts',icon:'🎯',label:'Active Rollouts',badge:counts.rollouts},
+    {id:'stale',icon:'⚠️',label:'Stale Flags',badge:counts.stale},
+    {id:'code',icon:'💻',label:'Code Snippets',badge:''}
+  ];
+  let html = '<div class="nav-section">Views</div>';
+  items.forEach(i => {
+    html += `<div class="nav-item ${!selectedFlagId && currentView===i.id?'active':''}" onclick="selectedFlagId=null;currentView='${i.id}';render()">
+      <span>${i.icon}</span>${i.label}${i.badge!==''?`<span class="badge">${i.badge}</span>`:''}
+    </div>`;
+  });
+  html += '<div class="nav-section">Flags</div>';
+  const filtered = state.flags.filter(f => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return f.name.toLowerCase().includes(q) || f.key.toLowerCase().includes(q) || f.tags?.some(t=>t.toLowerCase().includes(q));
+  });
+  filtered.forEach(f => {
+    const enabled = f.envState[currentEnv]?.enabled;
+    html += `<div class="nav-item ${selectedFlagId===f.id?'active':''}" onclick="selectedFlagId='${f.id}';render()">
+      <span style="color:${enabled?'var(--green)':'var(--text3)'}">●</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name)}</span>
+      <span class="badge">${f.envState.Production?.rollout||0}%</span>
+    </div>`;
+  });
+  document.getElementById('sidebarNav').innerHTML = html;
+}
+
+function renderTopbar() {
+  const titles = {flags:'All Flags',dashboard:'Dashboard',rollouts:'Active Rollouts',stale:'Stale Flags',code:'Code Snippets'};
+  document.getElementById('viewTitle').textContent = selectedFlagId ? (state.flags.find(f=>f.id===selectedFlagId)?.name||'Flag Detail') : titles[currentView]||'Flags';
+  let envHtml = '';
+  ENVS.forEach(e => {
+    envHtml += `<div class="env-pill ${currentEnv===e?'active':''}" onclick="currentEnv='${e}';render()">${e}</div>`;
+  });
+  document.getElementById('envPills').innerHTML = envHtml;
+}
+
+function renderFlags() {
+  const flags = getFilteredFlags();
+  if (!flags.length) {
+    document.getElementById('content').innerHTML = `<div class="empty"><div class="icon">🚩</div><p>${searchQuery?'No flags match your search':'No flags yet'}</p><button class="btn-primary" onclick="showCreateFlag()">Create First Flag</button></div>`;
+    return;
+  }
+  let html = `<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+    <button class="btn-primary" onclick="showCreateFlag()">+ New Flag</button>
+    <span style="font-size:12px;color:var(--text3)">${flags.length} flag${flags.length!==1?'s':''}</span>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      ${FLAG_TYPES.map(t=>`<div class="flag-tag type-${t}" style="cursor:pointer" onclick="toggleTypeFilter('${t}')">${FLAG_TYPE_LABELS[t]}</div>`).join('')}
+    </div>
+  </div>`;
+  flags.forEach(f => {
+    const es = f.envState[currentEnv] || {enabled:false,rollout:0};
+    const rollout = es.rollout || 0;
+    const color = rollout >= 100 ? 'var(--green)' : rollout > 0 ? 'var(--accent)' : 'var(--text3)';
+    const stale = isStale(f);
+    html += `<div class="flag-card" onclick="selectedFlagId='${f.id}';render()">
+      <div class="flag-row">
+        <div class="flag-toggle ${es.enabled?'on':'off'}" onclick="event.stopPropagation();toggleFlag('${f.id}')"><div class="knob"></div></div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="flag-name">${esc(f.name)}</span>
+            <span class="flag-key">${esc(f.key)}</span>
+            <span class="flag-tag type-${f.type}">${FLAG_TYPE_LABELS[f.type]}</span>
+            ${stale?'<span class="flag-tag stale">⚠️ Stale</span>':''}
+          </div>
+          ${f.description?`<div class="flag-desc">${esc(f.description).slice(0,120)}${f.description.length>120?'...':''}</div>`:''}
+          <div class="flag-meta">
+            ${f.tags?.map(t=>`<span class="flag-tag env">${esc(t)}</span>`).join('')||''}
+            ${rollout>0&&rollout<100?`<span class="flag-tag rollout">🎯 ${rollout}% rollout</span>`:''}
+            <span style="font-size:11px;color:var(--text3)">Updated ${relTime(f.updatedAt)}</span>
+          </div>
+          ${rollout>0&&rollout<100?`<div class="rollout-bar"><div class="fill" style="width:${rollout}%;background:${color}"></div></div>`:''}
+        </div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderFlagDetail() {
+  const f = state.flags.find(x=>x.id===selectedFlagId);
+  if (!f) { selectedFlagId=null; render(); return; }
+  const es = f.envState[currentEnv] || {enabled:false,rollout:0};
+  const depFlags = (f.dependencies||[]).map(id=>state.flags.find(x=>x.id===id)).filter(Boolean);
+  const dependents = state.flags.filter(x=>(x.dependencies||[]).includes(f.id));
+
+  let html = `<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+    <button class="btn-secondary btn-sm" onclick="selectedFlagId=null;render()">← Back</button>
+    <div class="flag-toggle ${es.enabled?'on':'off'}" style="flex-shrink:0" onclick="toggleFlag('${f.id}')"><div class="knob"></div></div>
+    <div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:18px;font-weight:700">${esc(f.name)}</span>
+        <span class="flag-tag type-${f.type}">${FLAG_TYPE_LABELS[f.type]}</span>
+        ${isStale(f)?'<span class="flag-tag stale">⚠️ Stale</span>':''}
+      </div>
+      <span class="flag-key">${esc(f.key)}</span>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn-secondary btn-sm" onclick="showEditFlag('${f.id}')">✏️ Edit</button>
+      <button class="btn-secondary btn-sm" onclick="duplicateFlag('${f.id}')">📋 Duplicate</button>
+      <button class="btn-danger btn-sm" onclick="deleteFlag('${f.id}')">🗑 Delete</button>
+    </div>
+  </div>`;
+
+  // Tabs
+  html += `<div class="tab-row">
+    <button class="tab-btn active" onclick="switchDetailTab(this,'overview')">Overview</button>
+    <button class="tab-btn" onclick="switchDetailTab(this,'rules')">Rules (${(f.rules||[]).length})</button>
+    <button class="tab-btn" onclick="switchDetailTab(this,'rollout')">Rollout</button>
+    <button class="tab-btn" onclick="switchDetailTab(this,'audit')">Audit Log (${(f.audit||[]).length})</button>
+    <button class="tab-btn" onclick="switchDetailTab(this,'code')">Code</button>
+  </div>`;
+
+  // Overview tab
+  html += `<div id="tab-overview">`;
+  if (f.description) html += `<div class="card"><p style="color:var(--text2)">${esc(f.description)}</p></div>`;
+
+  html += `<div class="detail-grid">
+    <div class="card"><div class="card-title" style="margin-bottom:12px">Environment Status</div>`;
+  ENVS.forEach(env => {
+    const s = f.envState[env]||{enabled:false,rollout:0};
+    html += `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;${env!==ENVS[ENVS.length-1]?'border-bottom:1px solid var(--border)':''}">
+      <span style="color:${s.enabled?'var(--green)':'var(--text3)}">●</span>
+      <span style="flex:1">${env}</span>
+      <span style="font-weight:600;color:${s.enabled?'var(--green)':'var(--text3)'}">${s.enabled?'ON':'OFF'}</span>
+      ${s.rollout>0?`<span style="color:var(--text2);font-size:12px">${s.rollout}%</span>`:''}
+    </div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="card"><div class="card-title" style="margin-bottom:12px">Details</div>
+    <div class="detail-field" style="margin-bottom:8px"><label>Type</label><div class="val"><span class="flag-tag type-${f.type}">${FLAG_TYPE_LABELS[f.type]}</span></div></div>
+    <div class="detail-field" style="margin-bottom:8px"><label>Tags</label><div class="val">${(f.tags||[]).map(t=>`<span class="flag-tag env">${esc(t)}</span>`).join(' ')||'—'}</div></div>
+    <div class="detail-field" style="margin-bottom:8px"><label>Created</label><div class="val">${fmtDate(f.createdAt)} by ${esc(f.createdBy||'—')}</div></div>
+    <div class="detail-field"><label>Last Updated</label><div class="val">${fmtDate(f.updatedAt)}</div></div>
+  </div></div>`;
+
+  // Dependencies
+  if (depFlags.length || dependents.length) {
+    html += `<div class="card"><div class="card-title" style="margin-bottom:12px">🔗 Dependencies</div>`;
+    if (depFlags.length) {
+      html += `<div style="margin-bottom:8px"><span style="font-size:12px;color:var(--text3)">Depends on:</span></div>`;
+      depFlags.forEach(d => {
+        html += `<div class="dep-node" style="cursor:pointer" onclick="selectedFlagId='${d.id}';render()">
+          <span style="color:${d.envState.Production?.enabled?'var(--green)':'var(--text3)'}">●</span> ${esc(d.name)}
+        </div>`;
+      });
+    }
+    if (dependents.length) {
+      html += `<div style="margin:8px 0"><span style="font-size:12px;color:var(--text3)">Depended on by:</span></div>`;
+      dependents.forEach(d => {
+        html += `<div class="dep-node" style="cursor:pointer" onclick="selectedFlagId='${d.id}';render()">
+          <span style="color:${d.envState.Production?.enabled?'var(--green)':'var(--text3)'}">●</span> ${esc(d.name)}
+        </div>`;
+      });
+    }
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  // Rules tab
+  html += `<div id="tab-rules" style="display:none">`;
+  html += `<button class="btn-primary btn-sm" style="margin-bottom:12px" onclick="showAddRule('${f.id}')">+ Add Rule</button>`;
+  if (!(f.rules||[]).length) {
+    html += `<div class="empty" style="padding:30px"><p>No targeting rules. Flag uses simple on/off toggle.</p></div>`;
+  } else {
+    (f.rules||[]).forEach(r => {
+      html += `<div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-type ${r.type}">${r.type.replace('-',' ')}</span>
+          <span style="font-size:12px;color:var(--text3)">${r.env||'All'}</span>
+          <button class="btn-icon btn-sm" style="margin-left:auto" onclick="deleteRule('${f.id}','${r.id}')">✕</button>
+        </div>
+        <div style="font-size:13px;color:var(--text2)">${esc(r.description||'')}</div>
+        <div style="margin-top:6px;font-size:12px;font-family:monospace;color:var(--text3)">`;
+      if (r.type==='percentage') html += `${r.value}% of users`;
+      else if (r.type==='user-list') html += `Users: ${(r.value||[]).join(', ')}`;
+      else if (r.type==='segment') html += `${r.value?.attribute} ${r.value?.operator} "${r.value?.val}"`;
+      else if (r.type==='schedule') html += `${r.value?.start||'?'} → ${r.value?.end||'?'}`;
+      html += `</div></div>`;
+    });
+  }
+  html += `</div>`;
+
+  // Rollout tab
+  html += `<div id="tab-rollout" style="display:none">`;
+  const stages = f.rolloutPlan?.stages || [];
+  if (!stages.length) {
+    html += `<div class="empty" style="padding:30px"><p>No rollout plan configured.</p><button class="btn-primary btn-sm" onclick="showEditFlag('${f.id}')">Edit Flag to Add Stages</button></div>`;
+  } else {
+    html += `<div class="card"><div class="card-title" style="margin-bottom:16px">Rollout Progress</div>`;
+    // Stage visualization
+    html += `<div style="display:flex;align-items:center;gap:0;margin-bottom:20px">`;
+    stages.forEach((s,i) => {
+      html += `<div class="stage-dot ${s.status}">${s.status==='done'?'✓':s.status==='active'?'►':i+1}</div>`;
+      if (i<stages.length-1) html += `<div class="stage-line ${s.status==='done'?'done':''}"></div>`;
+    });
+    html += `</div>`;
+    // Stage details
+    stages.forEach((s,i) => {
+      html += `<div style="display:flex;align-items:center;gap:12px;padding:10px;margin-bottom:6px;background:${s.status==='active'?'rgba(56,139,253,.08)':'transparent'};border-radius:var(--radius);border:1px solid ${s.status==='active'?'var(--accent)':'var(--border)'}">
+        <span style="font-weight:600;width:100px">${esc(s.name)}</span>
+        <span style="color:var(--text2)">${s.percentage}%</span>
+        <div class="rollout-bar" style="flex:1"><div class="fill" style="width:${s.percentage}%;background:${s.status==='done'?'var(--green)':s.status==='active'?'var(--accent)':'var(--surface3)'}"></div></div>
+        <span style="font-size:11px;color:${s.status==='done'?'var(--green)':s.status==='active'?'var(--accent)':'var(--text3)'}">${s.status==='done'?'✓ Done':s.status==='active'?'● Active':'○ Pending'}</span>
+        ${s.date?`<span style="font-size:11px;color:var(--text3)">${fmtDate(s.date)}</span>`:''}
+        ${s.status==='active'?`<button class="btn-primary btn-sm" onclick="advanceStage('${f.id}',${i})">Advance →</button>`:''}
+        ${s.status==='pending'&&i>0&&stages[i-1].status==='done'?`<button class="btn-secondary btn-sm" onclick="activateStage('${f.id}',${i})">Start</button>`:''}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  // Audit tab
+  html += `<div id="tab-audit" style="display:none">`;
+  (f.audit||[]).slice().reverse().forEach(a => {
+    html += `<div class="audit-item">
+      <div class="audit-dot ${a.action}"></div>
+      <div>
+        <div class="audit-text"><strong>${esc(a.by||'System')}</strong> ${esc(a.detail||a.action)}</div>
+        <div class="audit-time">${fmtDate(a.at)} · ${relTime(a.at)}</div>
+      </div>
+    </div>`;
+  });
+  if (!(f.audit||[]).length) html += `<div class="empty" style="padding:30px"><p>No audit log entries yet.</p></div>`;
+  html += `</div>`;
+
+  // Code tab
+  html += `<div id="tab-code" style="display:none">`;
+  html += renderCodeSnippetsForFlag(f);
+  html += `</div>`;
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function switchDetailTab(btn, tab) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['overview','rules','rollout','audit','code'].forEach(t=>{
+    const el = document.getElementById('tab-'+t);
+    if(el) el.style.display = t===tab?'block':'none';
+  });
+}
+
+function renderCodeSnippetsForFlag(f) {
+  const snippets = [
+    { lang:'JavaScript / React', code:`<span class="code-cm">// Flag Studio SDK</span>
+<span class="code-kw">import</span> { <span class="code-fn">useFlag</span> } <span class="code-kw">from</span> <span class="code-str">'@utmstamp/flags'</span>;
+
+<span class="code-kw">function</span> <span class="code-fn">MyComponent</span>() {
+  <span class="code-kw">const</span> isEnabled = <span class="code-fn">useFlag</span>(<span class="code-str">'${f.key}'</span>);
+
+  <span class="code-kw">if</span> (!isEnabled) <span class="code-kw">return</span> <span class="code-kw">null</span>;
+
+  <span class="code-kw">return</span> &lt;NewFeature /&gt;;
+}` },
+    { lang:'Node.js', code:`<span class="code-kw">const</span> flags = <span class="code-fn">require</span>(<span class="code-str">'@utmstamp/flags'</span>);
+
+<span class="code-kw">if</span> (<span class="code-kw">await</span> flags.<span class="code-fn">isEnabled</span>(<span class="code-str">'${f.key}'</span>, { userId })) {
+  <span class="code-cm">// Feature is on for this user</span>
+  <span class="code-fn">handleNewFeature</span>(req, res);
+} <span class="code-kw">else</span> {
+  <span class="code-fn">handleLegacy</span>(req, res);
+}` },
+    { lang:'Python', code:`<span class="code-kw">from</span> utmstamp_flags <span class="code-kw">import</span> <span class="code-fn">get_flag</span>
+
+<span class="code-kw">if</span> <span class="code-fn">get_flag</span>(<span class="code-str">'${f.key}'</span>, user_id=user.id):
+    <span class="code-fn">render_new_feature</span>()
+<span class="code-kw">else</span>:
+    <span class="code-fn">render_legacy</span>()` },
+    { lang:'cURL (API)', code:`<span class="code-fn">curl</span> -X GET <span class="code-str">"https://api.utmstamp.com/flags/${f.key}"</span> \\
+  -H <span class="code-str">"Authorization: Bearer YOUR_API_KEY"</span> \\
+  -H <span class="code-str">"X-User-Id: user_123"</span>
+
+<span class="code-cm"># Response: { "enabled": true, "variant": null }</span>` }
+  ];
+  let html = '';
+  snippets.forEach(s => {
+    html += `<div class="card" style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">${s.lang}</div>
+      <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button>${s.code}</div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderDashboard() {
+  const flags = state.flags;
+  const total = flags.length;
+  const active = flags.filter(f=>f.envState.Production?.enabled).length;
+  const rolling = flags.filter(f=>f.rolloutPlan?.stages?.some(s=>s.status==='active')).length;
+  const staleCount = flags.filter(f=>isStale(f)).length;
+  const experiments = flags.filter(f=>f.type==='experiment').length;
+  const killSwitches = flags.filter(f=>f.type==='kill-switch').length;
+
+  let html = `<div class="stats-grid">
+    <div class="stat-card"><div class="label">Total Flags</div><div class="value">${total}</div></div>
+    <div class="stat-card"><div class="label">Active in Prod</div><div class="value" style="color:var(--green)">${active}</div><div class="sub">${total?Math.round(active/total*100):0}% of total</div></div>
+    <div class="stat-card"><div class="label">Rolling Out</div><div class="value" style="color:var(--accent)">${rolling}</div></div>
+    <div class="stat-card"><div class="label">Stale Flags</div><div class="value" style="color:${staleCount?'var(--orange)':'var(--text)'}">${staleCount}</div><div class="sub">${staleCount?'⚠️ Need cleanup':'All clean'}</div></div>
+    <div class="stat-card"><div class="label">Experiments</div><div class="value" style="color:var(--purple)">${experiments}</div></div>
+    <div class="stat-card"><div class="label">Kill Switches</div><div class="value" style="color:var(--red)">${killSwitches}</div></div>
+  </div>`;
+
+  // Type distribution
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">`;
+  html += `<div class="chart-container"><h3>Flags by Type</h3><div class="bar-chart">`;
+  FLAG_TYPES.forEach(t => {
+    const c = flags.filter(f=>f.type===t).length;
+    const pct = total ? (c/total*100) : 0;
+    html += `<div class="bar-col"><div class="bar-value">${c}</div><div class="bar" style="height:${Math.max(pct,4)}%;background:${FLAG_TYPE_COLORS[t]}"></div><div class="bar-label">${FLAG_TYPE_LABELS[t]}</div></div>`;
+  });
+  html += `</div></div>`;
+
+  // Env coverage
+  html += `<div class="chart-container"><h3>Environment Coverage</h3><div class="bar-chart">`;
+  ENVS.forEach(env => {
+    const c = flags.filter(f=>f.envState[env]?.enabled).length;
+    const pct = total ? (c/total*100) : 0;
+    const colors = {Development:'var(--accent)',Staging:'var(--orange)',Production:'var(--green)'};
+    html += `<div class="bar-col"><div class="bar-value">${c}/${total}</div><div class="bar" style="height:${Math.max(pct,4)}%;background:${colors[env]}"></div><div class="bar-label">${env}</div></div>`;
+  });
+  html += `</div></div></div>`;
+
+  // Recent audit
+  html += `<div class="chart-container"><h3>Recent Activity</h3>`;
+  const allAudit = [];
+  flags.forEach(f => (f.audit||[]).forEach(a => allAudit.push({...a,flagName:f.name,flagId:f.id})));
+  allAudit.sort((a,b)=>new Date(b.at)-new Date(a.at));
+  allAudit.slice(0,10).forEach(a => {
+    html += `<div class="audit-item" style="cursor:pointer" onclick="selectedFlagId='${a.flagId}';render()">
+      <div class="audit-dot ${a.action}"></div>
+      <div>
+        <div class="audit-text"><strong>${esc(a.flagName)}</strong> — ${esc(a.detail||a.action)}</div>
+        <div class="audit-time">${relTime(a.at)}</div>
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Tag cloud
+  html += `<div class="chart-container"><h3>Tag Cloud</h3><div style="display:flex;flex-wrap:wrap;gap:6px">`;
+  const tagCount = {};
+  flags.forEach(f=>(f.tags||[]).forEach(t=>{tagCount[t]=(tagCount[t]||0)+1}));
+  Object.entries(tagCount).sort((a,b)=>b[1]-a[1]).forEach(([t,c])=>{
+    html += `<span class="flag-tag env" style="font-size:${Math.min(11+c*2,18)}px">${esc(t)} (${c})</span>`;
+  });
+  html += `</div></div>`;
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderRollouts() {
+  const rolling = state.flags.filter(f=>f.rolloutPlan?.stages?.some(s=>s.status==='active'));
+  if (!rolling.length) {
+    document.getElementById('content').innerHTML = `<div class="empty"><div class="icon">🎯</div><p>No active rollouts right now.</p></div>`;
+    return;
+  }
+  let html = `<div style="font-size:12px;color:var(--text3);margin-bottom:16px">${rolling.length} active rollout${rolling.length!==1?'s':''}</div>`;
+  rolling.forEach(f => {
+    const stages = f.rolloutPlan?.stages||[];
+    const activeStage = stages.find(s=>s.status==='active');
+    html += `<div class="card" style="cursor:pointer" onclick="selectedFlagId='${f.id}';render()">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <span style="font-weight:600;font-size:15px">${esc(f.name)}</span>
+        <span class="flag-tag type-${f.type}">${FLAG_TYPE_LABELS[f.type]}</span>
+        ${activeStage?`<span class="flag-tag rollout">🎯 ${activeStage.name} — ${activeStage.percentage}%</span>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:0;margin-bottom:8px">`;
+    stages.forEach((s,i) => {
+      html += `<div class="stage-dot ${s.status}" style="width:16px;height:16px;font-size:8px">${s.status==='done'?'✓':s.status==='active'?'►':''}</div>`;
+      if (i<stages.length-1) html += `<div class="stage-line ${s.status==='done'?'done':''}" style="flex:1"></div>`;
+    });
+    html += `</div><div class="stage-info">${stages.map(s=>`<span>${esc(s.name)}</span>`).join('')}</div>`;
+    html += `</div>`;
+  });
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderStale() {
+  const stale = state.flags.filter(f=>isStale(f));
+  if (!stale.length) {
+    document.getElementById('content').innerHTML = `<div class="empty"><div class="icon">✨</div><p>No stale flags. Your flag hygiene is excellent!</p></div>`;
+    return;
+  }
+  let html = `<div style="font-size:12px;color:var(--text3);margin-bottom:16px">⚠️ ${stale.length} flag${stale.length!==1?'s':''} may need cleanup</div>`;
+  html += `<div class="card" style="margin-bottom:16px;background:rgba(210,153,34,.05);border-color:rgba(210,153,34,.2)">
+    <p style="font-size:13px;color:var(--orange)">💡 Stale flags are those at 100% rollout for 14+ days or not updated in 30+ days. Consider cleaning them up to reduce tech debt.</p>
+  </div>`;
+  stale.forEach(f => {
+    const reason = getStaleReason(f);
+    html += `<div class="flag-card" onclick="selectedFlagId='${f.id}';render()">
+      <div class="flag-row">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="flag-name">${esc(f.name)}</span>
+            <span class="flag-key">${esc(f.key)}</span>
+            <span class="flag-tag stale">⚠️ ${reason}</span>
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-top:6px">Last updated: ${fmtDate(f.updatedAt)} (${relTime(f.updatedAt)})</div>
+        </div>
+        <button class="btn-danger btn-sm" onclick="event.stopPropagation();archiveFlag('${f.id}')">Archive</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderCode() {
+  let html = `<div class="card" style="margin-bottom:16px">
+    <h3 style="margin-bottom:8px">SDK Integration</h3>
+    <p style="font-size:13px;color:var(--text2)">Copy these snippets to integrate feature flags into your codebase. Each flag generates ready-to-use code.</p>
+  </div>`;
+
+  // Flag config dump
+  html += `<div class="card"><h3 style="margin-bottom:8px">Full Flag Configuration (JSON)</h3>
+    <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button>${esc(JSON.stringify(state.flags.map(f=>({
+      key:f.key,name:f.name,type:f.type,
+      environments:Object.fromEntries(ENVS.map(e=>[e.toLowerCase(),f.envState[e]||{enabled:false,rollout:0}])),
+      rules:(f.rules||[]).map(r=>({type:r.type,value:r.value}))
+    })),null,2))}</div>
+  </div>`;
+
+  // Individual flag snippets
+  html += `<h3 style="margin:20px 0 12px">Per-Flag Snippets</h3>`;
+  state.flags.forEach(f => {
+    html += `<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="selectedFlagId='${f.id}';render();setTimeout(()=>document.querySelector('.tab-btn:last-of-type')?.click(),50)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="color:${f.envState.Production?.enabled?'var(--green)':'var(--text3)'}">●</span>
+        <span class="flag-key">${esc(f.key)}</span>
+        <span style="color:var(--text2);font-size:13px">— ${esc(f.name)}</span>
+        <span style="margin-left:auto;color:var(--text3);font-size:12px">View snippets →</span>
+      </div>
+    </div>`;
+  });
+  document.getElementById('content').innerHTML = html;
+}
+
+// ─── Helpers ───
+function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+function getFilteredFlags() {
+  return state.flags.filter(f => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return f.name.toLowerCase().includes(q) || f.key.toLowerCase().includes(q) || (f.tags||[]).some(t=>t.toLowerCase().includes(q)) || (f.description||'').toLowerCase().includes(q);
+  });
+}
+function isStale(f) {
+  const daysSinceUpdate = (Date.now() - new Date(f.updatedAt).getTime()) / 86400000;
+  const fullyRolled = f.envState.Production?.enabled && f.envState.Production?.rollout >= 100;
+  const allStagesDone = (f.rolloutPlan?.stages||[]).every(s=>s.status==='done');
+  if (fullyRolled && allStagesDone && daysSinceUpdate > 14) return true;
+  if (daysSinceUpdate > 30) return true;
+  return false;
+}
+function getStaleReason(f) {
+  const daysSinceUpdate = Math.floor((Date.now() - new Date(f.updatedAt).getTime()) / 86400000);
+  const fullyRolled = f.envState.Production?.enabled && f.envState.Production?.rollout >= 100;
+  const allDone = (f.rolloutPlan?.stages||[]).every(s=>s.status==='done');
+  if (fullyRolled && allDone) return `100% for ${daysSinceUpdate}d — remove flag`;
+  return `Not updated in ${daysSinceUpdate}d`;
+}
+
+// ─── Actions ───
+function toggleFlag(id) {
+  const f = state.flags.find(x=>x.id===id);
+  if (!f) return;
+  const es = f.envState[currentEnv] || {enabled:false,rollout:0};
+  es.enabled = !es.enabled;
+  if (es.enabled && !es.rollout) es.rollout = 100;
+  if (!es.enabled) es.rollout = 0;
+  f.envState[currentEnv] = es;
+  f.updatedAt = now();
+  f.audit = f.audit || [];
+  f.audit.push({action:'toggled',by:'You',at:now(),detail:`${es.enabled?'Enabled':'Disabled'} in ${currentEnv}`});
+  save(); render();
+}
+
+function advanceStage(flagId, idx) {
+  const f = state.flags.find(x=>x.id===flagId);
+  if (!f) return;
+  const stages = f.rolloutPlan?.stages||[];
+  if (stages[idx]) {
+    stages[idx].status = 'done';
+    stages[idx].date = stages[idx].date || now();
+    if (stages[idx+1]) stages[idx+1].status = 'active';
+    // Update production rollout
+    const nextStage = stages[idx+1];
+    if (nextStage) {
+      f.envState.Production = f.envState.Production || {enabled:true,rollout:0};
+      f.envState.Production.rollout = nextStage.percentage;
+      f.envState.Production.enabled = true;
+    } else {
+      f.envState.Production = f.envState.Production || {enabled:true,rollout:0};
+      f.envState.Production.rollout = stages[idx].percentage;
+    }
+    f.updatedAt = now();
+    f.audit.push({action:'rollout',by:'You',at:now(),detail:`Advanced to ${stages[idx+1]?stages[idx+1].name+' ('+stages[idx+1].percentage+'%)':'completed'}`});
+    save(); render();
+  }
+}
+
+function activateStage(flagId, idx) {
+  const f = state.flags.find(x=>x.id===flagId);
+  if (!f) return;
+  const stages = f.rolloutPlan?.stages||[];
+  if (stages[idx]) {
+    stages[idx].status = 'active';
+    stages[idx].date = now();
+    f.envState.Production = f.envState.Production || {enabled:true,rollout:0};
+    f.envState.Production.rollout = stages[idx].percentage;
+    f.envState.Production.enabled = true;
+    f.updatedAt = now();
+    f.audit.push({action:'rollout',by:'You',at:now(),detail:`Started ${stages[idx].name} (${stages[idx].percentage}%)`});
+    save(); render();
+  }
+}
+
+function deleteFlag(id) {
+  if (!confirm('Delete this flag? This cannot be undone.')) return;
+  state.flags = state.flags.filter(f=>f.id!==id);
+  // Remove from dependencies
+  state.flags.forEach(f => { f.dependencies = (f.dependencies||[]).filter(d=>d!==id); });
+  selectedFlagId = null;
+  save(); render();
+}
+
+function archiveFlag(id) {
+  deleteFlag(id);
+}
+
+function duplicateFlag(id) {
+  const f = state.flags.find(x=>x.id===id);
+  if (!f) return;
+  const dup = JSON.parse(JSON.stringify(f));
+  dup.id = uid();
+  dup.name = f.name + ' (copy)';
+  dup.key = f.key + '_copy';
+  dup.createdAt = now();
+  dup.updatedAt = now();
+  dup.audit = [{action:'created',by:'You',at:now(),detail:'Duplicated from '+f.name}];
+  state.flags.push(dup);
+  selectedFlagId = dup.id;
+  save(); render();
+}
+
+function deleteRule(flagId, ruleId) {
+  const f = state.flags.find(x=>x.id===flagId);
+  if (!f) return;
+  f.rules = (f.rules||[]).filter(r=>r.id!==ruleId);
+  f.updatedAt = now();
+  f.audit.push({action:'rule',by:'You',at:now(),detail:'Removed a targeting rule'});
+  save(); render();
+}
+
+// ─── Modals ───
+function showModal(html) {
+  document.getElementById('modalRoot').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
+}
+function closeModal() { document.getElementById('modalRoot').innerHTML = ''; }
+
+function showCreateFlag() {
+  const depOptions = state.flags.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
+  showModal(`<h3>🚩 New Flag</h3>
+    <div class="form-group"><label>Name</label><input id="mName" placeholder="e.g. Video Signatures" /></div>
+    <div class="form-group"><label>Key (code identifier)</label><input id="mKey" placeholder="e.g. video_signatures" /></div>
+    <div class="form-group"><label>Description</label><textarea id="mDesc" rows="2" placeholder="What does this flag control?"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Type</label><select id="mType">${FLAG_TYPES.map(t=>`<option value="${t}">${FLAG_TYPE_LABELS[t]}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-group"><label>Tags (comma separated)</label><input id="mTags" placeholder="v2.0, feature, premium" /></div>
+    <div class="form-group"><label>Dependencies</label><select id="mDeps" multiple style="height:80px">${depOptions}</select></div>
+    <div class="form-group"><label>Rollout Stages (one per line: name:percentage)</label><textarea id="mStages" rows="3" placeholder="Internal:5&#10;Beta:25&#10;50%:50&#10;GA:100"></textarea></div>
+    <div class="form-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="createFlag()">Create Flag</button>
+    </div>`);
+  // Auto-generate key from name
+  document.getElementById('mName').addEventListener('input', e => {
+    document.getElementById('mKey').value = e.target.value.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+  });
+}
+
+function createFlag() {
+  const name = document.getElementById('mName').value.trim();
+  const key = document.getElementById('mKey').value.trim();
+  if (!name || !key) { alert('Name and key are required'); return; }
+  if (state.flags.some(f=>f.key===key)) { alert('Key already exists'); return; }
+  const tags = document.getElementById('mTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const deps = Array.from(document.getElementById('mDeps').selectedOptions).map(o=>o.value);
+  const stagesRaw = document.getElementById('mStages').value.trim();
+  const stages = stagesRaw ? stagesRaw.split('\n').map((line,i)=>{
+    const [n,p] = line.split(':');
+    return {name:n?.trim()||`Stage ${i+1}`,percentage:parseInt(p)||0,status:i===0?'active':'pending',date:i===0?now():null};
+  }) : [];
+
+  const flag = {
+    id: uid(), name, key,
+    description: document.getElementById('mDesc').value.trim(),
+    type: document.getElementById('mType').value,
+    tags, dependencies: deps,
+    envState: { Development:{enabled:false,rollout:0}, Staging:{enabled:false,rollout:0}, Production:{enabled:false,rollout:0} },
+    rules: [],
+    rolloutPlan: { stages },
+    createdAt: now(), updatedAt: now(), createdBy: 'You',
+    audit: [{action:'created',by:'You',at:now(),detail:'Flag created'}]
+  };
+  state.flags.push(flag);
+  selectedFlagId = flag.id;
+  save(); closeModal(); render();
+}
+
+function showEditFlag(id) {
+  const f = state.flags.find(x=>x.id===id);
+  if (!f) return;
+  const depOptions = state.flags.filter(x=>x.id!==id).map(x=>`<option value="${x.id}" ${(f.dependencies||[]).includes(x.id)?'selected':''}>${esc(x.name)}</option>`).join('');
+  const stagesText = (f.rolloutPlan?.stages||[]).map(s=>`${s.name}:${s.percentage}`).join('\n');
+  showModal(`<h3>✏️ Edit Flag</h3>
+    <div class="form-group"><label>Name</label><input id="mName" value="${esc(f.name)}" /></div>
+    <div class="form-group"><label>Key</label><input id="mKey" value="${esc(f.key)}" /></div>
+    <div class="form-group"><label>Description</label><textarea id="mDesc" rows="2">${esc(f.description||'')}</textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Type</label><select id="mType">${FLAG_TYPES.map(t=>`<option value="${t}" ${f.type===t?'selected':''}>${FLAG_TYPE_LABELS[t]}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-group"><label>Tags (comma separated)</label><input id="mTags" value="${(f.tags||[]).join(', ')}" /></div>
+    <div class="form-group"><label>Dependencies</label><select id="mDeps" multiple style="height:80px">${depOptions}</select></div>
+    <div class="form-group"><label>Rollout Stages (one per line: name:percentage)</label><textarea id="mStages" rows="3">${stagesText}</textarea></div>
+    <div class="form-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="updateFlag('${id}')">Save</button>
+    </div>`);
+}
+
+function updateFlag(id) {
+  const f = state.flags.find(x=>x.id===id);
+  if (!f) return;
+  f.name = document.getElementById('mName').value.trim() || f.name;
+  f.key = document.getElementById('mKey').value.trim() || f.key;
+  f.description = document.getElementById('mDesc').value.trim();
+  f.type = document.getElementById('mType').value;
+  f.tags = document.getElementById('mTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  f.dependencies = Array.from(document.getElementById('mDeps').selectedOptions).map(o=>o.value);
+  const stagesRaw = document.getElementById('mStages').value.trim();
+  if (stagesRaw) {
+    const oldStages = f.rolloutPlan?.stages||[];
+    f.rolloutPlan = { stages: stagesRaw.split('\n').map((line,i)=>{
+      const [n,p] = line.split(':');
+      const old = oldStages[i];
+      return {name:n?.trim()||`Stage ${i+1}`,percentage:parseInt(p)||0,status:old?.status||'pending',date:old?.date||null};
+    })};
+  }
+  f.updatedAt = now();
+  save(); closeModal(); render();
+}
+
+function showAddRule(flagId) {
+  showModal(`<h3>➕ Add Targeting Rule</h3>
+    <div class="form-group"><label>Rule Type</label><select id="mRuleType" onchange="updateRuleForm()">
+      <option value="percentage">Percentage Rollout</option>
+      <option value="user-list">User List</option>
+      <option value="segment">User Segment</option>
+      <option value="schedule">Schedule</option>
+    </select></div>
+    <div class="form-group"><label>Environment</label><select id="mRuleEnv">${ENVS.map(e=>`<option value="${e}" ${e==='Production'?'selected':''}>${e}</option>`).join('')}</select></div>
+    <div id="ruleValueForm"></div>
+    <div class="form-group"><label>Description</label><input id="mRuleDesc" placeholder="Why this rule?" /></div>
+    <div class="form-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="addRule('${flagId}')">Add Rule</button>
+    </div>`);
+  updateRuleForm();
+}
+
+function updateRuleForm() {
+  const type = document.getElementById('mRuleType').value;
+  let html = '';
+  if (type==='percentage') html = `<div class="form-group"><label>Percentage (0-100)</label><input id="mRuleVal" type="number" min="0" max="100" value="50" /></div>`;
+  else if (type==='user-list') html = `<div class="form-group"><label>User IDs / Emails (comma separated)</label><input id="mRuleVal" placeholder="user@example.com, user2@example.com" /></div>`;
+  else if (type==='segment') html = `<div class="form-row">
+    <div class="form-group"><label>Attribute</label><input id="mRuleAttr" placeholder="plan" /></div>
+    <div class="form-group"><label>Operator</label><select id="mRuleOp"><option value="equals">equals</option><option value="not_equals">not equals</option><option value="in">in</option><option value="gte">≥</option><option value="lte">≤</option></select></div>
+    <div class="form-group"><label>Value</label><input id="mRuleSegVal" placeholder="pro" /></div>
+  </div>`;
+  else if (type==='schedule') html = `<div class="form-row">
+    <div class="form-group"><label>Start Date</label><input id="mRuleStart" type="date" /></div>
+    <div class="form-group"><label>End Date</label><input id="mRuleEnd" type="date" /></div>
+  </div>`;
+  document.getElementById('ruleValueForm').innerHTML = html;
+}
+
+function addRule(flagId) {
+  const f = state.flags.find(x=>x.id===flagId);
+  if (!f) return;
+  const type = document.getElementById('mRuleType').value;
+  const env = document.getElementById('mRuleEnv').value;
+  const desc = document.getElementById('mRuleDesc').value.trim();
+  let value;
+  if (type==='percentage') value = parseInt(document.getElementById('mRuleVal').value)||0;
+  else if (type==='user-list') value = document.getElementById('mRuleVal').value.split(',').map(s=>s.trim()).filter(Boolean);
+  else if (type==='segment') value = {attribute:document.getElementById('mRuleAttr').value.trim(),operator:document.getElementById('mRuleOp').value,val:document.getElementById('mRuleSegVal').value.trim()};
+  else if (type==='schedule') value = {start:document.getElementById('mRuleStart').value,end:document.getElementById('mRuleEnd').value};
+  f.rules = f.rules||[];
+  f.rules.push({id:uid(),type,env,value,description:desc});
+  f.updatedAt = now();
+  f.audit.push({action:'rule',by:'You',at:now(),detail:`Added ${type} rule for ${env}`});
+  save(); closeModal(); render();
+}
+
+function showHelp() {
+  showModal(`<h3>⌨️ Keyboard Shortcuts</h3>
+    <div class="shortcut-grid" style="margin-bottom:20px">
+      <div class="shortcut-item"><kbd>N</kbd> New flag</div>
+      <div class="shortcut-item"><kbd>/</kbd> Search</div>
+      <div class="shortcut-item"><kbd>1</kbd> All Flags</div>
+      <div class="shortcut-item"><kbd>2</kbd> Dashboard</div>
+      <div class="shortcut-item"><kbd>3</kbd> Active Rollouts</div>
+      <div class="shortcut-item"><kbd>4</kbd> Stale Flags</div>
+      <div class="shortcut-item"><kbd>5</kbd> Code Snippets</div>
+      <div class="shortcut-item"><kbd>D</kbd> Dev environment</div>
+      <div class="shortcut-item"><kbd>S</kbd> Staging environment</div>
+      <div class="shortcut-item"><kbd>P</kbd> Production environment</div>
+      <div class="shortcut-item"><kbd>E</kbd> Export JSON</div>
+      <div class="shortcut-item"><kbd>I</kbd> Import JSON</div>
+      <div class="shortcut-item"><kbd>Esc</kbd> Back / Close</div>
+      <div class="shortcut-item"><kbd>?</kbd> This help</div>
+    </div>
+    <h3 style="margin-bottom:8px">About</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Flag Studio is a feature flag manager for planning, tracking, and coordinating feature rollouts. Manage flags across environments, set targeting rules, track rollout stages, and generate code snippets.</p>
+    <h3 style="margin-bottom:8px">Flag Types</h3>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+      <div style="font-size:13px"><span class="flag-tag type-release">Release</span> — Ship new features gradually</div>
+      <div style="font-size:13px"><span class="flag-tag type-experiment">Experiment</span> — A/B tests and experiments</div>
+      <div style="font-size:13px"><span class="flag-tag type-ops">Ops</span> — Operational controls (maintenance, migrations)</div>
+      <div style="font-size:13px"><span class="flag-tag type-permission">Permission</span> — Access control and entitlements</div>
+      <div style="font-size:13px"><span class="flag-tag type-kill-switch">Kill Switch</span> — Emergency disable switches</div>
+    </div>
+    <div class="form-actions"><button class="btn-primary" onclick="closeModal()">Got it</button></div>`);
+}
+
+function toggleTypeFilter(type) {
+  searchQuery = searchQuery === type ? '' : type;
+  document.getElementById('searchInput').value = searchQuery;
+  render();
+}
+
+// ─── Import/Export ───
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `flag-studio-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.flags) {
+          if (confirm(`Import ${data.flags.length} flags? This will merge with existing data.`)) {
+            data.flags.forEach(f => {
+              if (!state.flags.some(x=>x.id===f.id)) state.flags.push(f);
+            });
+            save(); render();
+          }
+        }
+      } catch { alert('Invalid JSON file'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function copyCode(btn) {
+  const block = btn.parentElement;
+  const text = block.textContent.replace('Copy','').trim();
+  navigator.clipboard.writeText(text);
+  btn.textContent = 'Copied!';
+  setTimeout(()=>btn.textContent='Copy',1500);
+}
+
+// ─── Keyboard ───
+document.addEventListener('keydown', e => {
+  if (document.querySelector('.modal-overlay')) {
+    if (e.key==='Escape') closeModal();
+    if ((e.metaKey||e.ctrlKey) && e.key==='Enter') {
+      const saveBtn = document.querySelector('.modal .btn-primary');
+      if (saveBtn) saveBtn.click();
+    }
+    return;
+  }
+  if (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') {
+    if (e.key==='Escape') { e.target.blur(); return; }
+    return;
+  }
+  if (e.key==='n'||e.key==='N') { e.preventDefault(); showCreateFlag(); }
+  else if (e.key==='/') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+  else if (e.key==='1') { selectedFlagId=null; currentView='flags'; render(); }
+  else if (e.key==='2') { selectedFlagId=null; currentView='dashboard'; render(); }
+  else if (e.key==='3') { selectedFlagId=null; currentView='rollouts'; render(); }
+  else if (e.key==='4') { selectedFlagId=null; currentView='stale'; render(); }
+  else if (e.key==='5') { selectedFlagId=null; currentView='code'; render(); }
+  else if (e.key==='d') { currentEnv='Development'; render(); }
+  else if (e.key==='s') { currentEnv='Staging'; render(); }
+  else if (e.key==='p') { currentEnv='Production'; render(); }
+  else if (e.key==='e') exportJSON();
+  else if (e.key==='i') importJSON();
+  else if (e.key==='?') showHelp();
+  else if (e.key==='Escape') { if(selectedFlagId){selectedFlagId=null;render();} }
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  render();
+});
+
+// Init
+render();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>
