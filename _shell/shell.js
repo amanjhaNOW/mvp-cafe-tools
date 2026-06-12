@@ -1,11 +1,13 @@
 /**
  * MVPC Shell — connected workspace for 80 overnight builds.
- * Manages sidebar nav, iframe loading, workspace storage, cross-tool flows.
+ * Manages nav (desktop sidebar + mobile full-screen switcher), iframe loading,
+ * workspace storage, cross-tool flows.
  */
 (function() {
   'use strict';
 
   const WORKSPACE_KEY = 'mvpc:workspace';
+  const RECENT_KEY = 'mvpc:recent';
 
   // ── Tool Registry ──
   const TOOLS = [
@@ -109,13 +111,13 @@
   });
 
   const CLUSTERS = [
-    { id: 'build', label: '🚀 Build a Product', desc: 'From idea to launch' },
-    { id: 'career', label: '💼 Career Loop', desc: 'Job hunt to offer' },
-    { id: 'product', label: '📊 Run a Product', desc: 'Metrics, feedback, growth' },
-    { id: 'team', label: '👥 Run a Team', desc: 'Sprints, retros, alignment' },
-    { id: 'money', label: '💰 Money & Pitch', desc: 'Pricing, runway, fundraise' },
-    { id: 'personal', label: '🧩 Personal & Dev', desc: 'Tools, focus, learning' },
-    { id: 'creative', label: '🎨 Creative & Play', desc: 'Make art, music, games' },
+    { id: 'build', label: '🚀 Build a Product', desc: 'From idea to launch', emoji: '🚀', short: 'Build a Product' },
+    { id: 'career', label: '💼 Career Loop', desc: 'Job hunt to offer', emoji: '💼', short: 'Career Loop' },
+    { id: 'product', label: '📊 Run a Product', desc: 'Metrics, feedback, growth', emoji: '📊', short: 'Run a Product' },
+    { id: 'team', label: '👥 Run a Team', desc: 'Sprints, retros, alignment', emoji: '👥', short: 'Run a Team' },
+    { id: 'money', label: '💰 Money & Pitch', desc: 'Pricing, runway, fundraise', emoji: '💰', short: 'Money & Pitch' },
+    { id: 'personal', label: '🧩 Personal & Dev', desc: 'Tools, focus, learning', emoji: '🧩', short: 'Personal & Dev' },
+    { id: 'creative', label: '🎨 Creative & Play', desc: 'Make art, music, games', emoji: '🎨', short: 'Creative & Play' },
   ];
 
   // Sprint Board should show in team cluster too (cross-ref)
@@ -145,6 +147,19 @@
   let workspace = null;
   let sidebarOpen = false;
   let nextCardDismissed = false;
+  let sheetCluster = 'all'; // current sheet filter
+
+  function clusterTools(clusterId) {
+    const tools = UNIQUE_TOOLS.filter(t => t.cluster === clusterId);
+    const extra = CROSS_CLUSTER[clusterId] || [];
+    for (const slug of extra) {
+      if (!tools.find(t => t.slug === slug)) {
+        const t = UNIQUE_TOOLS.find(t2 => t2.slug === slug);
+        if (t) tools.push(t);
+      }
+    }
+    return tools;
+  }
 
   // ── Workspace ──
   function loadWorkspace() {
@@ -170,32 +185,38 @@
     };
   }
 
-  // ── Rendering ──
+  // ── Recent tools ──
+  function getRecent() {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch(e) { return []; }
+  }
+  function trackRecent(slug) {
+    try {
+      let r = getRecent().filter(s => s !== slug);
+      r.unshift(slug);
+      r = r.slice(0, 6);
+      localStorage.setItem(RECENT_KEY, JSON.stringify(r));
+    } catch(e) {}
+  }
+
+  // ── Rendering: desktop sidebar ──
   function renderSidebar() {
     const nav = document.getElementById('sidebarNav');
+    if (!nav) return;
     let html = '';
 
     for (const cluster of CLUSTERS) {
-      const tools = UNIQUE_TOOLS.filter(t => t.cluster === cluster.id);
-      // Add cross-cluster tools
-      const extra = CROSS_CLUSTER[cluster.id] || [];
-      for (const slug of extra) {
-        if (!tools.find(t => t.slug === slug)) {
-          const t = UNIQUE_TOOLS.find(t2 => t2.slug === slug);
-          if (t) tools.push(t);
-        }
-      }
+      const tools = clusterTools(cluster.id);
       if (!tools.length) continue;
 
       html += `<div class="cluster" data-cluster="${cluster.id}">`;
-      html += `<div class="cluster__header" onclick="window.__shell.toggleCluster('${cluster.id}')">`;
+      html += `<div class="cluster__header" data-action="toggle-cluster" data-id="${cluster.id}">`;
       html += `<span class="cluster__arrow">▼</span> ${cluster.label}`;
       html += `</div>`;
       html += `<div class="cluster__desc">${cluster.desc}</div>`;
       html += `<div class="cluster__items">`;
       for (const tool of tools) {
         const active = currentTool === tool.slug ? ' active' : '';
-        html += `<a class="tool-item${active}" data-slug="${tool.slug}" onclick="window.__shell.openTool('${tool.slug}')">`;
+        html += `<a class="tool-item${active}" data-slug="${tool.slug}">`;
         html += `<span class="tool-item__emoji">${tool.emoji}</span>`;
         html += `<span class="tool-item__name">${tool.name}</span>`;
         html += `</a>`;
@@ -206,27 +227,123 @@
     nav.innerHTML = html;
   }
 
+  // ── Rendering: full-screen switcher sheet (mobile + ⌘K) ──
+  function renderSheet() {
+    const list = document.getElementById('sheetList');
+    if (!list) return;
+    let html = '';
+    for (const cluster of CLUSTERS) {
+      const tools = clusterTools(cluster.id);
+      if (!tools.length) continue;
+      html += `<div class="sheet__cluster" data-cluster="${cluster.id}">`;
+      html += `<div class="sheet__cluster-header">${cluster.label}</div>`;
+      for (const tool of tools) {
+        html += `<div class="sheet__row" data-slug="${tool.slug}" data-name="${tool.name.toLowerCase()}">`;
+        html += `<span class="sheet__row-emoji">${tool.emoji}</span>`;
+        html += `<span class="sheet__row-name">${tool.name}</span>`;
+        html += `</div>`;
+      }
+      html += `</div>`;
+    }
+    html += `<div class="sheet__empty" id="sheetEmpty" style="display:none">No tools match. Try another search.</div>`;
+    list.innerHTML = html;
+  }
+
+  function openSheet(clusterId, query) {
+    sheetCluster = clusterId || 'all';
+    const sheet = document.getElementById('toolSheet');
+    const title = document.getElementById('sheetTitle');
+    const search = document.getElementById('sheetSearch');
+    const c = CLUSTERS.find(x => x.id === sheetCluster);
+    title.textContent = c ? c.emoji + ' ' + c.short : 'All tools';
+    search.value = query || '';
+    applySheetFilter();
+    sheet.classList.add('open');
+    document.getElementById('sheetList').scrollTop = 0;
+    updateBottombarActive();
+    // No autofocus on mobile (keyboard jump); focus only when opened via ⌘K (desktop)
+  }
+
+  function closeSheet() {
+    document.getElementById('toolSheet').classList.remove('open');
+    sheetCluster = 'all';
+    updateBottombarActive();
+  }
+
+  function sheetIsOpen() {
+    return document.getElementById('toolSheet').classList.contains('open');
+  }
+
+  function applySheetFilter() {
+    const query = document.getElementById('sheetSearch').value.toLowerCase().trim();
+    let visible = 0;
+    document.querySelectorAll('#sheetList .sheet__cluster').forEach(sec => {
+      const inCluster = sheetCluster === 'all' || sec.dataset.cluster === sheetCluster;
+      let clusterVisible = 0;
+      sec.querySelectorAll('.sheet__row').forEach(row => {
+        const match = inCluster && (!query || row.dataset.name.includes(query));
+        row.style.display = match ? '' : 'none';
+        if (match) clusterVisible++;
+      });
+      sec.style.display = clusterVisible ? '' : 'none';
+      visible += clusterVisible;
+    });
+    const empty = document.getElementById('sheetEmpty');
+    if (empty) empty.style.display = visible ? 'none' : '';
+  }
+
+  function updateBottombarActive() {
+    const open = sheetIsOpen();
+    document.querySelectorAll('.bottombar__item').forEach(el => {
+      const c = el.dataset.cluster;
+      el.classList.toggle('active', open ? (c === sheetCluster || (c === 'all' && sheetCluster === 'all')) : false);
+    });
+  }
+
+  // ── Rendering: welcome ──
   function renderWelcome() {
     const wrap = document.getElementById('iframeWrap');
-    const starters = ['idea-validator', 'job-pipeline', 'sprint-board', 'prd-forge', 'metric-pulse', 'pricing-lab'];
-    const cards = starters.map(slug => {
-      const t = UNIQUE_TOOLS.find(x => x.slug === slug);
-      if (!t) return '';
-      return `<div class="welcome__card" onclick="window.__shell.openTool('${t.slug}')">
-        <div class="welcome__card-emoji">${t.emoji}</div>
-        <div class="welcome__card-name">${t.name}</div>
+    const recent = getRecent()
+      .map(slug => UNIQUE_TOOLS.find(t => t.slug === slug))
+      .filter(Boolean);
+
+    const recentHtml = recent.length ? `
+      <div class="welcome__section-title">Recent</div>
+      <div class="welcome__recent">${recent.map(t =>
+        `<div class="welcome__recent-chip" data-slug="${t.slug}"><span>${t.emoji}</span><span>${t.name}</span></div>`
+      ).join('')}</div>` : '';
+
+    const cards = CLUSTERS.map(c => {
+      const count = clusterTools(c.id).length;
+      return `<div class="welcome__card" data-cluster-card="${c.id}">
+        <div class="welcome__card-emoji">${c.emoji}</div>
+        <div class="welcome__card-name"><span>${c.short}</span><span class="welcome__card-count">${count} tools</span></div>
+        <div class="welcome__card-desc">${c.desc}</div>
       </div>`;
     }).join('');
 
     wrap.innerHTML = `<div class="welcome">
       <div class="welcome__inner">
-        <h2>👋 Welcome to your workspace</h2>
-        <p>80 free tools for founders, PMs, and builders. All connected. Pick one to start.</p>
+        <h2>⚡ 80 free tools for builders</h2>
+        <p class="welcome__sub">Idea validation, PRDs, sprints, job hunt, pricing — all connected, no login.</p>
+        <input class="welcome__search" id="welcomeSearch" type="search" placeholder="Search 80 tools…" autocomplete="off">
+        ${recentHtml}
+        <div class="welcome__section-title">Browse by goal</div>
         <div class="welcome__grid">${cards}</div>
       </div>
     </div>`;
+
+    const ws = document.getElementById('welcomeSearch');
+    ws.addEventListener('input', function() {
+      if (this.value.trim()) {
+        const q = this.value;
+        this.value = '';
+        openSheet('all', q);
+      }
+    });
   }
 
+  // ── Next card ──
   function updateNextCard() {
     const card = document.getElementById('nextCard');
     if (!currentTool || nextCardDismissed) { card.classList.add('hidden'); return; }
@@ -234,7 +351,6 @@
     const next = NEXT_MAP[currentTool];
     if (!next) { card.classList.add('hidden'); return; }
 
-    // Contextual: if condition key exists and array is empty, show alternative
     if (next.condition && workspace && (!workspace[next.condition] || workspace[next.condition].length === 0)) {
       card.classList.add('hidden'); return;
     }
@@ -253,33 +369,52 @@
   }
 
   // ── Navigation ──
-  function openTool(slug) {
+  function openTool(slug, skipHistory) {
     const tool = UNIQUE_TOOLS.find(t => t.slug === slug);
     if (!tool) return;
 
     currentTool = slug;
     nextCardDismissed = false;
+    closeSheet();
     sidebarOpen = false;
-    document.querySelector('.sidebar').classList.remove('open');
-    document.querySelector('.sidebar-overlay').classList.remove('visible');
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.classList.remove('open');
+    const overlay = document.querySelector('.sidebar-overlay');
+    if (overlay) overlay.classList.remove('visible');
+
+    trackRecent(slug);
 
     // Update URL
-    history.pushState({ tool: slug }, '', '/?tool=' + slug);
+    if (!skipHistory) history.pushState({ tool: slug }, '', '/?tool=' + slug);
 
-    // Update topbar
-    document.getElementById('topbarTitle').textContent = tool.name;
+    // Update topbar immediately (perceived speed)
+    document.getElementById('topbarTitle').textContent = tool.emoji + ' ' + tool.name;
 
     // Update sidebar active
     document.querySelectorAll('.tool-item').forEach(el => {
       el.classList.toggle('active', el.dataset.slug === slug);
     });
+    document.querySelectorAll('.sheet__row').forEach(el => {
+      el.classList.toggle('active', el.dataset.slug === slug);
+    });
 
-    // Load iframe
+    // Load iframe with loading overlay
     const wrap = document.getElementById('iframeWrap');
-    wrap.innerHTML = `<iframe id="toolFrame" src="/${slug}/" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"></iframe>`;
+    wrap.innerHTML = `
+      <div class="tool-loading" id="toolLoading">
+        <div class="tool-loading__spinner"></div>
+        <div class="tool-loading__label">Loading ${tool.name}…</div>
+      </div>
+      <iframe id="toolFrame" src="/${slug}/" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"></iframe>`;
 
     const iframe = document.getElementById('toolFrame');
     iframe.addEventListener('load', function() {
+      // Remove loading overlay
+      const loading = document.getElementById('toolLoading');
+      if (loading) {
+        loading.classList.add('done');
+        setTimeout(function() { if (loading.parentNode) loading.parentNode.removeChild(loading); }, 250);
+      }
       // Inject bridge
       try {
         const script = iframe.contentDocument.createElement('script');
@@ -290,7 +425,6 @@
           iframe.contentWindow.postMessage({ __mvpc: true, type: 'workspace-init', workspace: workspace }, '*');
         }, 100);
       } catch(e) {
-        // Cross-origin fallback — shouldn't happen for same-origin
         console.warn('Bridge injection failed:', e);
       }
     });
@@ -301,18 +435,23 @@
   function handlePopState(e) {
     const params = new URLSearchParams(window.location.search);
     const tool = params.get('tool');
-    if (tool) openTool(tool);
-    else { currentTool = null; renderWelcome(); updateNextCard(); }
+    if (tool) openTool(tool, true);
+    else {
+      currentTool = null;
+      document.getElementById('topbarTitle').textContent = 'Overnight Builds';
+      document.querySelectorAll('.tool-item.active, .sheet__row.active').forEach(el => el.classList.remove('active'));
+      renderWelcome();
+      updateNextCard();
+    }
   }
 
-  // ── Search ──
+  // ── Search (desktop sidebar) ──
   function handleSearch(query) {
     query = query.toLowerCase().trim();
-    document.querySelectorAll('.tool-item').forEach(el => {
+    document.querySelectorAll('#sidebarNav .tool-item').forEach(el => {
       const name = el.querySelector('.tool-item__name').textContent.toLowerCase();
       el.style.display = name.includes(query) || !query ? '' : 'none';
     });
-    // Show all clusters when searching
     if (query) {
       document.querySelectorAll('.cluster').forEach(c => c.classList.remove('collapsed'));
     }
@@ -335,7 +474,6 @@
     }
     if (msg.type === 'navigate-request') {
       if (msg.data) {
-        // Store cross-tool data
         workspace.__crossToolData = msg.data;
         saveWorkspace();
       }
@@ -346,11 +484,18 @@
   // ── Public API ──
   window.__shell = {
     openTool: openTool,
+    openSheet: openSheet,
+    closeSheet: closeSheet,
     toggleCluster: function(id) {
       const el = document.querySelector(`.cluster[data-cluster="${id}"]`);
       if (el) el.classList.toggle('collapsed');
     },
     toggleSidebar: function() {
+      // On mobile, burger opens the full-screen switcher instead of the old drawer
+      if (window.innerWidth <= 768) {
+        sheetIsOpen() ? closeSheet() : openSheet('all');
+        return;
+      }
       sidebarOpen = !sidebarOpen;
       document.querySelector('.sidebar').classList.toggle('open', sidebarOpen);
       document.querySelector('.sidebar-overlay').classList.toggle('visible', sidebarOpen);
@@ -366,50 +511,66 @@
   document.addEventListener('DOMContentLoaded', function() {
     loadWorkspace();
     renderSidebar();
+    renderSheet();
 
-    // Search
-    document.getElementById('sidebarSearch').addEventListener('input', function(e) {
-      handleSearch(e.target.value);
+    // Desktop sidebar search
+    const sidebarSearch = document.getElementById('sidebarSearch');
+    if (sidebarSearch) {
+      sidebarSearch.addEventListener('input', function(e) { handleSearch(e.target.value); });
+    }
+
+    // Sidebar nav: event delegation
+    document.getElementById('sidebarNav').addEventListener('click', function(e) {
+      const header = e.target.closest('[data-action="toggle-cluster"]');
+      if (header) { window.__shell.toggleCluster(header.dataset.id); return; }
+      const item = e.target.closest('.tool-item');
+      if (item) openTool(item.dataset.slug);
     });
 
-    // Sidebar overlay close
+    // Sheet: event delegation + search + close
+    document.getElementById('sheetList').addEventListener('click', function(e) {
+      const row = e.target.closest('.sheet__row');
+      if (row) openTool(row.dataset.slug);
+    });
+    document.getElementById('sheetSearch').addEventListener('input', applySheetFilter);
+    document.getElementById('sheetClose').addEventListener('click', closeSheet);
+
+    // Sidebar overlay close (desktop fallback)
     document.querySelector('.sidebar-overlay').addEventListener('click', function() {
       sidebarOpen = false;
       document.querySelector('.sidebar').classList.remove('open');
       this.classList.remove('visible');
     });
 
-    // Bottom bar
+    // Bottom bar — cluster tabs open the switcher filtered to that cluster
     document.querySelectorAll('.bottombar__item').forEach(el => {
       el.addEventListener('click', function() {
         const cluster = this.dataset.cluster;
-        if (cluster === 'all') {
-          window.__shell.toggleSidebar();
-        } else {
-          // Open first tool in cluster
-          const tool = UNIQUE_TOOLS.find(t => t.cluster === cluster);
-          if (tool) openTool(tool.slug);
-        }
+        if (sheetIsOpen() && sheetCluster === cluster) { closeSheet(); return; }
+        openSheet(cluster === 'all' ? 'all' : cluster);
       });
     });
 
     // Check URL for tool
     const params = new URLSearchParams(window.location.search);
     const tool = params.get('tool');
-    if (tool) openTool(tool);
+    if (tool) openTool(tool, true);
     else renderWelcome();
 
     window.addEventListener('popstate', handlePopState);
 
-    // Keyboard shortcut: Ctrl+K for search
+    // Keyboard: ⌘K opens search, Esc closes sheet
     document.addEventListener('keydown', function(e) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        const searchEl = document.getElementById('sidebarSearch');
-        searchEl.focus();
-        // Open sidebar on mobile
-        if (window.innerWidth <= 768) window.__shell.toggleSidebar();
+        if (window.innerWidth <= 768) {
+          openSheet('all');
+        } else {
+          const searchEl = document.getElementById('sidebarSearch');
+          if (searchEl) searchEl.focus();
+        }
       }
+      if (e.key === 'Escape' && sheetIsOpen()) closeSheet();
     });
   });
 })();

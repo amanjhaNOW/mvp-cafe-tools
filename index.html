@@ -19,6 +19,10 @@
     </div>
     <input class="sidebar__search" id="sidebarSearch" type="text" placeholder="Search tools… (⌘K)">
     <nav class="sidebar__nav" id="sidebarNav"></nav>
+    <div class="sidebar__footer">
+      <a class="sidebar__footer-link" href="/grid">▦ Grid View</a>
+      <a class="sidebar__footer-link" href="https://github.com/amanjhaNOW/mvp-cafe-tools" target="_blank" rel="noopener">↗ Source</a>
+    </div>
   </aside>
   <div class="sidebar-overlay"></div>
 
@@ -73,6 +77,18 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- Full-screen tool switcher (mobile + search) -->
+<div class="sheet" id="toolSheet" role="dialog" aria-label="Tool switcher">
+  <div class="sheet__header">
+    <span class="sheet__title" id="sheetTitle">All tools</span>
+    <button class="sheet__close" id="sheetClose" aria-label="Close">✕</button>
+  </div>
+  <div class="sheet__searchwrap">
+    <input class="sheet__search" id="sheetSearch" type="search" placeholder="Search 80 tools…" autocomplete="off">
+  </div>
+  <div class="sheet__list" id="sheetList"></div>
 </div>
 <script src="/_shell/shell.js"></script>
 </body>
