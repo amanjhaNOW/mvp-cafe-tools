@@ -585,7 +585,7 @@ function renderFlagDetail() {
   ENVS.forEach(env => {
     const s = f.envState[env]||{enabled:false,rollout:0};
     html += `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;${env!==ENVS[ENVS.length-1]?'border-bottom:1px solid var(--border)':''}">
-      <span style="color:${s.enabled?'var(--green)':'var(--text3)}">●</span>
+      <span style="color:${s.enabled?'var(--green)':'var(--text3)'}">●</span>
       <span style="flex:1">${env}</span>
       <span style="font-weight:600;color:${s.enabled?'var(--green)':'var(--text3)'}">${s.enabled?'ON':'OFF'}</span>
       ${s.rollout>0?`<span style="color:var(--text2);font-size:12px">${s.rollout}%</span>`:''}

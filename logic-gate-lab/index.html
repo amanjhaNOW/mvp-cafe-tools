@@ -744,7 +744,7 @@ function showProperties(comp) {
   if (comp.inputs.length) {
     html += `<div class="prop-row"><label>Inputs</label>`;
     comp.inputs.forEach((v, i) => {
-      html += `<div style="display:flex;align-items:center;gap:8px;margin-top:4px"><span style="color:var(--text2);font-size:12px">${comp.inputLabels[i] || 'IN'+i}</span><span style="color:${v ? 'var(--green)' : 'var(--red)';font-weight:700}">${v ? '1' : '0'}</span></div>`;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-top:4px"><span style="color:var(--text2);font-size:12px">${comp.inputLabels[i] || 'IN'+i}</span><span style="color:${v ? 'var(--green)' : 'var(--red)'};font-weight:700">${v ? '1' : '0'}</span></div>`;
     });
     html += `</div>`;
   }

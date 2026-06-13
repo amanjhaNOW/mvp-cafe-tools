@@ -99,6 +99,7 @@
     { slug: 'physics-lab', name: 'Physics Lab', emoji: '🪀', cluster: 'creative' },
     { slug: 'typing-arena', name: 'Typing Arena', emoji: '🏎️', cluster: 'creative' },
     { slug: 'dialogue-tree', name: 'Dialogue Tree', emoji: '🗨️', cluster: 'creative' },
+    { slug: 'palette-forge', name: 'Palette Forge', emoji: '🎨', cluster: 'build' },
   ];
 
   // Deduplicate (sprint-board appears in both build and team)
