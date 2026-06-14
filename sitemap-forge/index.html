@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Sitemap Forge — Visual Sitemap & IA Builder | mvp.cafe</title>
+<meta name="description" content="Plan your website structure visually. Drag-and-drop page hierarchy, auto-generate XML sitemaps, export diagrams. Free, no login.">
+<style>
+:root{--bg:#0a0a0f;--bg2:#131320;--bg3:#1a1a2e;--border:#252540;--text:#e8e8f0;--dim:#9090a8;--accent:#a78bfa;--accent2:#c4b5fd;--green:#4ade80;--red:#f87171;--yellow:#fbbf24;--blue:#60a5fa;--orange:#fb923c;--pink:#f472b6;--cyan:#22d3ee}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;height:100%;overflow:hidden}
+body{display:flex;flex-direction:column}
+
+/* Top bar */
+.topbar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;min-height:48px;z-index:100}
+.topbar__title{font-weight:700;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar__actions{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:8px;font-size:0.82rem;cursor:pointer;white-space:nowrap;min-height:36px;display:inline-flex;align-items:center;gap:4px;transition:background .15s,border-color .15s}
+.btn:hover{background:var(--border);border-color:var(--accent)}
+.btn--accent{background:var(--accent);color:#0a0a0f;border-color:var(--accent)}
+.btn--accent:hover{background:var(--accent2)}
+.btn--sm{padding:4px 8px;font-size:0.78rem;min-height:30px}
+.btn--icon{padding:6px 8px}
+
+/* Layout */
+.app{display:flex;flex:1;overflow:hidden}
+.sidebar{width:280px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.sidebar__header{padding:12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.sidebar__search{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;font-size:16px;outline:none}
+.sidebar__search:focus{border-color:var(--accent)}
+.sidebar__list{flex:1;overflow-y:auto;padding:8px}
+.sidebar__item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:0.88rem;transition:background .1s;min-height:44px}
+.sidebar__item:hover{background:var(--bg3)}
+.sidebar__item.active{background:var(--accent);color:#0a0a0f}
+.sidebar__item.active .sidebar__item-count{color:#0a0a0f;opacity:.7}
+.sidebar__item-emoji{font-size:1.1rem;flex-shrink:0}
+.sidebar__item-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar__item-count{font-size:0.75rem;color:var(--dim);flex-shrink:0}
+.sidebar__footer{padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap}
+
+/* Main content */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab{padding:10px 16px;font-size:0.85rem;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;color:var(--dim);transition:color .15s,border-color .15s;min-height:44px;display:flex;align-items:center}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.content{flex:1;overflow:auto;padding:16px}
+
+/* Tree view */
+.tree{padding:8px 0}
+.tree-node{margin-left:0}
+.tree-children{margin-left:24px;border-left:2px solid var(--border);padding-left:0}
+.tree-row{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;cursor:pointer;transition:background .1s;min-height:44px;margin:2px 0}
+.tree-row:hover{background:var(--bg3)}
+.tree-row.selected{background:rgba(167,139,250,.15);outline:1px solid var(--accent)}
+.tree-toggle{width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:var(--dim);cursor:pointer;flex-shrink:0;border-radius:4px}
+.tree-toggle:hover{background:var(--border)}
+.tree-toggle.leaf{visibility:hidden}
+.tree-icon{font-size:1rem;flex-shrink:0}
+.tree-label{flex:1;font-size:0.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-status{font-size:0.7rem;padding:2px 6px;border-radius:4px;font-weight:600;flex-shrink:0}
+.tree-status[data-s="live"]{background:rgba(74,222,128,.15);color:var(--green)}
+.tree-status[data-s="draft"]{background:rgba(251,191,36,.15);color:var(--yellow)}
+.tree-status[data-s="planned"]{background:rgba(96,165,250,.15);color:var(--blue)}
+.tree-status[data-s="deprecated"]{background:rgba(248,113,113,.15);color:var(--red)}
+.tree-depth{font-size:0.7rem;color:var(--dim);flex-shrink:0;margin-left:auto}
+.tree-actions{display:flex;gap:2px;flex-shrink:0;opacity:0;transition:opacity .15s}
+.tree-row:hover .tree-actions{opacity:1}
+.tree-act{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;font-size:0.8rem;background:none;border:none;color:var(--dim)}
+.tree-act:hover{background:var(--border);color:var(--text)}
+
+/* Detail panel */
+.detail{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:640px}
+.detail h3{font-size:1.1rem;margin-bottom:16px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:0.8rem;color:var(--dim);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;font-size:16px;font-family:inherit;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:60px}
+.field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239090a8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+.field-row{display:flex;gap:10px}
+.field-row .field{flex:1}
+.detail-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+
+/* Visual map (SVG canvas) */
+.map-wrap{flex:1;position:relative;overflow:hidden;background:var(--bg);min-height:300px}
+.map-wrap svg{width:100%;height:100%}
+.map-controls{position:absolute;bottom:12px;right:12px;display:flex;gap:6px;z-index:10}
+.map-info{position:absolute;top:12px;left:12px;font-size:0.8rem;color:var(--dim);z-index:10;background:rgba(10,10,15,.8);padding:4px 10px;border-radius:6px}
+
+/* XML preview */
+.xml-preview{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;font-family:"SF Mono","Fira Code",monospace;font-size:0.82rem;white-space:pre-wrap;word-break:break-all;overflow:auto;max-height:70vh;line-height:1.6;color:var(--dim)}
+.xml-preview .xml-tag{color:var(--accent)}
+.xml-preview .xml-val{color:var(--green)}
+
+/* Dashboard */
+.dash{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.dash-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+.dash-card__num{font-size:1.5rem;font-weight:700;color:var(--accent2)}
+.dash-card__label{font-size:0.78rem;color:var(--dim);margin-top:2px}
+.dash-section{margin-bottom:24px}
+.dash-section h4{font-size:0.9rem;margin-bottom:10px;color:var(--dim)}
+.dash-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.dash-bar__label{font-size:0.82rem;width:90px;flex-shrink:0}
+.dash-bar__track{flex:1;height:20px;background:var(--bg);border-radius:4px;overflow:hidden}
+.dash-bar__fill{height:100%;border-radius:4px;transition:width .3s}
+.dash-bar__count{font-size:0.78rem;color:var(--dim);width:30px;text-align:right;flex-shrink:0}
+
+/* Template cards */
+.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.tpl-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:border-color .15s,transform .15s}
+.tpl-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.tpl-card__emoji{font-size:1.5rem;margin-bottom:8px}
+.tpl-card__name{font-weight:700;font-size:0.95rem;margin-bottom:4px}
+.tpl-card__desc{font-size:0.82rem;color:var(--dim)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.modal h3{margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end;flex-wrap:wrap}
+.hidden{display:none!important}
+
+/* Mobile */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:-300px;top:0;bottom:0;width:280px;z-index:150;transition:left .2s}
+  .sidebar.open{left:0}
+  .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:140;display:none}
+  .sidebar-overlay.visible{display:block}
+  .topbar__menu{display:flex}
+  .field-row{flex-direction:column;gap:0}
+  .tree-actions{opacity:1}
+  .dash{grid-template-columns:repeat(2,1fr)}
+  .tpl-grid{grid-template-columns:1fr}
+  .map-controls{bottom:8px;right:8px}
+}
+@media(min-width:769px){
+  .topbar__menu{display:none}
+  .sidebar-overlay{display:none!important}
+}
+
+/* Drag styles */
+.tree-row.drag-over{background:rgba(167,139,250,.2);outline:2px dashed var(--accent)}
+.tree-row.dragging{opacity:.4}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="btn btn--icon topbar__menu" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+  <div class="topbar__title">🗺️ Sitemap Forge</div>
+  <div class="topbar__actions">
+    <button class="btn btn--sm" onclick="showHelp()" title="Help">?</button>
+  </div>
+</div>
+
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar__header">
+      <input class="sidebar__search" type="text" placeholder="Search sitemaps…" id="sidebarSearch" oninput="filterSitemaps()">
+      <button class="btn btn--accent" style="width:100%" onclick="createSitemap()">+ New Sitemap</button>
+    </div>
+    <div class="sidebar__list" id="sidebarList"></div>
+    <div class="sidebar__footer">
+      <button class="btn btn--sm" onclick="importData()">Import</button>
+      <button class="btn btn--sm" onclick="exportData()">Export</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-tab="tree" onclick="switchTab('tree')">📂 Pages</div>
+      <div class="tab" data-tab="map" onclick="switchTab('map')">🗺️ Visual Map</div>
+      <div class="tab" data-tab="xml" onclick="switchTab('xml')">📄 XML</div>
+      <div class="tab" data-tab="dash" onclick="switchTab('dash')">📊 Dashboard</div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modal" onclick="event.stopPropagation()"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const SK = k => 'mvpcafe:sitemap-forge:' + k;
+let sitemaps = [];
+let currentId = null;
+let currentTab = 'tree';
+let selectedPageId = null;
+let collapsed = new Set();
+
+const PAGE_TYPES = [
+  {id:'landing',emoji:'🏠',label:'Landing'},
+  {id:'feature',emoji:'⭐',label:'Feature'},
+  {id:'pricing',emoji:'💰',label:'Pricing'},
+  {id:'blog',emoji:'📝',label:'Blog'},
+  {id:'blog-post',emoji:'📄',label:'Blog Post'},
+  {id:'docs',emoji:'📚',label:'Documentation'},
+  {id:'auth',emoji:'🔐',label:'Auth'},
+  {id:'dashboard',emoji:'📊',label:'Dashboard'},
+  {id:'settings',emoji:'⚙️',label:'Settings'},
+  {id:'legal',emoji:'⚖️',label:'Legal'},
+  {id:'about',emoji:'ℹ️',label:'About'},
+  {id:'contact',emoji:'📬',label:'Contact'},
+  {id:'careers',emoji:'💼',label:'Careers'},
+  {id:'api',emoji:'🔌',label:'API'},
+  {id:'changelog',emoji:'📜',label:'Changelog'},
+  {id:'support',emoji:'🆘',label:'Support'},
+  {id:'other',emoji:'📎',label:'Other'},
+];
+const STATUSES = ['live','draft','planned','deprecated'];
+const STATUS_COLORS = {live:'var(--green)',draft:'var(--yellow)',planned:'var(--blue)',deprecated:'var(--red)'};
+const PRIORITIES = ['high','medium','low'];
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function save(){localStorage.setItem(SK('sitemaps'),JSON.stringify(sitemaps));localStorage.setItem(SK('current'),currentId||'')}
+function load(){try{sitemaps=JSON.parse(localStorage.getItem(SK('sitemaps')))||[]}catch(e){sitemaps=[]}currentId=localStorage.getItem(SK('current'))||null;if(currentId&&!sitemaps.find(s=>s.id===currentId))currentId=sitemaps[0]?.id||null}
+function getSitemap(){return sitemaps.find(s=>s.id===currentId)}
+function getTypeInfo(t){return PAGE_TYPES.find(p=>p.id===t)||PAGE_TYPES[PAGE_TYPES.length-1]}
+
+// Flatten pages tree into array
+function flattenPages(pages,depth=0,parentId=null){
+  const result=[];
+  for(const p of pages){
+    result.push({...p,depth,parentId});
+    if(p.children?.length) result.push(...flattenPages(p.children,depth+1,p.id));
+  }
+  return result;
+}
+
+function countPages(pages){
+  let c=0;
+  for(const p of pages){c++;if(p.children?.length)c+=countPages(p.children)}
+  return c;
+}
+
+function findPage(pages,id){
+  for(const p of pages){
+    if(p.id===id)return p;
+    if(p.children?.length){const f=findPage(p.children,id);if(f)return f}
+  }
+  return null;
+}
+
+function findParent(pages,id,parent=null){
+  for(const p of pages){
+    if(p.id===id)return{parent,siblings:pages};
+    if(p.children?.length){const f=findParent(p.children,id,p);if(f)return f}
+  }
+  return null;
+}
+
+function removePage(pages,id){
+  const idx=pages.findIndex(p=>p.id===id);
+  if(idx>=0){pages.splice(idx,1);return true}
+  for(const p of pages){if(p.children?.length&&removePage(p.children,id))return true}
+  return false;
+}
+
+function movePage(pages,pageId,targetId,position){
+  // position: 'child', 'before', 'after'
+  const pageInfo=findParent(pages,pageId);
+  if(!pageInfo)return;
+  const pageIdx=pageInfo.siblings.findIndex(p=>p.id===pageId);
+  const page=pageInfo.siblings.splice(pageIdx,1)[0];
+  if(position==='child'){
+    const target=findPage(pages,targetId);
+    if(!target)return;
+    if(!target.children)target.children=[];
+    target.children.push(page);
+  } else {
+    const targetInfo=findParent(pages,targetId);
+    if(!targetInfo)return;
+    const tIdx=targetInfo.siblings.findIndex(p=>p.id===targetId);
+    targetInfo.siblings.splice(position==='before'?tIdx:tIdx+1,0,page);
+  }
+}
+
+// ── Sidebar ──
+function renderSidebar(){
+  const q=(document.getElementById('sidebarSearch')?.value||'').toLowerCase();
+  const list=document.getElementById('sidebarList');
+  const filtered=sitemaps.filter(s=>!q||s.name.toLowerCase().includes(q));
+  list.innerHTML=filtered.length?filtered.map(s=>{
+    const count=countPages(s.pages);
+    const active=s.id===currentId?'active':'';
+    return `<div class="sidebar__item ${active}" onclick="selectSitemap('${s.id}')">
+      <span class="sidebar__item-emoji">🗺️</span>
+      <span class="sidebar__item-name">${esc(s.name)}</span>
+      <span class="sidebar__item-count">${count}p</span>
+    </div>`;
+  }).join(''):'<div style="padding:16px;color:var(--dim);font-size:.85rem;text-align:center">No sitemaps yet.<br>Create one to start!</div>';
+}
+
+window.filterSitemaps=renderSidebar;
+
+window.selectSitemap=function(id){
+  currentId=id;selectedPageId=null;save();renderSidebar();render();
+  closeSidebar();
+};
+
+window.createSitemap=function(){
+  showModal('New Sitemap',`
+    <div class="field"><label>Name</label><input id="mName" value="My Website" autofocus></div>
+    <div class="field"><label>Base URL</label><input id="mUrl" value="https://example.com" placeholder="https://yoursite.com"></div>
+    <p style="font-size:.85rem;color:var(--dim);margin-top:8px">Or start from a template:</p>
+    <div class="tpl-grid" style="margin-top:12px">
+      ${getTemplates().map(t=>`<div class="tpl-card" onclick="applyTemplate('${t.id}')">
+        <div class="tpl-card__emoji">${t.emoji}</div>
+        <div class="tpl-card__name">${t.name}</div>
+        <div class="tpl-card__desc">${t.desc}</div>
+      </div>`).join('')}
+    </div>
+  `,`<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn--accent" onclick="confirmCreate()">Create Blank</button>`);
+};
+
+window.confirmCreate=function(){
+  const name=document.getElementById('mName')?.value?.trim()||'My Website';
+  const url=document.getElementById('mUrl')?.value?.trim()||'https://example.com';
+  const sm={id:uid(),name,baseUrl:url,pages:[{id:uid(),title:'Home',slug:'/',type:'landing',status:'planned',description:'',priority:'high',notes:'',children:[]}],createdAt:new Date().toISOString()};
+  sitemaps.push(sm);currentId=sm.id;selectedPageId=null;save();renderSidebar();render();closeModal();
+};
+
+window.applyTemplate=function(tplId){
+  const tpl=getTemplates().find(t=>t.id===tplId);if(!tpl)return;
+  const name=document.getElementById('mName')?.value?.trim()||tpl.name;
+  const url=document.getElementById('mUrl')?.value?.trim()||'https://example.com';
+  const sm={id:uid(),name,baseUrl:url,pages:tpl.pages(),createdAt:new Date().toISOString()};
+  sitemaps.push(sm);currentId=sm.id;selectedPageId=null;save();renderSidebar();render();closeModal();
+};
+
+// ── Templates ──
+function getTemplates(){
+  return [
+    {id:'saas',emoji:'🚀',name:'SaaS Website',desc:'Landing, features, pricing, docs, blog',pages:()=>[
+      {id:uid(),title:'Home',slug:'/',type:'landing',status:'planned',description:'Main landing page',priority:'high',notes:'',children:[
+        {id:uid(),title:'Features',slug:'/features',type:'feature',status:'planned',description:'Product features overview',priority:'high',notes:'',children:[
+          {id:uid(),title:'Feature A',slug:'/features/a',type:'feature',status:'planned',description:'',priority:'medium',notes:'',children:[]},
+          {id:uid(),title:'Feature B',slug:'/features/b',type:'feature',status:'planned',description:'',priority:'medium',notes:'',children:[]},
+        ]},
+        {id:uid(),title:'Pricing',slug:'/pricing',type:'pricing',status:'planned',description:'Pricing tiers',priority:'high',notes:'',children:[]},
+        {id:uid(),title:'Blog',slug:'/blog',type:'blog',status:'planned',description:'Company blog',priority:'medium',notes:'',children:[
+          {id:uid(),title:'Blog Post 1',slug:'/blog/post-1',type:'blog-post',status:'draft',description:'',priority:'low',notes:'',children:[]},
+        ]},
+        {id:uid(),title:'Docs',slug:'/docs',type:'docs',status:'planned',description:'Documentation',priority:'high',notes:'',children:[
+          {id:uid(),title:'Getting Started',slug:'/docs/getting-started',type:'docs',status:'planned',description:'',priority:'high',notes:'',children:[]},
+          {id:uid(),title:'API Reference',slug:'/docs/api',type:'api',status:'planned',description:'',priority:'medium',notes:'',children:[]},
+        ]},
+        {id:uid(),title:'About',slug:'/about',type:'about',status:'planned',description:'About the company',priority:'medium',notes:'',children:[]},
+        {id:uid(),title:'Contact',slug:'/contact',type:'contact',status:'planned',description:'Contact form',priority:'medium',notes:'',children:[]},
+        {id:uid(),title:'Login',slug:'/login',type:'auth',status:'planned',description:'User auth',priority:'high',notes:'',children:[]},
+        {id:uid(),title:'Dashboard',slug:'/dashboard',type:'dashboard',status:'planned',description:'User dashboard',priority:'high',notes:'',children:[
+          {id:uid(),title:'Settings',slug:'/dashboard/settings',type:'settings',status:'planned',description:'',priority:'medium',notes:'',children:[]},
+        ]},
+        {id:uid(),title:'Changelog',slug:'/changelog',type:'changelog',status:'planned',description:'Product updates',priority:'low',notes:'',children:[]},
+        {id:uid(),title:'Privacy Policy',slug:'/privacy',type:'legal',status:'planned',description:'',priority:'low',notes:'',children:[]},
+        {id:uid(),title:'Terms of Service',slug:'/terms',type:'legal',status:'planned',description:'',priority:'low',notes:'',children:[]},
+      ]},
+    ]},
+    {id:'blog',emoji:'📝',name:'Blog / Content Site',desc:'Homepage, categories, posts, about',pages:()=>[
+      {id:uid(),title:'Home',slug:'/',type:'landing',status:'planned',description:'Blog homepage',priority:'high',notes:'',children:[
+        {id:uid(),title:'Tech',slug:'/tech',type:'blog',status:'planned',description:'Technology articles',priority:'high',notes:'',children:[
+          {id:uid(),title:'Post: Getting Started with React',slug:'/tech/getting-started-react',type:'blog-post',status:'draft',description:'',priority:'medium',notes:'',children:[]},
+        ]},
+        {id:uid(),title:'Product',slug:'/product',type:'blog',status:'planned',description:'Product management articles',priority:'high',notes:'',children:[]},
+        {id:uid(),title:'Startup',slug:'/startup',type:'blog',status:'planned',description:'Startup lessons',priority:'medium',notes:'',children:[]},
+        {id:uid(),title:'About',slug:'/about',type:'about',status:'planned',description:'About the author',priority:'medium',notes:'',children:[]},
+        {id:uid(),title:'Newsletter',slug:'/newsletter',type:'contact',status:'planned',description:'Newsletter signup',priority:'high',notes:'',children:[]},
+      ]},
+    ]},
+    {id:'ecommerce',emoji:'🛒',name:'E-Commerce',desc:'Products, categories, cart, checkout',pages:()=>[
+      {id:uid(),title:'Home',slug:'/',type:'landing',status:'planned',description:'Store homepage',priority:'high',notes:'',children:[
+        {id:uid(),title:'Products',slug:'/products',type:'feature',status:'planned',description:'All products',priority:'high',notes:'',children:[
+          {id:uid(),title:'Category A',slug:'/products/category-a',type:'feature',status:'planned',description:'',priority:'medium',notes:'',children:[]},
+          {id:uid(),title:'Category B',slug:'/products/category-b',type:'feature',status:'planned',description:'',priority:'medium',notes:'',children:[]},
+        ]},
+        {id:uid(),title:'Cart',slug:'/cart',type:'dashboard',status:'planned',description:'Shopping cart',priority:'high',notes:'',children:[]},
+        {id:uid(),title:'Checkout',slug:'/checkout',type:'dashboard',status:'planned',description:'Checkout flow',priority:'high',notes:'',children:[]},
+        {id:uid(),title:'Account',slug:'/account',type:'auth',status:'planned',description:'User account',priority:'high',notes:'',children:[
+          {id:uid(),title:'Orders',slug:'/account/orders',type:'dashboard',status:'planned',description:'',priority:'medium',notes:'',children:[]},
+          {id:uid(),title:'Settings',slug:'/account/settings',type:'settings',status:'planned',description:'',priority:'medium',notes:'',children:[]},
+        ]},
+        {id:uid(),title:'FAQ',slug:'/faq',type:'support',status:'planned',description:'',priority:'low',notes:'',children:[]},
+        {id:uid(),title:'Returns',slug:'/returns',type:'legal',status:'planned',description:'Return policy',priority:'medium',notes:'',children:[]},
+      ]},
+    ]},
+    {id:'portfolio',emoji:'🎨',name:'Portfolio',desc:'Work, about, contact, resume',pages:()=>[
+      {id:uid(),title:'Home',slug:'/',type:'landing',status:'planned',description:'Portfolio homepage',priority:'high',notes:'',children:[
+        {id:uid(),title:'Work',slug:'/work',type:'feature',status:'planned',description:'Project showcase',priority:'high',notes:'',children:[
+          {id:uid(),title:'Project 1',slug:'/work/project-1',type:'feature',status:'draft',description:'',priority:'medium',notes:'',children:[]},
+          {id:uid(),title:'Project 2',slug:'/work/project-2',type:'feature',status:'draft',description:'',priority:'medium',notes:'',children:[]},
+        ]},
+        {id:uid(),title:'About',slug:'/about',type:'about',status:'planned',description:'About me',priority:'high',notes:'',children:[]},
+        {id:uid(),title:'Blog',slug:'/blog',type:'blog',status:'planned',description:'Articles',priority:'medium',notes:'',children:[]},
+        {id:uid(),title:'Contact',slug:'/contact',type:'contact',status:'planned',description:'Get in touch',priority:'medium',notes:'',children:[]},
+        {id:uid(),title:'Resume',slug:'/resume',type:'other',status:'planned',description:'Online resume',priority:'medium',notes:'',children:[]},
+      ]},
+    ]},
+  ];
+}
+
+// ── Tree View ──
+function renderTree(pages,depth=0){
+  return pages.map(p=>{
+    const ti=getTypeInfo(p.type);
+    const hasChildren=p.children?.length>0;
+    const isCollapsed=collapsed.has(p.id);
+    const sel=p.id===selectedPageId?'selected':'';
+    const toggleClass=hasChildren?'':'leaf';
+    const toggleIcon=hasChildren?(isCollapsed?'▶':'▼'):'';
+    return `<div class="tree-node">
+      <div class="tree-row ${sel}" data-id="${p.id}" onclick="selectPage('${p.id}')" draggable="true" ondragstart="dragStart(event,'${p.id}')" ondragover="dragOver(event)" ondrop="drop(event,'${p.id}')" ondragend="dragEnd(event)" ondragleave="dragLeave(event)">
+        <span class="tree-toggle ${toggleClass}" onclick="event.stopPropagation();toggleNode('${p.id}')">${toggleIcon}</span>
+        <span class="tree-icon">${ti.emoji}</span>
+        <span class="tree-label">${esc(p.title)}</span>
+        <span class="tree-status" data-s="${p.status}">${p.status}</span>
+        <div class="tree-actions">
+          <button class="tree-act" onclick="event.stopPropagation();addChildPage('${p.id}')" title="Add child">+</button>
+          <button class="tree-act" onclick="event.stopPropagation();deletePage('${p.id}')" title="Delete">🗑</button>
+        </div>
+      </div>
+      ${hasChildren&&!isCollapsed?`<div class="tree-children">${renderTree(p.children,depth+1)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── Drag & Drop ──
+let draggedId=null;
+window.dragStart=function(e,id){draggedId=id;e.dataTransfer.effectAllowed='move';e.target.classList.add('dragging')};
+window.dragOver=function(e){e.preventDefault();e.dataTransfer.dropMode='move';e.currentTarget.classList.add('drag-over')};
+window.dragLeave=function(e){e.currentTarget.classList.remove('drag-over')};
+window.dragEnd=function(e){draggedId=null;document.querySelectorAll('.dragging,.drag-over').forEach(el=>{el.classList.remove('dragging','drag-over')})};
+window.drop=function(e,targetId){
+  e.preventDefault();e.currentTarget.classList.remove('drag-over');
+  if(!draggedId||draggedId===targetId)return;
+  const sm=getSitemap();if(!sm)return;
+  // Don't allow dropping onto a descendant
+  const targetPage=findPage(sm.pages,targetId);
+  if(findPage([findPage(sm.pages,draggedId)]||[],targetId))return;
+  movePage(sm.pages,draggedId,targetId,'child');
+  draggedId=null;save();render();
+};
+
+// ── Page Operations ──
+window.selectPage=function(id){selectedPageId=id;render()};
+window.toggleNode=function(id){collapsed.has(id)?collapsed.delete(id):collapsed.add(id);render()};
+
+window.addChildPage=function(parentId){
+  const sm=getSitemap();if(!sm)return;
+  const parent=findPage(sm.pages,parentId);if(!parent)return;
+  if(!parent.children)parent.children=[];
+  const newPage={id:uid(),title:'New Page',slug:parent.slug==='/'?'/new-page':parent.slug+'/new-page',type:'other',status:'planned',description:'',priority:'medium',notes:'',children:[]};
+  parent.children.push(newPage);
+  collapsed.delete(parentId);
+  selectedPageId=newPage.id;
+  save();render();
+};
+
+window.addRootPage=function(){
+  const sm=getSitemap();if(!sm)return;
+  const newPage={id:uid(),title:'New Section',slug:'/new-section',type:'other',status:'planned',description:'',priority:'medium',notes:'',children:[]};
+  sm.pages.push(newPage);selectedPageId=newPage.id;save();render();
+};
+
+window.deletePage=function(id){
+  const sm=getSitemap();if(!sm)return;
+  if(!confirm('Delete this page and all children?'))return;
+  removePage(sm.pages,id);
+  if(selectedPageId===id)selectedPageId=null;
+  save();render();
+};
+
+window.updatePage=function(){
+  const sm=getSitemap();if(!sm)return;
+  const page=findPage(sm.pages,selectedPageId);if(!page)return;
+  page.title=document.getElementById('pTitle')?.value||page.title;
+  page.slug=document.getElementById('pSlug')?.value||page.slug;
+  page.type=document.getElementById('pType')?.value||page.type;
+  page.status=document.getElementById('pStatus')?.value||page.status;
+  page.priority=document.getElementById('pPriority')?.value||page.priority;
+  page.description=document.getElementById('pDesc')?.value||'';
+  page.notes=document.getElementById('pNotes')?.value||'';
+  save();render();
+};
+
+// ── Visual Map (SVG tree) ──
+function renderVisualMap(){
+  const sm=getSitemap();
+  if(!sm||!sm.pages.length)return '<div style="padding:40px;text-align:center;color:var(--dim)">Add pages to see the visual map</div>';
+  
+  const nodeW=160,nodeH=48,gapX=20,gapY=60;
+  
+  // Calculate layout using recursive approach
+  function calcLayout(pages,x,y,depth){
+    const nodes=[];const edges=[];
+    let curX=x;
+    for(const p of pages){
+      const childResult=p.children?.length&&!collapsed.has(p.id)?calcLayout(p.children,curX,y+nodeH+gapY,depth+1):{nodes:[],edges:[],width:nodeW};
+      const myX=childResult.nodes.length?childResult.nodes[0].x+(childResult.width-nodeW)/2:curX;
+      const node={id:p.id,x:myX,y,title:p.title,type:p.type,status:p.status,width:nodeW,height:nodeH};
+      nodes.push(node);
+      nodes.push(...childResult.nodes);
+      edges.push(...childResult.edges);
+      for(const cn of(p.children||[])){
+        if(!collapsed.has(p.id)){
+          const childNode=childResult.nodes.find(n=>n.id===cn.id);
+          if(childNode)edges.push({from:node,to:childNode});
+        }
+      }
+      curX=Math.max(curX+nodeW+gapX,childResult.nodes.length?curX+childResult.width+gapX:curX+nodeW+gapX);
+    }
+    return{nodes,edges,width:curX-x-gapX};
+  }
+  
+  const layout=calcLayout(sm.pages,40,40,0);
+  const allNodes=layout.nodes;
+  const allEdges=layout.edges;
+  if(!allNodes.length)return '<div style="padding:40px;text-align:center;color:var(--dim)">No pages to display</div>';
+  
+  const maxX=Math.max(...allNodes.map(n=>n.x+n.width))+40;
+  const maxY=Math.max(...allNodes.map(n=>n.y+n.height))+40;
+  
+  let svg=`<div class="map-wrap"><div class="map-info">${allNodes.length} pages</div>
+    <div class="map-controls">
+      <button class="btn btn--sm" onclick="copyMapSVG()">📋 Copy SVG</button>
+    </div>
+    <div style="overflow:auto;width:100%;height:100%">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${maxX}" height="${maxY}" viewBox="0 0 ${maxX} ${maxY}" style="min-width:${maxX}px;min-height:${maxY}px">
+    <defs>
+      <filter id="shadow" x="-4%" y="-4%" width="108%" height="116%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity=".3"/></filter>
+    </defs>`;
+  
+  // Edges
+  for(const e of allEdges){
+    const x1=e.from.x+e.from.width/2,y1=e.from.y+e.from.height;
+    const x2=e.to.x+e.to.width/2,y2=e.to.y;
+    const midY=(y1+y2)/2;
+    svg+=`<path d="M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}" fill="none" stroke="#454570" stroke-width="2" stroke-linecap="round"/>`;
+  }
+  
+  // Nodes
+  for(const n of allNodes){
+    const ti=getTypeInfo(n.type);
+    const sc=STATUS_COLORS[n.status]||'var(--dim)';
+    const sel=n.id===selectedPageId;
+    const strokeColor=sel?'#a78bfa':'#353555';
+    const strokeW=sel?2:1;
+    const fill=sel?'#1e1e3a':'#181828';
+    svg+=`<g onclick="selectPage('${n.id}')" style="cursor:pointer">
+      <rect x="${n.x}" y="${n.y}" width="${n.width}" height="${n.height}" rx="8" fill="${fill}" stroke="${strokeColor}" stroke-width="${strokeW}" filter="url(#shadow)"/>
+      <text x="${n.x+8}" y="${n.y+20}" fill="#e8e8f0" font-size="11" font-family="-apple-system,sans-serif">${ti.emoji} ${escSvg(n.title.slice(0,16))}${n.title.length>16?'…':''}</text>
+      <text x="${n.x+8}" y="${n.y+36}" fill="${sc}" font-size="9" font-family="-apple-system,sans-serif" font-weight="600">${n.status}</text>
+      <text x="${n.x+n.width-8}" y="${n.y+36}" fill="#9090a8" font-size="9" font-family="-apple-system,sans-serif" text-anchor="end">${escSvg(n.type)}</text>
+    </g>`;
+  }
+  
+  svg+=`</svg></div></div>`;
+  return svg;
+}
+
+window.copyMapSVG=function(){
+  const svgEl=document.querySelector('.map-wrap svg');
+  if(!svgEl)return;
+  navigator.clipboard.writeText(svgEl.outerHTML).then(()=>notify('SVG copied!')).catch(()=>notify('Copy failed'));
+};
+
+// ── XML Sitemap ──
+function renderXML(){
+  const sm=getSitemap();if(!sm)return '';
+  const flat=flattenPages(sm.pages);
+  const baseUrl=(sm.baseUrl||'https://example.com').replace(/\/$/,'');
+  
+  let xml='<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml+='<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+  for(const p of flat){
+    if(p.status==='deprecated')continue;
+    const slug=p.slug.startsWith('/')?p.slug:'/'+p.slug;
+    const priority=p.priority==='high'?'1.0':p.priority==='medium'?'0.7':'0.4';
+    const freq=p.type==='blog-post'?'weekly':p.type==='blog'?'daily':'monthly';
+    xml+=`  <url>\n    <loc>${baseUrl}${slug}</loc>\n    <changefreq>${freq}</changefreq>\n    <priority>${priority}</priority>\n  </url>\n`;
+  }
+  xml+='</urlset>';
+  
+  // Syntax highlight
+  const highlighted=xml
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(&lt;\/?[\w:]+)/g,'<span class="xml-tag">$1</span>')
+    .replace(/(&gt;)([^&<]+)(&lt;)/g,'$1<span class="xml-val">$2</span>$3');
+  
+  return `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="btn btn--sm" onclick="copyXML()">📋 Copy XML</button>
+    <button class="btn btn--sm" onclick="downloadXML()">⬇ Download sitemap.xml</button>
+    <span style="font-size:.82rem;color:var(--dim);display:flex;align-items:center">${flattenPages(sm.pages).filter(p=>p.status!=='deprecated').length} URLs</span>
+  </div>
+  <div class="xml-preview">${highlighted}</div>`;
+}
+
+window.copyXML=function(){
+  const sm=getSitemap();if(!sm)return;
+  const flat=flattenPages(sm.pages);
+  const baseUrl=(sm.baseUrl||'https://example.com').replace(/\/$/,'');
+  let xml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+  for(const p of flat){
+    if(p.status==='deprecated')continue;
+    const slug=p.slug.startsWith('/')?p.slug:'/'+p.slug;
+    const priority=p.priority==='high'?'1.0':p.priority==='medium'?'0.7':'0.4';
+    const freq=p.type==='blog-post'?'weekly':p.type==='blog'?'daily':'monthly';
+    xml+=`  <url>\n    <loc>${baseUrl}${slug}</loc>\n    <changefreq>${freq}</changefreq>\n    <priority>${priority}</priority>\n  </url>\n`;
+  }
+  xml+='</urlset>';
+  navigator.clipboard.writeText(xml).then(()=>notify('XML copied!')).catch(()=>notify('Copy failed'));
+};
+
+window.downloadXML=function(){
+  const sm=getSitemap();if(!sm)return;
+  const flat=flattenPages(sm.pages);
+  const baseUrl=(sm.baseUrl||'https://example.com').replace(/\/$/,'');
+  let xml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+  for(const p of flat){
+    if(p.status==='deprecated')continue;
+    const slug=p.slug.startsWith('/')?p.slug:'/'+p.slug;
+    const priority=p.priority==='high'?'1.0':p.priority==='medium'?'0.7':'0.4';
+    const freq=p.type==='blog-post'?'weekly':p.type==='blog'?'daily':'monthly';
+    xml+=`  <url>\n    <loc>${baseUrl}${slug}</loc>\n    <changefreq>${freq}</changefreq>\n    <priority>${priority}</priority>\n  </url>\n`;
+  }
+  xml+='</urlset>';
+  const blob=new Blob([xml],{type:'application/xml'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sitemap.xml';a.click();URL.revokeObjectURL(a.href);
+};
+
+// ── Dashboard ──
+function renderDashboard(){
+  const sm=getSitemap();if(!sm)return '<div style="padding:40px;text-align:center;color:var(--dim)">Select a sitemap to see stats</div>';
+  const flat=flattenPages(sm.pages);
+  const total=flat.length;
+  const byStatus={live:0,draft:0,planned:0,deprecated:0};
+  const byType={};
+  const byPriority={high:0,medium:0,low:0};
+  let maxDepth=0;
+  for(const p of flat){
+    byStatus[p.status]=(byStatus[p.status]||0)+1;
+    byType[p.type]=(byType[p.type]||0)+1;
+    byPriority[p.priority]=(byPriority[p.priority]||0)+1;
+    if(p.depth>maxDepth)maxDepth=p.depth;
+  }
+  
+  const statusBars=STATUSES.map(s=>{
+    const count=byStatus[s]||0;
+    const pct=total?Math.round(count/total*100):0;
+    return `<div class="dash-bar">
+      <div class="dash-bar__label" style="color:${STATUS_COLORS[s]}">${s}</div>
+      <div class="dash-bar__track"><div class="dash-bar__fill" style="width:${pct}%;background:${STATUS_COLORS[s]}"></div></div>
+      <div class="dash-bar__count">${count}</div>
+    </div>`;
+  }).join('');
+  
+  const sortedTypes=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+  const typeBars=sortedTypes.map(([t,c])=>{
+    const ti=getTypeInfo(t);
+    const pct=total?Math.round(c/total*100):0;
+    return `<div class="dash-bar">
+      <div class="dash-bar__label">${ti.emoji} ${ti.label}</div>
+      <div class="dash-bar__track"><div class="dash-bar__fill" style="width:${pct}%;background:var(--accent)"></div></div>
+      <div class="dash-bar__count">${c}</div>
+    </div>`;
+  }).join('');
+  
+  return `<div class="dash">
+    <div class="dash-card"><div class="dash-card__num">${total}</div><div class="dash-card__label">Total Pages</div></div>
+    <div class="dash-card"><div class="dash-card__num" style="color:var(--green)">${byStatus.live||0}</div><div class="dash-card__label">Live</div></div>
+    <div class="dash-card"><div class="dash-card__num" style="color:var(--yellow)">${byStatus.draft||0}</div><div class="dash-card__label">Draft</div></div>
+    <div class="dash-card"><div class="dash-card__num" style="color:var(--blue)">${byStatus.planned||0}</div><div class="dash-card__label">Planned</div></div>
+    <div class="dash-card"><div class="dash-card__num">${maxDepth+1}</div><div class="dash-card__label">Max Depth</div></div>
+    <div class="dash-card"><div class="dash-card__num" style="color:var(--red)">${byStatus.deprecated||0}</div><div class="dash-card__label">Deprecated</div></div>
+  </div>
+  <div class="dash-section"><h4>Status Distribution</h4>${statusBars}</div>
+  <div class="dash-section"><h4>Page Types</h4>${typeBars}</div>
+  <div class="dash-section"><h4>Priority Breakdown</h4>
+    ${['high','medium','low'].map(pr=>{
+      const c=byPriority[pr]||0;
+      const pct=total?Math.round(c/total*100):0;
+      const col=pr==='high'?'var(--red)':pr==='medium'?'var(--yellow)':'var(--dim)';
+      return `<div class="dash-bar"><div class="dash-bar__label" style="color:${col}">${pr}</div><div class="dash-bar__track"><div class="dash-bar__fill" style="width:${pct}%;background:${col}"></div></div><div class="dash-bar__count">${c}</div></div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ── Detail Panel ──
+function renderDetail(){
+  const sm=getSitemap();if(!sm)return '';
+  const page=findPage(sm.pages,selectedPageId);
+  if(!page)return '<div style="padding:20px;color:var(--dim);font-size:.85rem">← Select a page from the tree to edit details</div>';
+  
+  const ti=getTypeInfo(page.type);
+  return `<div class="detail">
+    <h3>${ti.emoji} ${esc(page.title)}</h3>
+    <div class="field-row">
+      <div class="field"><label>Title</label><input id="pTitle" value="${escAttr(page.title)}" onchange="updatePage()"></div>
+      <div class="field"><label>URL Slug</label><input id="pSlug" value="${escAttr(page.slug)}" onchange="updatePage()"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Type</label><select id="pType" onchange="updatePage()">${PAGE_TYPES.map(t=>`<option value="${t.id}"${t.id===page.type?' selected':''}>${t.emoji} ${t.label}</option>`).join('')}</select></div>
+      <div class="field"><label>Status</label><select id="pStatus" onchange="updatePage()">${STATUSES.map(s=>`<option value="${s}"${s===page.status?' selected':''}>${s}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>Priority</label><select id="pPriority" onchange="updatePage()">${PRIORITIES.map(pr=>`<option value="${pr}"${pr===page.priority?' selected':''}>${pr}</option>`).join('')}</select></div>
+    <div class="field"><label>Description</label><textarea id="pDesc" rows="2" onchange="updatePage()">${esc(page.description||'')}</textarea></div>
+    <div class="field"><label>Notes</label><textarea id="pNotes" rows="3" onchange="updatePage()">${esc(page.notes||'')}</textarea></div>
+    <div class="detail-actions">
+      <button class="btn btn--sm" onclick="addChildPage('${page.id}')">+ Add Child</button>
+      <button class="btn btn--sm" onclick="duplicatePage('${page.id}')">📋 Duplicate</button>
+      <button class="btn btn--sm" style="color:var(--red)" onclick="deletePage('${page.id}')">🗑 Delete</button>
+    </div>
+  </div>`;
+}
+
+window.duplicatePage=function(id){
+  const sm=getSitemap();if(!sm)return;
+  const page=findPage(sm.pages,id);if(!page)return;
+  const info=findParent(sm.pages,id);if(!info)return;
+  function clonePage(p){return{...p,id:uid(),title:p.title+' (copy)',children:(p.children||[]).map(clonePage)}}
+  const copy=clonePage(page);
+  const idx=info.siblings.findIndex(p=>p.id===id);
+  info.siblings.splice(idx+1,0,copy);
+  selectedPageId=copy.id;save();render();
+};
+
+// ── Sitemap Settings ──
+window.editSitemap=function(){
+  const sm=getSitemap();if(!sm)return;
+  showModal('Sitemap Settings',`
+    <div class="field"><label>Name</label><input id="smName" value="${escAttr(sm.name)}"></div>
+    <div class="field"><label>Base URL</label><input id="smUrl" value="${escAttr(sm.baseUrl||'')}"></div>
+  `,`<button class="btn" style="color:var(--red)" onclick="deleteSitemap()">Delete</button>
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn btn--accent" onclick="saveSitemapSettings()">Save</button>`);
+};
+
+window.saveSitemapSettings=function(){
+  const sm=getSitemap();if(!sm)return;
+  sm.name=document.getElementById('smName')?.value?.trim()||sm.name;
+  sm.baseUrl=document.getElementById('smUrl')?.value?.trim()||sm.baseUrl;
+  save();renderSidebar();render();closeModal();
+};
+
+window.deleteSitemap=function(){
+  if(!confirm('Delete this sitemap?'))return;
+  sitemaps=sitemaps.filter(s=>s.id!==currentId);
+  currentId=sitemaps[0]?.id||null;selectedPageId=null;
+  save();renderSidebar();render();closeModal();
+};
+
+// ── Import/Export ──
+window.importData=function(){
+  const input=document.createElement('input');input.type='file';input.accept='.json';
+  input.onchange=function(e){
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      try{
+        const data=JSON.parse(ev.target.result);
+        if(Array.isArray(data)){sitemaps=[...sitemaps,...data]}
+        else if(data.sitemaps){sitemaps=[...sitemaps,...data.sitemaps]}
+        else if(data.pages){sitemaps.push(data)}
+        save();renderSidebar();render();notify('Imported!');
+      }catch(err){notify('Invalid JSON')}
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+};
+
+window.exportData=function(){
+  const blob=new Blob([JSON.stringify({sitemaps,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sitemap-forge-export.json';a.click();URL.revokeObjectURL(a.href);
+};
+
+// ── Copy as Markdown ──
+window.copyMarkdown=function(){
+  const sm=getSitemap();if(!sm)return;
+  function toMd(pages,depth=0){
+    return pages.map(p=>{
+      const indent='  '.repeat(depth);
+      const ti=getTypeInfo(p.type);
+      let line=`${indent}- ${ti.emoji} **${p.title}** \`${p.slug}\` — ${p.status}`;
+      if(p.description)line+=` — ${p.description}`;
+      if(p.children?.length)line+='\n'+toMd(p.children,depth+1);
+      return line;
+    }).join('\n');
+  }
+  const md=`# ${sm.name}\n\nBase URL: ${sm.baseUrl||'https://example.com'}\n\n${toMd(sm.pages)}`;
+  navigator.clipboard.writeText(md).then(()=>notify('Markdown copied!')).catch(()=>notify('Copy failed'));
+};
+
+// ── Main Render ──
+function render(){
+  const sm=getSitemap();
+  const content=document.getElementById('content');
+  if(!sm){
+    content.innerHTML=`<div style="text-align:center;padding:60px 20px">
+      <div style="font-size:3rem;margin-bottom:16px">🗺️</div>
+      <h2 style="margin-bottom:8px">Sitemap Forge</h2>
+      <p style="color:var(--dim);margin-bottom:24px;max-width:400px;margin-left:auto;margin-right:auto">Plan your website structure visually. Create page hierarchies, auto-generate XML sitemaps, export diagrams.</p>
+      <button class="btn btn--accent" onclick="createSitemap()">+ Create Your First Sitemap</button>
+    </div>`;
+    return;
+  }
+  
+  if(currentTab==='tree'){
+    content.innerHTML=`<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn--sm btn--accent" onclick="addRootPage()">+ Add Page</button>
+      <button class="btn btn--sm" onclick="editSitemap()">⚙️ Settings</button>
+      <button class="btn btn--sm" onclick="copyMarkdown()">📋 Copy as MD</button>
+      <button class="btn btn--sm" onclick="expandAll()">Expand All</button>
+      <button class="btn btn--sm" onclick="collapseAll()">Collapse All</button>
+      <span style="font-size:.82rem;color:var(--dim);margin-left:auto">${countPages(sm.pages)} pages</span>
+    </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:280px"><div class="tree">${renderTree(sm.pages)}</div></div>
+      <div style="flex:1;min-width:280px">${renderDetail()}</div>
+    </div>`;
+  } else if(currentTab==='map'){
+    content.innerHTML=renderVisualMap();
+    // Re-render detail if page selected
+    if(selectedPageId){
+      const detailDiv=document.createElement('div');
+      detailDiv.style.cssText='padding:16px;border-top:1px solid var(--border)';
+      detailDiv.innerHTML=renderDetail();
+      content.appendChild(detailDiv);
+    }
+  } else if(currentTab==='xml'){
+    content.innerHTML=renderXML();
+  } else if(currentTab==='dash'){
+    content.innerHTML=renderDashboard();
+  }
+}
+
+window.expandAll=function(){collapsed.clear();render()};
+window.collapseAll=function(){
+  const sm=getSitemap();if(!sm)return;
+  function addAll(pages){for(const p of pages){if(p.children?.length){collapsed.add(p.id);addAll(p.children)}}}
+  addAll(sm.pages);render();
+};
+
+window.switchTab=function(tab){
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  render();
+};
+
+// ── Modal ──
+function showModal(title,body,actions){
+  document.getElementById('modal').innerHTML=`<h3>${title}</h3>${body}<div class="modal-actions">${actions||''}</div>`;
+  document.getElementById('modalOverlay').classList.remove('hidden');
+}
+function closeModalFn(){document.getElementById('modalOverlay').classList.add('hidden')}
+window.closeModal=function(e){if(!e||e.target===document.getElementById('modalOverlay'))closeModalFn()};
+
+window.showHelp=function(){
+  showModal('Keyboard Shortcuts',`
+    <div style="font-size:.88rem;line-height:2">
+      <div><kbd>N</kbd> New sitemap</div>
+      <div><kbd>A</kbd> Add page</div>
+      <div><kbd>/</kbd> Search</div>
+      <div><kbd>1-4</kbd> Switch views</div>
+      <div><kbd>E</kbd> Export JSON</div>
+      <div><kbd>Esc</kbd> Close modal / deselect</div>
+      <div><kbd>Del</kbd> Delete selected page</div>
+      <div style="margin-top:12px;color:var(--dim)">Drag & drop pages to reorganize hierarchy</div>
+    </div>
+  `,`<button class="btn btn--accent" onclick="closeModal()">Got it</button>`);
+};
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown',function(e){
+  if(e.target.matches('input,textarea,select'))return;
+  if(e.key==='Escape'){
+    if(!document.getElementById('modalOverlay').classList.contains('hidden')){closeModalFn();return}
+    selectedPageId=null;render();return;
+  }
+  if(e.key==='n'||e.key==='N'){e.preventDefault();createSitemap();return}
+  if(e.key==='a'||e.key==='A'){e.preventDefault();addRootPage();return}
+  if(e.key==='/'){e.preventDefault();const s=document.getElementById('sidebarSearch');if(s){s.focus();if(window.innerWidth<=768)toggleSidebar(true)};return}
+  if(e.key==='1'){e.preventDefault();switchTab('tree');return}
+  if(e.key==='2'){e.preventDefault();switchTab('map');return}
+  if(e.key==='3'){e.preventDefault();switchTab('xml');return}
+  if(e.key==='4'){e.preventDefault();switchTab('dash');return}
+  if(e.key==='e'||e.key==='E'){e.preventDefault();exportData();return}
+  if(e.key==='Delete'&&selectedPageId){e.preventDefault();deletePage(selectedPageId);return}
+});
+
+// ── Sidebar toggle ──
+let sidebarOpen=false;
+window.toggleSidebar=function(forceOpen){
+  sidebarOpen=forceOpen===true?true:!sidebarOpen;
+  document.querySelector('.sidebar').classList.toggle('open',sidebarOpen);
+  document.querySelector('.sidebar-overlay').classList.toggle('visible',sidebarOpen);
+};
+function closeSidebar(){if(window.innerWidth<=768){sidebarOpen=false;document.querySelector('.sidebar').classList.remove('open');document.querySelector('.sidebar-overlay').classList.remove('visible')}}
+
+// ── Utils ──
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function escAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function escSvg(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
+function notify(msg){
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--accent);color:#0a0a0f;padding:8px 20px;border-radius:8px;font-size:.88rem;font-weight:600;z-index:300;animation:fadeIn .2s';
+  el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2000);
+}
+
+// ── Seed demo data ──
+function seedDemo(){
+  if(sitemaps.length)return;
+  const tpl=getTemplates().find(t=>t.id==='saas');
+  if(tpl){
+    // Create a UTMStamp-themed sitemap
+    const sm={id:uid(),name:'UTMStamp Website',baseUrl:'https://utmstamp.com',pages:[
+      {id:uid(),title:'Home',slug:'/',type:'landing',status:'live',description:'Main landing page with hero, features overview, social proof',priority:'high',notes:'Track hero CTA clicks',children:[
+        {id:uid(),title:'Features',slug:'/features',type:'feature',status:'live',description:'Full feature breakdown',priority:'high',notes:'',children:[
+          {id:uid(),title:'Signature Builder',slug:'/features/builder',type:'feature',status:'live',description:'Visual email signature builder',priority:'high',notes:'',children:[]},
+          {id:uid(),title:'UTM Tracking',slug:'/features/tracking',type:'feature',status:'live',description:'Automatic UTM parameter injection',priority:'high',notes:'',children:[]},
+          {id:uid(),title:'Team Management',slug:'/features/teams',type:'feature',status:'draft',description:'Centralized signature deployment for teams',priority:'high',notes:'Key enterprise feature',children:[]},
+          {id:uid(),title:'Analytics',slug:'/features/analytics',type:'feature',status:'planned',description:'Click analytics dashboard',priority:'medium',notes:'',children:[]},
+        ]},
+        {id:uid(),title:'Pricing',slug:'/pricing',type:'pricing',status:'live',description:'Free, Pro, Enterprise tiers',priority:'high',notes:'',children:[]},
+        {id:uid(),title:'Blog',slug:'/blog',type:'blog',status:'live',description:'SEO content hub',priority:'medium',notes:'Publish 2x/week',children:[
+          {id:uid(),title:'Why UTM Parameters Matter',slug:'/blog/why-utm-parameters',type:'blog-post',status:'live',description:'Pillar SEO content',priority:'medium',notes:'',children:[]},
+          {id:uid(),title:'Email Signature Best Practices',slug:'/blog/email-signature-best-practices',type:'blog-post',status:'live',description:'',priority:'medium',notes:'',children:[]},
+          {id:uid(),title:'Measuring Email Marketing ROI',slug:'/blog/email-marketing-roi',type:'blog-post',status:'draft',description:'In progress',priority:'low',notes:'',children:[]},
+        ]},
+        {id:uid(),title:'Templates',slug:'/templates',type:'feature',status:'live',description:'Pre-built signature templates gallery',priority:'medium',notes:'',children:[]},
+        {id:uid(),title:'Integrations',slug:'/integrations',type:'feature',status:'planned',description:'Gmail, Outlook, HubSpot integrations',priority:'medium',notes:'',children:[
+          {id:uid(),title:'Google Workspace',slug:'/integrations/google',type:'feature',status:'planned',description:'Auto-push signatures to Google Workspace',priority:'high',notes:'Top requested feature',children:[]},
+          {id:uid(),title:'Outlook / O365',slug:'/integrations/outlook',type:'feature',status:'planned',description:'',priority:'medium',notes:'',children:[]},
+        ]},
+        {id:uid(),title:'Login',slug:'/login',type:'auth',status:'live',description:'',priority:'high',notes:'',children:[]},
+        {id:uid(),title:'Sign Up',slug:'/signup',type:'auth',status:'live',description:'',priority:'high',notes:'',children:[]},
+        {id:uid(),title:'Dashboard',slug:'/dashboard',type:'dashboard',status:'live',description:'User dashboard',priority:'high',notes:'',children:[
+          {id:uid(),title:'Signatures',slug:'/dashboard/signatures',type:'dashboard',status:'live',description:'Manage signatures',priority:'high',notes:'',children:[]},
+          {id:uid(),title:'Analytics',slug:'/dashboard/analytics',type:'dashboard',status:'draft',description:'Click analytics',priority:'high',notes:'',children:[]},
+          {id:uid(),title:'Team',slug:'/dashboard/team',type:'dashboard',status:'planned',description:'Team management',priority:'medium',notes:'',children:[]},
+          {id:uid(),title:'Settings',slug:'/dashboard/settings',type:'settings',status:'live',description:'Account settings',priority:'medium',notes:'',children:[]},
+          {id:uid(),title:'Billing',slug:'/dashboard/billing',type:'settings',status:'live',description:'Subscription & billing',priority:'medium',notes:'',children:[]},
+        ]},
+        {id:uid(),title:'About',slug:'/about',type:'about',status:'planned',description:'Our story',priority:'low',notes:'',children:[]},
+        {id:uid(),title:'Contact',slug:'/contact',type:'contact',status:'planned',description:'Contact form',priority:'low',notes:'',children:[]},
+        {id:uid(),title:'Changelog',slug:'/changelog',type:'changelog',status:'live',description:'Product updates',priority:'low',notes:'',children:[]},
+        {id:uid(),title:'Privacy Policy',slug:'/privacy',type:'legal',status:'live',description:'',priority:'low',notes:'',children:[]},
+        {id:uid(),title:'Terms of Service',slug:'/terms',type:'legal',status:'live',description:'',priority:'low',notes:'',children:[]},
+        {id:uid(),title:'API Docs',slug:'/docs/api',type:'api',status:'planned',description:'Public API documentation',priority:'low',notes:'Phase 2',children:[]},
+      ]},
+    ],createdAt:new Date().toISOString()};
+    sitemaps.push(sm);
+    currentId=sm.id;
+  }
+  save();
+}
+
+// ── Init ──
+load();
+seedDemo();
+renderSidebar();
+render();
+
+})();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

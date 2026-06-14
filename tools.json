@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-13T19:34:58.167Z",
-  "count": 81,
+  "generatedAt": "2026-06-14T19:36:22.607Z",
+  "count": 82,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -649,6 +649,14 @@
       "tagline": "Color Palette Generator & Accessibility Checker",
       "emoji": "🎨",
       "day": 81,
+      "cluster": "personal"
+    },
+    {
+      "slug": "sitemap-forge",
+      "title": "Sitemap Forge",
+      "tagline": "Visual Sitemap & IA Builder",
+      "emoji": "🧭",
+      "day": 82,
       "cluster": "personal"
     }
   ]
