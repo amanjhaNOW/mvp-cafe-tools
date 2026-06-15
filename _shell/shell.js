@@ -101,6 +101,7 @@
     { slug: 'dialogue-tree', name: 'Dialogue Tree', emoji: '🗨️', cluster: 'creative' },
     { slug: 'palette-forge', name: 'Palette Forge', emoji: '🎨', cluster: 'build' },
     { slug: 'sitemap-forge', name: 'Sitemap Forge', emoji: '🗺️', cluster: 'build' },
+    { slug: 'testimonial-forge', name: 'Testimonial Forge', emoji: '⭐', cluster: 'product' },
   ];
 
   // Deduplicate (sprint-board appears in both build and team)

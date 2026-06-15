@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-14T19:36:22.607Z",
-  "count": 82,
+  "generatedAt": "2026-06-15T19:35:35.712Z",
+  "count": 83,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -649,15 +649,23 @@
       "tagline": "Color Palette Generator & Accessibility Checker",
       "emoji": "🎨",
       "day": 81,
-      "cluster": "personal"
+      "cluster": "build"
     },
     {
       "slug": "sitemap-forge",
       "title": "Sitemap Forge",
       "tagline": "Visual Sitemap & IA Builder",
-      "emoji": "🧭",
+      "emoji": "🗺️",
       "day": 82,
-      "cluster": "personal"
+      "cluster": "build"
+    },
+    {
+      "slug": "testimonial-forge",
+      "title": "Testimonial Forge",
+      "tagline": "Customer testimonials & social proof widgets",
+      "emoji": "⭐",
+      "day": 83,
+      "cluster": "product"
     }
   ]
 }

@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Testimonial Forge — Social Proof Manager</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;
+  --text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#388bfd;
+  --green:#3fb950;--yellow:#d29922;--red:#f85149;--purple:#bc8cff;--orange:#db6d28;
+  --radius:8px;--sidebar-w:260px;
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;overflow:hidden}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-size:16px;width:100%}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+textarea{resize:vertical;min-height:80px}
+
+/* Layout */
+.app{display:flex;height:100vh;height:100dvh}
+.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-header h1 span{font-size:20px}
+.sidebar-search{margin-top:10px;position:relative}
+.sidebar-search input{padding-left:32px;font-size:14px;height:36px}
+.sidebar-search::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px}
+.sidebar-nav{flex:1;overflow-y:auto;padding:8px}
+.sidebar-nav::-webkit-scrollbar{width:4px}
+.sidebar-nav::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.wall-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius);cursor:pointer;font-size:13px;transition:background .15s}
+.wall-item:hover{background:var(--surface2)}
+.wall-item.active{background:var(--accent);color:#fff}
+.wall-item .count{margin-left:auto;font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:10px;color:var(--text2)}
+.wall-item.active .count{background:rgba(255,255,255,.2);color:#fff}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap}
+.sidebar-footer button{font-size:12px;padding:6px 10px;border-radius:var(--radius);background:var(--surface2);border:1px solid var(--border);flex:1;min-width:0;white-space:nowrap}
+.sidebar-footer button:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface);min-height:52px;flex-shrink:0}
+.topbar-title{font-weight:600;font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu-btn{display:none;width:36px;height:36px;border-radius:var(--radius);background:var(--surface2);font-size:18px;align-items:center;justify-content:center}
+.view-tabs{display:flex;gap:2px;background:var(--surface2);border-radius:var(--radius);padding:2px}
+.view-tab{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;white-space:nowrap;transition:all .15s}
+.view-tab:hover{color:var(--accent)}
+.view-tab.active{background:var(--accent);color:#fff}
+.content{flex:1;overflow-y:auto;padding:20px}
+.content::-webkit-scrollbar{width:6px}
+.content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Cards */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;transition:border-color .15s}
+.card:hover{border-color:var(--accent)}
+.card-quote{font-size:15px;line-height:1.6;margin-bottom:16px;position:relative;padding-left:20px}
+.card-quote::before{content:'"';position:absolute;left:0;top:-4px;font-size:32px;color:var(--accent);font-family:Georgia,serif;line-height:1}
+.card-author{display:flex;align-items:center;gap:12px}
+.card-avatar{width:44px;height:44px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden}
+.card-avatar img{width:100%;height:100%;object-fit:cover}
+.card-info{flex:1;min-width:0}
+.card-name{font-weight:600;font-size:14px}
+.card-role{font-size:12px;color:var(--text2)}
+.card-stars{display:flex;gap:2px;margin-top:4px}
+.star{color:var(--yellow);font-size:14px}
+.star.empty{color:var(--border)}
+.card-status{position:absolute;top:12px;right:12px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.status-pending{background:rgba(210,153,34,.15);color:var(--yellow)}
+.status-approved{background:rgba(63,185,80,.15);color:var(--green)}
+.status-featured{background:rgba(88,166,255,.15);color:var(--accent)}
+.card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.card-tag{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text2)}
+.card-actions{display:flex;gap:4px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.card-actions button{font-size:12px;padding:6px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);flex:1}
+.card-actions button:hover{border-color:var(--accent);color:var(--accent)}
+.card-actions button.danger:hover{border-color:var(--red);color:var(--red)}
+
+/* Empty state */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;color:var(--text2)}
+.empty-icon{font-size:48px;margin-bottom:16px}
+.empty-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:8px}
+.empty-sub{font-size:14px;max-width:400px}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-val{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-label{font-size:12px;color:var(--text2);margin-top:4px}
+
+/* SVG Charts */
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.chart-title{font-size:14px;font-weight:600;margin-bottom:12px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.bar-label{font-size:12px;color:var(--text2);min-width:80px;text-align:right}
+.bar-track{flex:1;height:24px;background:var(--surface2);border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;transition:width .3s}
+.bar-val{font-size:11px;font-weight:600;position:absolute;right:8px;top:50%;transform:translateY(-50%);color:#fff}
+
+/* Carousel */
+.carousel-wrap{position:relative;overflow:hidden;max-width:700px;margin:0 auto}
+.carousel-track{display:flex;transition:transform .4s ease}
+.carousel-slide{min-width:100%;padding:0 20px}
+.carousel-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;text-align:center;max-width:600px;margin:0 auto}
+.carousel-card .card-quote{padding-left:0;font-size:18px;text-align:center}
+.carousel-card .card-quote::before{display:none}
+.carousel-card .big-quote{font-size:48px;color:var(--accent);font-family:Georgia,serif;line-height:1;margin-bottom:8px}
+.carousel-card .card-author{justify-content:center}
+.carousel-card .card-stars{justify-content:center}
+.carousel-nav{display:flex;justify-content:center;gap:8px;margin-top:16px;align-items:center}
+.carousel-nav button{width:44px;height:44px;border-radius:50%;background:var(--surface);border:1px solid var(--border);font-size:18px}
+.carousel-nav button:hover{border-color:var(--accent);color:var(--accent)}
+.carousel-dots{display:flex;gap:6px}
+.carousel-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .2s}
+.carousel-dot.active{background:var(--accent);width:24px;border-radius:4px}
+
+/* Wall of Love (marquee) */
+.wall-of-love{display:flex;flex-direction:column;gap:16px;overflow:hidden}
+.marquee-row{display:flex;gap:16px;animation:marquee-scroll var(--dur,40s) linear infinite}
+.marquee-row:nth-child(even){animation-direction:reverse}
+.marquee-card{min-width:300px;max-width:360px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;flex-shrink:0}
+@keyframes marquee-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* Widget preview */
+.widget-preview{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.widget-code{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:'SF Mono',Monaco,Consolas,monospace;font-size:13px;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;color:var(--green);margin-bottom:12px}
+.export-row{display:flex;gap:8px;flex-wrap:wrap}
+.export-row button{padding:8px 16px;border-radius:var(--radius);background:var(--accent);color:#fff;font-size:13px;font-weight:500}
+.export-row button:hover{background:var(--accent2)}
+.export-row button.secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+.export-row button.secondary:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Collection form preview */
+.form-preview{background:#fff;border-radius:12px;padding:32px;max-width:600px;margin:0 auto;color:#1a1a2e}
+.form-preview h2{font-size:20px;margin-bottom:4px;color:#1a1a2e}
+.form-preview p{font-size:14px;color:#666;margin-bottom:20px}
+.form-preview label{display:block;font-size:13px;font-weight:500;margin-bottom:4px;color:#333}
+.form-preview input,.form-preview textarea,.form-preview select{background:#f8f9fa;color:#1a1a2e;border:1px solid #ddd;margin-bottom:12px}
+.form-preview .form-stars{display:flex;gap:4px;margin-bottom:12px}
+.form-preview .form-star{font-size:28px;cursor:pointer;color:#ddd;transition:color .15s}
+.form-preview .form-star.active{color:#f59e0b}
+.form-submit{background:var(--accent);color:#fff;border:none;padding:12px 24px;border-radius:var(--radius);font-weight:600;cursor:pointer;width:100%;font-size:15px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:24px}
+.modal h2{font-size:18px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.modal-row{margin-bottom:12px}
+.modal-row label{display:block;font-size:13px;font-weight:500;margin-bottom:4px;color:var(--text2)}
+.modal-row-inline{display:flex;gap:8px}
+.modal-row-inline>*{flex:1}
+.modal-actions{display:flex;gap:8px;margin-top:20px}
+.modal-actions button{flex:1;padding:10px;border-radius:var(--radius);font-weight:500;font-size:14px}
+.modal-actions .btn-primary{background:var(--accent);color:#fff}
+.modal-actions .btn-primary:hover{background:var(--accent2)}
+.modal-actions .btn-cancel{background:var(--surface2);border:1px solid var(--border)}
+.modal-actions .btn-cancel:hover{border-color:var(--text2)}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-bar select{width:auto;min-width:120px;font-size:13px;height:36px;padding:0 12px}
+.filter-bar .filter-label{font-size:12px;color:var(--text2)}
+.pill-group{display:flex;gap:4px;flex-wrap:wrap}
+.pill{font-size:12px;padding:4px 12px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:all .15s}
+.pill:hover,.pill.active{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,.1)}
+
+/* Help overlay */
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:200;padding:16px}
+.help-overlay.open{display:flex}
+.help-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto}
+.help-box h2{margin-bottom:16px}
+.help-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.help-key{background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:50;transform:translateX(-100%);transition:transform .25s;width:280px;min-width:280px}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:49;display:none}
+  .sidebar-overlay.visible{display:block}
+  .menu-btn{display:flex}
+  .view-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .card-grid{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .content{padding:16px}
+  .marquee-card{min-width:260px;max-width:300px}
+  .modal{margin:8px}
+  .filter-bar{flex-direction:column;align-items:stretch}
+  .carousel-card{padding:24px 16px}
+  .carousel-card .card-quote{font-size:16px}
+}
+@media(max-width:430px){
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .topbar{padding:8px 12px}
+  .content{padding:12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h1><span>⭐</span> Testimonial Forge</h1>
+      <div class="sidebar-search">
+        <input type="text" placeholder="Search walls…" id="wallSearch" oninput="filterWalls()">
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-footer">
+      <button onclick="addWall()" title="New Wall">+ Wall</button>
+      <button onclick="importData()" title="Import">📥 Import</button>
+      <button onclick="exportData()" title="Export">📤 Export</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="topbarTitle">All Testimonials</div>
+      <div class="view-tabs" id="viewTabs">
+        <button class="view-tab active" data-view="grid" onclick="setView('grid')">Grid</button>
+        <button class="view-tab" data-view="carousel" onclick="setView('carousel')">Carousel</button>
+        <button class="view-tab" data-view="wall" onclick="setView('wall')">Wall of Love</button>
+        <button class="view-tab" data-view="collect" onclick="setView('collect')">Collect</button>
+        <button class="view-tab" data-view="export" onclick="setView('export')">Export</button>
+        <button class="view-tab" data-view="dashboard" onclick="setView('dashboard')">Dashboard</button>
+      </div>
+      <button onclick="addTestimonial()" style="padding:6px 12px;border-radius:var(--radius);background:var(--accent);color:#fff;font-size:13px;font-weight:500;white-space:nowrap">+ Add</button>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<!-- Testimonial Modal -->
+<div class="modal-overlay" id="testimonialModal">
+  <div class="modal">
+    <h2 id="modalTitle">✏️ Add Testimonial</h2>
+    <input type="hidden" id="tId">
+    <div class="modal-row">
+      <label>Quote *</label>
+      <textarea id="tQuote" rows="3" placeholder="What did they say?"></textarea>
+    </div>
+    <div class="modal-row modal-row-inline">
+      <div><label>Name *</label><input id="tName" placeholder="Jane Doe"></div>
+      <div><label>Avatar Emoji</label><input id="tAvatar" placeholder="👩‍💼" maxlength="4"></div>
+    </div>
+    <div class="modal-row modal-row-inline">
+      <div><label>Role</label><input id="tRole" placeholder="Head of Marketing"></div>
+      <div><label>Company</label><input id="tCompany" placeholder="Acme Inc"></div>
+    </div>
+    <div class="modal-row modal-row-inline">
+      <div><label>Photo URL</label><input id="tPhoto" placeholder="https://..."></div>
+      <div>
+        <label>Rating</label>
+        <select id="tRating">
+          <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+          <option value="4">⭐⭐⭐⭐ (4)</option>
+          <option value="3">⭐⭐⭐ (3)</option>
+          <option value="2">⭐⭐ (2)</option>
+          <option value="1">⭐ (1)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-row">
+      <label>Status</label>
+      <select id="tStatus">
+        <option value="pending">⏳ Pending</option>
+        <option value="approved">✅ Approved</option>
+        <option value="featured">⭐ Featured</option>
+      </select>
+    </div>
+    <div class="modal-row">
+      <label>Tags (comma-separated)</label>
+      <input id="tTags" placeholder="saas, product, enterprise">
+    </div>
+    <div class="modal-row">
+      <label>Source</label>
+      <input id="tSource" placeholder="G2, Twitter, Email, Interview…">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('testimonialModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveTestimonial()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Wall Modal -->
+<div class="modal-overlay" id="wallModal">
+  <div class="modal">
+    <h2>📋 Wall Settings</h2>
+    <input type="hidden" id="wId">
+    <div class="modal-row">
+      <label>Wall Name *</label>
+      <input id="wName" placeholder="UTMStamp Testimonials">
+    </div>
+    <div class="modal-row">
+      <label>Description</label>
+      <input id="wDesc" placeholder="Testimonials from early adopters">
+    </div>
+    <div class="modal-row modal-row-inline">
+      <div><label>Emoji</label><input id="wEmoji" placeholder="🚀" maxlength="4"></div>
+      <div><label>Color</label><input type="color" id="wColor" value="#58a6ff" style="height:42px;padding:4px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('wallModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveWall()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Help -->
+<div class="help-overlay" id="helpOverlay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="help-box">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="help-row"><span>Add testimonial</span><span class="help-key">N</span></div>
+    <div class="help-row"><span>Search</span><span class="help-key">/</span></div>
+    <div class="help-row"><span>Grid view</span><span class="help-key">1</span></div>
+    <div class="help-row"><span>Carousel view</span><span class="help-key">2</span></div>
+    <div class="help-row"><span>Wall of Love</span><span class="help-key">3</span></div>
+    <div class="help-row"><span>Collect form</span><span class="help-key">4</span></div>
+    <div class="help-row"><span>Export widget</span><span class="help-key">5</span></div>
+    <div class="help-row"><span>Dashboard</span><span class="help-key">6</span></div>
+    <div class="help-row"><span>Export JSON</span><span class="help-key">E</span></div>
+    <div class="help-row"><span>Import JSON</span><span class="help-key">I</span></div>
+    <div class="help-row"><span>Help</span><span class="help-key">?</span></div>
+    <div class="help-row"><span>Close modal</span><span class="help-key">Esc</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const SK = k => 'mvpcafe:testimonial-forge:' + k;
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+
+// State
+let walls = JSON.parse(localStorage.getItem(SK('walls')) || '[]');
+let testimonials = JSON.parse(localStorage.getItem(SK('testimonials')) || '[]');
+let currentWall = localStorage.getItem(SK('currentWall')) || 'all';
+let currentView = localStorage.getItem(SK('currentView')) || 'grid';
+let statusFilter = 'all';
+let tagFilter = '';
+let carouselIdx = 0;
+
+function save(){
+  localStorage.setItem(SK('walls'), JSON.stringify(walls));
+  localStorage.setItem(SK('testimonials'), JSON.stringify(testimonials));
+  localStorage.setItem(SK('currentWall'), currentWall);
+  localStorage.setItem(SK('currentView'), currentView);
+}
+
+// Seed demo data
+if(!walls.length && !testimonials.length){
+  walls = [
+    {id:'w1',name:'UTMStamp',desc:'Customer testimonials for UTMStamp',emoji:'📧',color:'#58a6ff'},
+    {id:'w2',name:'MVP Cafe',desc:'Client feedback',emoji:'☕',color:'#3fb950'},
+  ];
+  testimonials = [
+    {id:'t1',wallId:'w1',name:'Sarah Chen',role:'VP Marketing',company:'Stripe',avatar:'👩‍💼',photo:'',quote:'UTMStamp transformed how we track email campaign attribution. We went from guessing to knowing exactly which signatures drive clicks. Setup took 10 minutes.',rating:5,status:'featured',tags:['saas','enterprise'],source:'G2',createdAt:'2026-05-10'},
+    {id:'t2',wallId:'w1',name:'Rajesh Patel',role:'Growth Lead',company:'Freshworks',avatar:'👨‍💻',photo:'',quote:'Finally, a tool that makes email signatures a growth channel instead of an afterthought. Our click-through rate from signatures jumped 340% in the first month.',rating:5,status:'featured',tags:['growth','saas'],source:'Twitter',createdAt:'2026-05-15'},
+    {id:'t3',wallId:'w1',name:'Emily Watson',role:'Head of Demand Gen',company:'Notion',avatar:'👩',photo:'',quote:'We rolled out UTMStamp across 200+ employees in a single afternoon. The analytics dashboard is clean and the team deployment feature is a game-changer.',rating:5,status:'approved',tags:['enterprise','team'],source:'Email',createdAt:'2026-05-20'},
+    {id:'t4',wallId:'w1',name:'Marcus Johnson',role:'Digital Marketing Manager',company:'HubSpot',avatar:'👨‍🦱',photo:'',quote:'Great concept and solid execution. The free plan is generous enough to prove value before upgrading. Would love to see Outlook integration next.',rating:4,status:'approved',tags:['saas','product'],source:'Product Hunt',createdAt:'2026-05-22'},
+    {id:'t5',wallId:'w1',name:'Aiko Tanaka',role:'RevOps Director',company:'Zoom',avatar:'👩‍🔬',photo:'',quote:'We tested 4 signature tools. UTMStamp was the only one that combined beautiful templates with actual attribution data. ROI was obvious within a week.',rating:5,status:'featured',tags:['enterprise','comparison'],source:'G2',createdAt:'2026-05-25'},
+    {id:'t6',wallId:'w1',name:'David Kim',role:'Founder',company:'LaunchDark',avatar:'🧑‍🚀',photo:'',quote:'Shipping UTMStamp signatures across my 12-person team took less time than writing this review. The campaign banner feature is surprisingly useful for launches.',rating:4,status:'approved',tags:['startup','product'],source:'Twitter',createdAt:'2026-06-01'},
+    {id:'t7',wallId:'w1',name:'Priya Sharma',role:'CMO',company:'Razorpay',avatar:'👩‍💼',photo:'',quote:'I was skeptical about email signatures driving real traffic. UTMStamp proved me wrong — we now attribute 8% of our blog traffic to signature links.',rating:5,status:'featured',tags:['growth','data'],source:'LinkedIn',createdAt:'2026-06-05'},
+    {id:'t8',wallId:'w1',name:'James O\'Brien',role:'Sales Ops',company:'Salesforce',avatar:'👨‍💼',photo:'',quote:'Decent tool, still early. A few features missing compared to Exclaimer, but the price point and ease of setup make it worth it for smaller teams.',rating:3,status:'pending',tags:['comparison','enterprise'],source:'Email',createdAt:'2026-06-10'},
+    {id:'t9',wallId:'w2',name:'Nikhil Gupta',role:'Founder & CEO',company:'PayStack',avatar:'🧑‍💻',photo:'',quote:'MVP Cafe helped us think through our product strategy in ways our internal team couldn\'t. The frameworks and tools are incredibly practical.',rating:5,status:'featured',tags:['strategy','startup'],source:'Interview',createdAt:'2026-04-15'},
+    {id:'t10',wallId:'w2',name:'Lisa Park',role:'Product Lead',company:'Figma',avatar:'👩‍🎨',photo:'',quote:'The overnight builds toolkit is insane. I use at least 5 of these tools weekly. The fact that they\'re all free and work offline is mind-blowing.',rating:5,status:'approved',tags:['tools','product'],source:'Twitter',createdAt:'2026-05-01'},
+  ];
+  save();
+}
+
+// --- Rendering ---
+function renderSidebar(){
+  const q = (document.getElementById('wallSearch').value||'').toLowerCase();
+  let html = '<div class="wall-item'+(currentWall==='all'?' active':'')+'" data-wall="all" onclick="selectWall(\'all\')"><span>📋</span> All<span class="count">'+testimonials.length+'</span></div>';
+  walls.filter(w=> !q || w.name.toLowerCase().includes(q)).forEach(w=>{
+    const cnt = testimonials.filter(t=>t.wallId===w.id).length;
+    html += '<div class="wall-item'+(currentWall===w.id?' active':'')+'" data-wall="'+w.id+'" onclick="selectWall(\''+w.id+'\')" ondblclick="editWall(\''+w.id+'\')">';
+    html += '<span>'+(w.emoji||'📋')+'</span> '+esc(w.name)+'<span class="count">'+cnt+'</span></div>';
+  });
+  document.getElementById('sidebarNav').innerHTML = html;
+}
+
+function getFiltered(){
+  let list = currentWall==='all' ? testimonials : testimonials.filter(t=>t.wallId===currentWall);
+  if(statusFilter!=='all') list = list.filter(t=>t.status===statusFilter);
+  if(tagFilter) list = list.filter(t=>t.tags && t.tags.includes(tagFilter));
+  return list;
+}
+
+function getDisplayable(){
+  // For carousel/wall/export: only approved+featured
+  return getFiltered().filter(t=>t.status==='approved'||t.status==='featured');
+}
+
+function getAllTags(){
+  const tags = new Set();
+  testimonials.forEach(t=>(t.tags||[]).forEach(tag=>tags.add(tag)));
+  return [...tags].sort();
+}
+
+function renderStars(n){
+  let h='';
+  for(let i=1;i<=5;i++) h+='<span class="star'+(i>n?' empty':'')+'">★</span>';
+  return h;
+}
+
+function renderAvatar(t){
+  if(t.photo) return '<div class="card-avatar"><img src="'+esc(t.photo)+'" alt="'+esc(t.name)+'" onerror="this.parentElement.innerHTML=\''+(t.avatar||'👤')+'\'"></div>';
+  return '<div class="card-avatar">'+(t.avatar||'👤')+'</div>';
+}
+
+function renderFilterBar(){
+  const tags = getAllTags();
+  let h = '<div class="filter-bar">';
+  h += '<select onchange="statusFilter=this.value;render()" style="min-width:130px"><option value="all">All Status</option><option value="pending"'+(statusFilter==='pending'?' selected':'')+'>⏳ Pending</option><option value="approved"'+(statusFilter==='approved'?' selected':'')+'>✅ Approved</option><option value="featured"'+(statusFilter==='featured'?' selected':'')+'>⭐ Featured</option></select>';
+  if(tags.length){
+    h += '<div class="pill-group"><span class="pill'+(tagFilter===''?' active':'')+'" onclick="tagFilter=\'\';render()">All</span>';
+    tags.forEach(tag=>{
+      h += '<span class="pill'+(tagFilter===tag?' active':'')+'" onclick="tagFilter=\''+esc(tag)+'\';render()">'+esc(tag)+'</span>';
+    });
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function renderGrid(){
+  const list = getFiltered();
+  if(!list.length) return renderEmpty('No testimonials yet','Add your first testimonial or import from JSON');
+  let h = renderFilterBar() + '<div class="card-grid">';
+  list.sort((a,b)=>{
+    const o={featured:0,approved:1,pending:2};
+    return (o[a.status]||2)-(o[b.status]||2);
+  }).forEach(t=>{
+    h += '<div class="card">';
+    h += '<span class="card-status status-'+t.status+'">'+({pending:'⏳ Pending',approved:'✅ Approved',featured:'⭐ Featured'}[t.status]||t.status)+'</span>';
+    h += '<div class="card-quote">'+esc(t.quote)+'</div>';
+    h += '<div class="card-author">'+renderAvatar(t);
+    h += '<div class="card-info"><div class="card-name">'+esc(t.name)+'</div>';
+    h += '<div class="card-role">'+esc([t.role,t.company].filter(Boolean).join(', '))+'</div>';
+    h += '<div class="card-stars">'+renderStars(t.rating)+'</div></div></div>';
+    if(t.tags&&t.tags.length){
+      h += '<div class="card-tags">';
+      t.tags.forEach(tag=>h+='<span class="card-tag">'+esc(tag)+'</span>');
+      if(t.source) h+='<span class="card-tag" style="background:rgba(88,166,255,.1);color:var(--accent)">'+esc(t.source)+'</span>';
+      h += '</div>';
+    }
+    h += '<div class="card-actions">';
+    h += '<button onclick="editTestimonial(\''+t.id+'\')">✏️ Edit</button>';
+    h += '<button onclick="cycleStatus(\''+t.id+'\')">🔄 Status</button>';
+    h += '<button onclick="dupTestimonial(\''+t.id+'\')">📋 Dup</button>';
+    h += '<button class="danger" onclick="delTestimonial(\''+t.id+'\')">🗑️</button>';
+    h += '</div></div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+function renderCarousel(){
+  const list = getDisplayable();
+  if(!list.length) return renderEmpty('No approved testimonials','Approve or feature testimonials to see them in the carousel');
+  carouselIdx = Math.min(carouselIdx, list.length-1);
+  let h = '<div class="carousel-wrap"><div class="carousel-track" id="carouselTrack" style="transform:translateX(-'+carouselIdx*100+'%)">';
+  list.forEach(t=>{
+    h += '<div class="carousel-slide"><div class="carousel-card">';
+    h += '<div class="big-quote">"</div>';
+    h += '<div class="card-quote">'+esc(t.quote)+'</div>';
+    h += '<div class="card-author" style="margin-top:20px">'+renderAvatar(t);
+    h += '<div class="card-info"><div class="card-name">'+esc(t.name)+'</div>';
+    h += '<div class="card-role">'+esc([t.role,t.company].filter(Boolean).join(', '))+'</div>';
+    h += '<div class="card-stars" style="margin-top:6px">'+renderStars(t.rating)+'</div></div></div>';
+    h += '</div></div>';
+  });
+  h += '</div>';
+  h += '<div class="carousel-nav"><button onclick="moveCarousel(-1)">‹</button><div class="carousel-dots" id="carouselDots">';
+  list.forEach((_,i)=> h+='<div class="carousel-dot'+(i===carouselIdx?' active':'')+'"></div>');
+  h += '</div><button onclick="moveCarousel(1)">›</button></div></div>';
+  return h;
+}
+
+function renderWallOfLove(){
+  const list = getDisplayable();
+  if(!list.length) return renderEmpty('No approved testimonials','Approve or feature testimonials to show on the Wall of Love');
+  // Split into 2 or 3 rows
+  const rows = [[],[]];
+  if(list.length>8) rows.push([]);
+  // Duplicate for infinite scroll illusion
+  list.forEach((t,i)=> rows[i%rows.length].push(t));
+  let h = '<div class="wall-of-love">';
+  rows.forEach((row,ri)=>{
+    const items = [...row,...row]; // duplicate
+    const dur = 30 + ri*10;
+    h += '<div class="marquee-row" style="--dur:'+dur+'s">';
+    items.forEach(t=>{
+      h += '<div class="marquee-card">';
+      h += '<div class="card-quote" style="font-size:14px;margin-bottom:12px">'+esc(t.quote)+'</div>';
+      h += '<div class="card-author">'+renderAvatar(t);
+      h += '<div class="card-info"><div class="card-name" style="font-size:13px">'+esc(t.name)+'</div>';
+      h += '<div class="card-role" style="font-size:11px">'+esc([t.role,t.company].filter(Boolean).join(', '))+'</div>';
+      h += '<div class="card-stars">'+renderStars(t.rating)+'</div></div></div>';
+      h += '</div>';
+    });
+    h += '</div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+function renderCollect(){
+  const wall = walls.find(w=>w.id===currentWall);
+  const wallName = wall ? wall.name : 'Your Product';
+  let h = '<h3 style="margin-bottom:8px">📬 Collection Form Preview</h3>';
+  h += '<p style="color:var(--text2);font-size:13px;margin-bottom:16px">This is how your testimonial collection form looks. Export as standalone HTML to share with customers.</p>';
+  h += '<div class="form-preview">';
+  h += '<h2>Share Your Experience with '+esc(wallName)+'</h2>';
+  h += '<p>We\'d love to hear what you think. Your feedback helps us improve and helps others discover '+esc(wallName)+'.</p>';
+  h += '<label>Your Name *</label><input type="text" placeholder="Jane Doe">';
+  h += '<label>Role & Company</label><input type="text" placeholder="VP Marketing at Acme Inc">';
+  h += '<label>Your Testimonial *</label><textarea rows="4" placeholder="What do you love about '+esc(wallName)+'? How has it helped you?"></textarea>';
+  h += '<label>Rating</label><div class="form-stars">';
+  for(let i=1;i<=5;i++) h += '<span class="form-star'+(i<=4?' active':'')+'" data-val="'+i+'" onclick="this.parentElement.querySelectorAll(\'.form-star\').forEach((s,j)=>s.classList.toggle(\'active\',j<'+i+'))">★</span>';
+  h += '</div>';
+  h += '<label>Photo URL (optional)</label><input type="text" placeholder="https://...">';
+  h += '<button class="form-submit" onclick="alert(\'This is a preview — export the form to collect real testimonials!\')">Submit Testimonial</button>';
+  h += '</div>';
+  h += '<div class="export-row" style="margin-top:16px">';
+  h += '<button onclick="exportCollectionForm()">📥 Download Collection Form HTML</button>';
+  h += '<button class="secondary" onclick="copyCollectionForm()">📋 Copy HTML</button>';
+  h += '</div>';
+  return h;
+}
+
+function renderExport(){
+  const list = getDisplayable();
+  let h = '<h3 style="margin-bottom:8px">🔧 Widget Export</h3>';
+  h += '<p style="color:var(--text2);font-size:13px;margin-bottom:16px">Export your testimonials as embeddable widgets. Each generates a standalone HTML file you can host anywhere.</p>';
+
+  // Widget style selector
+  h += '<div class="filter-bar" style="margin-bottom:16px"><span style="font-size:13px;font-weight:500">Widget Style:</span>';
+  h += '<div class="pill-group">';
+  ['grid','carousel','wall','simple'].forEach(s=>{
+    h += '<span class="pill'+(s==='grid'?' active':'')+'" onclick="this.parentElement.querySelectorAll(\'.pill\').forEach(p=>p.classList.remove(\'active\'));this.classList.add(\'active\');previewWidget(\''+s+'\')">'+({grid:'Grid Cards',carousel:'Carousel',wall:'Wall of Love',simple:'Simple List'}[s])+'</span>';
+  });
+  h += '</div></div>';
+
+  h += '<div class="widget-preview" id="widgetPreview"><p style="color:var(--text2);font-size:13px">Select a style above to preview the widget.</p></div>';
+  h += '<div class="widget-code" id="widgetCode" style="display:none"></div>';
+  h += '<div class="export-row">';
+  h += '<button onclick="downloadWidget()">📥 Download Widget HTML</button>';
+  h += '<button class="secondary" onclick="copyWidget()">📋 Copy HTML</button>';
+  h += '<button class="secondary" onclick="exportMarkdown()">📝 Export Markdown</button>';
+  h += '</div>';
+
+  if(list.length) setTimeout(()=>previewWidget('grid'),0);
+  return h;
+}
+
+function renderDashboard(){
+  const all = currentWall==='all' ? testimonials : testimonials.filter(t=>t.wallId===currentWall);
+  const featured = all.filter(t=>t.status==='featured').length;
+  const approved = all.filter(t=>t.status==='approved').length;
+  const pending = all.filter(t=>t.status==='pending').length;
+  const avgRating = all.length ? (all.reduce((s,t)=>s+(t.rating||0),0)/all.length).toFixed(1) : '—';
+  const sources = {};
+  all.forEach(t=>{ if(t.source) sources[t.source]=(sources[t.source]||0)+1; });
+  const tags = {};
+  all.forEach(t=>(t.tags||[]).forEach(tag=>tags[tag]=(tags[tag]||0)+1));
+
+  let h = '<div class="stats-row">';
+  h += statCard(all.length,'Total');
+  h += statCard(featured,'Featured','var(--accent)');
+  h += statCard(approved,'Approved','var(--green)');
+  h += statCard(pending,'Pending','var(--yellow)');
+  h += statCard(avgRating,'Avg Rating','var(--purple)');
+  h += statCard(walls.length,'Walls','var(--orange)');
+  h += '</div>';
+
+  // Rating distribution
+  h += '<div class="chart-wrap"><div class="chart-title">⭐ Rating Distribution</div>';
+  for(let r=5;r>=1;r--){
+    const cnt = all.filter(t=>t.rating===r).length;
+    const pct = all.length ? (cnt/all.length*100) : 0;
+    h += barRow(r+'★',cnt,pct,'var(--yellow)');
+  }
+  h += '</div>';
+
+  // Status breakdown
+  h += '<div class="chart-wrap"><div class="chart-title">📊 Status Breakdown</div>';
+  [{l:'Featured',v:featured,c:'var(--accent)'},{l:'Approved',v:approved,c:'var(--green)'},{l:'Pending',v:pending,c:'var(--yellow)'}].forEach(s=>{
+    const pct = all.length ? (s.v/all.length*100) : 0;
+    h += barRow(s.l,s.v,pct,s.c);
+  });
+  h += '</div>';
+
+  // Sources
+  if(Object.keys(sources).length){
+    h += '<div class="chart-wrap"><div class="chart-title">📡 Sources</div>';
+    const maxS = Math.max(...Object.values(sources));
+    Object.entries(sources).sort((a,b)=>b[1]-a[1]).forEach(([src,cnt])=>{
+      h += barRow(src,cnt,cnt/maxS*100,'var(--accent)');
+    });
+    h += '</div>';
+  }
+
+  // Tags
+  if(Object.keys(tags).length){
+    h += '<div class="chart-wrap"><div class="chart-title">🏷️ Top Tags</div>';
+    const maxT = Math.max(...Object.values(tags));
+    Object.entries(tags).sort((a,b)=>b[1]-a[1]).slice(0,10).forEach(([tag,cnt])=>{
+      h += barRow(tag,cnt,cnt/maxT*100,'var(--purple)');
+    });
+    h += '</div>';
+  }
+
+  return h;
+}
+
+function statCard(val,label,color){
+  return '<div class="stat-card"><div class="stat-val" style="color:'+(color||'var(--accent)')+'">'+val+'</div><div class="stat-label">'+label+'</div></div>';
+}
+function barRow(label,val,pct,color){
+  return '<div class="bar-row"><span class="bar-label">'+esc(label)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(pct,2)+'%;background:'+color+'"></div><span class="bar-val">'+val+'</span></div></div>';
+}
+function renderEmpty(title,sub){
+  return '<div class="empty"><div class="empty-icon">⭐</div><div class="empty-title">'+title+'</div><div class="empty-sub">'+sub+'</div></div>';
+}
+
+function render(){
+  const views = {grid:renderGrid,carousel:renderCarousel,wall:renderWallOfLove,collect:renderCollect,export:renderExport,dashboard:renderDashboard};
+  document.getElementById('content').innerHTML = (views[currentView]||renderGrid)();
+  // Update topbar
+  const wall = walls.find(w=>w.id===currentWall);
+  document.getElementById('topbarTitle').textContent = wall ? (wall.emoji||'📋')+' '+wall.name : 'All Testimonials';
+  // Update tabs
+  document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view===currentView));
+  renderSidebar();
+}
+
+// --- CRUD ---
+window.selectWall = function(id){
+  currentWall = id;
+  statusFilter = 'all';
+  tagFilter = '';
+  save(); render();
+  toggleSidebar(false);
+};
+
+window.addWall = function(){
+  document.getElementById('wId').value = '';
+  document.getElementById('wName').value = '';
+  document.getElementById('wDesc').value = '';
+  document.getElementById('wEmoji').value = '';
+  document.getElementById('wColor').value = '#58a6ff';
+  openModal('wallModal');
+};
+
+window.editWall = function(id){
+  const w = walls.find(x=>x.id===id);
+  if(!w) return;
+  document.getElementById('wId').value = w.id;
+  document.getElementById('wName').value = w.name;
+  document.getElementById('wDesc').value = w.desc||'';
+  document.getElementById('wEmoji').value = w.emoji||'';
+  document.getElementById('wColor').value = w.color||'#58a6ff';
+  openModal('wallModal');
+};
+
+window.saveWall = function(){
+  const id = document.getElementById('wId').value;
+  const name = document.getElementById('wName').value.trim();
+  if(!name) return alert('Name required');
+  const data = {name,desc:document.getElementById('wDesc').value.trim(),emoji:document.getElementById('wEmoji').value.trim()||'📋',color:document.getElementById('wColor').value};
+  if(id){
+    const w = walls.find(x=>x.id===id);
+    if(w) Object.assign(w,data);
+  } else {
+    walls.push({id:uid(),...data});
+  }
+  save(); closeModal('wallModal'); render();
+};
+
+window.addTestimonial = function(){
+  document.getElementById('tId').value = '';
+  document.getElementById('tQuote').value = '';
+  document.getElementById('tName').value = '';
+  document.getElementById('tAvatar').value = '';
+  document.getElementById('tRole').value = '';
+  document.getElementById('tCompany').value = '';
+  document.getElementById('tPhoto').value = '';
+  document.getElementById('tRating').value = '5';
+  document.getElementById('tStatus').value = 'pending';
+  document.getElementById('tTags').value = '';
+  document.getElementById('tSource').value = '';
+  document.getElementById('modalTitle').textContent = '✏️ Add Testimonial';
+  openModal('testimonialModal');
+};
+
+window.editTestimonial = function(id){
+  const t = testimonials.find(x=>x.id===id);
+  if(!t) return;
+  document.getElementById('tId').value = t.id;
+  document.getElementById('tQuote').value = t.quote;
+  document.getElementById('tName').value = t.name;
+  document.getElementById('tAvatar').value = t.avatar||'';
+  document.getElementById('tRole').value = t.role||'';
+  document.getElementById('tCompany').value = t.company||'';
+  document.getElementById('tPhoto').value = t.photo||'';
+  document.getElementById('tRating').value = t.rating||5;
+  document.getElementById('tStatus').value = t.status||'pending';
+  document.getElementById('tTags').value = (t.tags||[]).join(', ');
+  document.getElementById('tSource').value = t.source||'';
+  document.getElementById('modalTitle').textContent = '✏️ Edit Testimonial';
+  openModal('testimonialModal');
+};
+
+window.saveTestimonial = function(){
+  const id = document.getElementById('tId').value;
+  const quote = document.getElementById('tQuote').value.trim();
+  const name = document.getElementById('tName').value.trim();
+  if(!quote||!name) return alert('Quote and Name required');
+  const data = {
+    quote,name,
+    avatar:document.getElementById('tAvatar').value.trim()||'👤',
+    role:document.getElementById('tRole').value.trim(),
+    company:document.getElementById('tCompany').value.trim(),
+    photo:document.getElementById('tPhoto').value.trim(),
+    rating:parseInt(document.getElementById('tRating').value)||5,
+    status:document.getElementById('tStatus').value||'pending',
+    tags:document.getElementById('tTags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    source:document.getElementById('tSource').value.trim(),
+  };
+  if(id){
+    const t = testimonials.find(x=>x.id===id);
+    if(t) Object.assign(t,data);
+  } else {
+    const wallId = currentWall==='all' ? (walls[0]?walls[0].id:'') : currentWall;
+    testimonials.push({id:uid(),wallId,...data,createdAt:new Date().toISOString().slice(0,10)});
+  }
+  save(); closeModal('testimonialModal'); render();
+};
+
+window.cycleStatus = function(id){
+  const t = testimonials.find(x=>x.id===id);
+  if(!t) return;
+  const cycle = {pending:'approved',approved:'featured',featured:'pending'};
+  t.status = cycle[t.status]||'pending';
+  save(); render();
+};
+
+window.dupTestimonial = function(id){
+  const t = testimonials.find(x=>x.id===id);
+  if(!t) return;
+  testimonials.push({...JSON.parse(JSON.stringify(t)),id:uid(),status:'pending',createdAt:new Date().toISOString().slice(0,10)});
+  save(); render();
+};
+
+window.delTestimonial = function(id){
+  if(!confirm('Delete this testimonial?')) return;
+  testimonials = testimonials.filter(x=>x.id!==id);
+  save(); render();
+};
+
+// --- Carousel ---
+window.moveCarousel = function(dir){
+  const list = getDisplayable();
+  if(!list.length) return;
+  carouselIdx = (carouselIdx+dir+list.length)%list.length;
+  const track = document.getElementById('carouselTrack');
+  if(track) track.style.transform = 'translateX(-'+carouselIdx*100+'%)';
+  document.querySelectorAll('.carousel-dot').forEach((d,i)=>d.classList.toggle('active',i===carouselIdx));
+};
+
+// --- View ---
+window.setView = function(v){
+  currentView = v;
+  carouselIdx = 0;
+  save(); render();
+};
+
+// --- Export ---
+window.exportData = function(){
+  const data = JSON.stringify({walls,testimonials},null,2);
+  download('testimonial-forge-backup.json',data,'application/json');
+};
+
+window.importData = function(){
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      try{
+        const d = JSON.parse(ev.target.result);
+        if(d.walls) {
+          const existIds = new Set(walls.map(w=>w.id));
+          d.walls.forEach(w=>{ if(!existIds.has(w.id)) walls.push(w); });
+        }
+        if(d.testimonials){
+          const existIds = new Set(testimonials.map(t=>t.id));
+          d.testimonials.forEach(t=>{ if(!existIds.has(t.id)) testimonials.push(t); });
+        }
+        save(); render();
+      } catch(err){ alert('Invalid JSON'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+};
+
+// --- Widget export ---
+let widgetStyle = 'grid';
+window.previewWidget = function(style){
+  widgetStyle = style;
+  const list = getDisplayable();
+  const code = generateWidgetHTML(list, style);
+  const preview = document.getElementById('widgetPreview');
+  const codeEl = document.getElementById('widgetCode');
+  if(preview){
+    if(!list.length){
+      preview.innerHTML = '<p style="color:var(--text2)">No approved/featured testimonials to export.</p>';
+      if(codeEl) codeEl.style.display = 'none';
+      return;
+    }
+    preview.innerHTML = '<p style="color:var(--text2);font-size:13px;margin-bottom:8px">Preview ('+list.length+' testimonials, '+style+' style):</p><iframe srcdoc="'+esc(code).replace(/"/g,'&quot;')+'" style="width:100%;height:320px;border:1px solid var(--border);border-radius:8px;background:#fff"></iframe>';
+  }
+  if(codeEl){
+    codeEl.style.display = 'block';
+    codeEl.textContent = code.slice(0,2000)+(code.length>2000?'\n\n… (truncated – download for full code)':'');
+  }
+};
+
+window.downloadWidget = function(){
+  const list = getDisplayable();
+  if(!list.length) return alert('No approved/featured testimonials');
+  download('testimonial-widget-'+widgetStyle+'.html',generateWidgetHTML(list,widgetStyle),'text/html');
+};
+window.copyWidget = function(){
+  const list = getDisplayable();
+  if(!list.length) return alert('No approved/featured testimonials');
+  navigator.clipboard.writeText(generateWidgetHTML(list,widgetStyle)).then(()=>alert('Copied!')).catch(()=>alert('Copy failed'));
+};
+
+window.exportMarkdown = function(){
+  const list = getDisplayable();
+  if(!list.length) return alert('No approved/featured testimonials');
+  let md = '# Testimonials\n\n';
+  list.forEach(t=>{
+    md += '> '+t.quote+'\n\n';
+    md += '**'+t.name+'**';
+    if(t.role||t.company) md += ' — '+[t.role,t.company].filter(Boolean).join(', ');
+    md += ' ('+t.rating+'/5 ⭐)\n\n---\n\n';
+  });
+  download('testimonials.md',md,'text/markdown');
+};
+
+// --- Collection form export ---
+window.exportCollectionForm = function(){
+  const wall = walls.find(w=>w.id===currentWall);
+  const name = wall?wall.name:'Your Product';
+  download('collect-testimonials.html',generateCollectionHTML(name),'text/html');
+};
+window.copyCollectionForm = function(){
+  const wall = walls.find(w=>w.id===currentWall);
+  const name = wall?wall.name:'Your Product';
+  navigator.clipboard.writeText(generateCollectionHTML(name)).then(()=>alert('Copied!')).catch(()=>alert('Copy failed'));
+};
+
+function generateWidgetHTML(list,style){
+  const stars = n=>{let h='';for(let i=1;i<=5;i++)h+='<span style="color:'+(i<=n?'#f59e0b':'#ddd')+'">★</span>';return h;};
+  const items = list.map(t=>`<div class="tf-card"><div class="tf-quote">"${escQ(t.quote)}"</div><div class="tf-author"><div class="tf-avatar">${t.avatar||'👤'}</div><div><div class="tf-name">${escQ(t.name)}</div><div class="tf-role">${escQ([t.role,t.company].filter(Boolean).join(', '))}</div><div class="tf-stars">${stars(t.rating)}</div></div></div></div>`).join('\n');
+
+  if(style==='simple'){
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px;background:#f9fafb;color:#1a1a2e}.tf-card{padding:20px 0;border-bottom:1px solid #e5e7eb}.tf-card:last-child{border-bottom:none}.tf-quote{font-size:16px;line-height:1.6;margin-bottom:12px;color:#374151}.tf-author{display:flex;align-items:center;gap:12px}.tf-avatar{width:40px;height:40px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:18px}.tf-name{font-weight:600;font-size:14px}.tf-role{font-size:12px;color:#6b7280}.tf-stars{font-size:14px}</style></head><body>${items}</body></html>`;
+  }
+
+  if(style==='carousel'){
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px;background:#f9fafb}.wrap{max-width:600px;margin:0 auto;overflow:hidden;position:relative}.track{display:flex;transition:transform .4s}.slide{min-width:100%;padding:0 10px}.tf-card{background:#fff;border-radius:12px;padding:32px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1)}.tf-quote{font-size:18px;line-height:1.6;color:#374151;margin-bottom:16px}.tf-author{display:flex;align-items:center;justify-content:center;gap:12px}.tf-avatar{width:44px;height:44px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:20px}.tf-name{font-weight:600;font-size:14px}.tf-role{font-size:12px;color:#6b7280}.tf-stars{font-size:14px}.nav{display:flex;justify-content:center;gap:12px;margin-top:16px}.nav button{width:44px;height:44px;border-radius:50%;border:1px solid #ddd;background:#fff;font-size:20px;cursor:pointer}</style></head><body><div class="wrap"><div class="track" id="t">${list.map(t=>`<div class="slide"><div class="tf-card"><div class="tf-quote">"${escQ(t.quote)}"</div><div class="tf-author"><div class="tf-avatar">${t.avatar||'👤'}</div><div><div class="tf-name">${escQ(t.name)}</div><div class="tf-role">${escQ([t.role,t.company].filter(Boolean).join(', '))}</div><div class="tf-stars">${stars(t.rating)}</div></div></div></div></div>`).join('')}</div><div class="nav"><button onclick="go(-1)">‹</button><button onclick="go(1)">›</button></div></div><script>let i=0,n=${list.length};function go(d){i=(i+d+n)%n;document.getElementById('t').style.transform='translateX(-'+i*100+'%)'}<\/script></body></html>`;
+  }
+
+  if(style==='wall'){
+    const half = Math.ceil(list.length/2);
+    const r1 = list.slice(0,half), r2 = list.slice(half);
+    const mkRow = (arr,dir)=>arr.concat(arr).map(t=>`<div class="mc"><div class="tf-quote">"${escQ(t.quote)}"</div><div class="tf-author"><div class="tf-avatar">${t.avatar||'👤'}</div><div><div class="tf-name">${escQ(t.name)}</div><div class="tf-role">${escQ([t.role,t.company].filter(Boolean).join(', '))}</div><div class="tf-stars">${stars(t.rating)}</div></div></div></div>`).join('');
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px;background:#f9fafb;overflow:hidden}.wol{display:flex;flex-direction:column;gap:16px;overflow:hidden}.mr{display:flex;gap:16px;animation:ms 35s linear infinite}.mr:nth-child(even){animation-direction:reverse}.mc{min-width:300px;max-width:340px;background:#fff;border-radius:12px;padding:20px;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.08)}.tf-quote{font-size:14px;line-height:1.6;color:#374151;margin-bottom:12px}.tf-author{display:flex;align-items:center;gap:10px}.tf-avatar{width:36px;height:36px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:16px}.tf-name{font-weight:600;font-size:13px}.tf-role{font-size:11px;color:#6b7280}.tf-stars{font-size:12px}@keyframes ms{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}</style></head><body><div class="wol"><div class="mr">${mkRow(r1)}</div><div class="mr">${mkRow(r2)}</div></div></body></html>`;
+  }
+
+  // Grid default
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px;background:#f9fafb}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}.tf-card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08)}.tf-quote{font-size:15px;line-height:1.6;color:#374151;margin-bottom:16px;position:relative;padding-left:18px}.tf-quote::before{content:'"';position:absolute;left:0;top:-2px;font-size:28px;color:#3b82f6;font-family:Georgia,serif}.tf-author{display:flex;align-items:center;gap:12px}.tf-avatar{width:44px;height:44px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:20px}.tf-name{font-weight:600;font-size:14px}.tf-role{font-size:12px;color:#6b7280}.tf-stars{font-size:14px;margin-top:4px}</style></head><body><div class="grid">${items}</div></body></html>`;
+}
+
+function generateCollectionHTML(productName){
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Share Your Experience — ${escQ(productName)}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9fafb;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}.form{background:#fff;border-radius:16px;padding:40px;max-width:520px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.08)}h1{font-size:22px;margin-bottom:8px;color:#1a1a2e}p{font-size:14px;color:#6b7280;margin-bottom:24px}label{display:block;font-size:13px;font-weight:500;margin-bottom:4px;color:#374151}input,textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-size:16px;margin-bottom:14px;color:#1a1a2e;font-family:inherit}input:focus,textarea:focus{outline:none;border-color:#3b82f6}.stars{display:flex;gap:6px;margin-bottom:14px}.star{font-size:32px;cursor:pointer;color:#ddd;transition:color .15s}.star.on{color:#f59e0b}button{width:100%;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer}button:hover{background:#2563eb}.ok{text-align:center;color:#10b981;font-size:18px;font-weight:600;padding:40px 0}</style></head><body><div class="form" id="f"><h1>Share Your Experience</h1><p>We'd love to hear what you think about ${escQ(productName)}. Your feedback helps us improve.</p><label>Your Name *</label><input id="n" required><label>Role & Company</label><input id="r" placeholder="VP Marketing at Acme"><label>Your Testimonial *</label><textarea id="q" rows="4" required></textarea><label>Rating</label><div class="stars" id="stars"></div><label>Photo URL (optional)</label><input id="ph" placeholder="https://..."><button onclick="send()">Submit Testimonial ✨</button></div><script>let rating=5;const s=document.getElementById('stars');for(let i=1;i<=5;i++){const el=document.createElement('span');el.className='star'+(i<=5?' on':'');el.textContent='★';el.onclick=()=>{rating=i;s.querySelectorAll('.star').forEach((x,j)=>x.classList.toggle('on',j<i))};s.appendChild(el)}function send(){const n=document.getElementById('n').value.trim();const q=document.getElementById('q').value.trim();if(!n||!q){alert('Name and testimonial required');return}const data={name:n,role:document.getElementById('r').value.trim(),quote:q,rating:rating,photo:document.getElementById('ph').value.trim(),date:new Date().toISOString()};const existing=JSON.parse(localStorage.getItem('tf_submissions')||'[]');existing.push(data);localStorage.setItem('tf_submissions',JSON.stringify(existing));document.getElementById('f').innerHTML='<div class="ok">🎉 Thank you for your testimonial!</div>'}<\/script></body></html>`;
+}
+
+// --- Util ---
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function escQ(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+window.closeModal = closeModal;
+
+window.toggleSidebar = function(force){
+  const sb = document.getElementById('sidebar');
+  const ov = document.querySelector('.sidebar-overlay');
+  const open = force!==undefined ? force : !sb.classList.contains('open');
+  sb.classList.toggle('open',open);
+  ov.classList.toggle('visible',open);
+};
+window.filterWalls = function(){ renderSidebar(); };
+
+function download(name,content,type){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content],{type}));
+  a.download = name; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
+  const mod = e.metaKey||e.ctrlKey;
+  if(e.key==='Escape'){
+    document.getElementById('helpOverlay').classList.remove('open');
+    closeModal('testimonialModal');
+    closeModal('wallModal');
+    return;
+  }
+  if(e.key==='?'||e.key==='/'){
+    if(e.key==='?'){e.preventDefault();document.getElementById('helpOverlay').classList.toggle('open');return;}
+    if(e.key==='/'){e.preventDefault();document.getElementById('wallSearch').focus();return;}
+  }
+  if(e.key==='n'||e.key==='N'){e.preventDefault();addTestimonial();return;}
+  if(e.key==='1'){e.preventDefault();setView('grid');}
+  if(e.key==='2'){e.preventDefault();setView('carousel');}
+  if(e.key==='3'){e.preventDefault();setView('wall');}
+  if(e.key==='4'){e.preventDefault();setView('collect');}
+  if(e.key==='5'){e.preventDefault();setView('export');}
+  if(e.key==='6'){e.preventDefault();setView('dashboard');}
+  if(e.key==='e'||e.key==='E'){e.preventDefault();exportData();}
+  if(e.key==='i'&&!mod){e.preventDefault();importData();}
+});
+
+// Init
+render();
+if(currentView==='export') setTimeout(()=>previewWidget('grid'),100);
+
+})();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>
