@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-15T19:35:35.712Z",
-  "count": 83,
+  "generatedAt": "2026-06-16T19:34:43.455Z",
+  "count": 84,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -662,10 +662,18 @@
     {
       "slug": "testimonial-forge",
       "title": "Testimonial Forge",
-      "tagline": "Customer testimonials & social proof widgets",
-      "emoji": "⭐",
+      "tagline": "Social Proof Manager",
+      "emoji": "🔧",
       "day": 83,
-      "cluster": "product"
+      "cluster": "personal"
+    },
+    {
+      "slug": "slide-forge",
+      "title": "Slide Forge",
+      "tagline": "Markdown Presentation Builder",
+      "emoji": "🎞️",
+      "day": 84,
+      "cluster": "build"
     }
   ]
 }

@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Slide Forge — Markdown Presentation Builder | mvp.cafe</title>
+<meta name="description" content="Write markdown, present beautifully. Browser-based slide deck builder with themes, speaker notes, export, and fullscreen presentation mode.">
+<style>
+:root {
+  --bg:#0d0d14;--bg2:#131320;--bg3:#1a1a2e;--border:#252540;--text:#e8e8f0;--dim:#8888a8;
+  --accent:#a78bfa;--accent2:#c4b5fd;--green:#4ade80;--red:#f87171;--yellow:#fbbf24;--blue:#60a5fa;
+  --mono:"SF Mono","Fira Code","JetBrains Mono",Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:var(--text)}
+input,textarea,select{font-family:inherit;color:var(--text);background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:16px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ── App Layout ── */
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+.topbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;min-height:48px;flex-wrap:wrap}
+.topbar__title{font-weight:700;font-size:0.95rem;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.topbar__title span{font-size:1.1rem}
+.topbar__spacer{flex:1;min-width:8px}
+.topbar__btn{padding:6px 12px;border-radius:6px;font-size:0.82rem;font-weight:600;transition:background .15s;white-space:nowrap;min-height:36px;display:inline-flex;align-items:center;gap:4px}
+.topbar__btn:hover{background:var(--bg3)}
+.topbar__btn--accent{background:var(--accent);color:#0d0d14}
+.topbar__btn--accent:hover{background:var(--accent2)}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;overflow-x:auto}
+.tab{padding:10px 16px;font-size:0.85rem;font-weight:600;color:var(--dim);border-bottom:2px solid transparent;transition:color .15s,border-color .15s;white-space:nowrap;min-height:44px;display:flex;align-items:center}
+.tab:hover{color:var(--text)}
+.tab--active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ── Main area ── */
+.main{flex:1;display:flex;overflow:hidden;position:relative}
+
+/* ── Sidebar (slide thumbnails) ── */
+.sidebar{width:180px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;padding:8px}
+.sidebar__item{padding:8px;border-radius:8px;cursor:pointer;margin-bottom:4px;border:2px solid transparent;transition:border-color .15s,background .15s}
+.sidebar__item:hover{background:var(--bg3)}
+.sidebar__item--active{border-color:var(--accent);background:rgba(167,139,250,0.08)}
+.sidebar__num{font-size:0.7rem;color:var(--dim);font-weight:600;margin-bottom:4px}
+.sidebar__preview{font-size:0.72rem;color:var(--text);line-height:1.3;overflow:hidden;max-height:3.9em;word-break:break-word}
+
+/* ── Editor ── */
+.editor-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.editor{flex:1;width:100%;resize:none;border:none;border-radius:0;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;line-height:1.7;padding:16px;outline:none;tab-size:2;overflow:auto}
+
+/* ── Preview ── */
+.preview-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#111}
+.preview-bar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;min-height:40px}
+.preview-bar__label{font-size:0.8rem;color:var(--dim);font-weight:600}
+.preview-bar__nav{display:flex;gap:4px}
+.preview-bar__nav button{width:32px;height:32px;border-radius:6px;font-size:1rem;display:flex;align-items:center;justify-content:center}
+.preview-bar__nav button:hover{background:var(--bg3)}
+.preview-bar__count{font-size:0.78rem;color:var(--dim);min-width:50px;text-align:center}
+.preview-container{flex:1;display:flex;align-items:center;justify-content:center;padding:16px;overflow:hidden;position:relative}
+.slide-frame{width:100%;max-width:960px;aspect-ratio:16/9;background:#fff;border-radius:8px;overflow:hidden;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+
+/* ── Slide Content ── */
+.slide{width:100%;height:100%;padding:8% 8%;overflow:auto;display:flex;flex-direction:column;justify-content:center;font-family:var(--sans);color:#1a1a2e;font-size:2.2vmin;line-height:1.6}
+.slide h1{font-size:3.2em;font-weight:800;margin-bottom:0.4em;line-height:1.15;letter-spacing:-0.02em}
+.slide h2{font-size:2.2em;font-weight:700;margin-bottom:0.4em;line-height:1.2}
+.slide h3{font-size:1.6em;font-weight:700;margin-bottom:0.3em}
+.slide p{margin-bottom:0.6em}
+.slide ul,.slide ol{margin:0.4em 0 0.6em 1.4em}
+.slide li{margin-bottom:0.3em}
+.slide strong{font-weight:700}
+.slide em{font-style:italic}
+.slide code{font-family:var(--mono);background:rgba(0,0,0,0.06);padding:0.15em 0.4em;border-radius:4px;font-size:0.88em}
+.slide pre{background:rgba(0,0,0,0.04);border-radius:8px;padding:1em 1.2em;overflow-x:auto;margin:0.6em 0;font-size:0.85em}
+.slide pre code{background:none;padding:0}
+.slide blockquote{border-left:4px solid currentColor;padding-left:1em;margin:0.6em 0;opacity:0.85;font-style:italic}
+.slide img{max-width:80%;max-height:50%;border-radius:8px;margin:0.5em auto;display:block}
+.slide hr{border:none;border-top:2px solid rgba(0,0,0,0.1);margin:1em 0}
+.slide a{color:inherit;text-decoration:underline}
+.slide table{border-collapse:collapse;margin:0.6em 0;width:100%}
+.slide th,.slide td{border:1px solid rgba(0,0,0,0.12);padding:0.4em 0.8em;text-align:left}
+.slide th{background:rgba(0,0,0,0.04);font-weight:700}
+.slide .slide-number{position:absolute;bottom:3%;right:4%;font-size:0.8em;opacity:0.3;font-weight:600}
+
+/* ── Themes ── */
+.theme-midnight .slide{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:#e8e8f0}
+.theme-midnight .slide code{background:rgba(255,255,255,0.1)}
+.theme-midnight .slide pre{background:rgba(0,0,0,0.3)}
+.theme-midnight .slide th{background:rgba(255,255,255,0.08)}
+.theme-midnight .slide th,.theme-midnight .slide td{border-color:rgba(255,255,255,0.15)}
+
+.theme-ocean .slide{background:linear-gradient(135deg,#0c3547,#1a6b8a);color:#e0f4ff}
+.theme-ocean .slide h1,.theme-ocean .slide h2{color:#7dd3fc}
+.theme-ocean .slide code{background:rgba(255,255,255,0.1)}
+.theme-ocean .slide pre{background:rgba(0,0,0,0.25)}
+
+.theme-sunset .slide{background:linear-gradient(135deg,#2d1b3d,#8b2252,#e65c00);color:#ffeedd}
+.theme-sunset .slide h1,.theme-sunset .slide h2{color:#ffd700}
+.theme-sunset .slide code{background:rgba(255,255,255,0.12)}
+.theme-sunset .slide pre{background:rgba(0,0,0,0.25)}
+
+.theme-forest .slide{background:linear-gradient(135deg,#0a1f0a,#1a4a1a,#2d6b2d);color:#d4edda}
+.theme-forest .slide h1,.theme-forest .slide h2{color:#90ee90}
+.theme-forest .slide code{background:rgba(255,255,255,0.1)}
+.theme-forest .slide pre{background:rgba(0,0,0,0.25)}
+
+.theme-clean .slide{background:#ffffff;color:#1a1a2e}
+.theme-clean .slide h1,.theme-clean .slide h2{color:#2d2d5e}
+
+.theme-ink .slide{background:#f8f6f0;color:#2c2c2c}
+.theme-ink .slide h1,.theme-ink .slide h2{color:#1a1a1a}
+.theme-ink .slide pre{background:#eee8dd}
+
+.theme-neon .slide{background:#0a0a0a;color:#e0e0e0}
+.theme-neon .slide h1{background:linear-gradient(90deg,#ff6ec7,#7873f5,#4ade80);-webkit-background-clip:text;background-clip:text;color:transparent}
+.theme-neon .slide h2{color:#ff6ec7}
+.theme-neon .slide code{background:rgba(255,255,255,0.08);color:#4ade80}
+.theme-neon .slide pre{background:rgba(255,255,255,0.05)}
+
+.theme-corporate .slide{background:#f0f4f8;color:#1e293b}
+.theme-corporate .slide h1,.theme-corporate .slide h2{color:#0f172a}
+.theme-corporate .slide pre{background:#e2e8f0}
+
+/* ── Presentation (fullscreen) ── */
+.presentation{position:fixed;inset:0;z-index:9999;background:#000;display:none;align-items:center;justify-content:center;flex-direction:column}
+.presentation--active{display:flex}
+.presentation .slide-frame{max-width:100vw;max-height:100vh;width:100vw;height:100vh;aspect-ratio:auto;border-radius:0;box-shadow:none}
+.presentation .slide{font-size:3vmin}
+.pres-bar{position:fixed;bottom:0;left:0;right:0;height:4px;background:rgba(255,255,255,0.1);z-index:10000}
+.pres-bar__fill{height:100%;background:var(--accent);transition:width .3s}
+.pres-timer{position:fixed;top:12px;right:16px;z-index:10000;color:rgba(255,255,255,0.4);font-size:14px;font-family:var(--mono);font-weight:600;pointer-events:none}
+.pres-notes{position:fixed;bottom:12px;left:16px;right:16px;z-index:10000;color:rgba(255,255,255,0.35);font-size:13px;max-height:80px;overflow:auto;pointer-events:none;font-family:var(--sans);line-height:1.4;display:none}
+.pres-notes--show{display:block}
+
+/* ── Settings modal ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:8000;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-bg--show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:1.1rem;margin-bottom:16px}
+.modal label{display:block;font-size:0.85rem;font-weight:600;margin-bottom:4px;color:var(--dim)}
+.modal select,.modal input{width:100%;margin-bottom:12px}
+.modal__row{display:flex;gap:8px;flex-wrap:wrap}
+.modal__row>*{flex:1;min-width:120px}
+.theme-swatch{display:inline-block;width:24px;height:24px;border-radius:4px;vertical-align:middle;margin-right:6px;border:1px solid var(--border)}
+
+/* ── Help modal ── */
+.help-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:0.85rem}
+.help-grid kbd{background:var(--bg3);padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:0.8rem;white-space:nowrap}
+
+/* ── Export panel ── */
+.export-panel{padding:16px;overflow:auto;flex:1}
+.export-panel h3{font-size:1rem;margin-bottom:8px}
+.export-panel p{font-size:0.85rem;color:var(--dim);margin-bottom:12px}
+.export-panel textarea{width:100%;height:200px;font-family:var(--mono);font-size:12px}
+.export-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .main--split .editor-wrap{display:none}
+  .topbar{gap:4px;padding:6px 8px}
+  .topbar__btn{padding:4px 8px;font-size:0.78rem}
+  .slide{font-size:2.8vmin;padding:6% 6%}
+  .preview-container{padding:8px}
+}
+@media(max-width:480px){
+  .tabs{gap:0}
+  .tab{padding:8px 10px;font-size:0.8rem}
+  .topbar__title{font-size:0.85rem}
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar__title"><span>🎞️</span> Slide Forge</div>
+    <div class="topbar__spacer"></div>
+    <button class="topbar__btn" onclick="openSettings()" title="Theme & Settings">⚙️ Theme</button>
+    <button class="topbar__btn" onclick="openHelp()" title="Keyboard Shortcuts">❓</button>
+    <button class="topbar__btn" onclick="exportDeck()" title="Export">📤 Export</button>
+    <button class="topbar__btn topbar__btn--accent" onclick="startPresentation()" title="Present (F5)">▶ Present</button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" id="tabs">
+    <button class="tab tab--active" data-view="edit" onclick="switchView('edit')">✏️ Edit</button>
+    <button class="tab" data-view="preview" onclick="switchView('preview')">👁️ Preview</button>
+    <button class="tab" data-view="split" onclick="switchView('split')">⬜ Split</button>
+    <button class="tab" data-view="export" onclick="switchView('export')">📤 Export</button>
+  </div>
+
+  <!-- Main -->
+  <div class="main" id="main">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar"></div>
+
+    <!-- Editor -->
+    <div class="editor-wrap" id="editorWrap">
+      <textarea class="editor" id="editor" spellcheck="false" placeholder="# Your First Slide
+
+Write markdown here. Separate slides with ---
+
+---
+
+## Second Slide
+
+- Bullet points work
+- **Bold** and *italic* too
+- `code` inline
+
+---
+
+## Speaker Notes
+
+Add notes below ??? on any slide.
+
+??? These are speaker notes. Only you see them."></textarea>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-wrap" id="previewWrap">
+      <div class="preview-bar">
+        <span class="preview-bar__label">Preview</span>
+        <div style="flex:1"></div>
+        <div class="preview-bar__nav">
+          <button onclick="prevSlide()" title="Previous">◀</button>
+          <span class="preview-bar__count" id="slideCount">1 / 1</span>
+          <button onclick="nextSlide()" title="Next">▶</button>
+        </div>
+      </div>
+      <div class="preview-container" id="previewContainer">
+        <div class="slide-frame" id="slideFrame">
+          <div class="slide" id="slideContent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export panel -->
+    <div class="export-panel" id="exportPanel" style="display:none">
+      <h3>📤 Export Your Deck</h3>
+      <p>Download your presentation as a self-contained HTML file. Open it anywhere, present offline.</p>
+      <div class="export-actions">
+        <button class="topbar__btn topbar__btn--accent" onclick="downloadHTML()">⬇️ Download HTML</button>
+        <button class="topbar__btn" onclick="copyMarkdown()">📋 Copy Markdown</button>
+        <button class="topbar__btn" onclick="downloadMarkdown()">💾 Download .md</button>
+      </div>
+      <div style="margin-top:20px">
+        <h3>📊 Deck Stats</h3>
+        <div id="deckStats" style="font-size:0.9rem;color:var(--dim);margin-top:8px;line-height:1.8"></div>
+      </div>
+      <div style="margin-top:20px">
+        <h3>📝 Markdown Source</h3>
+        <textarea id="exportSource" readonly style="margin-top:8px"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Presentation overlay -->
+<div class="presentation" id="presentation">
+  <div class="slide-frame" id="presFrame">
+    <div class="slide" id="presSlide"></div>
+  </div>
+  <div class="pres-bar"><div class="pres-bar__fill" id="presProgress"></div></div>
+  <div class="pres-timer" id="presTimer">00:00</div>
+  <div class="pres-notes" id="presNotes"></div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal-bg" id="settingsModal">
+  <div class="modal">
+    <h2>⚙️ Theme & Settings</h2>
+    <label>Theme</label>
+    <select id="themeSelect" onchange="setTheme(this.value)">
+      <option value="clean">Clean (White)</option>
+      <option value="ink">Ink (Warm Paper)</option>
+      <option value="corporate">Corporate (Blue-Gray)</option>
+      <option value="midnight" selected>Midnight (Dark Purple)</option>
+      <option value="ocean">Ocean (Deep Blue)</option>
+      <option value="sunset">Sunset (Warm Dark)</option>
+      <option value="forest">Forest (Green Dark)</option>
+      <option value="neon">Neon (Black + Glow)</option>
+    </select>
+    <label>Font Size Scale</label>
+    <select id="fontScale" onchange="setFontScale(this.value)">
+      <option value="0.8">Small</option>
+      <option value="1" selected>Medium</option>
+      <option value="1.3">Large</option>
+      <option value="1.6">Extra Large</option>
+    </select>
+    <label>Show Slide Numbers</label>
+    <select id="showNumbers" onchange="setShowNumbers(this.value==='true')">
+      <option value="true" selected>Yes</option>
+      <option value="false">No</option>
+    </select>
+    <label>Presentation: Show Speaker Notes</label>
+    <select id="showNotesInPres" onchange="setShowNotes(this.value==='true')">
+      <option value="false" selected>Hidden</option>
+      <option value="true">Visible (bottom)</option>
+    </select>
+    <div style="margin-top:16px;text-align:right">
+      <button class="topbar__btn topbar__btn--accent" onclick="closeSettings()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Help modal -->
+<div class="modal-bg" id="helpModal">
+  <div class="modal">
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="help-grid">
+      <kbd>F5</kbd><span>Start presentation</span>
+      <kbd>Esc</kbd><span>Exit presentation / close modal</span>
+      <kbd>←</kbd><span>Previous slide</span>
+      <kbd>→</kbd><span>Next slide</span>
+      <kbd>Space</kbd><span>Next slide (in presentation)</span>
+      <kbd>1-4</kbd><span>Switch view tabs</span>
+      <kbd>N</kbd><span>Toggle speaker notes (in pres.)</span>
+      <kbd>T</kbd><span>Toggle timer visibility (in pres.)</span>
+      <kbd>?</kbd><span>Show this help</span>
+    </div>
+    <h3 style="margin-top:16px;font-size:0.95rem">Markdown Syntax</h3>
+    <div style="font-size:0.85rem;color:var(--dim);margin-top:8px;line-height:1.7">
+      <code>---</code> Slide separator<br>
+      <code># H1</code> Big title<br>
+      <code>## H2</code> Section heading<br>
+      <code>**bold**</code> <strong>Bold</strong><br>
+      <code>*italic*</code> <em>Italic</em><br>
+      <code>`code`</code> <code>Inline code</code><br>
+      <code>```lang</code> Code block<br>
+      <code>> quote</code> Blockquote<br>
+      <code>- item</code> Bullet list<br>
+      <code>1. item</code> Numbered list<br>
+      <code>| a | b |</code> Table<br>
+      <code>![alt](url)</code> Image<br>
+      <code>???</code> Speaker notes (below this marker)<br>
+    </div>
+    <div style="margin-top:16px;text-align:right">
+      <button class="topbar__btn topbar__btn--accent" onclick="closeHelp()">Got it</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ── State ── */
+const SK = 'mvpcafe:slide-forge:';
+let slides = [];
+let currentSlide = 0;
+let currentView = 'edit';
+let settings = {
+  theme: 'midnight',
+  fontScale: 1,
+  showNumbers: true,
+  showNotes: false,
+};
+let presTimerStart = 0;
+let presTimerInterval = null;
+let presenting = false;
+
+/* ── DOM refs ── */
+const editor = document.getElementById('editor');
+const sidebar = document.getElementById('sidebar');
+const slideContent = document.getElementById('slideContent');
+const slideFrame = document.getElementById('slideFrame');
+const slideCount = document.getElementById('slideCount');
+const previewWrap = document.getElementById('previewWrap');
+const editorWrap = document.getElementById('editorWrap');
+const mainEl = document.getElementById('main');
+const exportPanel = document.getElementById('exportPanel');
+const presentation = document.getElementById('presentation');
+const presSlide = document.getElementById('presSlide');
+const presFrame = document.getElementById('presFrame');
+const presProgress = document.getElementById('presProgress');
+const presTimer = document.getElementById('presTimer');
+const presNotes = document.getElementById('presNotes');
+
+/* ── Markdown Parser (lightweight) ── */
+function parseMd(src) {
+  let html = '';
+  const lines = src.split('\n');
+  let i = 0;
+  let inCode = false, codeLang = '', codeLines = [];
+  let inList = false, listType = '';
+  let inTable = false, tableRows = [];
+
+  function flushList() {
+    if (!inList) return;
+    html += listType === 'ol' ? '</ol>' : '</ul>';
+    inList = false;
+  }
+  function flushTable() {
+    if (!inTable) return;
+    let t = '<table>';
+    tableRows.forEach((r, ri) => {
+      const tag = ri === 0 ? 'th' : 'td';
+      t += '<tr>' + r.map(c => `<${tag}>${inlinemd(c.trim())}</${tag}>`).join('') + '</tr>';
+    });
+    t += '</table>';
+    html += t;
+    inTable = false;
+    tableRows = [];
+  }
+
+  function inlinemd(s) {
+    // Images
+    s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+    // Links
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    // Bold+italic
+    s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    // Bold
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    // Italic
+    s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    s = s.replace(/_(.+?)_/g, '<em>$1</em>');
+    // Strikethrough
+    s = s.replace(/~~(.+?)~~/g, '<del>$1</del>');
+    // Code
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    return s;
+  }
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Code fence
+    if (/^```/.test(line)) {
+      if (inCode) {
+        flushList(); flushTable();
+        const escaped = codeLines.join('\n').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        html += `<pre><code>${escaped}</code></pre>`;
+        inCode = false;
+        codeLines = [];
+      } else {
+        flushList(); flushTable();
+        codeLang = line.slice(3).trim();
+        inCode = true;
+      }
+      i++; continue;
+    }
+    if (inCode) { codeLines.push(line); i++; continue; }
+
+    // Blank line
+    if (!line.trim()) { flushList(); flushTable(); i++; continue; }
+
+    // Table
+    if (/^\|(.+)\|$/.test(line)) {
+      flushList();
+      const cells = line.slice(1, -1).split('|');
+      // Skip separator row
+      if (/^[\s|:-]+$/.test(line.replace(/\|/g,''))) { i++; continue; }
+      if (!inTable) inTable = true;
+      tableRows.push(cells);
+      i++; continue;
+    } else { flushTable(); }
+
+    // Headings
+    const hm = line.match(/^(#{1,6})\s+(.+)/);
+    if (hm) { flushList(); flushTable(); const lvl = hm[1].length; html += `<h${lvl}>${inlinemd(hm[2])}</h${lvl}>`; i++; continue; }
+
+    // HR
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) { flushList(); flushTable(); html += '<hr>'; i++; continue; }
+
+    // Blockquote
+    if (/^>\s?/.test(line)) {
+      flushList(); flushTable();
+      let qlines = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) { qlines.push(lines[i].replace(/^>\s?/,'')); i++; }
+      html += `<blockquote>${inlinemd(qlines.join('<br>'))}</blockquote>`;
+      continue;
+    }
+
+    // Unordered list
+    if (/^[\-\*]\s+/.test(line)) {
+      flushTable();
+      if (!inList || listType !== 'ul') { flushList(); html += '<ul>'; inList = true; listType = 'ul'; }
+      html += `<li>${inlinemd(line.replace(/^[\-\*]\s+/,''))}</li>`;
+      i++; continue;
+    }
+
+    // Ordered list
+    if (/^\d+\.\s+/.test(line)) {
+      flushTable();
+      if (!inList || listType !== 'ol') { flushList(); html += '<ol>'; inList = true; listType = 'ol'; }
+      html += `<li>${inlinemd(line.replace(/^\d+\.\s+/,''))}</li>`;
+      i++; continue;
+    }
+
+    // Paragraph
+    flushList(); flushTable();
+    html += `<p>${inlinemd(line)}</p>`;
+    i++;
+  }
+  flushList(); flushTable();
+  if (inCode) {
+    const escaped = codeLines.join('\n').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    html += `<pre><code>${escaped}</code></pre>`;
+  }
+  return html;
+}
+
+/* ── Parse slides from markdown ── */
+function parseSlides(md) {
+  // Split on --- (must be on its own line, not inside code blocks)
+  const raw = [];
+  let current = '';
+  let inFence = false;
+  md.split('\n').forEach(line => {
+    if (/^```/.test(line)) inFence = !inFence;
+    if (!inFence && /^---\s*$/.test(line)) {
+      raw.push(current);
+      current = '';
+    } else {
+      current += (current ? '\n' : '') + line;
+    }
+  });
+  raw.push(current);
+
+  return raw.map(s => {
+    const parts = s.split(/^\?\?\?\s*$/m);
+    return {
+      content: (parts[0] || '').trim(),
+      notes: (parts[1] || '').trim(),
+    };
+  }).filter(s => s.content || s.notes);
+}
+
+/* ── Render ── */
+function render() {
+  const md = editor.value;
+  slides = parseSlides(md);
+  if (slides.length === 0) slides = [{ content: '', notes: '' }];
+  if (currentSlide >= slides.length) currentSlide = slides.length - 1;
+  if (currentSlide < 0) currentSlide = 0;
+
+  renderSlide();
+  renderSidebar();
+  slideCount.textContent = `${currentSlide + 1} / ${slides.length}`;
+  save();
+}
+
+function renderSlide() {
+  const s = slides[currentSlide];
+  const html = parseMd(s.content);
+  const numHtml = settings.showNumbers ? `<div class="slide-number">${currentSlide+1} / ${slides.length}</div>` : '';
+  slideContent.innerHTML = html + numHtml;
+  applyTheme(slideFrame);
+}
+
+function renderPresSlide() {
+  const s = slides[currentSlide];
+  presSlide.innerHTML = parseMd(s.content);
+  if (settings.showNumbers) {
+    presSlide.innerHTML += `<div class="slide-number">${currentSlide+1} / ${slides.length}</div>`;
+  }
+  applyTheme(presFrame);
+  presProgress.style.width = `${((currentSlide+1)/slides.length)*100}%`;
+  presNotes.textContent = s.notes || '';
+  presNotes.className = settings.showNotes && s.notes ? 'pres-notes pres-notes--show' : 'pres-notes';
+}
+
+function applyTheme(frame) {
+  frame.className = 'slide-frame theme-' + settings.theme;
+  const slide = frame.querySelector('.slide');
+  if (slide) slide.style.fontSize = (parseFloat(settings.fontScale) * 2.2) + 'vmin';
+}
+
+function renderSidebar() {
+  sidebar.innerHTML = slides.map((s, i) => {
+    const preview = s.content.split('\n')[0].replace(/^#+\s*/,'').slice(0,40) || '(empty)';
+    return `<div class="sidebar__item ${i===currentSlide?'sidebar__item--active':''}" onclick="goSlide(${i})">
+      <div class="sidebar__num">Slide ${i+1}</div>
+      <div class="sidebar__preview">${escHtml(preview)}</div>
+    </div>`;
+  }).join('');
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ── Navigation ── */
+window.goSlide = function(i) {
+  currentSlide = Math.max(0, Math.min(i, slides.length - 1));
+  renderSlide();
+  renderSidebar();
+  slideCount.textContent = `${currentSlide + 1} / ${slides.length}`;
+  if (presenting) renderPresSlide();
+};
+window.prevSlide = function() { goSlide(currentSlide - 1); };
+window.nextSlide = function() { goSlide(currentSlide + 1); };
+
+/* ── Views ── */
+window.switchView = function(v) {
+  currentView = v;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('tab--active', t.dataset.view === v));
+  
+  editorWrap.style.display = (v === 'edit' || v === 'split') ? '' : 'none';
+  previewWrap.style.display = (v === 'preview' || v === 'split') ? '' : 'none';
+  exportPanel.style.display = v === 'export' ? '' : 'none';
+  sidebar.style.display = (v === 'preview' || v === 'split') ? '' : 'none';
+  mainEl.classList.toggle('main--split', v === 'split');
+
+  if (v === 'export') renderExport();
+  if (v === 'preview' || v === 'split') render();
+
+  // On mobile, sidebar is hidden via CSS anyway
+  if (window.innerWidth <= 768) {
+    sidebar.style.display = 'none';
+  }
+};
+
+function renderExport() {
+  const md = editor.value;
+  document.getElementById('exportSource').value = md;
+  const s = parseSlides(md);
+  const words = md.split(/\s+/).filter(Boolean).length;
+  const notesCount = s.filter(x => x.notes).length;
+  document.getElementById('deckStats').innerHTML = `
+    <strong>${s.length}</strong> slides · <strong>${words}</strong> words · <strong>${notesCount}</strong> with speaker notes · Theme: <strong>${settings.theme}</strong>
+  `;
+}
+
+/* ── Presentation mode ── */
+window.startPresentation = function() {
+  if (slides.length === 0) return;
+  presenting = true;
+  currentSlide = 0;
+  presentation.classList.add('presentation--active');
+  renderPresSlide();
+  presTimerStart = Date.now();
+  presTimerInterval = setInterval(updateTimer, 1000);
+  updateTimer();
+  // Try fullscreen
+  try { document.documentElement.requestFullscreen?.(); } catch(e) {}
+};
+
+function exitPresentation() {
+  presenting = false;
+  presentation.classList.remove('presentation--active');
+  clearInterval(presTimerInterval);
+  try { document.exitFullscreen?.(); } catch(e) {}
+}
+
+function updateTimer() {
+  const elapsed = Math.floor((Date.now() - presTimerStart) / 1000);
+  const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  presTimer.textContent = `${m}:${s}`;
+}
+
+/* ── Settings ── */
+window.openSettings = function() { document.getElementById('settingsModal').classList.add('modal-bg--show'); };
+window.closeSettings = function() { document.getElementById('settingsModal').classList.remove('modal-bg--show'); };
+window.openHelp = function() { document.getElementById('helpModal').classList.add('modal-bg--show'); };
+window.closeHelp = function() { document.getElementById('helpModal').classList.remove('modal-bg--show'); };
+
+window.setTheme = function(t) { settings.theme = t; renderSlide(); save(); };
+window.setFontScale = function(s) { settings.fontScale = parseFloat(s); renderSlide(); save(); };
+window.setShowNumbers = function(b) { settings.showNumbers = b; renderSlide(); save(); };
+window.setShowNotes = function(b) { settings.showNotes = b; save(); };
+
+/* ── Export ── */
+window.exportDeck = function() { switchView('export'); };
+
+window.copyMarkdown = function() {
+  navigator.clipboard.writeText(editor.value).then(() => alert('Markdown copied to clipboard!'));
+};
+
+window.downloadMarkdown = function() {
+  const blob = new Blob([editor.value], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'presentation.md';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+window.downloadHTML = function() {
+  const s = parseSlides(editor.value);
+  const slideHtmls = s.map((sl, i) => {
+    const html = parseMd(sl.content);
+    const num = settings.showNumbers ? `<div class="sn">${i+1} / ${s.length}</div>` : '';
+    return `<div class="slide">${html}${num}</div>`;
+  });
+
+  const themeClass = 'theme-' + settings.theme;
+  const fontSize = (parseFloat(settings.fontScale) * 3) + 'vmin';
+
+  const doc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Presentation — Slide Forge</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#000;font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif}
+.deck{position:relative;width:100vw;height:100vh}
+.slide{position:absolute;inset:0;padding:8% 10%;display:flex;flex-direction:column;justify-content:center;opacity:0;pointer-events:none;transition:opacity .4s;font-size:${fontSize};line-height:1.6;overflow:auto}
+.slide.active{opacity:1;pointer-events:auto}
+.slide h1{font-size:3.2em;font-weight:800;margin-bottom:.4em;line-height:1.15;letter-spacing:-.02em}
+.slide h2{font-size:2.2em;font-weight:700;margin-bottom:.4em}
+.slide h3{font-size:1.6em;font-weight:700;margin-bottom:.3em}
+.slide p{margin-bottom:.6em}
+.slide ul,.slide ol{margin:.4em 0 .6em 1.4em}
+.slide li{margin-bottom:.3em}
+.slide strong{font-weight:700}
+.slide em{font-style:italic}
+.slide code{font-family:"SF Mono","Fira Code",monospace;background:rgba(0,0,0,.06);padding:.15em .4em;border-radius:4px;font-size:.88em}
+.slide pre{background:rgba(0,0,0,.04);border-radius:8px;padding:1em 1.2em;overflow-x:auto;margin:.6em 0;font-size:.85em}
+.slide pre code{background:none;padding:0}
+.slide blockquote{border-left:4px solid currentColor;padding-left:1em;margin:.6em 0;opacity:.85;font-style:italic}
+.slide img{max-width:80%;max-height:50%;border-radius:8px;margin:.5em auto;display:block}
+.slide hr{border:none;border-top:2px solid rgba(0,0,0,.1);margin:1em 0}
+.slide a{color:inherit;text-decoration:underline}
+.slide table{border-collapse:collapse;margin:.6em 0;width:100%}
+.slide th,.slide td{border:1px solid rgba(0,0,0,.12);padding:.4em .8em;text-align:left}
+.slide th{background:rgba(0,0,0,.04);font-weight:700}
+.sn{position:absolute;bottom:3%;right:4%;font-size:.7em;opacity:.3;font-weight:600}
+.bar{position:fixed;bottom:0;left:0;height:4px;background:rgba(167,139,250,.8);transition:width .3s;z-index:10}
+/* Themes */
+.theme-midnight .slide{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:#e8e8f0}
+.theme-midnight .slide code{background:rgba(255,255,255,.1)}.theme-midnight .slide pre{background:rgba(0,0,0,.3)}
+.theme-midnight .slide th{background:rgba(255,255,255,.08)}.theme-midnight .slide th,.theme-midnight .slide td{border-color:rgba(255,255,255,.15)}
+.theme-ocean .slide{background:linear-gradient(135deg,#0c3547,#1a6b8a);color:#e0f4ff}
+.theme-ocean .slide h1,.theme-ocean .slide h2{color:#7dd3fc}.theme-ocean .slide code{background:rgba(255,255,255,.1)}.theme-ocean .slide pre{background:rgba(0,0,0,.25)}
+.theme-sunset .slide{background:linear-gradient(135deg,#2d1b3d,#8b2252,#e65c00);color:#ffeedd}
+.theme-sunset .slide h1,.theme-sunset .slide h2{color:#ffd700}.theme-sunset .slide code{background:rgba(255,255,255,.12)}.theme-sunset .slide pre{background:rgba(0,0,0,.25)}
+.theme-forest .slide{background:linear-gradient(135deg,#0a1f0a,#1a4a1a,#2d6b2d);color:#d4edda}
+.theme-forest .slide h1,.theme-forest .slide h2{color:#90ee90}.theme-forest .slide code{background:rgba(255,255,255,.1)}.theme-forest .slide pre{background:rgba(0,0,0,.25)}
+.theme-clean .slide{background:#fff;color:#1a1a2e}.theme-clean .slide h1,.theme-clean .slide h2{color:#2d2d5e}
+.theme-ink .slide{background:#f8f6f0;color:#2c2c2c}.theme-ink .slide h1,.theme-ink .slide h2{color:#1a1a1a}.theme-ink .slide pre{background:#eee8dd}
+.theme-neon .slide{background:#0a0a0a;color:#e0e0e0}
+.theme-neon .slide h1{background:linear-gradient(90deg,#ff6ec7,#7873f5,#4ade80);-webkit-background-clip:text;background-clip:text;color:transparent}
+.theme-neon .slide h2{color:#ff6ec7}.theme-neon .slide code{background:rgba(255,255,255,.08);color:#4ade80}.theme-neon .slide pre{background:rgba(255,255,255,.05)}
+.theme-corporate .slide{background:#f0f4f8;color:#1e293b}.theme-corporate .slide h1,.theme-corporate .slide h2{color:#0f172a}.theme-corporate .slide pre{background:#e2e8f0}
+</style>
+</head>
+<body>
+<div class="deck ${themeClass}" id="deck">
+${slideHtmls.join('\n')}
+</div>
+<div class="bar" id="bar"></div>
+<script>
+const slides=document.querySelectorAll('.slide'),bar=document.getElementById('bar');
+let cur=0;
+function show(n){cur=Math.max(0,Math.min(n,slides.length-1));slides.forEach((s,i)=>s.classList.toggle('active',i===cur));bar.style.width=((cur+1)/slides.length*100)+'%';}
+show(0);
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')show(cur+1);else if(e.key==='ArrowLeft')show(cur-1);else if(e.key==='Escape')window.close?.();});
+document.addEventListener('click',e=>{const r=e.clientX/window.innerWidth;r>.5?show(cur+1):show(cur-1);});
+<\/script>
+</body></html>`;
+
+  const blob = new Blob([doc], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'presentation.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+/* ── Persistence ── */
+function save() {
+  try {
+    localStorage.setItem(SK + 'markdown', editor.value);
+    localStorage.setItem(SK + 'settings', JSON.stringify(settings));
+    localStorage.setItem(SK + 'currentSlide', currentSlide);
+  } catch(e) {}
+}
+
+function load() {
+  const md = localStorage.getItem(SK + 'markdown');
+  const st = localStorage.getItem(SK + 'settings');
+  const cs = localStorage.getItem(SK + 'currentSlide');
+  if (st) {
+    try { Object.assign(settings, JSON.parse(st)); } catch(e) {}
+  }
+  if (cs) currentSlide = parseInt(cs) || 0;
+  if (md !== null) {
+    editor.value = md;
+  } else {
+    editor.value = DEFAULT_DECK;
+  }
+  // Sync settings to UI
+  document.getElementById('themeSelect').value = settings.theme;
+  document.getElementById('fontScale').value = settings.fontScale;
+  document.getElementById('showNumbers').value = settings.showNumbers ? 'true' : 'false';
+  document.getElementById('showNotesInPres').value = settings.showNotes ? 'true' : 'false';
+}
+
+/* ── Keyboard ── */
+document.addEventListener('keydown', e => {
+  // In presentation mode
+  if (presenting) {
+    if (e.key === 'Escape') { exitPresentation(); e.preventDefault(); return; }
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); goSlide(currentSlide + 1); renderPresSlide(); return; }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goSlide(currentSlide - 1); renderPresSlide(); return; }
+    if (e.key === 'n' || e.key === 'N') { settings.showNotes = !settings.showNotes; renderPresSlide(); return; }
+    if (e.key === 't' || e.key === 'T') { presTimer.style.display = presTimer.style.display === 'none' ? '' : 'none'; return; }
+    return;
+  }
+
+  // In modals
+  if (document.getElementById('settingsModal').classList.contains('modal-bg--show') ||
+      document.getElementById('helpModal').classList.contains('modal-bg--show')) {
+    if (e.key === 'Escape') { closeSettings(); closeHelp(); e.preventDefault(); }
+    return;
+  }
+
+  // Global shortcuts (not when typing in editor)
+  const inEditor = document.activeElement === editor;
+
+  if (e.key === 'F5' || (e.key === 'p' && (e.metaKey || e.ctrlKey))) {
+    e.preventDefault();
+    startPresentation();
+    return;
+  }
+
+  if (!inEditor) {
+    if (e.key === 'ArrowRight') { nextSlide(); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { prevSlide(); e.preventDefault(); }
+    else if (e.key === '1') switchView('edit');
+    else if (e.key === '2') switchView('preview');
+    else if (e.key === '3') switchView('split');
+    else if (e.key === '4') switchView('export');
+    else if (e.key === '?') { openHelp(); e.preventDefault(); }
+  }
+});
+
+/* ── Editor events ── */
+let renderTimeout;
+editor.addEventListener('input', () => {
+  clearTimeout(renderTimeout);
+  renderTimeout = setTimeout(render, 300);
+});
+
+// Tab key in editor
+editor.addEventListener('keydown', e => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+    editor.selectionStart = editor.selectionEnd = start + 2;
+  }
+});
+
+/* ── Default deck ── */
+const DEFAULT_DECK = `# Slide Forge 🎞️
+
+### Write Markdown. Present Beautifully.
+
+Your browser-based presentation builder.
+
+---
+
+## How It Works
+
+- Write slides in **Markdown**
+- Separate slides with \`---\`
+- Choose from **8 themes**
+- Present fullscreen with ▶ or \`F5\`
+
+---
+
+## Rich Markdown Support
+
+All the formatting you need:
+
+- **Bold**, *italic*, ~~strikethrough~~
+- \`inline code\` and code blocks
+- Lists, tables, blockquotes
+- Images and links
+- Speaker notes (hidden)
+
+---
+
+## Code Blocks
+
+\`\`\`javascript
+function shipFast(idea) {
+  const mvp = build(idea, { days: 13 });
+  const users = launch(mvp);
+  return iterate(users.feedback);
+}
+\`\`\`
+
+---
+
+## Tables Work Too
+
+| Feature | Status |
+|---------|--------|
+| Markdown Editor | ✅ Done |
+| 8 Themes | ✅ Done |
+| Fullscreen Mode | ✅ Done |
+| Speaker Notes | ✅ Done |
+| HTML Export | ✅ Done |
+| Slide Thumbnails | ✅ Done |
+
+---
+
+## Speaker Notes
+
+Add notes below \`???\` on any slide.
+
+Only you see them during presentation.
+
+??? These are speaker notes!
+
+Press **N** during presentation to toggle notes.
+Press **T** to toggle the timer.
+
+---
+
+> "The best presentations tell a story, not show a deck."
+>
+> — Every PM ever
+
+---
+
+## Export Options
+
+- **Download HTML** — self-contained, present offline
+- **Copy Markdown** — paste into any editor
+- **Download .md** — save your source
+
+---
+
+# Ship It! 🚀
+
+Built with ❤️ at [mvp.cafe](https://mvp.cafe)
+
+*Day 84 of Overnight Builds*`;
+
+/* ── Init ── */
+load();
+render();
+switchView('edit');
+
+})();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>
