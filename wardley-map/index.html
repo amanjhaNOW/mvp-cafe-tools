@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>Wardley Map — Strategic Value Chain Mapper</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#3fb950;--danger:#f85149;--warn:#d29922;--purple:#bc8cff;--orange:#f0883e;--radius:8px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5}
+button{font-family:inherit;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:var(--radius);padding:6px 12px;font-size:13px;min-height:44px;transition:background .15s}
+button:hover{background:var(--border)}
+button.primary{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:600}
+button.primary:hover{opacity:.85}
+button.sm{min-height:32px;padding:4px 8px;font-size:12px}
+button.danger{border-color:var(--danger);color:var(--danger)}
+input,select,textarea{font-family:inherit;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;font-size:14px;width:100%;min-height:44px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:500}
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:260px;min-width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-header{padding:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sidebar-header h2{font-size:14px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-search{padding:8px 12px}
+.sidebar-search input{min-height:36px;font-size:13px;padding:6px 10px}
+.sidebar-list{flex:1;overflow-y:auto;padding:4px 0}
+.sidebar-item{padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;border-left:3px solid transparent;font-size:13px}
+.sidebar-item:hover{background:var(--surface2)}
+.sidebar-item.active{border-left-color:var(--accent);background:var(--surface2)}
+.sidebar-item .count{font-size:11px;color:var(--text2);margin-left:auto;background:var(--bg);padding:2px 6px;border-radius:10px}
+.sidebar-item .name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-section{padding:8px 12px;font-size:11px;text-transform:uppercase;color:var(--text2);letter-spacing:.5px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
+.topbar .tabs{display:flex;gap:2px}
+.topbar .tab{background:transparent;border:none;color:var(--text2);padding:6px 12px;border-radius:var(--radius);font-size:13px;min-height:36px}
+.topbar .tab.active{background:var(--surface2);color:var(--text)}
+.topbar .actions{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.content{flex:1;overflow:hidden;position:relative}
+/* Canvas */
+.map-canvas{width:100%;height:100%;position:relative;overflow:hidden}
+.map-canvas svg{width:100%;height:100%;cursor:crosshair}
+.map-canvas svg.pan-mode{cursor:grab}
+.map-canvas svg.pan-mode:active{cursor:grabbing}
+.map-canvas svg.connect-mode{cursor:cell}
+.comp-node{cursor:grab}
+.comp-node:hover circle,.comp-node:hover rect{filter:brightness(1.3)}
+.comp-node.selected circle,.comp-node.selected rect{stroke:var(--accent);stroke-width:3}
+.dep-line{stroke:var(--text2);stroke-width:1.5;fill:none;cursor:pointer}
+.dep-line:hover{stroke:var(--accent);stroke-width:2.5}
+.movement-arrow{stroke:var(--danger);stroke-width:2;stroke-dasharray:6,4;fill:none;marker-end:url(#arrowRed)}
+.inertia-bar{stroke:var(--warn);stroke-width:4;stroke-linecap:round}
+.annotation{cursor:move;font-size:11px;fill:var(--text2)}
+/* Properties panel */
+.props-panel{width:280px;min-width:280px;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;display:none;flex-direction:column;padding:12px}
+.props-panel.open{display:flex}
+.props-panel h3{font-size:13px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.props-panel .field{margin-bottom:10px}
+.props-panel .field-row{display:flex;gap:8px}
+.props-panel .field-row>*{flex:1}
+.props-panel .actions-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+/* Components view */
+.comp-table{width:100%;border-collapse:collapse}
+.comp-table th,.comp-table td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:13px}
+.comp-table th{background:var(--surface);color:var(--text2);font-weight:600;position:sticky;top:0;z-index:2}
+.comp-table tr:hover td{background:var(--surface2)}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.badge.genesis{background:#7c3aed33;color:#a78bfa}
+.badge.custom{background:#2563eb33;color:#60a5fa}
+.badge.product{background:#16a34a33;color:#4ade80}
+.badge.commodity{background:#d9770633;color:#fb923c}
+/* Dashboard */
+.dashboard{padding:16px;overflow-y:auto;height:100%}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat-card .val{font-size:24px;font-weight:700}
+.stat-card .lbl{font-size:12px;color:var(--text2);margin-top:2px}
+.dash-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.dash-section h3{font-size:14px;margin-bottom:12px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
+.bar-row .bar-label{width:100px;color:var(--text2);text-align:right;flex-shrink:0}
+.bar-row .bar-track{flex:1;height:20px;background:var(--bg);border-radius:4px;overflow:hidden}
+.bar-row .bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:11px;color:#fff;font-weight:500;min-width:20px}
+.bar-row .bar-val{width:30px;text-align:right;font-weight:500}
+/* Zoom controls */
+.zoom-controls{position:absolute;bottom:12px;right:12px;display:flex;gap:4px;z-index:5}
+.zoom-controls button{min-height:36px;min-width:36px;padding:0;font-size:16px}
+/* Legend */
+.legend{position:absolute;top:12px;right:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;font-size:11px;z-index:5;max-width:180px}
+.legend-item{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto}
+.modal h3{font-size:16px;margin-bottom:16px}
+.modal .field{margin-bottom:12px}
+.modal .btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* Toolbar hint */
+.mode-hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:var(--accent);color:#0d1117;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;z-index:10;display:flex;align-items:center;gap:8px}
+.mode-hint button{min-height:28px;padding:2px 10px;font-size:11px;background:rgba(0,0,0,.2);border:none;color:#0d1117}
+/* Help overlay */
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+.help-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto}
+.help-box h3{margin-bottom:12px}
+.help-box table{width:100%;border-collapse:collapse;font-size:12px}
+.help-box td{padding:4px 8px;border-bottom:1px solid var(--border)}
+.help-box td:first-child{font-weight:600;color:var(--accent);white-space:nowrap;width:100px}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text2);gap:12px;text-align:center;padding:20px}
+.empty-state .big{font-size:40px}
+/* Mobile */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:50;transform:translateX(-100%);transition:transform .2s;width:280px}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49;display:none}
+  .sidebar-backdrop.open{display:block}
+  .props-panel{position:fixed;left:0;right:0;bottom:0;z-index:50;width:100%;min-width:0;max-height:50vh;border-left:none;border-top:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0}
+  .topbar{padding:6px 8px}
+  .topbar .tab{padding:6px 8px;font-size:12px}
+  .legend{display:none}
+  .dash-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:480px){
+  .dash-grid{grid-template-columns:1fr 1fr}
+  .topbar .actions button span.label{display:none}
+}
+</style>
+</head>
+<body>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <span>🗺️</span><h2>Wardley Map</h2>
+      <button class="sm" onclick="newMap()" title="New map">+</button>
+    </div>
+    <div class="sidebar-search"><input id="mapSearch" placeholder="Search maps..." oninput="renderSidebar()"></div>
+    <div class="sidebar-list" id="mapList"></div>
+    <div class="sidebar-section">Components<button class="sm" onclick="addComponentModal()" title="Add">+</button></div>
+    <div class="sidebar-list" id="compList" style="max-height:40vh"></div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <button class="sm" id="menuBtn" onclick="toggleSidebar()" style="display:none">☰</button>
+      <div class="tabs">
+        <button class="tab active" data-view="map" onclick="switchView('map')">🗺️ Map</button>
+        <button class="tab" data-view="components" onclick="switchView('components')">📋 List</button>
+        <button class="tab" data-view="dashboard" onclick="switchView('dashboard')">📊 Dash</button>
+      </div>
+      <div class="actions">
+        <button class="sm" onclick="toggleConnectMode()" id="connectBtn" title="Draw dependency (D)">🔗 <span class="label">Connect</span></button>
+        <button class="sm" onclick="showTemplates()" title="Templates (T)">📐 <span class="label">Templates</span></button>
+        <button class="sm" onclick="exportMap()" title="Export (E)">📤 <span class="label">Export</span></button>
+        <button class="sm" onclick="importMap()" title="Import (I)">📥</button>
+        <button class="sm" onclick="showHelp()" title="Help (?)">?</button>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+  <aside class="props-panel" id="propsPanel"></aside>
+</div>
+
+<script>
+(function(){
+'use strict';
+const SK='mvpcafe:wardley-map:state';
+const COLORS={activity:'#58a6ff',practice:'#3fb950',data:'#f0883e',knowledge:'#bc8cff'};
+const TYPES=['activity','practice','data','knowledge'];
+const EVOL_LABELS=['Genesis','Custom-Built','Product (+rental)','Commodity (+utility)'];
+const EVOL_COLORS=['#a78bfa','#60a5fa','#4ade80','#fb923c'];
+const GAMEPLAY=['build','buy','outsource','partner','invest','decommission','differentiate','exploit'];
+let S={maps:[],activeMapId:null,view:'map',selectedId:null,selectedType:'component',connectMode:false,connectFrom:null,zoom:1,panX:0,panY:0,showLegend:true};
+let dragging=null,dragOff={x:0,y:0},isPanning=false,panStart={x:0,y:0},panStartState={x:0,y:0};
+
+function uid(){return crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36)}
+function save(){localStorage.setItem(SK,JSON.stringify(S))}
+function load(){try{const d=JSON.parse(localStorage.getItem(SK));if(d&&d.maps)Object.assign(S,d)}catch(e){}}
+function activeMap(){return S.maps.find(m=>m.id===S.activeMapId)||null}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function evolStage(e){return e<.25?0:e<.5?1:e<.75?2:3}
+function evolLabel(e){return EVOL_LABELS[evolStage(e)]}
+function evolClass(e){return['genesis','custom','product','commodity'][evolStage(e)]}
+
+// ── Init ──
+function init(){
+  load();
+  if(!S.maps.length)seedDemo();
+  if(!S.activeMapId&&S.maps.length)S.activeMapId=S.maps[0].id;
+  setupMobile();
+  render();
+  save();
+}
+
+function setupMobile(){
+  const mq=window.matchMedia('(max-width:768px)');
+  function check(){document.getElementById('menuBtn').style.display=mq.matches?'block':'none'}
+  mq.addEventListener('change',check);check();
+  document.getElementById('sidebarBackdrop').onclick=()=>toggleSidebar(false);
+}
+window.toggleSidebar=function(force){
+  const sb=document.getElementById('sidebar'),bd=document.getElementById('sidebarBackdrop');
+  const open=force!==undefined?force:!sb.classList.contains('open');
+  sb.classList.toggle('open',open);bd.classList.toggle('open',open);
+};
+
+// ── Render ──
+function render(){
+  renderSidebar();
+  renderContent();
+  renderProps();
+  document.querySelectorAll('.topbar .tab').forEach(t=>t.classList.toggle('active',t.dataset.view===S.view));
+  document.getElementById('connectBtn').style.background=S.connectMode?'var(--accent)':'';
+  document.getElementById('connectBtn').style.color=S.connectMode?'#0d1117':'';
+}
+
+window.renderSidebar=function(){
+  const q=(document.getElementById('mapSearch').value||'').toLowerCase();
+  const ml=document.getElementById('mapList');
+  const filtered=S.maps.filter(m=>!q||m.name.toLowerCase().includes(q));
+  ml.innerHTML=filtered.map(m=>`<div class="sidebar-item ${m.id===S.activeMapId?'active':''}" onclick="selectMap('${m.id}')" ondblclick="renameMap('${m.id}')">
+    <span class="name">${esc(m.name)}</span>
+    <span class="count">${m.components.length}</span>
+  </div>`).join('')||'<div style="padding:12px;color:var(--text2);font-size:12px">No maps</div>';
+  const cl=document.getElementById('compList');
+  const map=activeMap();
+  if(!map){cl.innerHTML='';return}
+  cl.innerHTML=map.components.map(c=>`<div class="sidebar-item ${c.id===S.selectedId?'active':''}" onclick="selectComponent('${c.id}')">
+    <span style="color:${COLORS[c.type]||COLORS.activity}">●</span>
+    <span class="name">${esc(c.name)}</span>
+    <span class="count" style="font-size:10px">${evolLabel(c.evolution).split(' ')[0]}</span>
+  </div>`).join('')||'<div style="padding:12px;color:var(--text2);font-size:12px">Click map to add</div>';
+};
+
+function renderContent(){
+  const el=document.getElementById('content');
+  if(S.view==='map')renderMap(el);
+  else if(S.view==='components')renderCompList(el);
+  else renderDashboard(el);
+}
+
+// ── Map View ──
+function renderMap(container){
+  const map=activeMap();
+  if(!map){container.innerHTML='<div class="empty-state"><div class="big">🗺️</div><div>Create a map to get started</div><button class="primary" onclick="newMap()">New Map</button></div>';return}
+  const W=1000,H=650,PAD={l:70,r:20,t:30,b:55};
+  const pw=W-PAD.l-PAD.r,ph=H-PAD.t-PAD.b;
+  let html=`<div class="map-canvas">`;
+  // Mode hint
+  if(S.connectMode)html+=`<div class="mode-hint">🔗 Connect Mode: Click source → then target <button onclick="toggleConnectMode()">Cancel</button></div>`;
+  // Legend
+  if(S.showLegend)html+=`<div class="legend">
+    <div style="font-weight:600;margin-bottom:6px">Component Types</div>
+    ${TYPES.map(t=>`<div class="legend-item"><div class="legend-dot" style="background:${COLORS[t]}"></div>${t.charAt(0).toUpperCase()+t.slice(1)}</div>`).join('')}
+    <div style="margin-top:8px;font-weight:600;margin-bottom:4px">Lines</div>
+    <div class="legend-item"><div style="width:20px;height:2px;background:var(--text2)"></div>Dependency</div>
+    <div class="legend-item"><div style="width:20px;height:2px;background:var(--danger);border-top:2px dashed var(--danger)"></div>Movement</div>
+    <div class="legend-item"><div style="width:20px;height:4px;background:var(--warn);border-radius:2px"></div>Inertia</div>
+  </div>`;
+  // Zoom controls
+  html+=`<div class="zoom-controls">
+    <button onclick="zoomMap(-1)" title="Zoom out">−</button>
+    <button onclick="zoomMap(0)" title="Fit" style="font-size:12px">${Math.round(S.zoom*100)}%</button>
+    <button onclick="zoomMap(1)" title="Zoom in">+</button>
+  </div>`;
+  // SVG
+  const vbx=-S.panX/S.zoom,vby=-S.panY/S.zoom,vbw=W/S.zoom,vbh=H/S.zoom;
+  html+=`<svg id="mapSvg" viewBox="${vbx} ${vby} ${vbw} ${vbh}" class="${S.connectMode?'connect-mode':''}"
+    onmousedown="svgMouseDown(event)" onmousemove="svgMouseMove(event)" onmouseup="svgMouseUp(event)"
+    ontouchstart="svgTouchStart(event)" ontouchmove="svgTouchMove(event)" ontouchend="svgTouchEnd(event)">
+    <defs>
+      <marker id="arrowGray" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="var(--text2)"/></marker>
+      <marker id="arrowRed" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="var(--danger)"/></marker>
+    </defs>`;
+  // Background
+  html+=`<rect x="${PAD.l}" y="${PAD.t}" width="${pw}" height="${ph}" fill="#0d1117" rx="4"/>`;
+  // Phase columns
+  for(let i=0;i<4;i++){
+    const x=PAD.l+i*(pw/4);
+    if(i>0)html+=`<line x1="${x}" y1="${PAD.t}" x2="${x}" y2="${PAD.t+ph}" stroke="var(--border)" stroke-dasharray="4,4"/>`;
+    html+=`<rect x="${x}" y="${PAD.t}" width="${pw/4}" height="${ph}" fill="${EVOL_COLORS[i]}08"/>`;
+    html+=`<text x="${x+pw/8}" y="${H-PAD.b+18}" text-anchor="middle" fill="${EVOL_COLORS[i]}" font-size="11" font-weight="600">${EVOL_LABELS[i].split(' ')[0]}</text>`;
+    if(EVOL_LABELS[i].includes('('))html+=`<text x="${x+pw/8}" y="${H-PAD.b+30}" text-anchor="middle" fill="${EVOL_COLORS[i]}88" font-size="9">${EVOL_LABELS[i].match(/\(.+/)[0]}</text>`;
+  }
+  // Y-axis
+  html+=`<text x="${PAD.l-8}" y="${PAD.t+12}" text-anchor="end" fill="var(--text2)" font-size="10">Visible</text>`;
+  html+=`<text x="${PAD.l-8}" y="${PAD.t+ph-2}" text-anchor="end" fill="var(--text2)" font-size="10">Invisible</text>`;
+  html+=`<text x="${PAD.l-8}" y="${PAD.t+ph/2}" text-anchor="end" fill="var(--text2)" font-size="9" transform="rotate(-90,${PAD.l-40},${PAD.t+ph/2})">Value Chain</text>`;
+  // Axis labels
+  html+=`<text x="${PAD.l+pw/2}" y="${H-5}" text-anchor="middle" fill="var(--text2)" font-size="10">Evolution →</text>`;
+  // Horizontal grid
+  for(let i=1;i<5;i++){
+    const y=PAD.t+i*(ph/5);
+    html+=`<line x1="${PAD.l}" y1="${y}" x2="${PAD.l+pw}" y2="${y}" stroke="var(--border)" stroke-dasharray="2,4" opacity=".4"/>`;
+  }
+  // Dependencies
+  map.dependencies.forEach(d=>{
+    const fc=map.components.find(c=>c.id===d.from),tc=map.components.find(c=>c.id===d.to);
+    if(!fc||!tc)return;
+    const x1=PAD.l+fc.evolution*pw,y1=PAD.t+(1-fc.visibility)*ph;
+    const x2=PAD.l+tc.evolution*pw,y2=PAD.t+(1-tc.visibility)*ph;
+    html+=`<line class="dep-line" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#arrowGray)"
+      onclick="selectDep('${d.id}')" data-dep="${d.id}" stroke="${d.id===S.selectedId?'var(--accent)':'var(--text2)'}"/>`;
+    if(d.label){
+      const mx=(x1+x2)/2,my=(y1+y2)/2;
+      html+=`<text x="${mx}" y="${my-6}" text-anchor="middle" fill="var(--text2)" font-size="9" pointer-events="none">${esc(d.label)}</text>`;
+    }
+  });
+  // Components
+  map.components.forEach(c=>{
+    const cx=PAD.l+c.evolution*pw,cy=PAD.t+(1-c.visibility)*ph;
+    const col=COLORS[c.type]||COLORS.activity;
+    const sel=c.id===S.selectedId;
+    // Inertia bar
+    if(c.inertia)html+=`<line class="inertia-bar" x1="${cx-15}" y1="${cy}" x2="${cx+15}" y2="${cy}" opacity=".6"/>`;
+    // Movement arrow
+    if(c.movement!=null){
+      const tx=PAD.l+c.movement*pw;
+      html+=`<line class="movement-arrow" x1="${cx+10}" y1="${cy}" x2="${tx-4}" y2="${cy}"/>`;
+    }
+    // Node
+    html+=`<g class="comp-node ${sel?'selected':''}" data-id="${c.id}"
+      onmousedown="startDrag(event,'${c.id}')" ondblclick="editComponentInline('${c.id}')">
+      <circle cx="${cx}" cy="${cy}" r="8" fill="${col}" stroke="${sel?'var(--accent)':col}" stroke-width="${sel?3:1.5}" opacity=".9"/>
+      <text x="${cx}" y="${cy-12}" text-anchor="middle" fill="var(--text)" font-size="10" font-weight="500" pointer-events="none">${esc(c.name)}</text>`;
+    if(c.gameplay)html+=`<text x="${cx}" y="${cy+18}" text-anchor="middle" fill="var(--warn)" font-size="8" font-style="italic" pointer-events="none">${esc(c.gameplay)}</text>`;
+    html+=`</g>`;
+  });
+  // Annotations
+  (map.annotations||[]).forEach(a=>{
+    const ax=PAD.l+a.x*pw,ay=PAD.t+(1-a.y)*ph;
+    html+=`<text class="annotation" x="${ax}" y="${ay}" font-style="italic" data-ann="${a.id}" ondblclick="editAnnotation('${a.id}')">${esc(a.text)}</text>`;
+  });
+  html+=`</svg></div>`;
+  container.innerHTML=html;
+}
+
+function toMapCoords(evt){
+  const svg=document.getElementById('mapSvg');if(!svg)return null;
+  const rect=svg.getBoundingClientRect();
+  const W=1000,H=650,PAD={l:70,r:20,t:30,b:55};
+  const pw=W-PAD.l-PAD.r,ph=H-PAD.t-PAD.b;
+  const vbx=-S.panX/S.zoom,vby=-S.panY/S.zoom,vbw=W/S.zoom,vbh=H/S.zoom;
+  const sx=(evt.clientX-rect.left)/rect.width*vbw+vbx;
+  const sy=(evt.clientY-rect.top)/rect.height*vbh+vby;
+  const evolution=clamp((sx-PAD.l)/pw,0,1);
+  const visibility=clamp(1-(sy-PAD.t)/ph,0,1);
+  return{evolution,visibility,sx,sy,inBounds:sx>=PAD.l&&sx<=PAD.l+pw&&sy>=PAD.t&&sy<=PAD.t+ph};
+}
+
+// ── SVG Interactions ──
+window.svgMouseDown=function(e){
+  if(e.target.closest('.comp-node')){return}
+  if(e.target.closest('.dep-line')){return}
+  if(e.button===0&&!S.connectMode){
+    isPanning=true;panStart={x:e.clientX,y:e.clientY};panStartState={x:S.panX,y:S.panY};
+    document.getElementById('mapSvg').classList.add('pan-mode');
+  }
+};
+window.svgMouseMove=function(e){
+  if(isPanning){
+    S.panX=panStartState.x+(e.clientX-panStart.x);
+    S.panY=panStartState.y+(e.clientY-panStart.y);
+    renderContent();
+  }
+  if(dragging){
+    const c=toMapCoords(e);if(!c)return;
+    const map=activeMap();if(!map)return;
+    const comp=map.components.find(x=>x.id===dragging);
+    if(comp&&c.inBounds){comp.evolution=c.evolution;comp.visibility=c.visibility;save();renderContent();renderSidebar()}
+  }
+};
+window.svgMouseUp=function(e){
+  if(isPanning){isPanning=false;document.getElementById('mapSvg')?.classList.remove('pan-mode');return}
+  if(dragging){dragging=null;return}
+  const node=e.target.closest('.comp-node');
+  if(node){
+    const id=node.dataset.id;
+    if(S.connectMode){
+      if(!S.connectFrom){S.connectFrom=id;render();}
+      else if(S.connectFrom!==id){addDependency(S.connectFrom,id);S.connectFrom=null;S.connectMode=false;render();}
+      return;
+    }
+    selectComponent(id);return;
+  }
+  if(S.connectMode)return;
+  // Click on empty canvas → add component
+  const c=toMapCoords(e);
+  if(c&&c.inBounds){addComponentAt(c.evolution,c.visibility)}
+};
+// Touch
+let touchId=null;
+window.svgTouchStart=function(e){
+  if(e.touches.length!==1)return;
+  const t=e.touches[0];touchId=t.identifier;
+  const node=e.target.closest('.comp-node');
+  if(node){startDrag(t,node.dataset.id);e.preventDefault();return}
+  isPanning=true;panStart={x:t.clientX,y:t.clientY};panStartState={x:S.panX,y:S.panY};
+};
+window.svgTouchMove=function(e){
+  const t=Array.from(e.touches).find(x=>x.identifier===touchId);if(!t)return;
+  if(isPanning){S.panX=panStartState.x+(t.clientX-panStart.x);S.panY=panStartState.y+(t.clientY-panStart.y);renderContent();e.preventDefault()}
+  if(dragging){
+    const c=toMapCoords(t);if(!c)return;
+    const map=activeMap();if(!map)return;
+    const comp=map.components.find(x=>x.id===dragging);
+    if(comp&&c.inBounds){comp.evolution=c.evolution;comp.visibility=c.visibility;save();renderContent()}
+    e.preventDefault();
+  }
+};
+window.svgTouchEnd=function(e){isPanning=false;dragging=null;touchId=null};
+
+window.startDrag=function(e,id){
+  e.stopPropagation?.();dragging=id;
+  S.selectedId=id;S.selectedType='component';renderProps();renderSidebar();
+};
+window.selectComponent=function(id){
+  S.selectedId=id;S.selectedType='component';render();
+};
+window.selectDep=function(id){
+  S.selectedId=id;S.selectedType='dependency';render();
+};
+
+// ── Zoom ──
+window.zoomMap=function(dir){
+  if(dir===0){S.zoom=1;S.panX=0;S.panY=0}
+  else S.zoom=clamp(S.zoom+(dir>0?.15:-.15),.3,3);
+  render();
+};
+document.addEventListener('wheel',e=>{
+  if(S.view!=='map')return;
+  if(e.target.closest('.sidebar')||e.target.closest('.props-panel'))return;
+  e.preventDefault();
+  S.zoom=clamp(S.zoom+(e.deltaY<0?.08:-.08),.3,3);render();
+},{passive:false});
+
+// ── Components CRUD ──
+function addComponentAt(evolution,visibility){
+  const map=activeMap();if(!map)return;
+  const name=`Component ${map.components.length+1}`;
+  const c={id:uid(),name,description:'',evolution,visibility,type:'activity',inertia:false,movement:null,gameplay:'',color:''};
+  map.components.push(c);map.updatedAt=Date.now();
+  S.selectedId=c.id;S.selectedType='component';save();render();
+}
+window.addComponentModal=function(){
+  const map=activeMap();if(!map)return;
+  addComponentAt(.5,.5);
+};
+function deleteComponent(id){
+  const map=activeMap();if(!map)return;
+  map.components=map.components.filter(c=>c.id!==id);
+  map.dependencies=map.dependencies.filter(d=>d.from!==id&&d.to!==id);
+  if(S.selectedId===id){S.selectedId=null}
+  map.updatedAt=Date.now();save();render();
+}
+function addDependency(fromId,toId){
+  const map=activeMap();if(!map)return;
+  if(map.dependencies.some(d=>d.from===fromId&&d.to===toId))return;
+  map.dependencies.push({id:uid(),from:fromId,to:toId,label:'',style:'solid'});
+  map.updatedAt=Date.now();save();render();
+}
+function deleteDependency(id){
+  const map=activeMap();if(!map)return;
+  map.dependencies=map.dependencies.filter(d=>d.id!==id);
+  if(S.selectedId===id)S.selectedId=null;
+  map.updatedAt=Date.now();save();render();
+}
+window.editComponentInline=function(id){
+  const map=activeMap();if(!map)return;
+  const c=map.components.find(x=>x.id===id);if(!c)return;
+  const name=prompt('Component name:',c.name);
+  if(name&&name.trim()){c.name=name.trim();map.updatedAt=Date.now();save();render();}
+};
+window.editAnnotation=function(id){
+  const map=activeMap();if(!map)return;
+  const a=(map.annotations||[]).find(x=>x.id===id);if(!a)return;
+  const text=prompt('Annotation:',a.text);
+  if(text!==null){if(!text.trim()){map.annotations=map.annotations.filter(x=>x.id!==id)}else{a.text=text.trim()}save();render()}
+};
+
+// ── Properties Panel ──
+function renderProps(){
+  const panel=document.getElementById('propsPanel');
+  const map=activeMap();
+  if(!S.selectedId||!map){panel.classList.remove('open');panel.innerHTML='';return}
+  if(S.selectedType==='component'){
+    const c=map.components.find(x=>x.id===S.selectedId);
+    if(!c){panel.classList.remove('open');return}
+    panel.classList.add('open');
+    panel.innerHTML=`<h3>Component <button class="sm" onclick="closeProps()">✕</button></h3>
+      <div class="field"><label>Name</label><input value="${esc(c.name)}" onchange="updateComp('name',this.value)"></div>
+      <div class="field"><label>Description</label><textarea onchange="updateComp('description',this.value)">${esc(c.description)}</textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Type</label><select onchange="updateComp('type',this.value)">${TYPES.map(t=>`<option ${t===c.type?'selected':''}>${t}</option>`).join('')}</select></div>
+      </div>
+      <div class="field"><label>Evolution: ${(c.evolution*100).toFixed(0)}% — ${evolLabel(c.evolution)}</label>
+        <input type="range" min="0" max="100" value="${c.evolution*100}" oninput="updateComp('evolution',this.value/100)" style="min-height:32px"></div>
+      <div class="field"><label>Visibility: ${(c.visibility*100).toFixed(0)}%</label>
+        <input type="range" min="0" max="100" value="${c.visibility*100}" oninput="updateComp('visibility',this.value/100)" style="min-height:32px"></div>
+      <div class="field"><label>Gameplay</label><select onchange="updateComp('gameplay',this.value)">
+        <option value="">None</option>${GAMEPLAY.map(g=>`<option ${g===c.gameplay?'selected':''}>${g}</option>`).join('')}</select></div>
+      <div class="field"><label>Movement Target (evolution)</label>
+        <input type="number" min="0" max="1" step="0.05" value="${c.movement!=null?c.movement:''}" placeholder="e.g. 0.8"
+          onchange="updateComp('movement',this.value===''?null:parseFloat(this.value))"></div>
+      <div class="field"><label><input type="checkbox" ${c.inertia?'checked':''} onchange="updateComp('inertia',this.checked)" style="min-height:auto;width:auto"> Has Inertia</label></div>
+      <div class="actions-row">
+        <button class="sm" onclick="connectFromSelected()">🔗 Connect</button>
+        <button class="sm" onclick="addAnnotationNear()">📝 Note</button>
+        <button class="sm danger" onclick="deleteSelectedComp()">🗑️ Delete</button>
+      </div>`;
+  } else if(S.selectedType==='dependency'){
+    const d=map.dependencies.find(x=>x.id===S.selectedId);
+    if(!d){panel.classList.remove('open');return}
+    const fc=map.components.find(c=>c.id===d.from),tc=map.components.find(c=>c.id===d.to);
+    panel.classList.add('open');
+    panel.innerHTML=`<h3>Dependency <button class="sm" onclick="closeProps()">✕</button></h3>
+      <div class="field"><label>From</label><input value="${fc?esc(fc.name):'?'}" disabled></div>
+      <div class="field"><label>To</label><input value="${tc?esc(tc.name):'?'}" disabled></div>
+      <div class="field"><label>Label</label><input value="${esc(d.label||'')}" onchange="updateDep('label',this.value)"></div>
+      <div class="actions-row"><button class="sm danger" onclick="deleteSelectedDep()">🗑️ Delete</button></div>`;
+  }
+}
+window.closeProps=function(){S.selectedId=null;render()};
+window.updateComp=function(key,val){
+  const map=activeMap();if(!map)return;
+  const c=map.components.find(x=>x.id===S.selectedId);if(!c)return;
+  c[key]=val;map.updatedAt=Date.now();save();render();
+};
+window.updateDep=function(key,val){
+  const map=activeMap();if(!map)return;
+  const d=map.dependencies.find(x=>x.id===S.selectedId);if(!d)return;
+  d[key]=val;map.updatedAt=Date.now();save();render();
+};
+window.deleteSelectedComp=function(){if(S.selectedId&&confirm('Delete this component?'))deleteComponent(S.selectedId)};
+window.deleteSelectedDep=function(){if(S.selectedId)deleteDependency(S.selectedId)};
+window.connectFromSelected=function(){if(S.selectedId){S.connectMode=true;S.connectFrom=S.selectedId;render()}};
+window.addAnnotationNear=function(){
+  const map=activeMap();if(!map)return;
+  const c=map.components.find(x=>x.id===S.selectedId);
+  const text=prompt('Annotation text:');if(!text?.trim())return;
+  if(!map.annotations)map.annotations=[];
+  map.annotations.push({id:uid(),x:(c?c.evolution:.5)+.05,y:(c?c.visibility:.5)-.05,text:text.trim()});
+  save();render();
+};
+
+// ── Map CRUD ──
+window.newMap=function(){
+  const map={id:uid(),name:'Untitled Map',description:'',createdAt:Date.now(),updatedAt:Date.now(),components:[],dependencies:[],annotations:[]};
+  S.maps.unshift(map);S.activeMapId=map.id;S.selectedId=null;save();render();toggleSidebar(false);
+};
+window.selectMap=function(id){S.activeMapId=id;S.selectedId=null;save();render();toggleSidebar(false)};
+window.renameMap=function(id){
+  const map=S.maps.find(m=>m.id===id);if(!map)return;
+  const name=prompt('Map name:',map.name);
+  if(name&&name.trim()){map.name=name.trim();map.updatedAt=Date.now();save();render()}
+};
+function deleteMap(id){
+  S.maps=S.maps.filter(m=>m.id!==id);
+  if(S.activeMapId===id)S.activeMapId=S.maps[0]?.id||null;
+  S.selectedId=null;save();render();
+}
+
+// ── Connect Mode ──
+window.toggleConnectMode=function(){
+  S.connectMode=!S.connectMode;S.connectFrom=null;render();
+};
+
+// ── Components List View ──
+function renderCompList(container){
+  const map=activeMap();
+  if(!map){container.innerHTML='<div class="empty-state"><div class="big">📋</div><div>Select a map</div></div>';return}
+  if(!map.components.length){container.innerHTML='<div class="empty-state"><div class="big">📋</div><div>No components yet</div><button class="primary" onclick="addComponentModal()">Add Component</button></div>';return}
+  const sorted=[...map.components].sort((a,b)=>b.visibility-a.visibility);
+  container.innerHTML=`<div style="overflow:auto;height:100%"><table class="comp-table"><thead><tr>
+    <th>Name</th><th>Type</th><th>Evolution</th><th>Visibility</th><th>Gameplay</th><th>Deps</th><th></th>
+  </tr></thead><tbody>${sorted.map(c=>{
+    const deps=map.dependencies.filter(d=>d.from===c.id||d.to===c.id).length;
+    return`<tr onclick="selectComponent('${c.id}');switchView('map')" style="cursor:pointer">
+      <td><span style="color:${COLORS[c.type]}">●</span> ${esc(c.name)}</td>
+      <td>${c.type}</td>
+      <td><span class="badge ${evolClass(c.evolution)}">${evolLabel(c.evolution).split(' ')[0]}</span> ${(c.evolution*100).toFixed(0)}%</td>
+      <td>${(c.visibility*100).toFixed(0)}%</td>
+      <td>${c.gameplay||'—'}</td>
+      <td>${deps}</td>
+      <td><button class="sm danger" onclick="event.stopPropagation();deleteComponent('${c.id}')" style="min-height:32px;padding:2px 8px">✕</button></td>
+    </tr>`}).join('')}</tbody></table></div>`;
+}
+
+// ── Dashboard ──
+function renderDashboard(container){
+  const map=activeMap();
+  if(!map){container.innerHTML='<div class="empty-state"><div class="big">📊</div><div>Select a map</div></div>';return}
+  const cc=map.components,dd=map.dependencies;
+  const byStage=[0,0,0,0];cc.forEach(c=>byStage[evolStage(c.evolution)]++);
+  const byType={};cc.forEach(c=>byType[c.type]=(byType[c.type]||0)+1);
+  const withGameplay=cc.filter(c=>c.gameplay).length;
+  const withMovement=cc.filter(c=>c.movement!=null).length;
+  const withInertia=cc.filter(c=>c.inertia).length;
+  const maxStage=Math.max(...byStage,1);
+  const maxType=Math.max(...Object.values(byType),1);
+  container.innerHTML=`<div class="dashboard">
+    <h3 style="margin-bottom:12px">${esc(map.name)}</h3>
+    <div class="dash-grid">
+      <div class="stat-card"><div class="val">${cc.length}</div><div class="lbl">Components</div></div>
+      <div class="stat-card"><div class="val">${dd.length}</div><div class="lbl">Dependencies</div></div>
+      <div class="stat-card"><div class="val">${withGameplay}</div><div class="lbl">With Gameplay</div></div>
+      <div class="stat-card"><div class="val">${withMovement}</div><div class="lbl">Planned Moves</div></div>
+      <div class="stat-card"><div class="val">${withInertia}</div><div class="lbl">With Inertia</div></div>
+      <div class="stat-card"><div class="val">${(map.annotations||[]).length}</div><div class="lbl">Annotations</div></div>
+    </div>
+    <div class="dash-section"><h3>Evolution Distribution</h3>
+      ${EVOL_LABELS.map((l,i)=>`<div class="bar-row">
+        <span class="bar-label">${l.split(' ')[0]}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${byStage[i]/maxStage*100}%;background:${EVOL_COLORS[i]}">${byStage[i]}</div></div>
+        <span class="bar-val">${byStage[i]}</span>
+      </div>`).join('')}
+    </div>
+    <div class="dash-section"><h3>Component Types</h3>
+      ${TYPES.map(t=>`<div class="bar-row">
+        <span class="bar-label">${t}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${(byType[t]||0)/maxType*100}%;background:${COLORS[t]}">${byType[t]||0}</div></div>
+        <span class="bar-val">${byType[t]||0}</span>
+      </div>`).join('')}
+    </div>
+    ${withGameplay?`<div class="dash-section"><h3>Gameplay Moves</h3>
+      ${cc.filter(c=>c.gameplay).map(c=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px">
+        <span style="color:${COLORS[c.type]}">●</span>
+        <span style="flex:1">${esc(c.name)}</span>
+        <span class="badge" style="background:var(--warn);color:#0d1117">${c.gameplay}</span>
+      </div>`).join('')}
+    </div>`:''}
+    <div class="dash-section"><h3>All Maps</h3>
+      ${S.maps.map(m=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;cursor:pointer" onclick="selectMap('${m.id}')">
+        <span style="color:${m.id===S.activeMapId?'var(--accent)':'var(--text2)'}">●</span>
+        <span style="flex:1">${esc(m.name)}</span>
+        <span style="color:var(--text2)">${m.components.length} comps</span>
+        ${S.maps.length>1?`<button class="sm danger" onclick="event.stopPropagation();if(confirm('Delete map?'))deleteMap('${m.id}')" style="min-height:28px;padding:2px 6px;font-size:11px">✕</button>`:''}
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ── View Switching ──
+window.switchView=function(v){S.view=v;render()};
+
+// ── Templates ──
+window.showTemplates=function(){
+  const overlay=document.createElement('div');overlay.className='modal-overlay';
+  overlay.innerHTML=`<div class="modal"><h3>📐 Templates</h3>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button onclick="loadTemplate('utmstamp');this.closest('.modal-overlay').remove()">🎯 UTMStamp Product Map</button>
+      <button onclick="loadTemplate('saas');this.closest('.modal-overlay').remove()">☁️ SaaS Starter</button>
+      <button onclick="loadTemplate('manufacturing');this.closest('.modal-overlay').remove()">🏭 Manufacturing</button>
+      <button onclick="loadTemplate('blank');this.closest('.modal-overlay').remove()">📄 Blank Map</button>
+    </div>
+    <div class="btn-row"><button onclick="this.closest('.modal-overlay').remove()">Cancel</button></div>
+  </div>`;
+  document.body.appendChild(overlay);overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};
+};
+
+window.loadTemplate=function(tpl){
+  const map={id:uid(),createdAt:Date.now(),updatedAt:Date.now(),components:[],dependencies:[],annotations:[]};
+  if(tpl==='utmstamp'){
+    map.name='UTMStamp Strategic Map';
+    const cs=[
+      {name:'Marketing Teams',evolution:.15,visibility:.95,type:'activity',desc:'Primary users who need email signature tracking'},
+      {name:'Signature Templates',evolution:.35,visibility:.85,type:'activity',desc:'Beautiful, customizable email signature designs'},
+      {name:'UTM Tracking',evolution:.4,visibility:.8,type:'practice',desc:'Campaign attribution via UTM parameters'},
+      {name:'Click Analytics',evolution:.35,visibility:.75,type:'data',desc:'Real-time click tracking and reporting dashboard'},
+      {name:'Team Deployment',evolution:.25,visibility:.7,type:'activity',desc:'Push signatures to entire teams'},
+      {name:'Google Workspace API',evolution:.65,visibility:.5,type:'activity',desc:'Auto-push signatures via Google admin API',gameplay:'build'},
+      {name:'Campaign Banners',evolution:.3,visibility:.65,type:'activity',desc:'Dynamic promotional banners in signatures'},
+      {name:'Template Engine',evolution:.45,visibility:.45,type:'practice',desc:'Rendering engine for signature HTML'},
+      {name:'Auth (Supabase)',evolution:.7,visibility:.35,type:'activity',desc:'User authentication and session management'},
+      {name:'Database',evolution:.75,visibility:.25,type:'data',desc:'PostgreSQL via Supabase'},
+      {name:'Hosting (Vercel)',evolution:.85,visibility:.2,type:'activity',desc:'Edge hosting and CDN'},
+      {name:'Video Signatures',evolution:.1,visibility:.6,type:'activity',desc:'Embed video in email signatures',gameplay:'differentiate'},
+      {name:'Stripe Billing',evolution:.8,visibility:.3,type:'activity',desc:'Subscription and payment processing'},
+      {name:'Analytics Pipeline',evolution:.35,visibility:.4,type:'data',desc:'Click event ingestion and aggregation'},
+    ];
+    cs.forEach(c=>{const comp={id:uid(),name:c.name,evolution:c.evolution,visibility:c.visibility,type:c.type,description:c.desc||'',inertia:false,movement:null,gameplay:c.gameplay||'',color:''};map.components.push(comp)});
+    // Dependencies (user needs → features → infrastructure)
+    const byName=n=>map.components.find(c=>c.name===n)?.id;
+    [[0,1],[0,2],[0,3],[0,4],[1,7],[2,7],[2,13],[3,13],[4,5],[5,8],[7,10],[8,9],[9,10],[3,9],[12,9],[11,7],[6,7],[13,9]].forEach(([fi,ti])=>{
+      if(cs[fi]&&cs[ti])map.dependencies.push({id:uid(),from:map.components[fi].id,to:map.components[ti].id,label:'',style:'solid'})
+    });
+    map.annotations=[{id:uid(),x:.08,y:.55,text:'Next big differentiator'},{id:uid(),x:.6,y:.48,text:'Key integration to build'}];
+    // Movement arrows
+    map.components[5].movement=.8; // Google Workspace API → more commodity
+    map.components[11].movement=.35; // Video Signatures → custom-built
+  }else if(tpl==='saas'){
+    map.name='SaaS Product Map';
+    const cs=[
+      {name:'End Users',evolution:.2,visibility:.95,type:'activity'},
+      {name:'User Interface',evolution:.35,visibility:.85,type:'activity'},
+      {name:'Core Features',evolution:.3,visibility:.75,type:'activity'},
+      {name:'API Layer',evolution:.5,visibility:.6,type:'practice'},
+      {name:'Authentication',evolution:.7,visibility:.5,type:'practice'},
+      {name:'Database',evolution:.75,visibility:.35,type:'data'},
+      {name:'Cloud Hosting',evolution:.85,visibility:.2,type:'activity'},
+      {name:'Monitoring',evolution:.65,visibility:.3,type:'practice'},
+      {name:'Payment Processing',evolution:.8,visibility:.45,type:'activity'},
+      {name:'Email Service',evolution:.8,visibility:.25,type:'activity'},
+    ];
+    cs.forEach(c=>{map.components.push({id:uid(),name:c.name,evolution:c.evolution,visibility:c.visibility,type:c.type,description:'',inertia:false,movement:null,gameplay:'',color:''})});
+    [[0,1],[0,2],[1,3],[2,3],[3,4],[3,5],[4,5],[5,6],[3,7],[3,8],[3,9]].forEach(([f,t])=>{
+      map.dependencies.push({id:uid(),from:map.components[f].id,to:map.components[t].id,label:'',style:'solid'})
+    });
+  }else if(tpl==='manufacturing'){
+    map.name='Manufacturing OS Map';
+    const cs=[
+      {name:'Brand Customers',evolution:.2,visibility:.95,type:'activity'},
+      {name:'Order Management',evolution:.35,visibility:.85,type:'activity'},
+      {name:'Production Planning',evolution:.3,visibility:.75,type:'practice'},
+      {name:'Quality Control',evolution:.25,visibility:.7,type:'practice'},
+      {name:'WMS (Warehouse)',evolution:.4,visibility:.6,type:'activity',gameplay:'build'},
+      {name:'IoT Sensors',evolution:.2,visibility:.5,type:'data'},
+      {name:'Factory Digital Twin',evolution:.15,visibility:.55,type:'knowledge'},
+      {name:'Cutting Operations',evolution:.5,visibility:.45,type:'practice'},
+      {name:'Sewing Operations',evolution:.45,visibility:.4,type:'practice'},
+      {name:'ERP Integration',evolution:.6,visibility:.35,type:'activity'},
+      {name:'Database',evolution:.75,visibility:.25,type:'data'},
+      {name:'Cloud Infrastructure',evolution:.85,visibility:.15,type:'activity'},
+    ];
+    cs.forEach(c=>{map.components.push({id:uid(),name:c.name,evolution:c.evolution,visibility:c.visibility,type:c.type,description:'',inertia:false,movement:null,gameplay:c.gameplay||'',color:''})});
+    [[0,1],[1,2],[2,3],[2,4],[2,7],[2,8],[3,5],[4,10],[5,6],[7,8],[8,9],[9,10],[10,11],[6,5]].forEach(([f,t])=>{
+      map.dependencies.push({id:uid(),from:map.components[f].id,to:map.components[t].id,label:'',style:'solid'})
+    });
+  }else{
+    map.name='New Map';
+  }
+  S.maps.unshift(map);S.activeMapId=map.id;S.selectedId=null;save();render();
+};
+
+// ── Export / Import ──
+window.exportMap=function(){
+  const map=activeMap();if(!map)return;
+  const overlay=document.createElement('div');overlay.className='modal-overlay';
+  overlay.innerHTML=`<div class="modal"><h3>📤 Export</h3>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button onclick="exportJSON();this.closest('.modal-overlay').remove()">💾 JSON Backup</button>
+      <button onclick="exportMarkdown();this.closest('.modal-overlay').remove()">📝 Markdown</button>
+      <button onclick="exportSVG();this.closest('.modal-overlay').remove()">🖼️ Copy SVG</button>
+    </div>
+    <div class="btn-row"><button onclick="this.closest('.modal-overlay').remove()">Cancel</button></div>
+  </div>`;
+  document.body.appendChild(overlay);overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};
+};
+window.exportJSON=function(){
+  const blob=new Blob([JSON.stringify({maps:S.maps},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='wardley-maps.json';a.click();
+};
+window.exportMarkdown=function(){
+  const map=activeMap();if(!map)return;
+  let md=`# ${map.name}\n\n`;
+  if(map.description)md+=`${map.description}\n\n`;
+  md+=`## Components (${map.components.length})\n\n`;
+  md+=`| Name | Type | Evolution | Visibility | Gameplay |\n|------|------|-----------|------------|----------|\n`;
+  [...map.components].sort((a,b)=>b.visibility-a.visibility).forEach(c=>{
+    md+=`| ${c.name} | ${c.type} | ${evolLabel(c.evolution)} (${(c.evolution*100).toFixed(0)}%) | ${(c.visibility*100).toFixed(0)}% | ${c.gameplay||'—'} |\n`;
+  });
+  md+=`\n## Dependencies (${map.dependencies.length})\n\n`;
+  map.dependencies.forEach(d=>{
+    const f=map.components.find(c=>c.id===d.from),t=map.components.find(c=>c.id===d.to);
+    md+=`- ${f?.name||'?'} → ${t?.name||'?'}${d.label?' ('+d.label+')':''}\n`;
+  });
+  if(map.annotations?.length){
+    md+=`\n## Annotations\n\n`;
+    map.annotations.forEach(a=>md+=`- ${a.text}\n`);
+  }
+  navigator.clipboard.writeText(md).then(()=>alert('Markdown copied!'));
+};
+window.exportSVG=function(){
+  const svg=document.getElementById('mapSvg');if(!svg)return;
+  navigator.clipboard.writeText(svg.outerHTML).then(()=>alert('SVG copied!'));
+};
+window.importMap=function(){
+  const input=document.createElement('input');input.type='file';input.accept='.json';
+  input.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+    r.onload=ev=>{try{const d=JSON.parse(ev.target.result);
+      if(d.maps){d.maps.forEach(m=>{if(!S.maps.find(x=>x.id===m.id))S.maps.push(m)});
+      if(d.maps[0])S.activeMapId=d.maps[0].id;save();render();alert(`Imported ${d.maps.length} map(s)`)}
+    }catch(err){alert('Invalid JSON')}};r.readAsText(f)};input.click();
+};
+
+// ── Help ──
+window.showHelp=function(){
+  const overlay=document.createElement('div');overlay.className='help-overlay';
+  overlay.innerHTML=`<div class="help-box"><h3>⌨️ Keyboard Shortcuts</h3><table>
+    <tr><td>Click map</td><td>Add component at position</td></tr>
+    <tr><td>Drag node</td><td>Move component</td></tr>
+    <tr><td>Double-click</td><td>Edit name inline</td></tr>
+    <tr><td>D</td><td>Toggle connect mode</td></tr>
+    <tr><td>N</td><td>New map</td></tr>
+    <tr><td>A</td><td>Add component (center)</td></tr>
+    <tr><td>T</td><td>Templates</td></tr>
+    <tr><td>1 / 2 / 3</td><td>Map / List / Dashboard</td></tr>
+    <tr><td>E</td><td>Export</td></tr>
+    <tr><td>I</td><td>Import</td></tr>
+    <tr><td>+ / −</td><td>Zoom in / out</td></tr>
+    <tr><td>0</td><td>Reset zoom</td></tr>
+    <tr><td>Del / Backspace</td><td>Delete selected</td></tr>
+    <tr><td>/</td><td>Search maps</td></tr>
+    <tr><td>Esc</td><td>Deselect / close</td></tr>
+    <tr><td>?</td><td>This help</td></tr>
+  </table><div style="margin-top:12px;font-size:12px;color:var(--text2)">
+    <p><strong>Wardley Mapping</strong> visualizes your value chain from user needs (top) to underlying capabilities (bottom), positioned by evolutionary stage (left=novel → right=commodity).</p>
+    <p style="margin-top:8px">Draw dependencies to show what components need. Add gameplay labels to mark strategic decisions. Use movement arrows to show planned evolution.</p>
+  </div><div class="btn-row"><button onclick="this.closest('.help-overlay').remove()">Close</button></div></div>`;
+  document.body.appendChild(overlay);overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};
+};
+
+// ── Keyboard ──
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea,select'))return;
+  const k=e.key;
+  if(k==='?'){e.preventDefault();showHelp()}
+  else if(k==='1'){e.preventDefault();switchView('map')}
+  else if(k==='2'){e.preventDefault();switchView('components')}
+  else if(k==='3'){e.preventDefault();switchView('dashboard')}
+  else if(k==='n'||k==='N'){e.preventDefault();newMap()}
+  else if(k==='a'||k==='A'){e.preventDefault();addComponentModal()}
+  else if(k==='d'||k==='D'){e.preventDefault();toggleConnectMode()}
+  else if(k==='t'){e.preventDefault();showTemplates()}
+  else if(k==='e'){e.preventDefault();exportMap()}
+  else if(k==='i'&&!e.metaKey&&!e.ctrlKey){e.preventDefault();importMap()}
+  else if(k==='+'||k==='='){e.preventDefault();zoomMap(1)}
+  else if(k==='-'){e.preventDefault();zoomMap(-1)}
+  else if(k==='0'){e.preventDefault();zoomMap(0)}
+  else if(k==='/'){e.preventDefault();document.getElementById('mapSearch')?.focus()}
+  else if(k==='Escape'){e.preventDefault();if(S.connectMode){S.connectMode=false;S.connectFrom=null;render()}else if(S.selectedId){S.selectedId=null;render()}else{closeProps()}}
+  else if(k==='Delete'||k==='Backspace'){
+    if(!S.selectedId)return;
+    if(S.selectedType==='component')deleteComponent(S.selectedId);
+    else if(S.selectedType==='dependency')deleteDependency(S.selectedId);
+  }
+});
+
+// ── Seed Demo ──
+function seedDemo(){
+  // Load UTMStamp template as initial demo
+  const map={id:uid(),name:'UTMStamp Strategic Map',description:'Strategic Wardley Map for UTMStamp — email signature tracking product',createdAt:Date.now(),updatedAt:Date.now(),components:[],dependencies:[],annotations:[]};
+  const cs=[
+    {name:'Marketing Teams',evolution:.15,visibility:.95,type:'activity'},
+    {name:'Signature Templates',evolution:.35,visibility:.85,type:'activity'},
+    {name:'UTM Tracking',evolution:.4,visibility:.8,type:'practice'},
+    {name:'Click Analytics',evolution:.35,visibility:.75,type:'data'},
+    {name:'Team Deployment',evolution:.25,visibility:.7,type:'activity'},
+    {name:'Google Workspace API',evolution:.65,visibility:.5,type:'activity',gameplay:'build'},
+    {name:'Campaign Banners',evolution:.3,visibility:.65,type:'activity'},
+    {name:'Template Engine',evolution:.45,visibility:.45,type:'practice'},
+    {name:'Auth (Supabase)',evolution:.7,visibility:.35,type:'activity'},
+    {name:'Database',evolution:.75,visibility:.25,type:'data'},
+    {name:'Hosting (Vercel)',evolution:.85,visibility:.2,type:'activity'},
+    {name:'Video Signatures',evolution:.1,visibility:.6,type:'activity',gameplay:'differentiate'},
+    {name:'Stripe Billing',evolution:.8,visibility:.3,type:'activity'},
+    {name:'Analytics Pipeline',evolution:.35,visibility:.4,type:'data'},
+  ];
+  cs.forEach(c=>{map.components.push({id:uid(),name:c.name,evolution:c.evolution,visibility:c.visibility,type:c.type,description:'',inertia:false,movement:null,gameplay:c.gameplay||'',color:''})});
+  [[0,1],[0,2],[0,3],[0,4],[1,7],[2,7],[2,13],[3,13],[4,5],[5,8],[7,10],[8,9],[9,10],[3,9],[12,9],[11,7],[6,7],[13,9]].forEach(([f,t])=>{
+    map.dependencies.push({id:uid(),from:map.components[f].id,to:map.components[t].id,label:'',style:'solid'})
+  });
+  map.annotations=[{id:uid(),x:.08,y:.55,text:'Next big differentiator'},{id:uid(),x:.6,y:.48,text:'Key integration to build'}];
+  map.components[5].movement=.8;map.components[11].movement=.35;
+  S.maps=[map];S.activeMapId=map.id;
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+init();
+})();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

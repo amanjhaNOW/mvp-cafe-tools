@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-16T19:34:43.455Z",
-  "count": 84,
+  "generatedAt": "2026-06-17T19:36:15.034Z",
+  "count": 85,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -674,6 +674,14 @@
       "emoji": "🎞️",
       "day": 84,
       "cluster": "build"
+    },
+    {
+      "slug": "wardley-map",
+      "title": "Wardley Map",
+      "tagline": "Strategic Value Chain Mapper",
+      "emoji": "🧭",
+      "day": 85,
+      "cluster": "personal"
     }
   ]
 }
