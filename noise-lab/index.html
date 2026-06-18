@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Noise Lab — Ambient Sound Mixer for Focus</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;
+  --text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#388bfd;
+  --green:#3fb950;--amber:#d29922;--red:#f85149;--purple:#bc8cff;
+  --pink:#f778ba;--orange:#f0883e;
+  --radius:12px;--radius-sm:8px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow-x:hidden}
+body{display:flex;flex-direction:column;min-height:100dvh}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;gap:8px;flex-wrap:wrap}
+.header h1{font-size:18px;font-weight:700;white-space:nowrap}
+.header h1 span{opacity:.6;font-weight:400;font-size:14px;margin-left:6px}
+.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-size:13px;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:44px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.small{padding:6px 10px;font-size:12px;min-height:36px}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn.danger:hover{background:var(--red);color:#fff}
+
+/* Main layout */
+.main{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:20px}
+
+/* Master controls bar */
+.master-bar{display:flex;align-items:center;gap:16px;padding:14px 16px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);flex-wrap:wrap}
+.master-vol{display:flex;align-items:center;gap:10px;flex:1;min-width:200px}
+.master-vol label{font-size:13px;color:var(--text2);white-space:nowrap}
+.master-vol input[type=range]{flex:1}
+.master-vol .vol-val{font-size:14px;font-weight:600;min-width:36px;text-align:right}
+.active-count{font-size:13px;color:var(--text2)}
+.active-count b{color:var(--green)}
+
+/* Timer */
+.timer-section{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.timer-display{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;min-width:60px;text-align:center}
+.timer-display.running{color:var(--green)}
+.timer-presets{display:flex;gap:4px}
+
+/* Presets row */
+.presets-section{display:flex;gap:8px;overflow-x:auto;padding:2px 0;-webkit-overflow-scrolling:touch}
+.presets-section::-webkit-scrollbar{display:none}
+.preset-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:20px;font-size:13px;cursor:pointer;white-space:nowrap;transition:all .15s;min-height:44px}
+.preset-chip:hover{border-color:var(--accent);color:var(--accent)}
+.preset-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.preset-chip .p-emoji{font-size:16px}
+
+/* Sound grid */
+.sounds-section h2{font-size:15px;color:var(--text2);margin-bottom:10px;font-weight:600}
+.sound-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.sound-card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;transition:all .2s;user-select:none}
+.sound-card:hover{border-color:var(--text2)}
+.sound-card.active{border-color:var(--accent);box-shadow:0 0 20px rgba(88,166,255,.15)}
+.sound-card.active .sound-icon{transform:scale(1.1)}
+.sound-icon{font-size:32px;transition:transform .2s}
+.sound-name{font-size:13px;font-weight:600;text-align:center}
+.sound-cat{font-size:11px;color:var(--text2)}
+.sound-slider{width:100%;display:flex;align-items:center;gap:6px}
+.sound-slider input[type=range]{flex:1;height:6px}
+.sound-slider .s-val{font-size:11px;color:var(--text2);min-width:24px;text-align:right}
+.sound-indicator{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--green);opacity:0;transition:opacity .2s}
+.sound-card.active .sound-indicator{opacity:1;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Saved mixes */
+.saved-section{margin-top:4px}
+.saved-section h2{font-size:15px;color:var(--text2);margin-bottom:10px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
+.saved-list{display:flex;flex-direction:column;gap:6px}
+.saved-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;min-height:44px}
+.saved-item:hover{border-color:var(--accent)}
+.saved-item .si-name{flex:1;font-size:13px;font-weight:600}
+.saved-item .si-sounds{font-size:11px;color:var(--text2)}
+.saved-item .si-del{color:var(--red);cursor:pointer;padding:4px 8px;font-size:14px;border-radius:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center}
+.saved-item .si-del:hover{background:rgba(248,81,73,.15)}
+
+/* Visualizer */
+.visualizer-wrap{height:60px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;position:relative}
+.visualizer-wrap canvas{width:100%;height:100%;display:block}
+.viz-label{position:absolute;top:6px;left:10px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px}
+
+/* Range styling */
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-track{height:6px;border-radius:3px;background:var(--border)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);margin-top:-6px;border:2px solid var(--bg)}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--border);border:none}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto}
+.modal h3{margin-bottom:14px;font-size:16px}
+.modal input[type=text]{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;min-height:44px}
+.modal input[type=text]:focus{outline:none;border-color:var(--accent)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+/* Help overlay */
+.help-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:16px}
+.help-overlay.open{display:flex}
+.help-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto}
+.help-box h3{margin-bottom:12px;font-size:18px}
+.help-box .hk{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.help-box .hk kbd{background:var(--bg);padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px;border:1px solid var(--border)}
+.help-box p{font-size:13px;color:var(--text2);margin:8px 0}
+
+/* Empty state */
+.empty{text-align:center;padding:20px;color:var(--text2);font-size:13px}
+
+/* Responsive */
+@media(max-width:600px){
+  .header{padding:10px 12px}
+  .header h1{font-size:16px}
+  .header h1 span{display:none}
+  .main{padding:12px}
+  .sound-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+  .sound-card{padding:14px 10px}
+  .master-bar{padding:12px;gap:10px}
+  .master-vol{min-width:160px}
+}
+@media(max-width:390px){
+  .sound-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .sound-card{padding:12px 8px;gap:8px}
+  .sound-icon{font-size:28px}
+  .sound-name{font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎧 Noise Lab<span>Focus Sound Mixer</span></h1>
+  <div class="header-actions">
+    <button class="btn small" onclick="stopAll()" title="Stop all sounds">⏹ Stop All</button>
+    <button class="btn small" onclick="openSave()">💾 Save Mix</button>
+    <button class="btn small" onclick="exportData()">📤</button>
+    <button class="btn small" onclick="importData()">📥</button>
+    <button class="btn small" onclick="toggleHelp()">❓</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Master controls -->
+  <div class="master-bar">
+    <div class="master-vol">
+      <label>🔊 Master</label>
+      <input type="range" min="0" max="100" value="70" id="masterVol" oninput="setMaster(this.value)">
+      <span class="vol-val" id="masterVal">70%</span>
+    </div>
+    <div class="active-count" id="activeCount">Active: <b>0</b></div>
+    <div class="timer-section">
+      <div class="timer-presets">
+        <button class="btn small" onclick="setTimer(15)">15m</button>
+        <button class="btn small" onclick="setTimer(25)">25m</button>
+        <button class="btn small" onclick="setTimer(45)">45m</button>
+        <button class="btn small" onclick="setTimer(60)">60m</button>
+      </div>
+      <div class="timer-display" id="timerDisplay">—</div>
+      <button class="btn small" id="timerBtn" onclick="toggleTimer()" style="display:none">⏸</button>
+      <button class="btn small" id="timerClear" onclick="clearTimer()" style="display:none">✕</button>
+    </div>
+  </div>
+
+  <!-- Visualizer -->
+  <div class="visualizer-wrap">
+    <span class="viz-label">Waveform</span>
+    <canvas id="vizCanvas"></canvas>
+  </div>
+
+  <!-- Presets -->
+  <div class="presets-section" id="presets"></div>
+
+  <!-- Sound Grid -->
+  <div class="sounds-section">
+    <h2>🎵 Sounds</h2>
+    <div class="sound-grid" id="soundGrid"></div>
+  </div>
+
+  <!-- Saved Mixes -->
+  <div class="saved-section" id="savedSection" style="display:none">
+    <h2>💾 Saved Mixes</h2>
+    <div class="saved-list" id="savedList"></div>
+  </div>
+</div>
+
+<!-- Save Modal -->
+<div class="modal-overlay" id="saveModal">
+  <div class="modal">
+    <h3>💾 Save Current Mix</h3>
+    <input type="text" id="mixName" placeholder="Mix name..." autofocus>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeSave()">Cancel</button>
+      <button class="btn active" onclick="doSave()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Help -->
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-box">
+    <h3>🎧 Noise Lab — Keyboard Shortcuts</h3>
+    <p>Ambient sound mixer for deep focus. All sounds synthesized in-browser with Web Audio API — no external files.</p>
+    <div class="hk"><span>Toggle sound 1-9, 0</span><kbd>1</kbd>–<kbd>0</kbd></div>
+    <div class="hk"><span>Stop all sounds</span><kbd>Esc</kbd></div>
+    <div class="hk"><span>Master volume up</span><kbd>↑</kbd></div>
+    <div class="hk"><span>Master volume down</span><kbd>↓</kbd></div>
+    <div class="hk"><span>Save mix</span><kbd>S</kbd></div>
+    <div class="hk"><span>Toggle help</span><kbd>?</kbd></div>
+    <div class="hk"><span>Timer 25min</span><kbd>T</kbd></div>
+    <p style="margin-top:16px;font-size:11px;color:var(--text2)">Day 86 · Built with Web Audio API · Zero dependencies · Local storage</p>
+    <div class="modal-actions"><button class="btn" onclick="toggleHelp()">Close</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const SK = 'mvpcafe:noise-lab:';
+let actx = null;
+let masterGain = null;
+let analyser = null;
+let vizRAF = null;
+
+// Ensure AudioContext
+function ensureCtx(){
+  if(actx) return actx;
+  actx = new (window.AudioContext||window.webkitAudioContext)();
+  masterGain = actx.createGain();
+  masterGain.gain.value = 0.7;
+  analyser = actx.createAnalyser();
+  analyser.fftSize = 2048;
+  masterGain.connect(analyser);
+  analyser.connect(actx.destination);
+  startViz();
+  return actx;
+}
+
+// ── Sound Definitions ──
+const SOUNDS = [
+  { id:'white',    name:'White Noise',   emoji:'⬜', cat:'Noise',   gen:genWhite },
+  { id:'pink',     name:'Pink Noise',    emoji:'🩷', cat:'Noise',   gen:genPink },
+  { id:'brown',    name:'Brown Noise',   emoji:'🟤', cat:'Noise',   gen:genBrown },
+  { id:'rain',     name:'Rain',          emoji:'🌧️', cat:'Nature',  gen:genRain },
+  { id:'thunder',  name:'Thunderstorm',  emoji:'⛈️', cat:'Nature',  gen:genThunder },
+  { id:'wind',     name:'Wind',          emoji:'💨', cat:'Nature',  gen:genWind },
+  { id:'waves',    name:'Ocean Waves',   emoji:'🌊', cat:'Nature',  gen:genWaves },
+  { id:'fire',     name:'Fireplace',     emoji:'🔥', cat:'Nature',  gen:genFire },
+  { id:'crickets', name:'Night Crickets', emoji:'🦗', cat:'Nature', gen:genCrickets },
+  { id:'cafe',     name:'Café Murmur',   emoji:'☕', cat:'Urban',   gen:genCafe },
+  { id:'binaural', name:'Focus Tone',    emoji:'🧠', cat:'Tonal',   gen:genBinaural },
+  { id:'drone',    name:'Deep Drone',    emoji:'🎵', cat:'Tonal',   gen:genDrone },
+  { id:'singing',  name:'Singing Bowl',  emoji:'🔔', cat:'Tonal',   gen:genBowl },
+  { id:'hum',      name:'Low Hum',       emoji:'〰️', cat:'Tonal',  gen:genHum },
+  { id:'static',   name:'TV Static',     emoji:'📺', cat:'Urban',   gen:genStatic },
+  { id:'train',    name:'Train Rhythm',  emoji:'🚂', cat:'Urban',   gen:genTrain },
+];
+
+// Active sounds: { id: { nodes:[], gain:GainNode, volume:0-1 } }
+const active = {};
+
+// ── Presets ──
+const PRESETS = [
+  { name:'Deep Focus', emoji:'🧠', sounds:{brown:0.6,binaural:0.3,rain:0.2} },
+  { name:'Rainy Day', emoji:'🌧️', sounds:{rain:0.7,thunder:0.3,wind:0.2} },
+  { name:'Coffee Shop', emoji:'☕', sounds:{cafe:0.6,rain:0.15} },
+  { name:'Night Forest', emoji:'🌲', sounds:{crickets:0.5,wind:0.3,fire:0.2} },
+  { name:'Ocean Calm', emoji:'🌊', sounds:{waves:0.7,wind:0.2} },
+  { name:'Pink Dreams', emoji:'💭', sounds:{pink:0.5,drone:0.2,singing:0.15} },
+  { name:'Work Mode', emoji:'💼', sounds:{brown:0.5,cafe:0.2} },
+  { name:'Meditation', emoji:'🧘', sounds:{singing:0.4,drone:0.25,waves:0.2} },
+];
+
+let currentPreset = -1;
+
+// ── Sound Generators ──
+// All return { nodes: [AudioNode...] } — first node should connect to gain
+
+function makeNoiseBuffer(seconds){
+  const ctx = ensureCtx();
+  const sr = ctx.sampleRate;
+  const len = sr * seconds;
+  const buf = ctx.createBuffer(2, len, sr);
+  for(let ch=0;ch<2;ch++){
+    const d = buf.getChannelData(ch);
+    for(let i=0;i<len;i++) d[i] = Math.random()*2-1;
+  }
+  return buf;
+}
+
+function genWhite(gain){
+  const ctx = ensureCtx();
+  const src = ctx.createBufferSource();
+  src.buffer = makeNoiseBuffer(4);
+  src.loop = true;
+  src.connect(gain);
+  src.start();
+  return { nodes:[src] };
+}
+
+function genPink(gain){
+  const ctx = ensureCtx();
+  const src = ctx.createBufferSource();
+  // Generate pink noise using Voss-McCartney
+  const sr = ctx.sampleRate;
+  const len = sr * 4;
+  const buf = ctx.createBuffer(2, len, sr);
+  for(let ch=0;ch<2;ch++){
+    const d = buf.getChannelData(ch);
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for(let i=0;i<len;i++){
+      const w = Math.random()*2-1;
+      b0=0.99886*b0+w*0.0555179;
+      b1=0.99332*b1+w*0.0750759;
+      b2=0.96900*b2+w*0.1538520;
+      b3=0.86650*b3+w*0.3104856;
+      b4=0.55000*b4+w*0.5329522;
+      b5=-0.7616*b5-w*0.0168980;
+      d[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11;
+      b6=w*0.115926;
+    }
+  }
+  src.buffer = buf;
+  src.loop = true;
+  src.connect(gain);
+  src.start();
+  return { nodes:[src] };
+}
+
+function genBrown(gain){
+  const ctx = ensureCtx();
+  const sr = ctx.sampleRate;
+  const len = sr * 4;
+  const buf = ctx.createBuffer(2, len, sr);
+  for(let ch=0;ch<2;ch++){
+    const d = buf.getChannelData(ch);
+    let last = 0;
+    for(let i=0;i<len;i++){
+      const w = Math.random()*2-1;
+      last = (last + 0.02*w) / 1.02;
+      d[i] = last * 3.5;
+    }
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  src.connect(gain);
+  src.start();
+  return { nodes:[src] };
+}
+
+function genRain(gain){
+  const ctx = ensureCtx();
+  // Layered filtered noise
+  const src = ctx.createBufferSource();
+  src.buffer = makeNoiseBuffer(6);
+  src.loop = true;
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass'; hp.frequency.value = 800;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 8000;
+  // Slight volume modulation for realism
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 0.15;
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = 0.15;
+  const modGain = ctx.createGain();
+  modGain.gain.value = 0.85;
+  lfo.connect(lfoGain);
+  lfoGain.connect(modGain.gain);
+  src.connect(hp);
+  hp.connect(lp);
+  lp.connect(modGain);
+  modGain.connect(gain);
+  src.start(); lfo.start();
+  return { nodes:[src,lfo] };
+}
+
+function genThunder(gain){
+  const ctx = ensureCtx();
+  // Background rain + periodic low rumble
+  const rainSrc = ctx.createBufferSource();
+  rainSrc.buffer = makeNoiseBuffer(6);
+  rainSrc.loop = true;
+  const rainLP = ctx.createBiquadFilter();
+  rainLP.type='lowpass'; rainLP.frequency.value=6000;
+  const rainGain = ctx.createGain();
+  rainGain.gain.value = 0.4;
+  rainSrc.connect(rainLP); rainLP.connect(rainGain); rainGain.connect(gain);
+  // Thunder rumble: low noise bursts
+  const rumbleSrc = ctx.createBufferSource();
+  const sr = ctx.sampleRate;
+  const len = sr * 10;
+  const buf = ctx.createBuffer(2, len, sr);
+  for(let ch=0;ch<2;ch++){
+    const d = buf.getChannelData(ch);
+    let v=0;
+    for(let i=0;i<len;i++){
+      const t = i/sr;
+      // Random rumbles at ~2s, 5s, 8s
+      let env=0;
+      [2,5,8].forEach(p=>{
+        const dt=t-p;
+        if(dt>0 && dt<1.5) env += Math.exp(-dt*3)*0.7;
+      });
+      v = (v + 0.02*(Math.random()*2-1))/1.02;
+      d[i]=v*3.5*env;
+    }
+  }
+  const rumble = ctx.createBufferSource();
+  rumble.buffer = buf;
+  rumble.loop = true;
+  const rumbleLP = ctx.createBiquadFilter();
+  rumbleLP.type='lowpass'; rumbleLP.frequency.value=200;
+  rumble.connect(rumbleLP); rumbleLP.connect(gain);
+  rainSrc.start(); rumble.start();
+  return { nodes:[rainSrc,rumble] };
+}
+
+function genWind(gain){
+  const ctx = ensureCtx();
+  const src = ctx.createBufferSource();
+  src.buffer = makeNoiseBuffer(6);
+  src.loop = true;
+  const bp = ctx.createBiquadFilter();
+  bp.type='bandpass'; bp.frequency.value=400; bp.Q.value=0.5;
+  // Slow sweep
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 0.08;
+  const lfoG = ctx.createGain();
+  lfoG.gain.value = 300;
+  lfo.connect(lfoG); lfoG.connect(bp.frequency);
+  src.connect(bp); bp.connect(gain);
+  src.start(); lfo.start();
+  return { nodes:[src,lfo] };
+}
+
+function genWaves(gain){
+  const ctx = ensureCtx();
+  const src = ctx.createBufferSource();
+  src.buffer = makeNoiseBuffer(8);
+  src.loop = true;
+  const lp = ctx.createBiquadFilter();
+  lp.type='lowpass'; lp.frequency.value=1200;
+  // Volume modulation for wave-like swells
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 0.12;
+  const lfoG = ctx.createGain();
+  lfoG.gain.value = 0.4;
+  const mod = ctx.createGain();
+  mod.gain.value = 0.5;
+  lfo.connect(lfoG); lfoG.connect(mod.gain);
+  src.connect(lp); lp.connect(mod); mod.connect(gain);
+  src.start(); lfo.start();
+  return { nodes:[src,lfo] };
+}
+
+function genFire(gain){
+  const ctx = ensureCtx();
+  const sr = ctx.sampleRate;
+  const len = sr * 6;
+  const buf = ctx.createBuffer(2, len, sr);
+  for(let ch=0;ch<2;ch++){
+    const d = buf.getChannelData(ch);
+    let v=0;
+    for(let i=0;i<len;i++){
+      const w = Math.random()*2-1;
+      v = (v + 0.05*w)/1.05;
+      // Random crackles
+      const crackle = (Math.random()<0.003) ? (Math.random()-0.5)*0.8 : 0;
+      d[i] = v*2 + crackle;
+    }
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  const lp = ctx.createBiquadFilter();
+  lp.type='lowpass'; lp.frequency.value=3000;
+  const hp = ctx.createBiquadFilter();
+  hp.type='highpass'; hp.frequency.value=100;
+  src.connect(hp); hp.connect(lp); lp.connect(gain);
+  src.start();
+  return { nodes:[src] };
+}
+
+function genCrickets(gain){
+  const ctx = ensureCtx();
+  // High-pitched chirping using modulated oscillator
+  const carrier = ctx.createOscillator();
+  carrier.frequency.value = 4200;
+  carrier.type = 'sine';
+  // AM modulation for chirp pattern
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 7;
+  const lfoG = ctx.createGain();
+  lfoG.gain.value = 0.5;
+  const modG = ctx.createGain();
+  modG.gain.value = 0.5;
+  lfo.connect(lfoG); lfoG.connect(modG.gain);
+  // Second chirp slightly offset for realism
+  const c2 = ctx.createOscillator();
+  c2.frequency.value = 3800;
+  const lfo2 = ctx.createOscillator();
+  lfo2.frequency.value = 5.5;
+  const lfo2G = ctx.createGain();
+  lfo2G.gain.value = 0.4;
+  const mod2G = ctx.createGain();
+  mod2G.gain.value = 0.4;
+  lfo2.connect(lfo2G); lfo2G.connect(mod2G.gain);
+  carrier.connect(modG); modG.connect(gain);
+  c2.connect(mod2G); mod2G.connect(gain);
+  carrier.start(); lfo.start(); c2.start(); lfo2.start();
+  return { nodes:[carrier,lfo,c2,lfo2] };
+}
+
+function genCafe(gain){
+  const ctx = ensureCtx();
+  // Bandpass-filtered noise to simulate murmur
+  const src = ctx.createBufferSource();
+  src.buffer = makeNoiseBuffer(8);
+  src.loop = true;
+  const bp = ctx.createBiquadFilter();
+  bp.type='bandpass'; bp.frequency.value=600; bp.Q.value=0.3;
+  const bp2 = ctx.createBiquadFilter();
+  bp2.type='bandpass'; bp2.frequency.value=1800; bp2.Q.value=0.5;
+  const bp2G = ctx.createGain();
+  bp2G.gain.value = 0.3;
+  // Random amplitude for murmur effect
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 0.3;
+  const lfoG = ctx.createGain();
+  lfoG.gain.value = 0.2;
+  const modG = ctx.createGain();
+  modG.gain.value = 0.7;
+  lfo.connect(lfoG); lfoG.connect(modG.gain);
+  src.connect(bp); bp.connect(modG); modG.connect(gain);
+  // Higher freq layer
+  const src2 = ctx.createBufferSource();
+  src2.buffer = makeNoiseBuffer(6);
+  src2.loop = true;
+  src2.connect(bp2); bp2.connect(bp2G); bp2G.connect(gain);
+  src.start(); lfo.start(); src2.start();
+  return { nodes:[src,lfo,src2] };
+}
+
+function genBinaural(gain){
+  const ctx = ensureCtx();
+  // Left: 200Hz, Right: 210Hz → 10Hz binaural beat (alpha wave)
+  const merger = ctx.createChannelMerger(2);
+  const oL = ctx.createOscillator();
+  oL.frequency.value = 200; oL.type='sine';
+  const gL = ctx.createGain(); gL.gain.value=0.6;
+  oL.connect(gL); gL.connect(merger,0,0);
+  const oR = ctx.createOscillator();
+  oR.frequency.value = 210; oR.type='sine';
+  const gR = ctx.createGain(); gR.gain.value=0.6;
+  oR.connect(gR); gR.connect(merger,0,1);
+  merger.connect(gain);
+  oL.start(); oR.start();
+  return { nodes:[oL,oR] };
+}
+
+function genDrone(gain){
+  const ctx = ensureCtx();
+  // Deep layered drone
+  const o1 = ctx.createOscillator();
+  o1.frequency.value = 55; o1.type='sine';
+  const o2 = ctx.createOscillator();
+  o2.frequency.value = 82.5; o2.type='sine';
+  const o3 = ctx.createOscillator();
+  o3.frequency.value = 110; o3.type='triangle';
+  const g1 = ctx.createGain(); g1.gain.value=0.5;
+  const g2 = ctx.createGain(); g2.gain.value=0.3;
+  const g3 = ctx.createGain(); g3.gain.value=0.15;
+  // Slow vibrato
+  const vib = ctx.createOscillator();
+  vib.frequency.value = 0.1;
+  const vibG = ctx.createGain();
+  vibG.gain.value = 2;
+  vib.connect(vibG); vibG.connect(o1.frequency); vibG.connect(o2.frequency);
+  o1.connect(g1); g1.connect(gain);
+  o2.connect(g2); g2.connect(gain);
+  o3.connect(g3); g3.connect(gain);
+  o1.start(); o2.start(); o3.start(); vib.start();
+  return { nodes:[o1,o2,o3,vib] };
+}
+
+function genBowl(gain){
+  const ctx = ensureCtx();
+  // Singing bowl: layered harmonics with slow decay envelope cycling
+  const freqs = [261.6, 523.2, 784.8, 1046.4]; // C4 harmonics
+  const nodes = [];
+  freqs.forEach((f,i) => {
+    const o = ctx.createOscillator();
+    o.frequency.value = f;
+    o.type = 'sine';
+    const g = ctx.createGain();
+    g.gain.value = 0.25 / (i+1);
+    // Slow amplitude cycle for singing effect
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 0.15 + i*0.05;
+    const lg = ctx.createGain();
+    lg.gain.value = 0.12 / (i+1);
+    const mg = ctx.createGain();
+    mg.gain.value = 0.2 / (i+1);
+    lfo.connect(lg); lg.connect(mg.gain);
+    o.connect(mg); mg.connect(gain);
+    o.start(); lfo.start();
+    nodes.push(o, lfo);
+  });
+  return { nodes };
+}
+
+function genHum(gain){
+  const ctx = ensureCtx();
+  // 60Hz electrical hum with harmonics
+  const o1 = ctx.createOscillator();
+  o1.frequency.value = 60; o1.type='sine';
+  const o2 = ctx.createOscillator();
+  o2.frequency.value = 120; o2.type='sine';
+  const o3 = ctx.createOscillator();
+  o3.frequency.value = 180; o3.type='sine';
+  const g1 = ctx.createGain(); g1.gain.value=0.5;
+  const g2 = ctx.createGain(); g2.gain.value=0.2;
+  const g3 = ctx.createGain(); g3.gain.value=0.08;
+  o1.connect(g1); g1.connect(gain);
+  o2.connect(g2); g2.connect(gain);
+  o3.connect(g3); g3.connect(gain);
+  o1.start(); o2.start(); o3.start();
+  return { nodes:[o1,o2,o3] };
+}
+
+function genStatic(gain){
+  const ctx = ensureCtx();
+  const src = ctx.createBufferSource();
+  src.buffer = makeNoiseBuffer(3);
+  src.loop = true;
+  // Slight bandpass to make it sound like TV
+  const bp = ctx.createBiquadFilter();
+  bp.type='bandpass'; bp.frequency.value=2000; bp.Q.value=0.2;
+  // Random crackle effect via fast AM
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 50;
+  lfo.type = 'square';
+  const lg = ctx.createGain();
+  lg.gain.value = 0.15;
+  const mg = ctx.createGain();
+  mg.gain.value = 0.7;
+  lfo.connect(lg); lg.connect(mg.gain);
+  src.connect(bp); bp.connect(mg); mg.connect(gain);
+  src.start(); lfo.start();
+  return { nodes:[src,lfo] };
+}
+
+function genTrain(gain){
+  const ctx = ensureCtx();
+  // Rhythmic low noise for clackety-clack
+  const sr = ctx.sampleRate;
+  const len = sr * 4;
+  const buf = ctx.createBuffer(2, len, sr);
+  for(let ch=0;ch<2;ch++){
+    const d = buf.getChannelData(ch);
+    for(let i=0;i<len;i++){
+      const t = i/sr;
+      const beat = t % 0.6;
+      const click1 = (beat < 0.05) ? 0.8 : 0;
+      const click2 = (beat > 0.28 && beat < 0.33) ? 0.6 : 0;
+      const rumble = (Math.random()*2-1)*0.15;
+      d[i] = (click1+click2)*(Math.random()*2-1) + rumble;
+    }
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  const lp = ctx.createBiquadFilter();
+  lp.type='lowpass'; lp.frequency.value=1500;
+  src.connect(lp); lp.connect(gain);
+  src.start();
+  return { nodes:[src] };
+}
+
+// ── Toggle Sound ──
+function toggleSound(id){
+  ensureCtx();
+  if(actx.state==='suspended') actx.resume();
+  if(active[id]){
+    stopSound(id);
+  } else {
+    startSound(id, getSoundDef(id).defaultVol||0.5);
+  }
+  updateUI();
+  saveState();
+}
+
+function startSound(id, vol){
+  ensureCtx();
+  if(actx.state==='suspended') actx.resume();
+  if(active[id]) stopSound(id);
+  const def = getSoundDef(id);
+  const g = actx.createGain();
+  g.gain.value = vol * masterGain.gain.value;
+  g.connect(masterGain);
+  const result = def.gen(g);
+  active[id] = { nodes:result.nodes, gain:g, volume:vol };
+}
+
+function stopSound(id){
+  if(!active[id]) return;
+  active[id].nodes.forEach(n=>{
+    try{n.stop();}catch(e){}
+    try{n.disconnect();}catch(e){}
+  });
+  try{active[id].gain.disconnect();}catch(e){}
+  delete active[id];
+}
+
+function stopAll(){
+  Object.keys(active).forEach(id=>stopSound(id));
+  currentPreset = -1;
+  updateUI();
+  saveState();
+}
+
+function setVolume(id, vol){
+  if(!active[id]) return;
+  active[id].volume = vol;
+  active[id].gain.gain.setTargetAtTime(vol * masterGain.gain.value, actx.currentTime, 0.05);
+  saveState();
+}
+
+function setMaster(val){
+  const v = val/100;
+  document.getElementById('masterVal').textContent = val+'%';
+  if(masterGain) masterGain.gain.setTargetAtTime(v, actx.currentTime, 0.05);
+  // Update individual gains
+  Object.entries(active).forEach(([id,s])=>{
+    s.gain.gain.setTargetAtTime(s.volume * v, actx.currentTime, 0.05);
+  });
+  localStorage.setItem(SK+'master', val);
+}
+
+function getSoundDef(id){ return SOUNDS.find(s=>s.id===id); }
+
+// ── Presets ──
+function loadPreset(idx){
+  const p = PRESETS[idx];
+  if(!p) return;
+  stopAll();
+  Object.entries(p.sounds).forEach(([id,vol])=>startSound(id,vol));
+  currentPreset = idx;
+  updateUI();
+  saveState();
+}
+
+// ── Timer ──
+let timerTotal = 0;
+let timerRemaining = 0;
+let timerInterval = null;
+let timerPaused = false;
+
+function setTimer(min){
+  clearTimer();
+  timerTotal = min*60;
+  timerRemaining = timerTotal;
+  timerPaused = false;
+  document.getElementById('timerBtn').style.display='';
+  document.getElementById('timerClear').style.display='';
+  document.getElementById('timerBtn').textContent='⏸';
+  timerInterval = setInterval(tickTimer, 1000);
+  updateTimerDisplay();
+}
+
+function tickTimer(){
+  if(timerPaused) return;
+  timerRemaining--;
+  updateTimerDisplay();
+  if(timerRemaining<=0){
+    clearTimer();
+    stopAll();
+    updateUI();
+  }
+}
+
+function toggleTimer(){
+  timerPaused = !timerPaused;
+  document.getElementById('timerBtn').textContent = timerPaused ? '▶' : '⏸';
+  document.getElementById('timerDisplay').classList.toggle('running', !timerPaused);
+}
+
+function clearTimer(){
+  if(timerInterval) clearInterval(timerInterval);
+  timerInterval=null; timerRemaining=0; timerTotal=0; timerPaused=false;
+  document.getElementById('timerDisplay').textContent='—';
+  document.getElementById('timerDisplay').classList.remove('running');
+  document.getElementById('timerBtn').style.display='none';
+  document.getElementById('timerClear').style.display='none';
+}
+
+function updateTimerDisplay(){
+  const m = Math.floor(timerRemaining/60);
+  const s = timerRemaining%60;
+  const el = document.getElementById('timerDisplay');
+  el.textContent = m+':'+(s<10?'0':'')+s;
+  el.classList.toggle('running', !timerPaused && timerRemaining>0);
+}
+
+// ── Visualizer ──
+function startViz(){
+  const canvas = document.getElementById('vizCanvas');
+  const cx = canvas.getContext('2d');
+  function draw(){
+    vizRAF = requestAnimationFrame(draw);
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if(canvas.width!==w*2||canvas.height!==h*2){canvas.width=w*2;canvas.height=h*2;}
+    cx.clearRect(0,0,canvas.width,canvas.height);
+    if(!analyser || Object.keys(active).length===0){
+      // Draw flat line
+      cx.strokeStyle='#30363d';
+      cx.lineWidth=2;
+      cx.beginPath();
+      cx.moveTo(0,canvas.height/2);
+      cx.lineTo(canvas.width,canvas.height/2);
+      cx.stroke();
+      return;
+    }
+    const bufLen = analyser.frequencyBinCount;
+    const data = new Uint8Array(bufLen);
+    analyser.getByteTimeDomainData(data);
+    cx.lineWidth=2;
+    cx.strokeStyle='#58a6ff';
+    cx.beginPath();
+    const step = canvas.width / bufLen;
+    for(let i=0;i<bufLen;i++){
+      const v = data[i]/128.0;
+      const y = (v * canvas.height) / 2;
+      if(i===0) cx.moveTo(0,y);
+      else cx.lineTo(i*step,y);
+    }
+    cx.stroke();
+  }
+  draw();
+}
+
+// ── Save/Load Mixes ──
+function getSavedMixes(){
+  try{ return JSON.parse(localStorage.getItem(SK+'mixes'))||[]; }catch(e){ return []; }
+}
+function saveMixes(arr){ localStorage.setItem(SK+'mixes',JSON.stringify(arr)); }
+
+function openSave(){
+  if(Object.keys(active).length===0) return;
+  document.getElementById('saveModal').classList.add('open');
+  const inp = document.getElementById('mixName');
+  inp.value='';
+  setTimeout(()=>inp.focus(),100);
+}
+function closeSave(){ document.getElementById('saveModal').classList.remove('open'); }
+
+function doSave(){
+  const name = document.getElementById('mixName').value.trim();
+  if(!name) return;
+  const sounds = {};
+  Object.entries(active).forEach(([id,s])=>{ sounds[id]=Math.round(s.volume*100)/100; });
+  const mixes = getSavedMixes();
+  mixes.push({ name, sounds, created:Date.now() });
+  saveMixes(mixes);
+  closeSave();
+  renderSaved();
+}
+
+function loadMix(idx){
+  const mixes = getSavedMixes();
+  const mix = mixes[idx];
+  if(!mix) return;
+  stopAll();
+  Object.entries(mix.sounds).forEach(([id,vol])=>startSound(id,vol));
+  currentPreset = -1;
+  updateUI();
+  saveState();
+}
+
+function deleteMix(idx){
+  const mixes = getSavedMixes();
+  mixes.splice(idx,1);
+  saveMixes(mixes);
+  renderSaved();
+}
+
+// ── Import/Export ──
+function exportData(){
+  const data = {
+    mixes: getSavedMixes(),
+    currentActive: {},
+    master: parseInt(document.getElementById('masterVol').value)
+  };
+  Object.entries(active).forEach(([id,s])=>{ data.currentActive[id]=s.volume; });
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='noise-lab-export.json';
+  a.click();
+}
+
+function importData(){
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='.json';
+  inp.onchange = e => {
+    const f = e.target.files[0];
+    if(!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try{
+        const d = JSON.parse(ev.target.result);
+        if(d.mixes){ saveMixes([...getSavedMixes(),...d.mixes]); renderSaved(); }
+        if(d.currentActive){
+          stopAll();
+          Object.entries(d.currentActive).forEach(([id,vol])=>startSound(id,vol));
+          updateUI();
+        }
+        if(d.master!=null){
+          document.getElementById('masterVol').value=d.master;
+          setMaster(d.master);
+        }
+      }catch(err){ console.error('Import error',err); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+
+// ── State Persistence ──
+function saveState(){
+  const state = {};
+  Object.entries(active).forEach(([id,s])=>{ state[id]=s.volume; });
+  localStorage.setItem(SK+'state',JSON.stringify(state));
+}
+
+function restoreState(){
+  const master = localStorage.getItem(SK+'master');
+  if(master!=null){
+    document.getElementById('masterVol').value=master;
+    document.getElementById('masterVal').textContent=master+'%';
+  }
+  try{
+    const state = JSON.parse(localStorage.getItem(SK+'state'));
+    if(state && Object.keys(state).length>0){
+      Object.entries(state).forEach(([id,vol])=>{
+        if(getSoundDef(id)) startSound(id,vol);
+      });
+    }
+  }catch(e){}
+}
+
+// ── UI Rendering ──
+function renderAll(){
+  renderPresets();
+  renderSounds();
+  renderSaved();
+  updateUI();
+}
+
+function renderPresets(){
+  const el = document.getElementById('presets');
+  el.innerHTML = PRESETS.map((p,i)=>`
+    <div class="preset-chip ${currentPreset===i?'active':''}" onclick="loadPreset(${i})">
+      <span class="p-emoji">${p.emoji}</span>${p.name}
+    </div>
+  `).join('');
+}
+
+function renderSounds(){
+  const el = document.getElementById('soundGrid');
+  el.innerHTML = SOUNDS.map((s,i)=>{
+    const a = active[s.id];
+    const vol = a ? Math.round(a.volume*100) : 50;
+    return `
+    <div class="sound-card ${a?'active':''}" data-id="${s.id}">
+      <div class="sound-indicator"></div>
+      <div class="sound-icon" onclick="toggleSound('${s.id}')">${s.emoji}</div>
+      <div class="sound-name" onclick="toggleSound('${s.id}')">${s.name}</div>
+      <div class="sound-cat">${s.cat}</div>
+      <div class="sound-slider">
+        <input type="range" min="0" max="100" value="${vol}"
+          oninput="handleSlider('${s.id}',this.value)"
+          onchange="handleSlider('${s.id}',this.value)">
+        <span class="s-val">${vol}%</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSaved(){
+  const mixes = getSavedMixes();
+  const section = document.getElementById('savedSection');
+  const list = document.getElementById('savedList');
+  if(mixes.length===0){ section.style.display='none'; return; }
+  section.style.display='';
+  list.innerHTML = mixes.map((m,i)=>{
+    const soundNames = Object.keys(m.sounds).map(id=>{
+      const d=getSoundDef(id); return d?d.emoji:'';
+    }).join(' ');
+    return `
+    <div class="saved-item" onclick="loadMix(${i})">
+      <span class="si-name">${esc(m.name)}</span>
+      <span class="si-sounds">${soundNames}</span>
+      <span class="si-del" onclick="event.stopPropagation();deleteMix(${i})">🗑</span>
+    </div>`;
+  }).join('');
+}
+
+function updateUI(){
+  // Update active count
+  const count = Object.keys(active).length;
+  document.getElementById('activeCount').innerHTML = `Active: <b>${count}</b>`;
+  // Update card states
+  document.querySelectorAll('.sound-card').forEach(card=>{
+    const id = card.dataset.id;
+    const a = active[id];
+    card.classList.toggle('active', !!a);
+    if(a){
+      const slider = card.querySelector('input[type=range]');
+      const valEl = card.querySelector('.s-val');
+      const v = Math.round(a.volume*100);
+      slider.value = v;
+      valEl.textContent = v+'%';
+    }
+  });
+  // Update preset chips
+  document.querySelectorAll('.preset-chip').forEach((chip,i)=>{
+    chip.classList.toggle('active', currentPreset===i);
+  });
+}
+
+window.handleSlider = function(id, val){
+  const vol = val/100;
+  const card = document.querySelector(`.sound-card[data-id="${id}"]`);
+  card.querySelector('.s-val').textContent = val+'%';
+  if(active[id]){
+    setVolume(id, vol);
+  } else {
+    // Start the sound if slider moved above 0
+    if(vol > 0){
+      startSound(id, vol);
+      updateUI();
+      saveState();
+    }
+  }
+};
+
+function esc(s){ const d=document.createElement('div');d.textContent=s;return d.innerHTML; }
+
+// ── Help ──
+function toggleHelp(){
+  document.getElementById('helpOverlay').classList.toggle('open');
+}
+
+// ── Keyboard ──
+document.addEventListener('keydown', function(e){
+  if(e.target.tagName==='INPUT'&&e.target.type==='text') return;
+  const key = e.key;
+  // 1-9,0 toggle sounds
+  if(key>='1'&&key<='9'){
+    const idx = parseInt(key)-1;
+    if(SOUNDS[idx]) toggleSound(SOUNDS[idx].id);
+    e.preventDefault();
+  }
+  if(key==='0' && SOUNDS[9]){ toggleSound(SOUNDS[9].id); e.preventDefault(); }
+  if(key==='Escape'){
+    if(document.getElementById('helpOverlay').classList.contains('open')){ toggleHelp(); }
+    else if(document.getElementById('saveModal').classList.contains('open')){ closeSave(); }
+    else { stopAll(); updateUI(); }
+    e.preventDefault();
+  }
+  if(key==='ArrowUp'){
+    const v = Math.min(100, parseInt(document.getElementById('masterVol').value)+5);
+    document.getElementById('masterVol').value=v;
+    setMaster(v);
+    e.preventDefault();
+  }
+  if(key==='ArrowDown'){
+    const v = Math.max(0, parseInt(document.getElementById('masterVol').value)-5);
+    document.getElementById('masterVol').value=v;
+    setMaster(v);
+    e.preventDefault();
+  }
+  if(key==='s'||key==='S'){ openSave(); e.preventDefault(); }
+  if(key==='?'){ toggleHelp(); e.preventDefault(); }
+  if(key==='t'||key==='T'){ setTimer(25); e.preventDefault(); }
+});
+
+// Handle Enter in save modal
+document.addEventListener('keydown', function(e){
+  if(e.key==='Enter' && document.getElementById('saveModal').classList.contains('open')){
+    doSave();
+    e.preventDefault();
+  }
+});
+
+// Expose global functions
+window.toggleSound=toggleSound;
+window.loadPreset=loadPreset;
+window.stopAll=stopAll;
+window.setMaster=setMaster;
+window.setTimer=setTimer;
+window.toggleTimer=toggleTimer;
+window.clearTimer=clearTimer;
+window.openSave=openSave;
+window.closeSave=closeSave;
+window.doSave=doSave;
+window.loadMix=loadMix;
+window.deleteMix=deleteMix;
+window.exportData=exportData;
+window.importData=importData;
+window.toggleHelp=toggleHelp;
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', function(){
+  renderAll();
+  // Restore on first interaction (AudioContext requires user gesture)
+  let restored = false;
+  function tryRestore(){
+    if(restored) return;
+    restored = true;
+    restoreState();
+    updateUI();
+    document.removeEventListener('click', tryRestore);
+    document.removeEventListener('keydown', tryRestore);
+    document.removeEventListener('touchstart', tryRestore);
+  }
+  document.addEventListener('click', tryRestore);
+  document.addEventListener('keydown', tryRestore);
+  document.addEventListener('touchstart', tryRestore);
+});
+
+})();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

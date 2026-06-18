@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-17T19:36:15.034Z",
-  "count": 85,
+  "generatedAt": "2026-06-18T19:35:30.956Z",
+  "count": 86,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -681,6 +681,14 @@
       "tagline": "Strategic Value Chain Mapper",
       "emoji": "🧭",
       "day": 85,
+      "cluster": "build"
+    },
+    {
+      "slug": "noise-lab",
+      "title": "Noise Lab",
+      "tagline": "Ambient Sound Mixer for Focus",
+      "emoji": "🎧",
+      "day": 86,
       "cluster": "personal"
     }
   ]
