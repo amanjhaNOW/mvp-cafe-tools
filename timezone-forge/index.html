@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>Time Zone Forge — World Clock & Meeting Planner | mvp.cafe</title>
+<meta name="description" content="World clock, meeting planner, and timezone converter. Find the best meeting time across time zones with visual overlap detection.">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#242836;--border:#2e3345;--text:#e1e4ed;--text2:#8b90a0;--accent:#6c5ce7;--accent2:#a29bfe;--green:#00b894;--green2:#55efc4;--red:#ff6b6b;--orange:#fdcb6e;--blue:#74b9ff;--gold:#ffeaa7;--night:#2d3436;--day:#ffeaa7}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+button{font:inherit;cursor:pointer;border:none;background:none;color:var(--text)}
+input,select{font:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:16px;min-height:44px}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+
+/* Layout */
+.app{display:flex;flex-direction:column;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.topbar h1{font-size:18px;font-weight:700;white-space:nowrap}
+.topbar h1 span{color:var(--accent2)}
+.tabs{display:flex;gap:4px;margin-left:auto}
+.tabs button{padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--text2);min-height:44px;transition:all .15s}
+.tabs button.active{background:var(--accent);color:#fff}
+.tabs button:hover:not(.active){background:var(--surface2)}
+.main{flex:1;padding:16px;max-width:1200px;width:100%;margin:0 auto}
+
+/* Clock Cards */
+.clock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.clock-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;transition:border-color .15s}
+.clock-card:hover{border-color:var(--accent)}
+.clock-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.clock-label{font-size:16px;font-weight:700}
+.clock-tz{font-size:11px;color:var(--text2);margin-top:2px}
+.clock-daynight{font-size:20px}
+.clock-time{font-size:36px;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:-1px;margin:8px 0 4px}
+.clock-date{font-size:13px;color:var(--text2)}
+.clock-offset{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-top:6px}
+.clock-offset.ahead{background:rgba(0,184,148,.15);color:var(--green2)}
+.clock-offset.behind{background:rgba(255,107,107,.15);color:var(--red)}
+.clock-offset.same{background:rgba(108,92,231,.15);color:var(--accent2)}
+.clock-relative{font-size:11px;color:var(--text2);margin-top:4px}
+.clock-actions{position:absolute;top:8px;right:8px;display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.clock-card:hover .clock-actions{opacity:1}
+.clock-actions button{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--surface2)}
+.clock-actions button:hover{background:var(--accent);color:#fff}
+
+/* Add Clock */
+.add-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:stretch}
+.add-bar .search-wrap{flex:1;min-width:200px;position:relative}
+.add-bar input{width:100%;padding-right:36px}
+.add-bar .search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--text2);pointer-events:none}
+.add-bar .settings-btn{min-height:44px;padding:0 14px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:13px;display:flex;align-items:center;gap:6px}
+.add-bar .settings-btn:hover{border-color:var(--accent)}
+.dropdown{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:300px;overflow-y:auto;z-index:100;margin-top:4px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.dropdown-item{padding:10px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;min-height:44px}
+.dropdown-item:hover,.dropdown-item.highlighted{background:var(--surface2)}
+.dropdown-item .city{font-weight:600;font-size:14px}
+.dropdown-item .tz-name{font-size:11px;color:var(--text2)}
+.dropdown-item .region-badge{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--surface2);color:var(--text2)}
+
+/* Planner */
+.planner-controls{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.planner-controls label{font-size:13px;color:var(--text2)}
+.planner-controls select{min-width:140px}
+.planner-ref{font-size:12px;color:var(--text2);margin-bottom:8px}
+.planner-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.planner-table{width:100%;min-width:700px;border-collapse:collapse}
+.planner-table th,.planner-table td{text-align:center;font-size:11px;padding:0;border-right:1px solid var(--border)}
+.planner-table th:last-child,.planner-table td:last-child{border-right:none}
+.planner-table thead th{padding:6px 0;background:var(--surface2);color:var(--text2);font-weight:600;position:sticky;top:0;z-index:2}
+.planner-table .tz-label{text-align:left;padding:8px 10px;font-weight:600;font-size:12px;white-space:nowrap;position:sticky;left:0;background:var(--surface);z-index:1;min-width:110px;border-right:2px solid var(--border)}
+.planner-table thead .tz-label{background:var(--surface2)}
+.planner-cell{height:40px;min-width:24px;position:relative;cursor:pointer;transition:background .1s}
+.planner-cell.work{background:rgba(0,184,148,.2)}
+.planner-cell.overlap{background:rgba(108,92,231,.35)}
+.planner-cell.selected{background:rgba(253,203,110,.3)!important;box-shadow:inset 0 0 0 2px var(--gold)}
+.planner-cell.now{box-shadow:inset 2px 0 0 var(--red)}
+.planner-cell:hover{background:rgba(255,255,255,.08)!important}
+.planner-cell .cell-hour{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text2);opacity:.7}
+.planner-cell.night-cell{background:rgba(45,52,54,.3)}
+.planner-cell.work.night-cell{background:rgba(0,184,148,.2)}
+.overlap-row td.planner-cell.overlap{background:rgba(108,92,231,.45)}
+.overlap-row .tz-label{color:var(--accent2);font-style:italic}
+.planner-legend{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;font-size:12px;color:var(--text2)}
+.legend-item{display:flex;align-items:center;gap:6px}
+.legend-swatch{width:16px;height:12px;border-radius:3px}
+
+/* Meeting result */
+.meeting-result{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px}
+.meeting-result h3{font-size:14px;margin-bottom:12px;color:var(--accent2)}
+.meeting-times{display:flex;flex-direction:column;gap:6px}
+.meeting-time-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--surface2);border-radius:8px}
+.meeting-time-row .tz-name{font-size:13px;color:var(--text2)}
+.meeting-time-row .time-val{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.meeting-time-row .day-badge{font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px}
+.meeting-time-row .day-badge.prev{background:rgba(255,107,107,.15);color:var(--red)}
+.meeting-time-row .day-badge.next{background:rgba(0,184,148,.15);color:var(--green2)}
+.best-time-box{background:linear-gradient(135deg,rgba(108,92,231,.15),rgba(0,184,148,.15));border:1px solid var(--accent);border-radius:12px;padding:16px;margin-top:16px}
+.best-time-box h3{font-size:14px;color:var(--accent2);margin-bottom:8px}
+.best-time-box .window{font-size:13px;color:var(--text2);margin-bottom:8px}
+.best-time-box .no-overlap{color:var(--red);font-size:13px}
+.copy-btn{min-height:44px;padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;font-size:13px;margin-top:8px}
+.copy-btn:hover{background:var(--accent2);color:var(--bg)}
+
+/* Converter */
+.converter{max-width:500px;margin:0 auto}
+.converter-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.converter-row{margin-bottom:16px}
+.converter-row label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
+.converter-row select,.converter-row input{width:100%}
+.converter-swap{display:flex;justify-content:center;margin:12px 0}
+.converter-swap button{width:44px;height:44px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);font-size:20px;display:flex;align-items:center;justify-content:center}
+.converter-swap button:hover{border-color:var(--accent);background:var(--accent);color:#fff}
+.converter-result{background:var(--surface2);border-radius:12px;padding:20px;text-align:center;margin-top:16px}
+.converter-result .result-time{font-size:32px;font-weight:300;font-variant-numeric:tabular-nums}
+.converter-result .result-date{font-size:14px;color:var(--text2);margin-top:6px}
+.converter-result .result-offset{font-size:12px;color:var(--accent2);margin-top:4px}
+
+/* Dashboard */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.stat-card .stat-val{font-size:28px;font-weight:700;color:var(--accent2)}
+.stat-card .stat-label{font-size:12px;color:var(--text2);margin-top:4px}
+.groups-section{margin-top:20px}
+.groups-section h3{font-size:16px;margin-bottom:12px}
+.group-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.group-card .group-name{font-weight:600;font-size:14px}
+.group-card .group-tzs{font-size:12px;color:var(--text2);flex:1;min-width:200px}
+.group-card .group-actions{display:flex;gap:6px}
+.group-card .group-actions button{min-height:36px;padding:6px 12px;border-radius:6px;background:var(--surface2);font-size:12px}
+.group-card .group-actions button:hover{background:var(--accent);color:#fff}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:440px;width:100%;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:18px;margin-bottom:16px}
+.modal .field{margin-bottom:14px}
+.modal .field label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
+.modal .field input,.modal .field select{width:100%}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.modal-actions button{min-height:44px;padding:8px 20px;border-radius:8px;font-weight:600;font-size:14px}
+.modal-actions .cancel{background:var(--surface2)}
+.modal-actions .cancel:hover{background:var(--border)}
+.modal-actions .primary{background:var(--accent);color:#fff}
+.modal-actions .primary:hover{background:var(--accent2);color:var(--bg)}
+.hidden{display:none!important}
+
+/* Help */
+.help-float{position:fixed;bottom:16px;right:16px;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:50;box-shadow:0 4px 16px rgba(108,92,231,.4)}
+.help-float:hover{background:var(--accent2);color:var(--bg)}
+.shortcuts{columns:2;gap:12px}
+.shortcut{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;break-inside:avoid}
+.shortcut kbd{background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px}
+.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:300;animation:toastIn .3s ease}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* Responsive */
+@media(max-width:600px){
+  .topbar{padding:10px 12px}
+  .topbar h1{font-size:15px}
+  .tabs button{padding:6px 10px;font-size:12px;min-height:40px}
+  .main{padding:12px}
+  .clock-grid{grid-template-columns:1fr}
+  .clock-time{font-size:30px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .shortcuts{columns:1}
+  .planner-controls{flex-direction:column;align-items:stretch}
+}
+@media(max-width:430px){
+  .add-bar{flex-direction:column}
+  .clock-actions{opacity:1}
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app"></div>
+<button class="help-float" onclick="toggleHelp()" title="Keyboard shortcuts">?</button>
+
+<script>
+'use strict';
+
+// ── Timezone Database ──
+const TZ_DB = [
+  // Americas
+  {tz:'America/New_York',city:'New York',country:'US',region:'Americas'},
+  {tz:'America/Chicago',city:'Chicago',country:'US',region:'Americas'},
+  {tz:'America/Denver',city:'Denver',country:'US',region:'Americas'},
+  {tz:'America/Los_Angeles',city:'Los Angeles',country:'US',region:'Americas'},
+  {tz:'America/Anchorage',city:'Anchorage',country:'US',region:'Americas'},
+  {tz:'Pacific/Honolulu',city:'Honolulu',country:'US',region:'Americas'},
+  {tz:'America/Toronto',city:'Toronto',country:'CA',region:'Americas'},
+  {tz:'America/Vancouver',city:'Vancouver',country:'CA',region:'Americas'},
+  {tz:'America/Mexico_City',city:'Mexico City',country:'MX',region:'Americas'},
+  {tz:'America/Sao_Paulo',city:'São Paulo',country:'BR',region:'Americas'},
+  {tz:'America/Argentina/Buenos_Aires',city:'Buenos Aires',country:'AR',region:'Americas'},
+  {tz:'America/Bogota',city:'Bogotá',country:'CO',region:'Americas'},
+  {tz:'America/Lima',city:'Lima',country:'PE',region:'Americas'},
+  {tz:'America/Santiago',city:'Santiago',country:'CL',region:'Americas'},
+  {tz:'America/Phoenix',city:'Phoenix',country:'US',region:'Americas'},
+  // Europe
+  {tz:'Europe/London',city:'London',country:'GB',region:'Europe'},
+  {tz:'Europe/Paris',city:'Paris',country:'FR',region:'Europe'},
+  {tz:'Europe/Berlin',city:'Berlin',country:'DE',region:'Europe'},
+  {tz:'Europe/Amsterdam',city:'Amsterdam',country:'NL',region:'Europe'},
+  {tz:'Europe/Madrid',city:'Madrid',country:'ES',region:'Europe'},
+  {tz:'Europe/Rome',city:'Rome',country:'IT',region:'Europe'},
+  {tz:'Europe/Zurich',city:'Zürich',country:'CH',region:'Europe'},
+  {tz:'Europe/Stockholm',city:'Stockholm',country:'SE',region:'Europe'},
+  {tz:'Europe/Helsinki',city:'Helsinki',country:'FI',region:'Europe'},
+  {tz:'Europe/Warsaw',city:'Warsaw',country:'PL',region:'Europe'},
+  {tz:'Europe/Athens',city:'Athens',country:'GR',region:'Europe'},
+  {tz:'Europe/Istanbul',city:'Istanbul',country:'TR',region:'Europe'},
+  {tz:'Europe/Moscow',city:'Moscow',country:'RU',region:'Europe'},
+  {tz:'Europe/Dublin',city:'Dublin',country:'IE',region:'Europe'},
+  {tz:'Europe/Lisbon',city:'Lisbon',country:'PT',region:'Europe'},
+  {tz:'Europe/Bucharest',city:'Bucharest',country:'RO',region:'Europe'},
+  {tz:'Europe/Prague',city:'Prague',country:'CZ',region:'Europe'},
+  {tz:'Europe/Copenhagen',city:'Copenhagen',country:'DK',region:'Europe'},
+  // Asia
+  {tz:'Asia/Kolkata',city:'Mumbai',country:'IN',region:'Asia'},
+  {tz:'Asia/Kolkata',city:'Delhi',country:'IN',region:'Asia',alt:true},
+  {tz:'Asia/Kolkata',city:'Bangalore',country:'IN',region:'Asia',alt:true},
+  {tz:'Asia/Tokyo',city:'Tokyo',country:'JP',region:'Asia'},
+  {tz:'Asia/Shanghai',city:'Shanghai',country:'CN',region:'Asia'},
+  {tz:'Asia/Hong_Kong',city:'Hong Kong',country:'HK',region:'Asia'},
+  {tz:'Asia/Singapore',city:'Singapore',country:'SG',region:'Asia'},
+  {tz:'Asia/Seoul',city:'Seoul',country:'KR',region:'Asia'},
+  {tz:'Asia/Bangkok',city:'Bangkok',country:'TH',region:'Asia'},
+  {tz:'Asia/Jakarta',city:'Jakarta',country:'ID',region:'Asia'},
+  {tz:'Asia/Dubai',city:'Dubai',country:'AE',region:'Asia'},
+  {tz:'Asia/Riyadh',city:'Riyadh',country:'SA',region:'Asia'},
+  {tz:'Asia/Karachi',city:'Karachi',country:'PK',region:'Asia'},
+  {tz:'Asia/Dhaka',city:'Dhaka',country:'BD',region:'Asia'},
+  {tz:'Asia/Taipei',city:'Taipei',country:'TW',region:'Asia'},
+  {tz:'Asia/Manila',city:'Manila',country:'PH',region:'Asia'},
+  {tz:'Asia/Kuala_Lumpur',city:'Kuala Lumpur',country:'MY',region:'Asia'},
+  {tz:'Asia/Ho_Chi_Minh',city:'Ho Chi Minh',country:'VN',region:'Asia'},
+  {tz:'Asia/Tel_Aviv',city:'Tel Aviv',country:'IL',region:'Asia'},
+  {tz:'Asia/Colombo',city:'Colombo',country:'LK',region:'Asia'},
+  {tz:'Asia/Kathmandu',city:'Kathmandu',country:'NP',region:'Asia'},
+  // Oceania
+  {tz:'Australia/Sydney',city:'Sydney',country:'AU',region:'Oceania'},
+  {tz:'Australia/Melbourne',city:'Melbourne',country:'AU',region:'Oceania'},
+  {tz:'Australia/Perth',city:'Perth',country:'AU',region:'Oceania'},
+  {tz:'Australia/Brisbane',city:'Brisbane',country:'AU',region:'Oceania'},
+  {tz:'Pacific/Auckland',city:'Auckland',country:'NZ',region:'Oceania'},
+  {tz:'Pacific/Fiji',city:'Fiji',country:'FJ',region:'Oceania'},
+  // Africa
+  {tz:'Africa/Cairo',city:'Cairo',country:'EG',region:'Africa'},
+  {tz:'Africa/Lagos',city:'Lagos',country:'NG',region:'Africa'},
+  {tz:'Africa/Johannesburg',city:'Johannesburg',country:'ZA',region:'Africa'},
+  {tz:'Africa/Nairobi',city:'Nairobi',country:'KE',region:'Africa'},
+  {tz:'Africa/Casablanca',city:'Casablanca',country:'MA',region:'Africa'},
+  {tz:'Africa/Accra',city:'Accra',country:'GH',region:'Africa'},
+];
+
+// ── Storage ──
+const SK = k => `mvpcafe:timezone-forge:${k}`;
+function save(k, v) { try { localStorage.setItem(SK(k), JSON.stringify(v)); } catch(e) {} }
+function load(k, def) { try { const v = localStorage.getItem(SK(k)); return v ? JSON.parse(v) : def; } catch(e) { return def; } }
+
+// ── State ──
+let state = load('state', null) || getDefault();
+function getDefault() {
+  return {
+    clocks: [
+      { id:'c1', tz:'Asia/Kolkata', label:'Mumbai', workStart:9, workEnd:17 },
+      { id:'c2', tz:'America/New_York', label:'New York', workStart:9, workEnd:17 },
+      { id:'c3', tz:'Europe/London', label:'London', workStart:9, workEnd:17 },
+      { id:'c4', tz:'America/Los_Angeles', label:'San Francisco', workStart:9, workEnd:17 },
+      { id:'c5', tz:'Asia/Tokyo', label:'Tokyo', workStart:9, workEnd:17 },
+    ],
+    groups: [
+      { id:'g1', name:'Global Standup', tzList:['Asia/Kolkata','America/New_York','Europe/London'] },
+      { id:'g2', name:'US + India', tzList:['Asia/Kolkata','America/New_York','America/Los_Angeles'] },
+    ],
+    use24h: true,
+    showSeconds: true,
+    meetingDuration: 60,
+    selectedHour: null,
+    view: 'clocks',
+    nextId: 6,
+    nextGroupId: 3,
+  };
+}
+function persist() { save('state', state); }
+
+// ── Utilities ──
+const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+function getOffsetMin(tz, date) {
+  date = date || new Date();
+  const utcStr = date.toLocaleString('en-US', { timeZone: 'UTC' });
+  const tzStr = date.toLocaleString('en-US', { timeZone: tz });
+  return Math.round((new Date(tzStr) - new Date(utcStr)) / 60000);
+}
+
+function formatOffset(min) {
+  const sign = min >= 0 ? '+' : '-';
+  const abs = Math.abs(min);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  return `UTC${sign}${h}${m ? ':' + String(m).padStart(2,'0') : ''}`;
+}
+
+function formatTime(tz, use24h, showSec) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hour: 'numeric', minute: '2-digit',
+    second: showSec ? '2-digit' : undefined, hour12: !use24h
+  }).format(new Date());
+}
+
+function formatDate(tz) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, weekday: 'short', month: 'short', day: 'numeric'
+  }).format(new Date());
+}
+
+function getHour(tz) {
+  const p = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hour: 'numeric', hour12: false
+  }).formatToParts(new Date());
+  return parseInt(p.find(x => x.type === 'hour')?.value || 0);
+}
+
+function getHourFrac(tz) {
+  const now = new Date();
+  const p = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hour: 'numeric', minute: 'numeric', hour12: false
+  }).formatToParts(now);
+  const h = parseInt(p.find(x => x.type === 'hour')?.value || 0);
+  const m = parseInt(p.find(x => x.type === 'minute')?.value || 0);
+  return h + m / 60;
+}
+
+function isDaytime(tz) {
+  const h = getHour(tz);
+  return h >= 6 && h < 20;
+}
+
+function dayDiff(tz) {
+  const localDate = new Intl.DateTimeFormat('en-US', { timeZone: localTz, day: 'numeric', month: 'numeric', year: 'numeric' }).format(new Date());
+  const tzDate = new Intl.DateTimeFormat('en-US', { timeZone: tz, day: 'numeric', month: 'numeric', year: 'numeric' }).format(new Date());
+  if (localDate === tzDate) return 0;
+  const ld = new Date(localDate), td = new Date(tzDate);
+  return td > ld ? 1 : -1;
+}
+
+function uid(prefix) { return prefix + (state.nextId++); }
+
+// ── Toast ──
+let toastTimer;
+function toast(msg) {
+  const old = document.querySelector('.toast');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.body.appendChild(el);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.remove(), 2000);
+}
+
+// ── Render Engine ──
+const $app = document.getElementById('app');
+let tickInterval;
+
+function render() {
+  const views = [
+    { id:'clocks', label:'🕐 Clocks' },
+    { id:'planner', label:'📊 Planner' },
+    { id:'converter', label:'🔄 Convert' },
+    { id:'dashboard', label:'📈 Dashboard' },
+  ];
+  let html = `
+    <div class="topbar">
+      <h1>🌍 <span>Time Zone</span> Forge</h1>
+      <div class="tabs">
+        ${views.map(v => `<button class="${state.view === v.id ? 'active' : ''}" onclick="switchView('${v.id}')">${v.label}</button>`).join('')}
+      </div>
+    </div>
+    <div class="main">
+  `;
+
+  if (state.view === 'clocks') html += renderClocks();
+  else if (state.view === 'planner') html += renderPlanner();
+  else if (state.view === 'converter') html += renderConverter();
+  else if (state.view === 'dashboard') html += renderDashboard();
+
+  html += '</div>';
+  $app.innerHTML = html;
+
+  clearInterval(tickInterval);
+  if (state.view === 'clocks') {
+    tickInterval = setInterval(updateClockTimes, 1000);
+  }
+}
+
+function switchView(v) { state.view = v; state.selectedHour = null; persist(); render(); }
+
+// ── Clocks View ──
+let searchQuery = '';
+let dropdownOpen = false;
+let hlIdx = -1;
+
+function renderClocks() {
+  let html = `
+    <div class="add-bar">
+      <div class="search-wrap">
+        <input type="text" id="tz-search" placeholder="Search cities or timezones..." value="${esc(searchQuery)}"
+          oninput="onSearchInput(this.value)" onfocus="openDropdown()" onkeydown="onSearchKey(event)">
+        <span class="search-icon">🔍</span>
+        ${dropdownOpen ? renderDropdown() : ''}
+      </div>
+      <button class="settings-btn" onclick="toggleSettings()">⚙️ ${state.use24h ? '24h' : '12h'}</button>
+    </div>
+    <div class="clock-grid">
+  `;
+
+  for (const c of state.clocks) {
+    const off = getOffsetMin(c.tz);
+    const localOff = getOffsetMin(localTz);
+    const diff = off - localOff;
+    const diffH = diff / 60;
+    const offClass = diff > 0 ? 'ahead' : diff < 0 ? 'behind' : 'same';
+    const offLabel = diff === 0 ? 'Same time' : `${diffH > 0 ? '+' : ''}${diffH % 1 === 0 ? diffH : diffH.toFixed(1)}h`;
+    const dd = dayDiff(c.tz);
+    const dayLabel = dd === 1 ? 'Tomorrow' : dd === -1 ? 'Yesterday' : '';
+    const isDay = isDaytime(c.tz);
+
+    html += `
+      <div class="clock-card">
+        <div class="clock-actions">
+          <button onclick="editClock('${c.id}')" title="Edit">✏️</button>
+          <button onclick="removeClock('${c.id}')" title="Remove">🗑️</button>
+        </div>
+        <div class="clock-header">
+          <div>
+            <div class="clock-label">${esc(c.label)}</div>
+            <div class="clock-tz">${c.tz}</div>
+          </div>
+          <div class="clock-daynight">${isDay ? '☀️' : '🌙'}</div>
+        </div>
+        <div class="clock-time" data-tz="${c.tz}">${formatTime(c.tz, state.use24h, state.showSeconds)}</div>
+        <div class="clock-date">${formatDate(c.tz)}</div>
+        <span class="clock-offset ${offClass}">${formatOffset(off)} · ${offLabel}</span>
+        ${dayLabel ? `<div class="clock-relative">${dayLabel} there</div>` : ''}
+      </div>
+    `;
+  }
+  html += '</div>';
+  return html;
+}
+
+function updateClockTimes() {
+  document.querySelectorAll('.clock-time[data-tz]').forEach(el => {
+    el.textContent = formatTime(el.dataset.tz, state.use24h, state.showSeconds);
+  });
+}
+
+function renderDropdown() {
+  const q = searchQuery.toLowerCase();
+  const existing = new Set(state.clocks.map(c => c.tz + ':' + c.label));
+  let items = TZ_DB.filter(t => {
+    if (existing.has(t.tz + ':' + t.city)) return false;
+    if (!q) return true;
+    return t.city.toLowerCase().includes(q) || t.tz.toLowerCase().includes(q) || t.country.toLowerCase().includes(q) || t.region.toLowerCase().includes(q);
+  });
+  if (items.length === 0) return '<div class="dropdown"><div class="dropdown-item"><span class="city">No results</span></div></div>';
+  items = items.slice(0, 20);
+  return `<div class="dropdown">${items.map((t, i) =>
+    `<div class="dropdown-item${i === hlIdx ? ' highlighted' : ''}" onclick="addFromDB(${i})" data-idx="${i}">
+      <div><span class="city">${esc(t.city)}, ${t.country}</span><br><span class="tz-name">${t.tz} · ${formatOffset(getOffsetMin(t.tz))}</span></div>
+      <span class="region-badge">${t.region}</span>
+    </div>`
+  ).join('')}</div>`;
+}
+
+function onSearchInput(v) { searchQuery = v; hlIdx = -1; dropdownOpen = true; render(); setTimeout(() => { const el = document.getElementById('tz-search'); if(el){el.focus();el.setSelectionRange(v.length,v.length);} }, 0); }
+function openDropdown() { dropdownOpen = true; render(); setTimeout(() => document.getElementById('tz-search')?.focus(), 0); }
+
+function onSearchKey(e) {
+  const q = searchQuery.toLowerCase();
+  const existing = new Set(state.clocks.map(c => c.tz + ':' + c.label));
+  const items = TZ_DB.filter(t => {
+    if (existing.has(t.tz + ':' + t.label)) return false;
+    if (!q) return true;
+    return t.city.toLowerCase().includes(q) || t.tz.toLowerCase().includes(q) || t.country.toLowerCase().includes(q);
+  }).slice(0, 20);
+
+  if (e.key === 'ArrowDown') { e.preventDefault(); hlIdx = Math.min(hlIdx + 1, items.length - 1); render(); setTimeout(() => document.getElementById('tz-search')?.focus(), 0); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); hlIdx = Math.max(hlIdx - 1, -1); render(); setTimeout(() => document.getElementById('tz-search')?.focus(), 0); }
+  else if (e.key === 'Enter' && hlIdx >= 0 && hlIdx < items.length) { e.preventDefault(); addClock(items[hlIdx].tz, items[hlIdx].city); }
+  else if (e.key === 'Escape') { dropdownOpen = false; searchQuery = ''; render(); }
+}
+
+function addFromDB(idx) {
+  const q = searchQuery.toLowerCase();
+  const existing = new Set(state.clocks.map(c => c.tz + ':' + c.label));
+  const items = TZ_DB.filter(t => {
+    if (existing.has(t.tz + ':' + t.city)) return false;
+    if (!q) return true;
+    return t.city.toLowerCase().includes(q) || t.tz.toLowerCase().includes(q) || t.country.toLowerCase().includes(q);
+  }).slice(0, 20);
+  if (idx < items.length) addClock(items[idx].tz, items[idx].city);
+}
+
+function addClock(tz, label) {
+  state.clocks.push({ id: uid('c'), tz, label, workStart: 9, workEnd: 17 });
+  searchQuery = ''; dropdownOpen = false; persist(); render();
+  toast(`Added ${label}`);
+}
+
+function removeClock(id) {
+  state.clocks = state.clocks.filter(c => c.id !== id);
+  persist(); render();
+}
+
+function editClock(id) {
+  const c = state.clocks.find(x => x.id === id);
+  if (!c) return;
+  showModal('Edit Clock', [
+    { key:'label', label:'Label', type:'text', value:c.label },
+    { key:'workStart', label:'Work starts at', type:'number', value:c.workStart, min:0, max:23 },
+    { key:'workEnd', label:'Work ends at', type:'number', value:c.workEnd, min:1, max:24 },
+  ], data => {
+    c.label = data.label || c.label;
+    c.workStart = parseInt(data.workStart) || 9;
+    c.workEnd = parseInt(data.workEnd) || 17;
+    persist(); render();
+  });
+}
+
+function toggleSettings() {
+  state.use24h = !state.use24h;
+  persist(); render();
+}
+
+// ── Planner View ──
+function renderPlanner() {
+  if (state.clocks.length === 0) return '<p style="color:var(--text2);text-align:center;margin-top:40px">Add some clocks first to use the planner.</p>';
+
+  const refTz = state.clocks[0].tz;
+  const refOff = getOffsetMin(refTz);
+  const nowFrac = getHourFrac(refTz);
+  const nowHour = Math.floor(nowFrac);
+
+  // Build hour headers (reference timezone hours)
+  let headerCells = `<th class="tz-label">Timezone</th>`;
+  for (let h = 0; h < 24; h++) {
+    const label = state.use24h ? String(h).padStart(2,'0') : (h === 0 ? '12a' : h < 12 ? h + 'a' : h === 12 ? '12p' : (h-12) + 'p');
+    headerCells += `<th>${label}</th>`;
+  }
+
+  // Calculate overlap: for each hour (in ref TZ), check if ALL clocks are in working hours
+  const overlapHours = new Array(24).fill(true);
+  const clockWorkHours = [];
+
+  for (const c of state.clocks) {
+    const cOff = getOffsetMin(c.tz);
+    const delta = (cOff - refOff) / 60; // hours ahead of ref
+    const workHrs = new Set();
+
+    for (let h = 0; h < 24; h++) {
+      // When ref is at hour h, this clock is at hour h + delta
+      let localH = (h + delta) % 24;
+      if (localH < 0) localH += 24;
+      const localHFloor = Math.floor(localH);
+      if (localHFloor >= c.workStart && localHFloor < c.workEnd) {
+        workHrs.add(h);
+      }
+    }
+    clockWorkHours.push(workHrs);
+    for (let h = 0; h < 24; h++) {
+      if (!workHrs.has(h)) overlapHours[h] = false;
+    }
+  }
+
+  // Find overlap window
+  let overlapStart = -1, overlapEnd = -1, overlapCount = 0;
+  for (let h = 0; h < 24; h++) { if (overlapHours[h]) overlapCount++; }
+  if (overlapCount > 0) {
+    for (let h = 0; h < 24; h++) { if (overlapHours[h]) { overlapStart = h; break; } }
+    for (let h = 23; h >= 0; h--) { if (overlapHours[h]) { overlapEnd = h + 1; break; } }
+  }
+
+  // Build rows
+  let rows = '';
+  state.clocks.forEach((c, ci) => {
+    const cOff = getOffsetMin(c.tz);
+    const delta = (cOff - refOff) / 60;
+    let cells = `<td class="tz-label">${esc(c.label)}<br><span style="font-weight:400;font-size:10px;color:var(--text2)">${formatOffset(cOff)}</span></td>`;
+
+    for (let h = 0; h < 24; h++) {
+      let localH = (h + delta) % 24;
+      if (localH < 0) localH += 24;
+      const localHFloor = Math.floor(localH);
+      const isWork = clockWorkHours[ci].has(h);
+      const isOverlap = overlapHours[h] && state.clocks.length > 1;
+      const isNow = h === nowHour;
+      const isSelected = h === state.selectedHour;
+      const isNight = localHFloor >= 20 || localHFloor < 6;
+      let cls = 'planner-cell';
+      if (isWork) cls += ' work';
+      if (isOverlap) cls += ' overlap';
+      if (isNow) cls += ' now';
+      if (isSelected) cls += ' selected';
+      if (isNight && !isWork) cls += ' night-cell';
+
+      const localLabel = state.use24h ? String(localHFloor).padStart(2,'0') : (localHFloor === 0 ? '12a' : localHFloor < 12 ? localHFloor + 'a' : localHFloor === 12 ? '12p' : (localHFloor-12) + 'p');
+      cells += `<td class="${cls}" onclick="selectPlannerHour(${h})" title="${c.label}: ${localLabel}"><span class="cell-hour">${localLabel}</span></td>`;
+    }
+    rows += `<tr>${cells}</tr>`;
+  });
+
+  // Overlap summary row
+  if (state.clocks.length > 1) {
+    let overlapCells = `<td class="tz-label" style="color:var(--accent2);font-style:italic">Overlap</td>`;
+    for (let h = 0; h < 24; h++) {
+      const isOl = overlapHours[h];
+      const isSelected = h === state.selectedHour;
+      let cls = 'planner-cell';
+      if (isOl) cls += ' overlap';
+      if (isSelected) cls += ' selected';
+      overlapCells += `<td class="${cls}" onclick="selectPlannerHour(${h})"></td>`;
+    }
+    rows += `<tr class="overlap-row">${overlapCells}</tr>`;
+  }
+
+  let html = `
+    <div class="planner-controls">
+      <label>Reference: <strong>${esc(state.clocks[0].label)}</strong></label>
+      <label>Duration:</label>
+      <select onchange="setDuration(this.value)" style="min-width:100px">
+        ${[30,60,90,120].map(d => `<option value="${d}" ${state.meetingDuration===d?'selected':''}>${d} min</option>`).join('')}
+      </select>
+      <button class="copy-btn" onclick="findBestTime()" style="margin-left:auto">🎯 Find Best Time</button>
+    </div>
+    <div class="planner-ref">Hours shown are local time for each timezone. Click a column to compare times.</div>
+    <div class="planner-wrap">
+      <table class="planner-table">
+        <thead><tr>${headerCells}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="planner-legend">
+      <div class="legend-item"><div class="legend-swatch" style="background:rgba(0,184,148,.25)"></div> Working hours</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:rgba(108,92,231,.4)"></div> Overlap</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:rgba(253,203,110,.3);border:2px solid var(--gold)"></div> Selected</div>
+      <div class="legend-item"><div class="legend-swatch" style="box-shadow:inset 2px 0 0 var(--red)"></div> Now</div>
+    </div>
+  `;
+
+  // Selected hour detail
+  if (state.selectedHour !== null) {
+    html += renderMeetingDetail(state.selectedHour, refTz, refOff);
+  }
+
+  // Best time box
+  if (overlapCount > 0 && state.clocks.length > 1) {
+    const refStart = state.use24h ? `${String(overlapStart).padStart(2,'0')}:00` : formatHour12(overlapStart);
+    const refEnd = state.use24h ? `${String(overlapEnd).padStart(2,'0')}:00` : formatHour12(overlapEnd);
+    html += `
+      <div class="best-time-box">
+        <h3>✅ Overlap Window</h3>
+        <div class="window">${overlapCount} hour${overlapCount>1?'s':''} of overlap: <strong>${refStart} – ${refEnd}</strong> ${esc(state.clocks[0].label)} time</div>
+      </div>
+    `;
+  } else if (state.clocks.length > 1) {
+    html += `
+      <div class="best-time-box" style="border-color:var(--red)">
+        <h3>⚠️ No Standard Overlap</h3>
+        <div class="no-overlap">No working-hour overlap found between all zones. Try adjusting working hours (edit clocks) or consider async communication.</div>
+      </div>
+    `;
+  }
+
+  return html;
+}
+
+function formatHour12(h) {
+  if (h === 0 || h === 24) return '12:00 AM';
+  if (h < 12) return h + ':00 AM';
+  if (h === 12) return '12:00 PM';
+  return (h - 12) + ':00 PM';
+}
+
+function selectPlannerHour(h) {
+  state.selectedHour = state.selectedHour === h ? null : h;
+  persist(); render();
+}
+
+function setDuration(v) { state.meetingDuration = parseInt(v); persist(); }
+
+function renderMeetingDetail(refHour, refTz, refOff) {
+  let html = `<div class="meeting-result"><h3>📅 Meeting at ${state.use24h ? String(refHour).padStart(2,'0')+':00' : formatHour12(refHour)} ${esc(state.clocks[0].label)} time</h3><div class="meeting-times">`;
+
+  const meetingText = [];
+  for (const c of state.clocks) {
+    const cOff = getOffsetMin(c.tz);
+    const delta = (cOff - refOff) / 60;
+    let localH = refHour + delta;
+    let dayBadge = '';
+    if (localH >= 24) { localH -= 24; dayBadge = '<span class="day-badge next">+1 day</span>'; }
+    else if (localH < 0) { localH += 24; dayBadge = '<span class="day-badge prev">-1 day</span>'; }
+    const hInt = Math.floor(localH);
+    const mInt = Math.round((localH - hInt) * 60);
+    const timeStr = state.use24h
+      ? `${String(hInt).padStart(2,'0')}:${String(mInt).padStart(2,'0')}`
+      : `${hInt === 0 ? 12 : hInt > 12 ? hInt - 12 : hInt}:${String(mInt).padStart(2,'0')} ${hInt < 12 ? 'AM' : 'PM'}`;
+    meetingText.push(`${c.label}: ${timeStr}${dayBadge ? (localH + delta >= 24 ? ' (+1 day)' : ' (-1 day)') : ''}`);
+
+    html += `<div class="meeting-time-row"><span class="tz-name">${esc(c.label)} · ${formatOffset(cOff)}</span><span class="time-val">${timeStr}${dayBadge}</span></div>`;
+  }
+  html += `</div><button class="copy-btn" onclick="copyMeetingTime()">📋 Copy Meeting Times</button></div>`;
+  return html;
+}
+
+function copyMeetingTime() {
+  if (state.selectedHour === null) return;
+  const refTz = state.clocks[0].tz;
+  const refOff = getOffsetMin(refTz);
+  let text = `Meeting at ${state.use24h ? String(state.selectedHour).padStart(2,'0') + ':00' : formatHour12(state.selectedHour)} ${state.clocks[0].label} time:\n\n`;
+  for (const c of state.clocks) {
+    const cOff = getOffsetMin(c.tz);
+    const delta = (cOff - refOff) / 60;
+    let localH = state.selectedHour + delta;
+    let dayNote = '';
+    if (localH >= 24) { localH -= 24; dayNote = ' (+1 day)'; }
+    else if (localH < 0) { localH += 24; dayNote = ' (-1 day)'; }
+    const hInt = Math.floor(localH);
+    const mInt = Math.round((localH - hInt) * 60);
+    const timeStr = `${String(hInt).padStart(2,'0')}:${String(mInt).padStart(2,'0')}`;
+    text += `• ${c.label} (${formatOffset(cOff)}): ${timeStr}${dayNote}\n`;
+  }
+  navigator.clipboard.writeText(text).then(() => toast('Copied!')).catch(() => toast('Copy failed'));
+}
+
+function findBestTime() {
+  const refOff = getOffsetMin(state.clocks[0].tz);
+  let bestStart = -1, bestLen = 0;
+
+  // Find longest contiguous overlap window
+  for (let start = 0; start < 24; start++) {
+    let len = 0;
+    for (let h = start; h < start + 24 && h < 48; h++) {
+      const hh = h % 24;
+      let allWork = true;
+      for (const c of state.clocks) {
+        const cOff = getOffsetMin(c.tz);
+        const delta = (cOff - refOff) / 60;
+        let localH = (hh + delta) % 24;
+        if (localH < 0) localH += 24;
+        const localHFloor = Math.floor(localH);
+        if (localHFloor < c.workStart || localHFloor >= c.workEnd) { allWork = false; break; }
+      }
+      if (allWork) len++; else break;
+    }
+    if (len > bestLen) { bestLen = len; bestStart = start; }
+  }
+
+  if (bestLen > 0) {
+    // Select the middle of the overlap window
+    const mid = bestStart + Math.floor(bestLen / 2);
+    state.selectedHour = mid % 24;
+    persist(); render();
+    toast(`Best overlap: ${bestLen}h window found`);
+  } else {
+    toast('No overlap found — try adjusting work hours');
+  }
+}
+
+// ── Converter View ──
+let convFrom = state.clocks[0]?.tz || localTz;
+let convTo = state.clocks[1]?.tz || 'America/New_York';
+let convTime = '';
+
+function renderConverter() {
+  const allTzs = getUniqueTzOptions();
+  const now = new Date();
+  const fromTime = convTime || new Intl.DateTimeFormat('en-GB', { timeZone: convFrom, hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+
+  // Calculate result
+  const [hh, mm] = fromTime.split(':').map(Number);
+  const fromOff = getOffsetMin(convFrom);
+  const toOff = getOffsetMin(convTo);
+  const delta = (toOff - fromOff);
+  const fromMin = (hh || 0) * 60 + (mm || 0);
+  let toMin = fromMin + delta;
+  let dayShift = 0;
+  if (toMin >= 1440) { toMin -= 1440; dayShift = 1; }
+  else if (toMin < 0) { toMin += 1440; dayShift = -1; }
+  const toH = Math.floor(toMin / 60);
+  const toM = toMin % 60;
+  const resultTime = state.use24h
+    ? `${String(toH).padStart(2,'0')}:${String(toM).padStart(2,'0')}`
+    : `${toH === 0 ? 12 : toH > 12 ? toH - 12 : toH}:${String(toM).padStart(2,'0')} ${toH < 12 ? 'AM' : 'PM'}`;
+  const dayLabel = dayShift === 1 ? 'Next day' : dayShift === -1 ? 'Previous day' : 'Same day';
+  const diffH = delta / 60;
+  const diffLabel = delta === 0 ? 'Same timezone' : `${diffH > 0 ? '+' : ''}${diffH % 1 === 0 ? diffH : diffH.toFixed(1)} hours`;
+
+  return `
+    <div class="converter">
+      <div class="converter-card">
+        <div class="converter-row">
+          <label>From</label>
+          <select onchange="convFrom=this.value;render()">
+            ${allTzs.map(t => `<option value="${t.tz}" ${t.tz===convFrom?'selected':''}>${t.label} (${formatOffset(getOffsetMin(t.tz))})</option>`).join('')}
+          </select>
+        </div>
+        <div class="converter-row">
+          <label>Time</label>
+          <input type="time" value="${fromTime}" onchange="convTime=this.value;render()">
+        </div>
+        <div class="converter-swap">
+          <button onclick="const t=convFrom;convFrom=convTo;convTo=t;render()" title="Swap">⇅</button>
+        </div>
+        <div class="converter-row">
+          <label>To</label>
+          <select onchange="convTo=this.value;render()">
+            ${allTzs.map(t => `<option value="${t.tz}" ${t.tz===convTo?'selected':''}>${t.label} (${formatOffset(getOffsetMin(t.tz))})</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="converter-result">
+        <div class="result-time">${resultTime}</div>
+        <div class="result-date">${dayLabel}</div>
+        <div class="result-offset">${diffLabel}</div>
+      </div>
+    </div>
+  `;
+}
+
+function getUniqueTzOptions() {
+  const seen = new Set();
+  const result = [];
+  // First add user's clocks
+  for (const c of state.clocks) {
+    if (!seen.has(c.tz)) { seen.add(c.tz); result.push({ tz: c.tz, label: c.label }); }
+  }
+  // Then add from DB
+  for (const t of TZ_DB) {
+    if (!seen.has(t.tz)) { seen.add(t.tz); result.push({ tz: t.tz, label: t.city }); }
+  }
+  return result;
+}
+
+// ── Dashboard View ──
+function renderDashboard() {
+  const regionCounts = {};
+  for (const c of state.clocks) {
+    const entry = TZ_DB.find(t => t.tz === c.tz);
+    const region = entry?.region || 'Other';
+    regionCounts[region] = (regionCounts[region] || 0) + 1;
+  }
+
+  // Calculate span
+  let minOff = Infinity, maxOff = -Infinity;
+  for (const c of state.clocks) {
+    const off = getOffsetMin(c.tz);
+    minOff = Math.min(minOff, off); maxOff = Math.max(maxOff, off);
+  }
+  const spanH = state.clocks.length > 0 ? (maxOff - minOff) / 60 : 0;
+
+  // Overlap hours
+  const refOff = state.clocks[0] ? getOffsetMin(state.clocks[0].tz) : 0;
+  let overlapH = 0;
+  if (state.clocks.length > 1) {
+    for (let h = 0; h < 24; h++) {
+      let allWork = true;
+      for (const c of state.clocks) {
+        const delta = (getOffsetMin(c.tz) - refOff) / 60;
+        let localH = (h + delta) % 24;
+        if (localH < 0) localH += 24;
+        const lhf = Math.floor(localH);
+        if (lhf < c.workStart || lhf >= c.workEnd) { allWork = false; break; }
+      }
+      if (allWork) overlapH++;
+    }
+  }
+
+  let html = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val">${state.clocks.length}</div><div class="stat-label">Clocks</div></div>
+      <div class="stat-card"><div class="stat-val">${state.groups.length}</div><div class="stat-label">Groups</div></div>
+      <div class="stat-card"><div class="stat-val">${spanH.toFixed(1)}h</div><div class="stat-label">Time Span</div></div>
+      <div class="stat-card"><div class="stat-val">${overlapH}h</div><div class="stat-label">Work Overlap</div></div>
+      <div class="stat-card"><div class="stat-val">${Object.keys(regionCounts).length}</div><div class="stat-label">Regions</div></div>
+      <div class="stat-card"><div class="stat-val">${new Set(state.clocks.map(c => getOffsetMin(c.tz))).size}</div><div class="stat-label">Unique Offsets</div></div>
+    </div>
+  `;
+
+  // Region breakdown
+  if (Object.keys(regionCounts).length > 0) {
+    const maxCount = Math.max(...Object.values(regionCounts));
+    html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px"><h3 style="font-size:14px;margin-bottom:12px">Region Distribution</h3>';
+    for (const [region, count] of Object.entries(regionCounts).sort((a,b) => b[1] - a[1])) {
+      const pct = (count / maxCount) * 100;
+      html += `<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>${region}</span><span style="color:var(--text2)">${count}</span></div><div style="height:6px;background:var(--surface2);border-radius:3px"><div style="height:100%;width:${pct}%;background:var(--accent);border-radius:3px"></div></div></div>`;
+    }
+    html += '</div>';
+  }
+
+  // Groups section
+  html += '<div class="groups-section"><h3>📁 Saved Groups <button class="copy-btn" onclick="addGroup()" style="font-size:12px;padding:6px 12px;margin-left:8px">+ New Group</button></h3>';
+
+  if (state.groups.length === 0) {
+    html += '<p style="color:var(--text2);margin-top:12px">No groups yet. Create one to quickly load timezone sets.</p>';
+  } else {
+    for (const g of state.groups) {
+      html += `
+        <div class="group-card">
+          <div>
+            <div class="group-name">${esc(g.name)}</div>
+            <div class="group-tzs">${g.tzList.map(tz => {
+              const e = TZ_DB.find(t => t.tz === tz);
+              return e ? e.city : tz.split('/').pop();
+            }).join(', ')}</div>
+          </div>
+          <div class="group-actions">
+            <button onclick="loadGroup('${g.id}')" title="Load this group">📥 Load</button>
+            <button onclick="deleteGroup('${g.id}')" title="Delete">🗑️</button>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // Save current as group
+  if (state.clocks.length > 0) {
+    html += `<button class="copy-btn" onclick="saveCurrentAsGroup()" style="margin-top:12px">💾 Save Current Clocks as Group</button>`;
+  }
+
+  html += '</div>';
+
+  // Import/Export
+  html += `
+    <div style="margin-top:24px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="copy-btn" onclick="exportData()">📤 Export JSON</button>
+      <button class="copy-btn" style="background:var(--surface2);color:var(--text)" onclick="importData()">📥 Import JSON</button>
+      <button class="copy-btn" style="background:var(--red)" onclick="resetData()">🗑️ Reset All</button>
+    </div>
+  `;
+
+  return html;
+}
+
+function addGroup() {
+  showModal('New Group', [
+    { key: 'name', label: 'Group Name', type: 'text', value: '' },
+  ], data => {
+    if (!data.name) return;
+    state.groups.push({
+      id: 'g' + (state.nextGroupId++),
+      name: data.name,
+      tzList: state.clocks.map(c => c.tz)
+    });
+    persist(); render();
+    toast('Group created');
+  });
+}
+
+function saveCurrentAsGroup() {
+  showModal('Save as Group', [
+    { key: 'name', label: 'Group Name', type: 'text', value: 'My Team' },
+  ], data => {
+    if (!data.name) return;
+    state.groups.push({
+      id: 'g' + (state.nextGroupId++),
+      name: data.name,
+      tzList: state.clocks.map(c => c.tz)
+    });
+    persist(); render();
+    toast('Group saved');
+  });
+}
+
+function loadGroup(id) {
+  const g = state.groups.find(x => x.id === id);
+  if (!g) return;
+  state.clocks = g.tzList.map((tz, i) => {
+    const entry = TZ_DB.find(t => t.tz === tz);
+    return { id: uid('c'), tz, label: entry?.city || tz.split('/').pop(), workStart: 9, workEnd: 17 };
+  });
+  state.view = 'clocks';
+  persist(); render();
+  toast(`Loaded "${g.name}"`);
+}
+
+function deleteGroup(id) {
+  state.groups = state.groups.filter(g => g.id !== id);
+  persist(); render();
+}
+
+function exportData() {
+  const json = JSON.stringify(state, null, 2);
+  navigator.clipboard.writeText(json).then(() => toast('Copied JSON to clipboard')).catch(() => {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'timezone-forge-backup.json'; a.click();
+    URL.revokeObjectURL(url);
+    toast('Downloaded JSON');
+  });
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.clocks) {
+          Object.assign(state, data);
+          persist(); render();
+          toast('Imported successfully');
+        }
+      } catch(e) { toast('Invalid JSON'); }
+    };
+    r.readAsText(f);
+  };
+  input.click();
+}
+
+function resetData() {
+  if (confirm('Reset all data? This cannot be undone.')) {
+    state = getDefault();
+    persist(); render();
+    toast('Data reset');
+  }
+}
+
+// ── Modal ──
+function showModal(title, fields, onSave) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+
+  let fieldsHtml = '';
+  for (const f of fields) {
+    if (f.type === 'number') {
+      fieldsHtml += `<div class="field"><label>${f.label}</label><input type="number" id="modal-${f.key}" value="${f.value}" min="${f.min||''}" max="${f.max||''}"></div>`;
+    } else {
+      fieldsHtml += `<div class="field"><label>${f.label}</label><input type="text" id="modal-${f.key}" value="${esc(String(f.value))}"></div>`;
+    }
+  }
+
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>${title}</h2>
+      ${fieldsHtml}
+      <div class="modal-actions">
+        <button class="cancel" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button class="primary" id="modal-save">Save</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.getElementById('modal-save').onclick = () => {
+    const data = {};
+    for (const f of fields) {
+      data[f.key] = document.getElementById(`modal-${f.key}`).value;
+    }
+    overlay.remove();
+    onSave(data);
+  };
+
+  // Focus first input
+  setTimeout(() => {
+    const first = overlay.querySelector('input');
+    if (first) { first.focus(); first.select(); }
+  }, 50);
+}
+
+// ── Help ──
+let helpOpen = false;
+function toggleHelp() {
+  helpOpen = !helpOpen;
+  const existing = document.querySelector('.modal-overlay.help-modal');
+  if (existing) { existing.remove(); helpOpen = false; return; }
+  if (!helpOpen) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay help-modal';
+  overlay.onclick = e => { if (e.target === overlay) { overlay.remove(); helpOpen = false; } };
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:520px">
+      <h2>⌨️ Keyboard Shortcuts</h2>
+      <div class="shortcuts">
+        <div class="shortcut"><span>Clocks view</span><kbd>1</kbd></div>
+        <div class="shortcut"><span>Planner view</span><kbd>2</kbd></div>
+        <div class="shortcut"><span>Converter view</span><kbd>3</kbd></div>
+        <div class="shortcut"><span>Dashboard view</span><kbd>4</kbd></div>
+        <div class="shortcut"><span>Add clock</span><kbd>N</kbd></div>
+        <div class="shortcut"><span>Toggle 12/24h</span><kbd>H</kbd></div>
+        <div class="shortcut"><span>Find best time</span><kbd>B</kbd></div>
+        <div class="shortcut"><span>Export</span><kbd>E</kbd></div>
+        <div class="shortcut"><span>Help</span><kbd>?</kbd></div>
+        <div class="shortcut"><span>Close</span><kbd>Esc</kbd></div>
+      </div>
+      <div class="modal-actions"><button class="cancel" onclick="this.closest('.modal-overlay').remove();helpOpen=false">Close</button></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+// ── Keyboard ──
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  if (document.querySelector('.modal-overlay') && e.key === 'Escape') {
+    document.querySelector('.modal-overlay').remove();
+    helpOpen = false;
+    return;
+  }
+  switch(e.key) {
+    case '1': switchView('clocks'); break;
+    case '2': switchView('planner'); break;
+    case '3': switchView('converter'); break;
+    case '4': switchView('dashboard'); break;
+    case 'n': case 'N': if (state.view === 'clocks') { e.preventDefault(); openDropdown(); } break;
+    case 'h': case 'H': toggleSettings(); break;
+    case 'b': case 'B': if (state.view === 'planner') findBestTime(); break;
+    case 'e': case 'E': exportData(); break;
+    case '?': toggleHelp(); break;
+    case 'Escape': dropdownOpen = false; searchQuery = ''; state.selectedHour = null; render(); break;
+  }
+});
+
+// Close dropdown on click outside
+document.addEventListener('click', e => {
+  if (dropdownOpen && !e.target.closest('.search-wrap')) {
+    dropdownOpen = false;
+    searchQuery = '';
+    render();
+  }
+});
+
+// ── Helpers ──
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Init ──
+render();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

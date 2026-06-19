@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-18T19:35:30.956Z",
-  "count": 86,
+  "generatedAt": "2026-06-19T19:37:15.052Z",
+  "count": 87,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -689,6 +689,14 @@
       "tagline": "Ambient Sound Mixer for Focus",
       "emoji": "🎧",
       "day": 86,
+      "cluster": "personal"
+    },
+    {
+      "slug": "timezone-forge",
+      "title": "Time Zone Forge",
+      "tagline": "World Clock & Meeting Planner",
+      "emoji": "📐",
+      "day": 87,
       "cluster": "personal"
     }
   ]
