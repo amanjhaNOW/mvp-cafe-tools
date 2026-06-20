@@ -106,6 +106,7 @@
     { slug: 'wardley-map', name: 'Wardley Map', emoji: '🗺️', cluster: 'build' },
     { slug: 'noise-lab', name: 'Noise Lab', emoji: '🎧', cluster: 'personal' },
     { slug: 'timezone-forge', name: 'Time Zone Forge', emoji: '🌍', cluster: 'personal' },
+    { slug: 'calc-pad', name: 'Calc Pad', emoji: '🧮', cluster: 'personal' },
   ];
 
   // Deduplicate (sprint-board appears in both build and team)

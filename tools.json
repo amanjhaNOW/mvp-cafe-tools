@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-19T19:37:15.052Z",
-  "count": 87,
+  "generatedAt": "2026-06-20T19:34:57.753Z",
+  "count": 88,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -697,6 +697,14 @@
       "tagline": "World Clock & Meeting Planner",
       "emoji": "📐",
       "day": 87,
+      "cluster": "personal"
+    },
+    {
+      "slug": "calc-pad",
+      "title": "Calc Pad",
+      "tagline": "Smart Calculator Notebook",
+      "emoji": "📓",
+      "day": 88,
       "cluster": "personal"
     }
   ]

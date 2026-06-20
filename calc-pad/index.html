@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Calc Pad — Smart Calculator Notebook</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;
+  --text:#e6edf3;--text2:#8b949e;--text3:#484f58;
+  --accent:#58a6ff;--accent2:#1f6feb;--green:#3fb950;--orange:#d29922;
+  --red:#f85149;--purple:#bc8cff;--pink:#f778ba;
+  --radius:8px;--font:'SF Mono',SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;min-height:48px}
+.header h1{font-size:16px;font-weight:600;white-space:nowrap}
+.header .logo{font-size:20px}
+.header-actions{display:flex;gap:4px;margin-left:auto}
+.btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px;font-family:var(--sans);display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:36px;min-width:36px;justify-content:center}
+.btn:hover{background:var(--border);color:var(--text)}
+.btn.primary{background:var(--accent2);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent)}
+.btn .icon{font-size:16px}
+.btn-label{display:inline}
+
+/* ── Main Layout ── */
+.main{display:flex;flex:1;overflow:hidden}
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:8px;border-bottom:1px solid var(--border);display:flex;gap:4px}
+.sidebar-header .btn{flex:1}
+.pad-list{flex:1;overflow-y:auto;padding:4px}
+.pad-item{padding:8px 10px;border-radius:6px;cursor:pointer;display:flex;flex-direction:column;gap:2px;font-family:var(--sans)}
+.pad-item:hover{background:var(--surface2)}
+.pad-item.active{background:var(--accent2);color:#fff}
+.pad-item .pad-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pad-item .pad-meta{font-size:11px;color:var(--text3)}
+.pad-item.active .pad-meta{color:rgba(255,255,255,.6)}
+
+/* ── Editor Area ── */
+.editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.pad-title-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.pad-title-input{background:transparent;border:none;color:var(--text);font-size:15px;font-weight:600;font-family:var(--sans);flex:1;outline:none;min-width:0}
+.pad-title-input:focus{border-bottom:1px solid var(--accent)}
+.total-badge{background:var(--green);color:#000;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;font-family:var(--font)}
+
+/* ── Calc Lines ── */
+.calc-body{flex:1;overflow-y:auto;padding:0}
+.calc-line{display:flex;align-items:stretch;border-bottom:1px solid var(--border);min-height:44px;position:relative}
+.calc-line:hover{background:var(--surface2)}
+.calc-line.focused{background:rgba(88,166,255,.06)}
+.line-num{width:40px;padding:10px 4px;text-align:right;color:var(--text3);font-size:12px;flex-shrink:0;user-select:none;display:flex;align-items:center;justify-content:flex-end}
+.line-input-wrap{flex:1;display:flex;align-items:center;min-width:0}
+.line-input{width:100%;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:14px;padding:10px 8px;outline:none;min-height:44px}
+.line-input::placeholder{color:var(--text3)}
+.line-result{width:180px;padding:10px 12px;text-align:right;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;user-select:none}
+.line-result:hover{background:rgba(255,255,255,.03)}
+.line-result.has-value{color:var(--green);font-weight:500}
+.line-result.is-error{color:var(--red);font-size:12px}
+.line-result.is-comment{color:var(--text3);font-style:italic;font-size:12px}
+.line-result.is-assign{color:var(--purple)}
+.line-result .copy-hint{font-size:10px;color:var(--text3);opacity:0;transition:.15s}
+.line-result:hover .copy-hint{opacity:1}
+.line-result.is-total{color:var(--orange);font-weight:700}
+
+/* ── Summary Bar ── */
+.summary-bar{display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;font-family:var(--sans);font-size:12px;color:var(--text2);flex-wrap:wrap}
+.summary-stat{display:flex;align-items:center;gap:4px}
+.summary-stat .val{color:var(--text);font-weight:600;font-family:var(--font)}
+.summary-actions{margin-left:auto;display:flex;gap:4px}
+
+/* ── Variables Panel ── */
+.vars-panel{width:260px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.vars-panel.hidden{display:none}
+.vars-header{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;font-family:var(--sans);display:flex;align-items:center;justify-content:space-between}
+.vars-list{flex:1;overflow-y:auto;padding:4px 8px}
+.var-item{display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid var(--border);font-size:13px}
+.var-name{color:var(--purple);font-weight:500}
+.var-value{color:var(--green)}
+.var-item.fn .var-name{color:var(--accent)}
+
+/* ── Help Modal ── */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;max-width:640px;width:100%;max-height:80vh;overflow-y:auto;padding:20px}
+.modal h2{font-size:18px;margin-bottom:12px;font-family:var(--sans)}
+.modal h3{font-size:14px;margin:16px 0 8px;color:var(--accent);font-family:var(--sans)}
+.modal p,.modal li{font-size:13px;line-height:1.6;color:var(--text2);font-family:var(--sans)}
+.modal code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-family:var(--font);font-size:12px;color:var(--green)}
+.modal ul{padding-left:20px;margin-bottom:8px}
+.modal .close-modal{position:sticky;top:0;float:right;font-size:20px;cursor:pointer;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;z-index:1}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:8px 16px;border-radius:8px;font-size:13px;font-family:var(--sans);font-weight:600;z-index:200;opacity:0;transition:.3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* ── Mobile sidebar toggle ── */
+.sidebar-toggle{display:none}
+
+/* ── Mobile ── */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:50;transform:translateX(-100%);transition:.25s;width:280px}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49;display:none}
+  .sidebar-backdrop.open{display:block}
+  .sidebar-toggle{display:flex}
+  .vars-panel{display:none !important}
+  .line-result{width:120px;font-size:13px;padding:10px 8px}
+  .line-num{width:32px;font-size:11px}
+  .btn-label{display:none}
+  .header h1{font-size:14px}
+  .total-badge{font-size:11px;padding:3px 8px}
+}
+@media(max-width:430px){
+  .line-result{width:100px;font-size:12px;padding:8px 6px}
+  .header{padding:6px 8px;gap:4px}
+  .pad-title-bar{padding:6px 8px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="btn sidebar-toggle" onclick="toggleSidebar()" title="Pads"><span class="icon">☰</span></button>
+  <span class="logo">🧮</span>
+  <h1>Calc Pad</h1>
+  <div class="header-actions">
+    <button class="btn" onclick="toggleVars()" title="Variables"><span class="icon">𝑥</span><span class="btn-label">Vars</span></button>
+    <button class="btn" onclick="showHelp()" title="Help"><span class="icon">?</span></button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <button class="btn primary" onclick="newPad()"><span class="icon">+</span> New Pad</button>
+      <button class="btn" onclick="importData()" title="Import"><span class="icon">📥</span></button>
+      <button class="btn" onclick="exportData()" title="Export"><span class="icon">📤</span></button>
+    </div>
+    <div class="pad-list" id="padList"></div>
+  </div>
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+
+  <div class="editor-area">
+    <div class="pad-title-bar">
+      <input class="pad-title-input" id="padTitle" placeholder="Untitled Pad" spellcheck="false">
+      <div class="total-badge" id="totalBadge" title="Running total">= 0</div>
+    </div>
+    <div class="calc-body" id="calcBody"></div>
+    <div class="summary-bar">
+      <div class="summary-stat">Lines <span class="val" id="statLines">0</span></div>
+      <div class="summary-stat">Variables <span class="val" id="statVars">0</span></div>
+      <div class="summary-stat">Total <span class="val" id="statTotal">0</span></div>
+      <div class="summary-actions">
+        <button class="btn" onclick="copyAllResults()" title="Copy results"><span class="icon">📋</span><span class="btn-label">Copy</span></button>
+        <button class="btn" onclick="exportMarkdown()" title="Export Markdown"><span class="icon">📝</span><span class="btn-label">MD</span></button>
+        <button class="btn" onclick="clearPad()" title="Clear pad"><span class="icon">🗑️</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="vars-panel" id="varsPanel">
+    <div class="vars-header">
+      <span>Variables & Functions</span>
+      <button class="btn" onclick="toggleVars()" style="padding:4px 6px;min-height:28px"><span class="icon">✕</span></button>
+    </div>
+    <div class="vars-list" id="varsList"></div>
+  </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal-overlay hidden" id="helpModal" onclick="if(event.target===this)closeHelp()">
+  <div class="modal">
+    <button class="close-modal" onclick="closeHelp()">✕</button>
+    <h2>🧮 Calc Pad — Smart Calculator Notebook</h2>
+    <p>Type math, text, or both. Results appear on the right.</p>
+
+    <h3>Basic Math</h3>
+    <ul>
+      <li><code>100 + 200</code> → 300</li>
+      <li><code>1500 * 1.18</code> → 1,770</li>
+      <li><code>(50 + 30) * 2</code> → 160</li>
+      <li><code>2 ^ 10</code> → 1,024</li>
+    </ul>
+
+    <h3>Variables</h3>
+    <ul>
+      <li><code>price = 1500</code> → assigns 1,500</li>
+      <li><code>tax = 18%</code> → assigns 0.18</li>
+      <li><code>price + price * tax</code> → 1,770</li>
+      <li><code>total = price * (1 + tax)</code> → assigns 1,770</li>
+    </ul>
+
+    <h3>Percentages</h3>
+    <ul>
+      <li><code>1500 + 18%</code> → 1,770 (adds 18%)</li>
+      <li><code>1500 - 10%</code> → 1,350 (subtracts 10%)</li>
+      <li><code>200 as % of 800</code> → 25%</li>
+      <li><code>50% of 1200</code> → 600</li>
+    </ul>
+
+    <h3>Unit Conversions</h3>
+    <ul>
+      <li><code>100 km in miles</code> → 62.14</li>
+      <li><code>72 kg in lbs</code> → 158.73</li>
+      <li><code>98.6 F in C</code> → 37°C</li>
+      <li><code>5 hours in minutes</code> → 300</li>
+      <li><code>2 GB in MB</code> → 2,048</li>
+    </ul>
+
+    <h3>Functions</h3>
+    <ul>
+      <li><code>sqrt(144)</code> → 12</li>
+      <li><code>round(3.7)</code> → 4</li>
+      <li><code>ceil(3.2)</code> → 4</li>
+      <li><code>floor(3.8)</code> → 3</li>
+      <li><code>abs(-5)</code> → 5</li>
+      <li><code>min(3, 7, 1)</code> → 1</li>
+      <li><code>max(3, 7, 1)</code> → 7</li>
+      <li><code>log(100)</code> → 2</li>
+      <li><code>ln(2.718)</code> → 1</li>
+      <li><code>sin(45)</code> / <code>cos(45)</code> / <code>tan(45)</code></li>
+      <li><code>pi</code> → 3.14159…</li>
+      <li><code>e</code> → 2.71828…</li>
+    </ul>
+
+    <h3>Comments & Labels</h3>
+    <ul>
+      <li><code>// this is a comment</code> → ignored</li>
+      <li><code>Hosting cost: 49</code> → result is 49</li>
+      <li><code>--- subtotal ---</code> → shows running total</li>
+      <li><code>=== grand total ===</code> → shows running total</li>
+    </ul>
+
+    <h3>Special</h3>
+    <ul>
+      <li><code>previous</code> or <code>ans</code> → last computed result</li>
+      <li><code>sum</code> or <code>total</code> → running total of all numeric results</li>
+      <li>Click any result to copy it</li>
+    </ul>
+
+    <h3>Keyboard Shortcuts</h3>
+    <ul>
+      <li><code>Enter</code> — New line below</li>
+      <li><code>Backspace</code> on empty line — Delete line</li>
+      <li><code>↑/↓</code> — Navigate lines</li>
+      <li><code>⌘/Ctrl+N</code> — New pad</li>
+      <li><code>⌘/Ctrl+E</code> — Export</li>
+      <li><code>⌘/Ctrl+Shift+C</code> — Copy all results</li>
+      <li><code>?</code> when no line focused — Help</li>
+      <li><code>Esc</code> — Close modal</li>
+    </ul>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+const SK = k => `mvpcafe:calc-pad:${k}`;
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+// ── State ──
+let pads = [];
+let activePadId = null;
+
+// ── Unit conversions ──
+const UNITS = {
+  // Length
+  km:   { base:'m', factor:1000 },
+  m:    { base:'m', factor:1 },
+  cm:   { base:'m', factor:0.01 },
+  mm:   { base:'m', factor:0.001 },
+  mi:   { base:'m', factor:1609.344 },
+  mile: { base:'m', factor:1609.344 },
+  miles:{ base:'m', factor:1609.344 },
+  ft:   { base:'m', factor:0.3048 },
+  feet: { base:'m', factor:0.3048 },
+  inch: { base:'m', factor:0.0254 },
+  inches:{ base:'m', factor:0.0254 },
+  in:   { base:'m', factor:0.0254 },
+  yd:   { base:'m', factor:0.9144 },
+  yards:{ base:'m', factor:0.9144 },
+  // Weight
+  kg:   { base:'g', factor:1000 },
+  g:    { base:'g', factor:1 },
+  mg:   { base:'g', factor:0.001 },
+  lb:   { base:'g', factor:453.592 },
+  lbs:  { base:'g', factor:453.592 },
+  oz:   { base:'g', factor:28.3495 },
+  // Volume
+  l:    { base:'ml', factor:1000 },
+  liter:{ base:'ml', factor:1000 },
+  liters:{base:'ml', factor:1000 },
+  ml:   { base:'ml', factor:1 },
+  gal:  { base:'ml', factor:3785.41 },
+  gallon:{ base:'ml', factor:3785.41 },
+  gallons:{ base:'ml', factor:3785.41 },
+  cup:  { base:'ml', factor:236.588 },
+  cups: { base:'ml', factor:236.588 },
+  // Time
+  sec:  { base:'s', factor:1 },
+  second:{ base:'s', factor:1 },
+  seconds:{ base:'s', factor:1 },
+  s:    { base:'s', factor:1 },
+  min:  { base:'s', factor:60 },
+  minute:{ base:'s', factor:60 },
+  minutes:{ base:'s', factor:60 },
+  hr:   { base:'s', factor:3600 },
+  hour: { base:'s', factor:3600 },
+  hours:{ base:'s', factor:3600 },
+  day:  { base:'s', factor:86400 },
+  days: { base:'s', factor:86400 },
+  week: { base:'s', factor:604800 },
+  weeks:{ base:'s', factor:604800 },
+  month:{ base:'s', factor:2592000 },
+  months:{ base:'s', factor:2592000 },
+  year: { base:'s', factor:31536000 },
+  years:{ base:'s', factor:31536000 },
+  // Data
+  b:    { base:'bit', factor:1 },
+  bit:  { base:'bit', factor:1 },
+  bits: { base:'bit', factor:1 },
+  byte: { base:'bit', factor:8 },
+  bytes:{ base:'bit', factor:8 },
+  kb:   { base:'bit', factor:8*1024 },
+  mb:   { base:'bit', factor:8*1024*1024 },
+  gb:   { base:'bit', factor:8*1024*1024*1024 },
+  tb:   { base:'bit', factor:8*1024*1024*1024*1024 },
+};
+
+// Temp conversions
+const TEMP = {
+  c: 'c', celsius: 'c', '°c': 'c',
+  f: 'f', fahrenheit: 'f', '°f': 'f',
+  k: 'k', kelvin: 'k'
+};
+
+function convertTemp(val, from, to) {
+  let celsius;
+  if (from === 'c') celsius = val;
+  else if (from === 'f') celsius = (val - 32) * 5/9;
+  else celsius = val - 273.15;
+  if (to === 'c') return celsius;
+  if (to === 'f') return celsius * 9/5 + 32;
+  return celsius + 273.15;
+}
+
+// ── Math functions ──
+const FUNCS = {
+  sqrt: Math.sqrt, abs: Math.abs, round: Math.round,
+  floor: Math.floor, ceil: Math.ceil,
+  sin: v => Math.sin(v * Math.PI / 180),
+  cos: v => Math.cos(v * Math.PI / 180),
+  tan: v => Math.tan(v * Math.PI / 180),
+  asin: v => Math.asin(v) * 180 / Math.PI,
+  acos: v => Math.acos(v) * 180 / Math.PI,
+  atan: v => Math.atan(v) * 180 / Math.PI,
+  log: Math.log10, ln: Math.log, exp: Math.exp,
+  pow: Math.pow,
+  min: (...a) => Math.min(...a),
+  max: (...a) => Math.max(...a),
+  avg: (...a) => a.reduce((s,v) => s+v, 0) / a.length,
+  random: () => Math.random(),
+};
+
+const CONSTS = { pi: Math.PI, e: Math.E, tau: Math.PI * 2 };
+
+// ── Tokenizer ──
+function tokenize(expr) {
+  const tokens = [];
+  let i = 0;
+  while (i < expr.length) {
+    if (/\s/.test(expr[i])) { i++; continue; }
+    // Number
+    if (/[\d.]/.test(expr[i])) {
+      let num = '';
+      while (i < expr.length && /[\d._,]/.test(expr[i])) {
+        if (expr[i] !== ',' && expr[i] !== '_') num += expr[i];
+        i++;
+      }
+      if (expr[i] === '.' && /\d/.test(expr[i+1]||'')) {
+        num += '.'; i++;
+        while (i < expr.length && /\d/.test(expr[i])) { num += expr[i]; i++; }
+      }
+      // Check for % suffix
+      if (expr[i] === '%') {
+        tokens.push({ type: 'number', value: parseFloat(num) / 100, pct: true });
+        i++;
+      } else {
+        tokens.push({ type: 'number', value: parseFloat(num) });
+      }
+      continue;
+    }
+    // Operators
+    if ('+-*/^()'.includes(expr[i])) {
+      tokens.push({ type: 'op', value: expr[i] }); i++; continue;
+    }
+    // Identifier
+    if (/[a-zA-Z_$]/.test(expr[i])) {
+      let id = '';
+      while (i < expr.length && /[a-zA-Z0-9_$°]/.test(expr[i])) { id += expr[i]; i++; }
+      // Check for % suffix on identifiers (variable%)
+      if (expr[i] === '%') {
+        tokens.push({ type: 'ident', value: id, pct: true }); i++;
+      } else {
+        tokens.push({ type: 'ident', value: id });
+      }
+      continue;
+    }
+    // % operator standalone
+    if (expr[i] === '%') {
+      tokens.push({ type: 'op', value: '%' }); i++; continue;
+    }
+    i++; // skip unknown
+  }
+  return tokens;
+}
+
+// ── Parser (recursive descent) ──
+function parse(tokens, vars) {
+  let pos = 0;
+  function peek() { return tokens[pos]; }
+  function eat(type, val) {
+    const t = tokens[pos];
+    if (!t) return null;
+    if (type && t.type !== type) return null;
+    if (val !== undefined && t.value !== val) return null;
+    pos++; return t;
+  }
+
+  function parseExpr() { return parseAdd(); }
+
+  function parseAdd() {
+    let left = parseMul();
+    if (left === null) return null;
+    while (peek()) {
+      const op = peek();
+      if (op.type === 'op' && (op.value === '+' || op.value === '-')) {
+        pos++;
+        // Check if next is a percentage for add/subtract
+        const savedPos = pos;
+        const right = parseMul();
+        if (right === null) return left;
+        // Check if this multiplication result was from a bare percentage
+        if (right !== null && tokens[savedPos] && tokens[savedPos].pct) {
+          // e.g. 1500 + 18% means 1500 + 1500*0.18
+          if (op.value === '+') left = left + left * right;
+          else left = left - left * right;
+        } else {
+          if (op.value === '+') left += right;
+          else left -= right;
+        }
+      } else break;
+    }
+    return left;
+  }
+
+  function parseMul() {
+    let left = parsePow();
+    if (left === null) return null;
+    while (peek()) {
+      const op = peek();
+      if (op.type === 'op' && (op.value === '*' || op.value === '/')) {
+        pos++;
+        const right = parsePow();
+        if (right === null) return left;
+        if (op.value === '*') left *= right;
+        else left = right !== 0 ? left / right : NaN;
+      } else break;
+    }
+    return left;
+  }
+
+  function parsePow() {
+    let left = parseUnary();
+    if (left === null) return null;
+    if (peek() && peek().type === 'op' && peek().value === '^') {
+      pos++;
+      const right = parseUnary();
+      if (right === null) return left;
+      left = Math.pow(left, right);
+    }
+    return left;
+  }
+
+  function parseUnary() {
+    if (peek() && peek().type === 'op' && peek().value === '-') {
+      pos++;
+      const v = parseAtom();
+      return v === null ? null : -v;
+    }
+    if (peek() && peek().type === 'op' && peek().value === '+') {
+      pos++;
+    }
+    return parseAtom();
+  }
+
+  function parseAtom() {
+    const t = peek();
+    if (!t) return null;
+    // Number
+    if (t.type === 'number') { pos++; return t.value; }
+    // Parenthesized expression
+    if (t.type === 'op' && t.value === '(') {
+      pos++;
+      const v = parseExpr();
+      eat('op', ')');
+      return v;
+    }
+    // Identifier
+    if (t.type === 'ident') {
+      const name = t.value.toLowerCase();
+      pos++;
+      // Function call
+      if (peek() && peek().type === 'op' && peek().value === '(') {
+        pos++; // eat (
+        const args = [];
+        while (peek() && !(peek().type === 'op' && peek().value === ')')) {
+          const arg = parseExpr();
+          if (arg !== null) args.push(arg);
+          // skip commas
+          if (peek() && peek().type === 'ident' && peek().value === ',') pos++;
+          else if (peek() && peek().type === 'op' && peek().value === ',') pos++;
+          // Handle comma as separator within parens
+          while (peek() && peek().type === 'op' && peek().value !== ')' && peek().value !== '+' && peek().value !== '-' && peek().value !== '*' && peek().value !== '/') {
+            if(peek().value === ',') { pos++; break; }
+            break;
+          }
+        }
+        eat('op', ')');
+        const fn = FUNCS[name];
+        if (fn) return fn(...args);
+        return null;
+      }
+      // Constants
+      if (CONSTS[name] !== undefined) {
+        const val = CONSTS[name];
+        return t.pct ? val / 100 : val;
+      }
+      // Variables
+      if (vars[name] !== undefined) {
+        const val = vars[name];
+        return t.pct ? val / 100 : val;
+      }
+      // Keywords
+      if (name === 'previous' || name === 'ans' || name === 'prev') {
+        const val = vars['__previous'] || 0;
+        return t.pct ? val / 100 : val;
+      }
+      if (name === 'sum' || name === 'total') {
+        const val = vars['__total'] || 0;
+        return t.pct ? val / 100 : val;
+      }
+      return null;
+    }
+    return null;
+  }
+
+  const result = parseExpr();
+  return (pos >= tokens.length) ? result : result;
+}
+
+// ── Line Evaluator ──
+function evaluateLine(text, vars, prevResult, runningTotal) {
+  const trimmed = text.trim();
+  if (!trimmed) return { type: 'empty', value: null };
+
+  // Comment
+  if (trimmed.startsWith('//') || trimmed.startsWith('#')) {
+    return { type: 'comment', value: trimmed.slice(trimmed.startsWith('//')?2:1).trim() };
+  }
+
+  // Separator / total line
+  if (/^[-=]{3,}/.test(trimmed)) {
+    return { type: 'total', value: runningTotal };
+  }
+
+  // "X as % of Y"
+  const pctOfMatch = trimmed.match(/^(.+?)\s+as\s+%\s+of\s+(.+)$/i);
+  if (pctOfMatch) {
+    const a = evaluateExpression(pctOfMatch[1], vars);
+    const b = evaluateExpression(pctOfMatch[2], vars);
+    if (a !== null && b !== null && b !== 0) {
+      return { type: 'value', value: (a / b) * 100, suffix: '%' };
+    }
+  }
+
+  // "X% of Y"
+  const pctOfMatch2 = trimmed.match(/^([\d.]+)\s*%\s+of\s+(.+)$/i);
+  if (pctOfMatch2) {
+    const pct = parseFloat(pctOfMatch2[1]) / 100;
+    const base = evaluateExpression(pctOfMatch2[2], vars);
+    if (base !== null) {
+      return { type: 'value', value: pct * base };
+    }
+  }
+
+  // Unit conversion: "X unit in/to unit"
+  const unitMatch = trimmed.match(/^(.+?)\s+([\w°]+)\s+(?:in|to|as)\s+([\w°]+)\s*$/i);
+  if (unitMatch) {
+    const val = evaluateExpression(unitMatch[1], vars);
+    const from = unitMatch[2].toLowerCase();
+    const to = unitMatch[3].toLowerCase();
+    if (val !== null) {
+      // Temperature
+      if (TEMP[from] && TEMP[to]) {
+        const result = convertTemp(val, TEMP[from], TEMP[to]);
+        const suffix = to === 'c' || to === 'celsius' ? '°C' : to === 'f' || to === 'fahrenheit' ? '°F' : 'K';
+        return { type: 'value', value: result, suffix };
+      }
+      // Other units
+      const fromU = UNITS[from], toU = UNITS[to];
+      if (fromU && toU && fromU.base === toU.base) {
+        const result = (val * fromU.factor) / toU.factor;
+        return { type: 'value', value: result, suffix: to };
+      }
+    }
+  }
+
+  // Assignment: "name = expr"
+  const assignMatch = trimmed.match(/^([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(.+)$/);
+  if (assignMatch && !['in','to','as','of','and','or','not'].includes(assignMatch[1].toLowerCase())) {
+    const name = assignMatch[1].toLowerCase();
+    const val = evaluateExpression(assignMatch[2], vars);
+    if (val !== null) {
+      vars[name] = val;
+      return { type: 'assign', value: val, varName: assignMatch[1] };
+    }
+  }
+
+  // Try to extract last number or expression from the line
+  // First try: evaluate the whole line as an expression
+  const wholeResult = evaluateExpression(trimmed, vars);
+  if (wholeResult !== null) {
+    return { type: 'value', value: wholeResult };
+  }
+
+  // Try: find an expression at the end (after label text like "Hosting cost: 49")
+  const labelMatch = trimmed.match(/^.+?[:]\s*(.+)$/);
+  if (labelMatch) {
+    const val = evaluateExpression(labelMatch[1], vars);
+    if (val !== null) return { type: 'value', value: val };
+  }
+
+  // Try: extract any trailing number/expression
+  const trailingMatch = trimmed.match(/\b([\d][^\s]*(?:\s*[\+\-\*\/\^]\s*[\d][^\s]*)*)$/);
+  if (trailingMatch) {
+    const val = evaluateExpression(trailingMatch[1], vars);
+    if (val !== null) return { type: 'value', value: val };
+  }
+
+  return { type: 'text', value: null };
+}
+
+function evaluateExpression(expr, vars) {
+  try {
+    const tokens = tokenize(expr);
+    if (tokens.length === 0) return null;
+    const result = parse(tokens, vars);
+    if (result === null || isNaN(result) || !isFinite(result)) return null;
+    return result;
+  } catch { return null; }
+}
+
+// ── Formatting ──
+function formatNumber(n, suffix) {
+  if (n === null || n === undefined) return '';
+  if (suffix === '%') return roundSmart(n) + '%';
+  const formatted = Math.abs(n) >= 1000 ? n.toLocaleString('en-IN', { maximumFractionDigits: 4 }) : roundSmart(n);
+  return formatted + (suffix ? ' ' + suffix : '');
+}
+
+function roundSmart(n) {
+  if (Number.isInteger(n)) return n.toString();
+  const s = n.toFixed(10);
+  // Remove trailing zeros but keep at least 2 decimal places if there are any
+  const trimmed = parseFloat(s);
+  if (Math.abs(trimmed - Math.round(trimmed)) < 1e-10) return Math.round(trimmed).toString();
+  return trimmed.toLocaleString('en-IN', { maximumFractionDigits: 6 });
+}
+
+// ── Pad Management ──
+function loadState() {
+  try {
+    pads = JSON.parse(localStorage.getItem(SK('pads')) || '[]');
+    activePadId = localStorage.getItem(SK('active')) || null;
+  } catch { pads = []; activePadId = null; }
+  if (!pads.length) {
+    pads.push(createDefaultPad());
+    activePadId = pads[0].id;
+  }
+  if (!activePadId || !pads.find(p => p.id === activePadId)) {
+    activePadId = pads[0].id;
+  }
+}
+
+function saveState() {
+  localStorage.setItem(SK('pads'), JSON.stringify(pads));
+  localStorage.setItem(SK('active'), activePadId);
+}
+
+function createDefaultPad() {
+  return {
+    id: uid(),
+    name: 'Quick Calculations',
+    lines: [
+      '// 🧮 Welcome to Calc Pad!',
+      '// Type math, assign variables, convert units',
+      '',
+      'price = 1500',
+      'tax = 18%',
+      'price + price * tax',
+      '',
+      'Hosting cost: 49',
+      'Domain: 12',
+      'Email service: 25',
+      '--- monthly total ---',
+      '',
+      '10 km in miles',
+      '72 kg in lbs',
+      '98.6 F in C',
+      '',
+      'sqrt(144) + 8',
+      'max(100, 200, 50)',
+    ],
+    created: Date.now()
+  };
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+function getActivePad() { return pads.find(p => p.id === activePadId); }
+
+// ── Rendering ──
+function render() {
+  renderPadList();
+  renderEditor();
+  renderVars();
+}
+
+function renderPadList() {
+  const el = $('#padList');
+  el.innerHTML = pads.map(p => `
+    <div class="pad-item ${p.id === activePadId ? 'active' : ''}" onclick="switchPad('${p.id}')" oncontextmenu="padContext(event,'${p.id}')">
+      <div class="pad-name">${esc(p.name)}</div>
+      <div class="pad-meta">${p.lines.filter(l=>l.trim()).length} lines</div>
+    </div>
+  `).join('');
+}
+
+function renderEditor() {
+  const pad = getActivePad();
+  if (!pad) return;
+  $('#padTitle').value = pad.name;
+
+  const vars = {};
+  let runningTotal = 0;
+  let previousResult = 0;
+  const results = [];
+
+  // Evaluate all lines
+  pad.lines.forEach((line, i) => {
+    vars['__previous'] = previousResult;
+    vars['__total'] = runningTotal;
+    const result = evaluateLine(line, vars, previousResult, runningTotal);
+    results.push(result);
+    if (result.value !== null && result.type !== 'comment' && result.type !== 'text') {
+      if (result.type !== 'total') {
+        runningTotal += result.value;
+      }
+      previousResult = result.value;
+    }
+  });
+
+  const body = $('#calcBody');
+  body.innerHTML = pad.lines.map((line, i) => {
+    const r = results[i];
+    let resultClass = '';
+    let resultText = '';
+    if (r.type === 'empty') { resultClass = ''; resultText = ''; }
+    else if (r.type === 'comment') { resultClass = 'is-comment'; resultText = '// ' + r.value; }
+    else if (r.type === 'text') { resultClass = ''; resultText = ''; }
+    else if (r.type === 'total') { resultClass = 'has-value is-total'; resultText = '= ' + formatNumber(r.value); }
+    else if (r.type === 'assign') { resultClass = 'has-value is-assign'; resultText = r.varName + ' = ' + formatNumber(r.value, r.suffix); }
+    else if (r.type === 'value') { resultClass = 'has-value'; resultText = '= ' + formatNumber(r.value, r.suffix); }
+    else if (r.type === 'error') { resultClass = 'is-error'; resultText = r.value; }
+
+    return `
+      <div class="calc-line" data-idx="${i}">
+        <div class="line-num">${i + 1}</div>
+        <div class="line-input-wrap">
+          <input class="line-input" value="${escAttr(line)}" data-idx="${i}"
+            placeholder="${i === 0 ? 'Type math, variables, or text...' : ''}"
+            spellcheck="false" autocomplete="off" autocapitalize="off">
+        </div>
+        <div class="line-result ${resultClass}" onclick="copyResult(${i})" title="Click to copy">
+          <span>${resultText}</span>
+          ${resultText ? '<span class="copy-hint">📋</span>' : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Update stats
+  const numericResults = results.filter(r => r.value !== null && r.type !== 'comment' && r.type !== 'text' && r.type !== 'total');
+  const varCount = Object.keys(vars).filter(k => !k.startsWith('__')).length;
+  $('#statLines').textContent = pad.lines.filter(l => l.trim()).length;
+  $('#statVars').textContent = varCount;
+  $('#statTotal').textContent = formatNumber(runningTotal);
+  $('#totalBadge').textContent = '= ' + formatNumber(runningTotal);
+
+  // Bind events
+  body.querySelectorAll('.line-input').forEach(input => {
+    input.addEventListener('input', onLineInput);
+    input.addEventListener('keydown', onLineKeydown);
+    input.addEventListener('focus', onLineFocus);
+    input.addEventListener('blur', onLineBlur);
+  });
+}
+
+function renderVars() {
+  const pad = getActivePad();
+  if (!pad) return;
+  const vars = {};
+  let runningTotal = 0;
+  let previousResult = 0;
+  pad.lines.forEach(line => {
+    vars['__previous'] = previousResult;
+    vars['__total'] = runningTotal;
+    const result = evaluateLine(line, vars, previousResult, runningTotal);
+    if (result.value !== null && result.type !== 'comment' && result.type !== 'text' && result.type !== 'total') {
+      runningTotal += result.value;
+      previousResult = result.value;
+    }
+  });
+  const el = $('#varsList');
+  const userVars = Object.entries(vars).filter(([k]) => !k.startsWith('__'));
+  if (!userVars.length) {
+    el.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:var(--sans)">No variables defined yet.<br><br>Try: <code>price = 1500</code></div>';
+    return;
+  }
+  el.innerHTML = userVars.map(([k, v]) => `
+    <div class="var-item">
+      <span class="var-name">${esc(k)}</span>
+      <span class="var-value">${formatNumber(v)}</span>
+    </div>
+  `).join('') + `
+    <div class="var-item fn"><span class="var-name">previous</span><span class="var-value">${formatNumber(previousResult)}</span></div>
+    <div class="var-item fn"><span class="var-name">total</span><span class="var-value">${formatNumber(runningTotal)}</span></div>
+  `;
+}
+
+// ── Event Handlers ──
+function onLineInput(e) {
+  const idx = parseInt(e.target.dataset.idx);
+  const pad = getActivePad();
+  pad.lines[idx] = e.target.value;
+  saveState();
+  // Re-render results without losing focus
+  renderInPlace();
+}
+
+function renderInPlace() {
+  const pad = getActivePad();
+  if (!pad) return;
+  const vars = {};
+  let runningTotal = 0;
+  let previousResult = 0;
+  const results = [];
+  pad.lines.forEach((line, i) => {
+    vars['__previous'] = previousResult;
+    vars['__total'] = runningTotal;
+    const result = evaluateLine(line, vars, previousResult, runningTotal);
+    results.push(result);
+    if (result.value !== null && result.type !== 'comment' && result.type !== 'text' && result.type !== 'total') {
+      if (result.type !== 'total') runningTotal += result.value;
+      previousResult = result.value;
+    }
+  });
+
+  // Update result cells
+  const body = $('#calcBody');
+  const resultEls = body.querySelectorAll('.line-result');
+  results.forEach((r, i) => {
+    if (!resultEls[i]) return;
+    let resultClass = 'line-result';
+    let resultText = '';
+    if (r.type === 'comment') { resultClass += ' is-comment'; resultText = '// ' + r.value; }
+    else if (r.type === 'total') { resultClass += ' has-value is-total'; resultText = '= ' + formatNumber(r.value); }
+    else if (r.type === 'assign') { resultClass += ' has-value is-assign'; resultText = r.varName + ' = ' + formatNumber(r.value, r.suffix); }
+    else if (r.type === 'value') { resultClass += ' has-value'; resultText = '= ' + formatNumber(r.value, r.suffix); }
+    resultEls[i].className = resultClass;
+    resultEls[i].innerHTML = resultText ? `<span>${resultText}</span><span class="copy-hint">📋</span>` : '';
+  });
+
+  // Update stats
+  const varCount = Object.keys(vars).filter(k => !k.startsWith('__')).length;
+  $('#statLines').textContent = pad.lines.filter(l => l.trim()).length;
+  $('#statVars').textContent = varCount;
+  $('#statTotal').textContent = formatNumber(runningTotal);
+  $('#totalBadge').textContent = '= ' + formatNumber(runningTotal);
+  renderVars();
+}
+
+function onLineKeydown(e) {
+  const idx = parseInt(e.target.dataset.idx);
+  const pad = getActivePad();
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    pad.lines.splice(idx + 1, 0, '');
+    saveState();
+    renderEditor();
+    focusLine(idx + 1);
+  } else if (e.key === 'Backspace' && e.target.value === '' && pad.lines.length > 1) {
+    e.preventDefault();
+    pad.lines.splice(idx, 1);
+    saveState();
+    renderEditor();
+    focusLine(Math.max(0, idx - 1));
+  } else if (e.key === 'ArrowUp' && idx > 0) {
+    if (e.target.selectionStart === 0) {
+      e.preventDefault();
+      focusLine(idx - 1);
+    }
+  } else if (e.key === 'ArrowDown' && idx < pad.lines.length - 1) {
+    if (e.target.selectionStart === e.target.value.length) {
+      e.preventDefault();
+      focusLine(idx + 1);
+    }
+  }
+}
+
+function onLineFocus(e) {
+  e.target.closest('.calc-line').classList.add('focused');
+}
+
+function onLineBlur(e) {
+  e.target.closest('.calc-line').classList.remove('focused');
+}
+
+function focusLine(idx) {
+  const input = $(`[data-idx="${idx}"].line-input`);
+  if (input) {
+    input.focus();
+    input.selectionStart = input.selectionEnd = input.value.length;
+  }
+}
+
+// ── Actions ──
+window.switchPad = function(id) {
+  activePadId = id;
+  saveState();
+  render();
+  closeSidebar();
+};
+
+window.newPad = function() {
+  const pad = { id: uid(), name: 'New Pad', lines: [''], created: Date.now() };
+  pads.unshift(pad);
+  activePadId = pad.id;
+  saveState();
+  render();
+  closeSidebar();
+  $('#padTitle').focus();
+  $('#padTitle').select();
+};
+
+window.clearPad = function() {
+  const pad = getActivePad();
+  if (!pad) return;
+  if (pad.lines.filter(l => l.trim()).length > 0 && !confirm('Clear all lines in this pad?')) return;
+  pad.lines = [''];
+  saveState();
+  renderEditor();
+  renderVars();
+  focusLine(0);
+};
+
+window.padContext = function(e, id) {
+  e.preventDefault();
+  if (pads.length <= 1) return;
+  if (confirm('Delete this pad?')) {
+    pads = pads.filter(p => p.id !== id);
+    if (activePadId === id) activePadId = pads[0].id;
+    saveState();
+    render();
+  }
+};
+
+window.copyResult = function(idx) {
+  const pad = getActivePad();
+  const vars = {};
+  let runningTotal = 0, previousResult = 0;
+  let result = null;
+  for (let i = 0; i <= idx; i++) {
+    vars['__previous'] = previousResult;
+    vars['__total'] = runningTotal;
+    result = evaluateLine(pad.lines[i], vars, previousResult, runningTotal);
+    if (result.value !== null && result.type !== 'comment' && result.type !== 'text' && result.type !== 'total') {
+      runningTotal += result.value;
+      previousResult = result.value;
+    }
+  }
+  if (result && result.value !== null) {
+    const text = result.suffix ? result.value + (result.suffix === '%' ? '%' : ' ' + result.suffix) : String(result.value);
+    navigator.clipboard.writeText(text).then(() => toast('Copied: ' + formatNumber(result.value, result.suffix)));
+  }
+};
+
+window.copyAllResults = function() {
+  const pad = getActivePad();
+  const vars = {};
+  let runningTotal = 0, previousResult = 0;
+  const lines = [];
+  pad.lines.forEach((line, i) => {
+    vars['__previous'] = previousResult;
+    vars['__total'] = runningTotal;
+    const r = evaluateLine(line, vars, previousResult, runningTotal);
+    let rText = '';
+    if (r.type === 'value' || r.type === 'assign') rText = formatNumber(r.value, r.suffix);
+    else if (r.type === 'total') rText = 'TOTAL: ' + formatNumber(r.value);
+    if (r.value !== null && r.type !== 'comment' && r.type !== 'text' && r.type !== 'total') {
+      runningTotal += r.value;
+      previousResult = r.value;
+    }
+    lines.push(line + (rText ? '\t→ ' + rText : ''));
+  });
+  navigator.clipboard.writeText(lines.join('\n')).then(() => toast('All lines copied!'));
+};
+
+window.exportMarkdown = function() {
+  const pad = getActivePad();
+  const vars = {};
+  let runningTotal = 0, previousResult = 0;
+  let md = `# ${pad.name}\n\n`;
+  md += '| Line | Expression | Result |\n|------|-----------|--------|\n';
+  pad.lines.forEach((line, i) => {
+    if (!line.trim()) return;
+    vars['__previous'] = previousResult;
+    vars['__total'] = runningTotal;
+    const r = evaluateLine(line, vars, previousResult, runningTotal);
+    let rText = '';
+    if (r.type === 'value' || r.type === 'assign') rText = formatNumber(r.value, r.suffix);
+    else if (r.type === 'total') rText = '**' + formatNumber(r.value) + '**';
+    else if (r.type === 'comment') rText = '_comment_';
+    if (r.value !== null && r.type !== 'comment' && r.type !== 'text' && r.type !== 'total') {
+      runningTotal += r.value;
+      previousResult = r.value;
+    }
+    md += `| ${i + 1} | \`${line.replace(/\|/g, '\\|')}\` | ${rText} |\n`;
+  });
+  md += `\n**Running Total: ${formatNumber(runningTotal)}**\n`;
+  navigator.clipboard.writeText(md).then(() => toast('Markdown copied!'));
+};
+
+window.exportData = function() {
+  const blob = new Blob([JSON.stringify({ pads, version: 1 }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'calc-pad-export.json';
+  a.click();
+  toast('Exported!');
+};
+
+window.importData = function() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.pads && Array.isArray(data.pads)) {
+          const existing = new Set(pads.map(p => p.id));
+          data.pads.forEach(p => { if (!existing.has(p.id)) pads.push(p); });
+          saveState();
+          render();
+          toast(`Imported ${data.pads.length} pad(s)!`);
+        }
+      } catch { toast('Invalid file'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+};
+
+// ── Sidebar ──
+window.toggleSidebar = function() {
+  $('#sidebar').classList.toggle('open');
+  $('#sidebarBackdrop').classList.toggle('open');
+};
+function closeSidebar() {
+  $('#sidebar').classList.remove('open');
+  $('#sidebarBackdrop').classList.remove('open');
+}
+
+// ── Vars panel ──
+window.toggleVars = function() {
+  $('#varsPanel').classList.toggle('hidden');
+};
+
+// ── Help ──
+window.showHelp = function() { $('#helpModal').classList.remove('hidden'); };
+window.closeHelp = function() { $('#helpModal').classList.add('hidden'); };
+
+// ── Pad title ──
+$('#padTitle').addEventListener('input', function() {
+  const pad = getActivePad();
+  if (pad) { pad.name = this.value || 'Untitled'; saveState(); renderPadList(); }
+});
+
+// ── Global shortcuts ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeHelp(); return; }
+  const mod = e.metaKey || e.ctrlKey;
+  if (mod && e.key === 'n') { e.preventDefault(); newPad(); }
+  if (mod && e.key === 'e') { e.preventDefault(); exportData(); }
+  if (mod && e.shiftKey && e.key === 'C') { e.preventDefault(); copyAllResults(); }
+});
+
+// ── Toast ──
+function toast(msg) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ── Helpers ──
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Seed extra demo pad ──
+function seedDemoPads() {
+  if (pads.length > 1) return;
+  pads.push({
+    id: uid(),
+    name: 'SaaS Unit Economics',
+    lines: [
+      '// SaaS Unit Economics Calculator',
+      '',
+      'monthlyPrice = 29',
+      'annualDiscount = 20%',
+      'annualPrice = monthlyPrice * 12 * (1 - annualDiscount)',
+      '',
+      'churnRate = 5%',
+      'avgLifetimeMonths = 1 / churnRate',
+      'ltv = monthlyPrice * avgLifetimeMonths',
+      '',
+      'adSpend = 2000',
+      'signups = 150',
+      'trialConversion = 12%',
+      'customers = signups * trialConversion',
+      'cac = adSpend / customers',
+      '',
+      '--- unit economics ---',
+      '',
+      'ltvCacRatio = ltv / cac',
+      '',
+      '// Payback period in months',
+      'paybackMonths = cac / monthlyPrice',
+    ],
+    created: Date.now() - 1000
+  });
+  pads.push({
+    id: uid(),
+    name: 'Trip Budget',
+    lines: [
+      '// Weekend Trip Budget',
+      '',
+      'Flight: 8500',
+      'Hotel: 3200 * 2',
+      'Food: 1500 * 3',
+      'Transport: 800',
+      'Activities: 2000',
+      '',
+      '=== trip total ===',
+      '',
+      'people = 2',
+      'perPerson = total / people',
+      '',
+      '// Convert to USD',
+      'perPerson / 83.5',
+    ],
+    created: Date.now() - 2000
+  });
+  saveState();
+}
+
+// ── Init ──
+loadState();
+seedDemoPads();
+render();
+focusLine(0);
+
+})();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>
