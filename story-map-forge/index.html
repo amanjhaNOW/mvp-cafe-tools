@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Story Map Forge</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a26;--bg4:#222233;
+--text:#e8e8f0;--text2:#a0a0b8;--text3:#6a6a80;
+--border:#2a2a3a;--border2:#3a3a4f;
+--accent:#6c5ce7;--accent2:#a29bfe;--accent-bg:rgba(108,92,231,.12);
+--danger:#ff6b6b;--success:#51cf66;--warning:#ffd43b;--info:#74c0fc;
+--radius:8px;--radius-sm:5px;--radius-lg:12px;
+--shadow:0 2px 8px rgba(0,0,0,.3);--shadow-lg:0 8px 32px rgba(0,0,0,.5);
+--status-idea:#6a6a80;--status-planned:#74c0fc;--status-progress:#ffd43b;
+--status-done:#51cf66;--status-deferred:#ff6b6b;
+--transition:150ms ease;
+}
+html{font-size:16px;background:var(--bg)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--text);background:var(--bg);min-height:100dvh;overflow-x:hidden;display:flex;flex-direction:column}
+button{font:inherit;cursor:pointer;border:none;background:none;color:var(--text);min-height:44px;min-width:44px}
+input,textarea,select{font:inherit;color:var(--text);background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;min-height:44px;font-size:16px;width:100%}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-bg)}
+textarea{resize:vertical;min-height:80px}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0a0b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+
+/* Layout */
+.app{display:flex;height:100dvh;overflow:hidden}
+.sidebar{width:260px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:transform var(--transition);z-index:100}
+.sidebar.closed{transform:translateX(-260px);position:absolute;height:100%}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sidebar-header h1{font-size:15px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;flex:1}
+.sidebar-toggle{position:fixed;top:8px;left:8px;z-index:101;background:var(--bg3);border-radius:var(--radius);display:none;padding:8px}
+.sidebar-search{padding:8px 12px}
+.sidebar-search input{min-height:36px;font-size:14px}
+.map-list{flex:1;overflow-y:auto;padding:4px 8px}
+.map-item{padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;gap:8px;transition:background var(--transition);font-size:14px;min-height:44px}
+.map-item:hover{background:var(--bg3)}
+.map-item.active{background:var(--accent-bg);color:var(--accent2)}
+.map-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.map-item .del{opacity:0;color:var(--danger);font-size:12px;min-width:28px;min-height:28px;display:flex;align-items:center;justify-content:center;border-radius:4px}
+.map-item:hover .del{opacity:.6}
+.map-item .del:hover{opacity:1;background:rgba(255,107,107,.1)}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border)}
+.btn{padding:8px 16px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;transition:all var(--transition);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2);color:#111}
+.btn-sm{padding:4px 10px;min-height:32px;min-width:32px;font-size:13px}
+.btn-ghost{color:var(--text2)}
+.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-danger{color:var(--danger)}
+.btn-danger:hover{background:rgba(255,107,107,.1)}
+.btn-full{width:100%}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;background:var(--bg2)}
+.topbar .menu-btn{display:none}
+.topbar-title{font-size:14px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.view-tabs{display:flex;gap:2px;background:var(--bg3);border-radius:var(--radius);padding:2px}
+.view-tab{padding:6px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;color:var(--text2);min-height:36px}
+.view-tab.active{background:var(--accent);color:#fff}
+.view-tab:hover:not(.active){background:var(--bg4)}
+.topbar-actions{display:flex;gap:4px}
+.content{flex:1;overflow:auto;padding:16px}
+
+/* Release Legend */
+.release-legend{display:flex;gap:8px;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--border);align-items:center;flex-shrink:0;background:var(--bg2)}
+.release-legend .label{font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.release-chip{padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;cursor:pointer;min-height:28px;display:flex;align-items:center;gap:4px;transition:all var(--transition);border:1px solid transparent}
+.release-chip.active{border-color:currentColor;box-shadow:0 0 8px rgba(255,255,255,.1)}
+.release-chip.muted{opacity:.35}
+.release-manage{font-size:12px;color:var(--accent2);cursor:pointer;min-height:28px;display:flex;align-items:center}
+.release-manage:hover{text-decoration:underline}
+
+/* Map View */
+.map-grid{display:flex;gap:0;min-width:min-content;padding-bottom:32px}
+.activity-col{min-width:240px;max-width:320px;flex:1;border-right:1px solid var(--border)}
+.activity-col:last-child{border-right:none}
+.activity-header{padding:12px 16px;font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:5}
+.activity-header .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.activity-header .name{flex:1;cursor:pointer}
+.activity-header .acts{display:flex;gap:2px}
+.task-group{border-top:1px solid var(--border);padding:8px}
+.task-header{padding:6px 8px;font-size:13px;font-weight:500;color:var(--text2);display:flex;align-items:center;gap:6px;border-radius:var(--radius-sm);margin-bottom:4px}
+.task-header .name{flex:1;cursor:pointer}
+.task-header:hover{background:var(--bg3)}
+.story-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 10px 10px 14px;margin-bottom:6px;cursor:pointer;transition:all var(--transition);position:relative;border-left:3px solid var(--border)}
+.story-card:hover{border-color:var(--border2);background:var(--bg4);transform:translateY(-1px);box-shadow:var(--shadow)}
+.story-card .title{font-size:13px;font-weight:500;margin-bottom:6px;line-height:1.3}
+.story-card .meta{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)}
+.story-card .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.story-card .estimate{padding:1px 6px;border-radius:3px;background:var(--bg);font-weight:600;font-size:10px;letter-spacing:.5px}
+.story-card .tag{padding:1px 5px;border-radius:3px;background:var(--accent-bg);color:var(--accent2);font-size:10px}
+.add-btn{width:100%;padding:6px;border-radius:var(--radius-sm);color:var(--text3);font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px;min-height:32px;border:1px dashed var(--border);margin-top:4px;transition:all var(--transition)}
+.add-btn:hover{color:var(--accent2);border-color:var(--accent);background:var(--accent-bg)}
+
+/* Mobile Map Accordion */
+.map-accordion{display:none}
+.acc-activity{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;overflow:hidden}
+.acc-activity-header{padding:12px 16px;font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;cursor:pointer;min-height:48px}
+.acc-activity-header .arrow{transition:transform var(--transition);color:var(--text3)}
+.acc-activity-header.open .arrow{transform:rotate(90deg)}
+.acc-activity-body{display:none;padding:0 8px 8px}
+.acc-activity-header.open+.acc-activity-body{display:block}
+.acc-task{margin-bottom:6px}
+.acc-task-header{padding:8px;font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px;border-radius:var(--radius-sm)}
+.acc-task-header:hover{background:var(--bg3)}
+.acc-task-header .arrow{transition:transform var(--transition);color:var(--text3);font-size:10px}
+.acc-task-header.open .arrow{transform:rotate(90deg)}
+.acc-task-body{display:none;padding:0 0 0 16px}
+.acc-task-header.open+.acc-task-body{display:block}
+
+/* Backlog View */
+.backlog-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.backlog-filters select{width:auto;min-width:140px;font-size:13px;min-height:36px}
+.backlog-filters input{max-width:240px;min-height:36px;font-size:13px}
+.backlog-table{width:100%;border-collapse:collapse;font-size:13px}
+.backlog-table th{text-align:left;padding:8px 12px;border-bottom:2px solid var(--border);color:var(--text2);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;white-space:nowrap;user-select:none}
+.backlog-table th:hover{color:var(--text)}
+.backlog-table th .sort-arrow{margin-left:4px;font-size:10px}
+.backlog-table td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.backlog-table tr:hover td{background:var(--bg3)}
+.backlog-table tr{cursor:pointer}
+
+/* Dashboard */
+.dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-card .value{font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-card .label{font-size:12px;color:var(--text2);margin-top:4px}
+.dash-section{grid-column:1/-1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:4px}
+.dash-section h3{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text2)}
+.progress-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:13px}
+.progress-row .name{min-width:100px;font-weight:500}
+.progress-bar{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width .3s ease}
+.progress-row .pct{min-width:40px;text-align:right;color:var(--text2);font-size:12px}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:120px;padding-top:8px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar-fill{width:100%;border-radius:4px 4px 0 0;min-height:2px;transition:height .3s ease}
+.bar-label{font-size:10px;color:var(--text3);text-align:center;word-break:break-all}
+.bar-value{font-size:11px;font-weight:600}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity var(--transition)}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:520px;max-height:90dvh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.modal-header h2{font-size:16px;font-weight:600;flex:1}
+.modal-body{padding:20px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.form-row{display:flex;gap:8px}
+.form-row>*{flex:1}
+.tag-input{display:flex;flex-wrap:wrap;gap:4px;padding:6px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);min-height:44px;align-items:center;cursor:text}
+.tag-input:focus-within{border-color:var(--accent)}
+.tag-input input{border:none;background:none;padding:4px;flex:1;min-width:80px;min-height:28px}
+.tag-input .tag{padding:2px 8px;border-radius:3px;background:var(--accent-bg);color:var(--accent2);font-size:12px;display:flex;align-items:center;gap:4px}
+.tag-input .tag .remove{cursor:pointer;font-size:14px;line-height:1;min-width:auto;min-height:auto}
+.color-picker{display:flex;gap:6px;flex-wrap:wrap}
+.color-swatch{width:32px;height:32px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all var(--transition)}
+.color-swatch.active{border-color:#fff;transform:scale(1.15)}
+.color-swatch:hover{transform:scale(1.1)}
+.estimate-picker{display:flex;gap:4px}
+.estimate-opt{padding:6px 12px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;border:1px solid var(--border);min-height:36px;transition:all var(--transition)}
+.estimate-opt.active{border-color:var(--accent);background:var(--accent-bg);color:var(--accent2)}
+.estimate-opt:hover:not(.active){background:var(--bg4)}
+.status-picker{display:flex;gap:4px;flex-wrap:wrap}
+.status-opt{padding:6px 12px;border-radius:var(--radius-sm);font-size:12px;border:1px solid var(--border);min-height:36px;display:flex;align-items:center;gap:4px;transition:all var(--transition)}
+.status-opt.active{border-color:currentColor}
+.status-opt:hover:not(.active){background:var(--bg4)}
+.kbd-help{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px}
+.kbd{padding:2px 8px;border-radius:4px;background:var(--bg3);border:1px solid var(--border);font-family:monospace;font-size:12px;text-align:center;min-width:28px;display:inline-block}
+.confirm-text{font-size:14px;line-height:1.5;color:var(--text2)}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;height:100%;z-index:100}
+  .sidebar.closed{transform:translateX(-260px)}
+  .sidebar-toggle,.topbar .menu-btn{display:flex}
+  .map-grid{display:none}
+  .map-accordion{display:block}
+  .backlog-filters{flex-direction:column}
+  .backlog-filters select,.backlog-filters input{width:100%;max-width:none}
+  .dashboard{grid-template-columns:repeat(2,1fr)}
+  .form-row{flex-direction:column}
+}
+@media(max-width:430px){
+  .content{padding:10px}
+  .dashboard{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <!-- Sidebar -->
+  <aside class="sidebar closed" id="sidebar">
+    <div class="sidebar-header">
+      <h1>⚒️ Story Map Forge</h1>
+      <button class="btn btn-sm btn-ghost" onclick="toggleSidebar()" title="Close sidebar">✕</button>
+    </div>
+    <div class="sidebar-search">
+      <input type="text" placeholder="Search maps..." id="mapSearch" oninput="renderMapList()">
+    </div>
+    <div class="map-list" id="mapList"></div>
+    <div class="sidebar-footer">
+      <button class="btn btn-primary btn-full" onclick="createMap()">+ New Map</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <button class="menu-btn btn btn-sm btn-ghost" onclick="toggleSidebar()">☰</button>
+      <button class="btn btn-sm btn-ghost" onclick="toggleSidebar()" style="display:none" id="sidebarBtn">☰</button>
+      <div class="topbar-title" id="topbarTitle">Story Map Forge</div>
+      <div class="view-tabs">
+        <button class="view-tab active" data-view="map" onclick="setView('map')">Map</button>
+        <button class="view-tab" data-view="backlog" onclick="setView('backlog')">Backlog</button>
+        <button class="view-tab" data-view="dashboard" onclick="setView('dashboard')">Dashboard</button>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-sm btn-ghost" onclick="globalSearch()" title="Search stories (/)">🔍</button>
+        <button class="btn btn-sm btn-ghost" onclick="showExportMenu()" title="Export (E)">📤</button>
+        <button class="btn btn-sm btn-ghost" onclick="importData()" title="Import (I)">📥</button>
+        <button class="btn btn-sm btn-ghost" onclick="showHelp()" title="Help (?)">❓</button>
+      </div>
+    </div>
+
+    <!-- Release Legend -->
+    <div class="release-legend" id="releaseLegend"></div>
+
+    <!-- Content -->
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+const SK='mvpcafe:story-map-forge:state';
+const PRESETS=['#6c5ce7','#00b894','#0984e3','#e17055','#fdcb6e','#e84393','#00cec9','#636e72'];
+const STATUSES=['idea','planned','in-progress','done','deferred'];
+const STATUS_COLORS={idea:'var(--status-idea)',planned:'var(--status-planned)','in-progress':'var(--status-progress)',done:'var(--status-done)',deferred:'var(--status-deferred)'};
+const STATUS_LABELS={idea:'Idea',planned:'Planned','in-progress':'In Progress',done:'Done',deferred:'Deferred'};
+const ESTIMATES=['XS','S','M','L','XL'];
+
+let state={maps:[],activeMapId:null};
+let currentView='map';
+let releaseFilter=null;
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function save(){localStorage.setItem(SK,JSON.stringify(state))}
+function load(){try{const d=localStorage.getItem(SK);if(d){state=JSON.parse(d)}}catch(e){}}
+function getMap(id){return state.maps.find(m=>m.id===(id||state.activeMapId))}
+function activeMap(){return getMap(state.activeMapId)}
+
+// Init
+load();
+if(!state.maps.length)seedDemo();
+if(!state.activeMapId&&state.maps.length)state.activeMapId=state.maps[0].id;
+render();
+initSidebar();
+
+function initSidebar(){
+  const mq=window.matchMedia('(min-width:769px)');
+  function check(e){document.getElementById('sidebar').classList.toggle('closed',!e.matches);document.getElementById('sidebarBtn').style.display=e.matches?'flex':'none'}
+  mq.addEventListener('change',check);check(mq);
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('closed')}
+
+function render(){
+  renderMapList();
+  renderReleaseLegend();
+  renderView();
+  const m=activeMap();
+  document.getElementById('topbarTitle').textContent=m?m.name:'Story Map Forge';
+}
+function renderMapList(){
+  const q=(document.getElementById('mapSearch')?.value||'').toLowerCase();
+  const el=document.getElementById('mapList');
+  const filtered=state.maps.filter(m=>m.name.toLowerCase().includes(q));
+  el.innerHTML=filtered.map(m=>`
+    <div class="map-item ${m.id===state.activeMapId?'active':''}" onclick="selectMap('${m.id}')">
+      <span class="name" ondblclick="event.stopPropagation();renameMap('${m.id}')">${esc(m.name)}</span>
+      <button class="del" onclick="event.stopPropagation();deleteMap('${m.id}')" title="Delete">🗑</button>
+    </div>`).join('');
+}
+
+function selectMap(id){state.activeMapId=id;releaseFilter=null;save();render()}
+function createMap(){
+  const name=prompt('Map name:','New Story Map');
+  if(!name)return;
+  const m={id:uid(),name,description:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),activities:[],releases:[{id:uid(),name:'MVP',color:'#00b894',order:0},{id:uid(),name:'Release 1',color:'#0984e3',order:1}]};
+  state.maps.push(m);state.activeMapId=m.id;save();render();
+}
+function renameMap(id){
+  const m=getMap(id);if(!m)return;
+  const name=prompt('Rename map:',m.name);
+  if(name){m.name=name;m.updatedAt=new Date().toISOString();save();render()}
+}
+function deleteMap(id){
+  const m=getMap(id);if(!m)return;
+  showConfirm(`Delete map "${m.name}" and all its data?`,()=>{
+    state.maps=state.maps.filter(x=>x.id!==id);
+    if(state.activeMapId===id)state.activeMapId=state.maps[0]?.id||null;
+    save();render();
+  });
+}
+
+function setView(v){
+  currentView=v;
+  document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
+  renderView();
+}
+function renderView(){
+  const el=document.getElementById('content');
+  const m=activeMap();
+  if(!m){el.innerHTML='<p style="color:var(--text3);text-align:center;padding:60px">No map selected. Create one from the sidebar.</p>';return}
+  if(currentView==='map')renderMapView(el,m);
+  else if(currentView==='backlog')renderBacklogView(el,m);
+  else renderDashboardView(el,m);
+}
+
+function renderReleaseLegend(){
+  const el=document.getElementById('releaseLegend');
+  const m=activeMap();
+  if(!m){el.innerHTML='';return}
+  el.innerHTML=`<span class="label">Releases</span>`+
+    m.releases.sort((a,b)=>a.order-b.order).map(r=>{
+      const isActive=releaseFilter===r.id;
+      const isMuted=releaseFilter&&!isActive;
+      return `<span class="release-chip ${isActive?'active':''} ${isMuted?'muted':''}" style="background:${r.color}22;color:${r.color}" onclick="toggleReleaseFilter('${r.id}')">${esc(r.name)}</span>`;
+    }).join('')+
+    `<span class="release-chip ${releaseFilter==='none'?'active':''} ${releaseFilter&&releaseFilter!=='none'?'muted':''}" style="background:var(--bg3);color:var(--text3)" onclick="toggleReleaseFilter('none')">Unassigned</span>`+
+    `<span class="release-manage" onclick="manageReleases()">⚙ Manage</span>`;
+}
+function toggleReleaseFilter(id){
+  releaseFilter=releaseFilter===id?null:id;
+  renderReleaseLegend();renderView();
+}
+
+// === MAP VIEW ===
+function renderMapView(el,m){
+  const acts=m.activities.sort((a,b)=>a.order-b.order);
+  // Desktop grid
+  let grid='<div class="map-grid">';
+  acts.forEach(a=>{
+    grid+=`<div class="activity-col">
+      <div class="activity-header" style="background:${a.color}15">
+        <span class="dot" style="background:${a.color}"></span>
+        <span class="name" onclick="editActivity('${a.id}')">${esc(a.name)}</span>
+        <div class="acts">
+          <button class="btn btn-sm btn-ghost" onclick="addTask('${a.id}')" title="Add task">+📋</button>
+          <button class="btn btn-sm btn-ghost" onclick="editActivity('${a.id}')" title="Edit">✎</button>
+        </div>
+      </div>`;
+    const tasks=(a.tasks||[]).sort((x,y)=>x.order-y.order);
+    tasks.forEach(t=>{
+      grid+=`<div class="task-group">
+        <div class="task-header">
+          <span class="name" onclick="editTask('${a.id}','${t.id}')">${esc(t.name)}</span>
+          <button class="btn btn-sm btn-ghost" style="font-size:11px" onclick="editTask('${a.id}','${t.id}')" title="Edit task">✎</button>
+        </div>`;
+      const stories=(t.stories||[]).sort((x,y)=>x.order-y.order).filter(s=>filterStory(s));
+      stories.forEach(s=>{
+        const rel=m.releases.find(r=>r.id===s.releaseId);
+        grid+=storyCardHTML(s,rel);
+      });
+      grid+=`<button class="add-btn" onclick="addStory('${a.id}','${t.id}')">+ Story</button></div>`;
+    });
+    grid+=`<div style="padding:8px"><button class="add-btn" onclick="addTask('${a.id}')">+ Task</button></div></div>`;
+  });
+  grid+=`<div class="activity-col" style="min-width:120px;display:flex;align-items:flex-start;justify-content:center;padding-top:16px">
+    <button class="add-btn" style="max-width:160px" onclick="addActivity()">+ Activity</button></div></div>`;
+
+  // Mobile accordion
+  let acc='<div class="map-accordion">';
+  acts.forEach(a=>{
+    acc+=`<div class="acc-activity">
+      <div class="acc-activity-header" onclick="this.classList.toggle('open')" style="background:${a.color}15">
+        <span class="arrow">▶</span>
+        <span class="dot" style="background:${a.color};width:10px;height:10px;border-radius:50%"></span>
+        <span style="flex:1">${esc(a.name)}</span>
+        <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();editActivity('${a.id}')">✎</button>
+      </div>
+      <div class="acc-activity-body">`;
+    (a.tasks||[]).sort((x,y)=>x.order-y.order).forEach(t=>{
+      acc+=`<div class="acc-task">
+        <div class="acc-task-header" onclick="this.classList.toggle('open')">
+          <span class="arrow" style="font-size:10px">▶</span>
+          <span style="flex:1">${esc(t.name)}</span>
+          <button class="btn btn-sm btn-ghost" style="font-size:11px" onclick="event.stopPropagation();editTask('${a.id}','${t.id}')">✎</button>
+        </div>
+        <div class="acc-task-body">`;
+      (t.stories||[]).sort((x,y)=>x.order-y.order).filter(s=>filterStory(s)).forEach(s=>{
+        const rel=m.releases.find(r=>r.id===s.releaseId);
+        acc+=storyCardHTML(s,rel);
+      });
+      acc+=`<button class="add-btn" onclick="addStory('${a.id}','${t.id}')">+ Story</button></div></div>`;
+    });
+    acc+=`<button class="add-btn" onclick="addTask('${a.id}')">+ Task</button></div></div>`;
+  });
+  acc+=`<button class="add-btn" onclick="addActivity()" style="margin-top:8px">+ Activity</button></div>`;
+  el.innerHTML=grid+acc;
+}
+
+function storyCardHTML(s,rel){
+  const borderColor=rel?rel.color:'var(--border)';
+  const tags=(s.tags||[]).slice(0,2).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
+  return `<div class="story-card" style="border-left-color:${borderColor}" onclick="editStory('${s.id}')">
+    <div class="title">${esc(s.title)}</div>
+    <div class="meta">
+      <span class="status-dot" style="background:${STATUS_COLORS[s.status]||STATUS_COLORS.idea}"></span>
+      <span>${STATUS_LABELS[s.status]||'Idea'}</span>
+      ${s.estimate?`<span class="estimate">${s.estimate}</span>`:''}
+      ${tags}
+    </div>
+  </div>`;
+}
+
+function filterStory(s){
+  if(!releaseFilter)return true;
+  if(releaseFilter==='none')return !s.releaseId;
+  return s.releaseId===releaseFilter;
+}
+
+// === BACKLOG VIEW ===
+function renderBacklogView(el,m){
+  let stories=[];
+  m.activities.forEach(a=>(a.tasks||[]).forEach(t=>(t.stories||[]).forEach(s=>stories.push({...s,activityName:a.name,activityId:a.id,taskName:t.name,taskId:t.id}))));
+  
+  el.innerHTML=`<div class="backlog-filters">
+    <input type="text" placeholder="Search stories..." id="blSearch" oninput="renderView()">
+    <select id="blActivity" onchange="renderView()"><option value="">All Activities</option>${m.activities.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select>
+    <select id="blRelease" onchange="renderView()"><option value="">All Releases</option>${m.releases.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}<option value="none">Unassigned</option></select>
+    <select id="blStatus" onchange="renderView()"><option value="">All Statuses</option>${STATUSES.map(s=>`<option value="${s}">${STATUS_LABELS[s]}</option>`).join('')}</select>
+  </div>
+  <table class="backlog-table"><thead><tr>
+    <th onclick="sortBacklog('title')">Title <span class="sort-arrow">↕</span></th>
+    <th onclick="sortBacklog('activityName')">Activity <span class="sort-arrow">↕</span></th>
+    <th onclick="sortBacklog('taskName')">Task <span class="sort-arrow">↕</span></th>
+    <th onclick="sortBacklog('release')">Release <span class="sort-arrow">↕</span></th>
+    <th onclick="sortBacklog('status')">Status <span class="sort-arrow">↕</span></th>
+    <th onclick="sortBacklog('estimate')">Est <span class="sort-arrow">↕</span></th>
+  </tr></thead><tbody id="blBody"></tbody></table>`;
+  
+  setTimeout(()=>renderBacklogRows(stories),0);
+}
+
+let backlogSort={field:'title',asc:true};
+function sortBacklog(field){
+  if(backlogSort.field===field)backlogSort.asc=!backlogSort.asc;
+  else{backlogSort.field=field;backlogSort.asc=true}
+  renderView();
+}
+
+function renderBacklogRows(stories){
+  const body=document.getElementById('blBody');if(!body)return;
+  const m=activeMap();
+  const q=(document.getElementById('blSearch')?.value||'').toLowerCase();
+  const fa=document.getElementById('blActivity')?.value||'';
+  const fr=document.getElementById('blRelease')?.value||'';
+  const fs=document.getElementById('blStatus')?.value||'';
+  
+  let filtered=stories.filter(s=>{
+    if(q&&!s.title.toLowerCase().includes(q)&&!(s.description||'').toLowerCase().includes(q))return false;
+    if(fa&&s.activityId!==fa)return false;
+    if(fr==='none'&&s.releaseId)return false;
+    if(fr&&fr!=='none'&&s.releaseId!==fr)return false;
+    if(fs&&s.status!==fs)return false;
+    return true;
+  });
+  
+  const sf=backlogSort.field;
+  filtered.sort((a,b)=>{
+    let va,vb;
+    if(sf==='release'){
+      const ra=m.releases.find(r=>r.id===a.releaseId);
+      const rb=m.releases.find(r=>r.id===b.releaseId);
+      va=ra?ra.name:'zzz';vb=rb?rb.name:'zzz';
+    } else if(sf==='estimate'){
+      va=ESTIMATES.indexOf(a.estimate);vb=ESTIMATES.indexOf(b.estimate);
+      if(va<0)va=99;if(vb<0)vb=99;
+    } else {va=a[sf]||'';vb=b[sf]||''}
+    if(typeof va==='string')return backlogSort.asc?va.localeCompare(vb):vb.localeCompare(va);
+    return backlogSort.asc?va-vb:vb-va;
+  });
+  
+  body.innerHTML=filtered.map(s=>{
+    const rel=m.releases.find(r=>r.id===s.releaseId);
+    return `<tr onclick="editStory('${s.id}')">
+      <td>${esc(s.title)}</td>
+      <td>${esc(s.activityName)}</td>
+      <td>${esc(s.taskName)}</td>
+      <td>${rel?`<span style="color:${rel.color}">${esc(rel.name)}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td><span style="display:inline-flex;align-items:center;gap:4px"><span class="status-dot" style="background:${STATUS_COLORS[s.status]};width:7px;height:7px;border-radius:50%;display:inline-block"></span>${STATUS_LABELS[s.status]||'Idea'}</span></td>
+      <td>${s.estimate||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// === DASHBOARD VIEW ===
+function renderDashboardView(el,m){
+  let all=[];
+  m.activities.forEach(a=>(a.tasks||[]).forEach(t=>(t.stories||[]).forEach(s=>all.push({...s,actName:a.name,actColor:a.color}))));
+  const total=all.length;
+  const bySt={};STATUSES.forEach(s=>bySt[s]=0);all.forEach(s=>bySt[s.status]=(bySt[s.status]||0)+1);
+  const unassigned=all.filter(s=>!s.releaseId).length;
+  const estMap={};all.forEach(s=>{if(s.estimate)estMap[s.estimate]=(estMap[s.estimate]||0)+1});
+
+  let html=`<div class="dashboard">
+    <div class="stat-card"><div class="value">${total}</div><div class="label">Total Stories</div></div>
+    <div class="stat-card"><div class="value" style="color:var(--status-idea)">${bySt.idea||0}</div><div class="label">Ideas</div></div>
+    <div class="stat-card"><div class="value" style="color:var(--status-planned);-webkit-text-fill-color:var(--status-planned)">${bySt.planned||0}</div><div class="label">Planned</div></div>
+    <div class="stat-card"><div class="value" style="color:var(--status-progress);-webkit-text-fill-color:var(--status-progress)">${bySt['in-progress']||0}</div><div class="label">In Progress</div></div>
+    <div class="stat-card"><div class="value" style="color:var(--status-done);-webkit-text-fill-color:var(--status-done)">${bySt.done||0}</div><div class="label">Done</div></div>
+    <div class="stat-card"><div class="value" style="color:var(--status-deferred);-webkit-text-fill-color:var(--status-deferred)">${bySt.deferred||0}</div><div class="label">Deferred</div></div>
+    <div class="stat-card"><div class="value">${unassigned}</div><div class="label">Unassigned</div></div>
+    <div class="stat-card"><div class="value">${Object.values(estMap).reduce((a,b)=>a+b,0)}</div><div class="label">Estimated</div></div>`;
+
+  // Release progress
+  html+=`<div class="dash-section"><h3>Release Progress</h3>`;
+  m.releases.sort((a,b)=>a.order-b.order).forEach(r=>{
+    const rs=all.filter(s=>s.releaseId===r.id);
+    const done=rs.filter(s=>s.status==='done').length;
+    const pct=rs.length?Math.round(done/rs.length*100):0;
+    html+=`<div class="progress-row"><span class="name" style="color:${r.color}">${esc(r.name)}</span>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${r.color}"></div></div>
+      <span class="pct">${done}/${rs.length}</span></div>`;
+  });
+  html+=`</div>`;
+
+  // Activity coverage
+  html+=`<div class="dash-section"><h3>Stories per Activity</h3><div class="bar-chart">`;
+  const maxAct=Math.max(1,...m.activities.map(a=>{let c=0;(a.tasks||[]).forEach(t=>c+=(t.stories||[]).length);return c}));
+  m.activities.forEach(a=>{
+    let c=0;(a.tasks||[]).forEach(t=>c+=(t.stories||[]).length);
+    const h=Math.round(c/maxAct*100);
+    html+=`<div class="bar-col"><div class="bar-value">${c}</div><div class="bar-fill" style="height:${h}px;background:${a.color}"></div><div class="bar-label">${esc(a.name)}</div></div>`;
+  });
+  html+=`</div></div>`;
+
+  // Estimate distribution
+  html+=`<div class="dash-section"><h3>Estimate Distribution</h3><div class="bar-chart">`;
+  const maxEst=Math.max(1,...ESTIMATES.map(e=>estMap[e]||0));
+  ESTIMATES.forEach(e=>{
+    const c=estMap[e]||0;const h=Math.round(c/maxEst*100);
+    html+=`<div class="bar-col"><div class="bar-value">${c}</div><div class="bar-fill" style="height:${h}px;background:var(--accent)"></div><div class="bar-label">${e}</div></div>`;
+  });
+  html+=`</div></div></div>`;
+  el.innerHTML=html;
+}
+
+// === CRUD ===
+function addActivity(){
+  const m=activeMap();if(!m)return;
+  openModal('New Activity',`
+    <div class="form-group"><label>Name</label><input id="mf-name" placeholder="Activity name"></div>
+    <div class="form-group"><label>Color</label><div class="color-picker" id="mf-colors">${PRESETS.map((c,i)=>`<div class="color-swatch ${i===0?'active':''}" style="background:${c}" data-color="${c}" onclick="pickColor(this)"></div>`).join('')}</div></div>
+  `,()=>{
+    const name=document.getElementById('mf-name').value.trim();if(!name)return;
+    const color=document.querySelector('#mf-colors .active')?.dataset.color||PRESETS[0];
+    m.activities.push({id:uid(),name,color,order:m.activities.length,tasks:[]});
+    m.updatedAt=new Date().toISOString();save();render();closeModal();
+  });
+  setTimeout(()=>document.getElementById('mf-name')?.focus(),100);
+}
+
+function editActivity(aid){
+  const m=activeMap();if(!m)return;
+  const a=m.activities.find(x=>x.id===aid);if(!a)return;
+  openModal('Edit Activity',`
+    <div class="form-group"><label>Name</label><input id="mf-name" value="${esc(a.name)}"></div>
+    <div class="form-group"><label>Color</label><div class="color-picker" id="mf-colors">${PRESETS.map(c=>`<div class="color-swatch ${c===a.color?'active':''}" style="background:${c}" data-color="${c}" onclick="pickColor(this)"></div>`).join('')}</div></div>
+    <div style="margin-top:16px"><button class="btn btn-danger" onclick="deleteActivity('${aid}')">🗑 Delete Activity</button></div>
+  `,()=>{
+    a.name=document.getElementById('mf-name').value.trim()||a.name;
+    a.color=document.querySelector('#mf-colors .active')?.dataset.color||a.color;
+    m.updatedAt=new Date().toISOString();save();render();closeModal();
+  });
+}
+
+function deleteActivity(aid){
+  const m=activeMap();const a=m.activities.find(x=>x.id===aid);
+  showConfirm(`Delete activity "${a.name}" and all its tasks/stories?`,()=>{
+    m.activities=m.activities.filter(x=>x.id!==aid);
+    m.updatedAt=new Date().toISOString();save();render();closeModal();
+  });
+}
+
+function addTask(aid){
+  const m=activeMap();const a=m.activities.find(x=>x.id===aid);if(!a)return;
+  const name=prompt('Task name:');if(!name)return;
+  if(!a.tasks)a.tasks=[];
+  a.tasks.push({id:uid(),name,order:a.tasks.length,stories:[]});
+  m.updatedAt=new Date().toISOString();save();render();
+}
+
+function editTask(aid,tid){
+  const m=activeMap();const a=m.activities.find(x=>x.id===aid);if(!a)return;
+  const t=(a.tasks||[]).find(x=>x.id===tid);if(!t)return;
+  openModal('Edit Task',`
+    <div class="form-group"><label>Name</label><input id="mf-name" value="${esc(t.name)}"></div>
+    <div style="margin-top:16px"><button class="btn btn-danger" onclick="deleteTask('${aid}','${tid}')">🗑 Delete Task</button></div>
+  `,()=>{
+    t.name=document.getElementById('mf-name').value.trim()||t.name;
+    m.updatedAt=new Date().toISOString();save();render();closeModal();
+  });
+}
+
+function deleteTask(aid,tid){
+  const m=activeMap();const a=m.activities.find(x=>x.id===aid);
+  const t=(a.tasks||[]).find(x=>x.id===tid);
+  showConfirm(`Delete task "${t.name}" and all its stories?`,()=>{
+    a.tasks=a.tasks.filter(x=>x.id!==tid);
+    m.updatedAt=new Date().toISOString();save();render();closeModal();
+  });
+}
+
+function addStory(aid,tid){
+  const m=activeMap();if(!m)return;
+  const a=m.activities.find(x=>x.id===aid);if(!a)return;
+  const t=(a.tasks||[]).find(x=>x.id===tid);if(!t)return;
+  if(!t.stories)t.stories=[];
+  const s={id:uid(),title:'New Story',description:'',criteria:'',estimate:'',status:'idea',releaseId:m.releases[0]?.id||'',tags:[],notes:'',order:t.stories.length};
+  t.stories.push(s);
+  m.updatedAt=new Date().toISOString();save();render();
+  editStory(s.id);
+}
+
+function findStory(sid){
+  const m=activeMap();if(!m)return null;
+  for(const a of m.activities)for(const t of(a.tasks||[]))for(const s of(t.stories||[]))if(s.id===sid)return{story:s,task:t,activity:a};
+  return null;
+}
+
+function editStory(sid){
+  const m=activeMap();if(!m)return;
+  const found=findStory(sid);if(!found)return;
+  const{story:s,task:t,activity:a}=found;
+  const rel=m.releases.find(r=>r.id===s.releaseId);
+  
+  // Build task options for move
+  let taskOpts='';
+  m.activities.forEach(act=>(act.tasks||[]).forEach(tk=>{
+    taskOpts+=`<option value="${act.id}::${tk.id}" ${tk.id===t.id?'selected':''}>${esc(act.name)} → ${esc(tk.name)}</option>`;
+  }));
+
+  openModal('Edit Story',`
+    <div class="form-group"><label>Title</label><input id="sf-title" value="${esc(s.title)}"></div>
+    <div class="form-group"><label>Description</label><textarea id="sf-desc" rows="3">${esc(s.description||'')}</textarea></div>
+    <div class="form-group"><label>Acceptance Criteria</label><textarea id="sf-criteria" rows="3" placeholder="Given... When... Then...">${esc(s.criteria||'')}</textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Estimate</label><div class="estimate-picker">${ESTIMATES.map(e=>`<button class="estimate-opt ${s.estimate===e?'active':''}" data-est="${e}" onclick="pickEstimate(this)">${e}</button>`).join('')}</div></div>
+      <div class="form-group"><label>Status</label><div class="status-picker">${STATUSES.map(st=>`<button class="status-opt ${s.status===st?'active':''}" data-st="${st}" onclick="pickStatus(this)" style="color:${STATUS_COLORS[st]}"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${STATUS_COLORS[st]}"></span>${STATUS_LABELS[st]}</button>`).join('')}</div></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Release</label><select id="sf-release"><option value="">Unassigned</option>${m.releases.map(r=>`<option value="${r.id}" ${s.releaseId===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Move to Task</label><select id="sf-task">${taskOpts}</select></div>
+    </div>
+    <div class="form-group"><label>Tags</label><div class="tag-input" id="sf-tags" onclick="this.querySelector('input').focus()">
+      ${(s.tags||[]).map(t=>`<span class="tag">${esc(t)}<span class="remove" onclick="removeTag(this)">×</span></span>`).join('')}
+      <input placeholder="Add tag + Enter" onkeydown="if(event.key==='Enter'){event.preventDefault();addTag(this)}">
+    </div></div>
+    <div class="form-group"><label>Notes</label><textarea id="sf-notes" rows="2">${esc(s.notes||'')}</textarea></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-ghost btn-sm" onclick="duplicateStory('${sid}')">📋 Duplicate</button>
+      <button class="btn btn-ghost btn-sm" onclick="moveStoryUp('${sid}')">⬆ Up</button>
+      <button class="btn btn-ghost btn-sm" onclick="moveStoryDown('${sid}')">⬇ Down</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteStory('${sid}')">🗑 Delete</button>
+    </div>
+  `,()=>{
+    s.title=document.getElementById('sf-title').value.trim()||s.title;
+    s.description=document.getElementById('sf-desc').value;
+    s.criteria=document.getElementById('sf-criteria').value;
+    s.estimate=document.querySelector('.estimate-picker .active')?.dataset.est||'';
+    s.status=document.querySelector('.status-picker .active')?.dataset.st||'idea';
+    s.releaseId=document.getElementById('sf-release').value;
+    s.notes=document.getElementById('sf-notes').value;
+    // Collect tags
+    s.tags=Array.from(document.querySelectorAll('#sf-tags .tag')).map(t=>t.textContent.replace('×','').trim());
+    // Move to different task?
+    const taskVal=document.getElementById('sf-task').value;
+    const[newAid,newTid]=taskVal.split('::');
+    if(newTid!==t.id){
+      t.stories=t.stories.filter(x=>x.id!==sid);
+      const newA=m.activities.find(x=>x.id===newAid);
+      const newT=(newA.tasks||[]).find(x=>x.id===newTid);
+      s.order=newT.stories.length;
+      newT.stories.push(s);
+    }
+    m.updatedAt=new Date().toISOString();save();render();closeModal();
+  });
+  setTimeout(()=>document.getElementById('sf-title')?.focus(),100);
+}
+
+function addTag(input){
+  const v=input.value.trim();if(!v)return;
+  const tag=document.createElement('span');tag.className='tag';tag.innerHTML=`${esc(v)}<span class="remove" onclick="removeTag(this)">×</span>`;
+  input.parentNode.insertBefore(tag,input);input.value='';
+}
+function removeTag(el){el.parentNode.remove()}
+function pickColor(el){el.parentNode.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));el.classList.add('active')}
+function pickEstimate(el){el.parentNode.querySelectorAll('.estimate-opt').forEach(s=>s.classList.remove('active'));el.classList.toggle('active')}
+function pickStatus(el){el.parentNode.querySelectorAll('.status-opt').forEach(s=>s.classList.remove('active'));el.classList.add('active')}
+
+function deleteStory(sid){
+  const found=findStory(sid);if(!found)return;
+  showConfirm(`Delete story "${found.story.title}"?`,()=>{
+    found.task.stories=found.task.stories.filter(x=>x.id!==sid);
+    activeMap().updatedAt=new Date().toISOString();save();render();closeModal();
+  });
+}
+function duplicateStory(sid){
+  const found=findStory(sid);if(!found)return;
+  const copy={...JSON.parse(JSON.stringify(found.story)),id:uid(),title:found.story.title+' (copy)',order:found.task.stories.length};
+  found.task.stories.push(copy);
+  activeMap().updatedAt=new Date().toISOString();save();render();closeModal();
+  editStory(copy.id);
+}
+function moveStoryUp(sid){
+  const found=findStory(sid);if(!found)return;
+  const arr=found.task.stories.sort((a,b)=>a.order-b.order);
+  const idx=arr.findIndex(s=>s.id===sid);
+  if(idx<=0)return;
+  [arr[idx].order,arr[idx-1].order]=[arr[idx-1].order,arr[idx].order];
+  activeMap().updatedAt=new Date().toISOString();save();render();editStory(sid);
+}
+function moveStoryDown(sid){
+  const found=findStory(sid);if(!found)return;
+  const arr=found.task.stories.sort((a,b)=>a.order-b.order);
+  const idx=arr.findIndex(s=>s.id===sid);
+  if(idx>=arr.length-1)return;
+  [arr[idx].order,arr[idx+1].order]=[arr[idx+1].order,arr[idx].order];
+  activeMap().updatedAt=new Date().toISOString();save();render();editStory(sid);
+}
+
+// === RELEASES ===
+function manageReleases(){
+  const m=activeMap();if(!m)return;
+  let html=`<div id="rel-list">`;
+  m.releases.sort((a,b)=>a.order-b.order).forEach(r=>{
+    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px;background:var(--bg3);border-radius:var(--radius-sm)">
+      <input type="color" value="${r.color}" style="width:36px;height:36px;padding:0;border:none;cursor:pointer;background:none;min-height:36px" onchange="this.parentNode.dataset.color=this.value" data-rid="${r.id}">
+      <input value="${esc(r.name)}" style="flex:1" data-rid="${r.id}" class="rel-name">
+      <button class="btn btn-sm btn-danger" onclick="deleteRelease('${r.id}')">🗑</button>
+    </div>`;
+  });
+  html+=`</div><button class="btn btn-ghost btn-full" onclick="addReleaseRow()" style="margin-top:8px">+ Add Release</button>`;
+  
+  openModal('Manage Releases',html,()=>{
+    document.querySelectorAll('.rel-name').forEach(inp=>{
+      const r=m.releases.find(x=>x.id===inp.dataset.rid);
+      if(r){
+        r.name=inp.value.trim()||r.name;
+        const colorInput=inp.parentNode.querySelector('input[type=color]');
+        if(colorInput)r.color=colorInput.value;
+      }
+    });
+    // New rows
+    document.querySelectorAll('.rel-new-name').forEach(inp=>{
+      const color=inp.parentNode.querySelector('input[type=color]')?.value||PRESETS[m.releases.length%PRESETS.length];
+      const name=inp.value.trim();
+      if(name)m.releases.push({id:uid(),name,color,order:m.releases.length});
+    });
+    m.updatedAt=new Date().toISOString();save();render();closeModal();
+  });
+}
+function addReleaseRow(){
+  const list=document.getElementById('rel-list');
+  const div=document.createElement('div');
+  div.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px;background:var(--bg3);border-radius:var(--radius-sm)';
+  div.innerHTML=`<input type="color" value="${PRESETS[Math.floor(Math.random()*PRESETS.length)]}" style="width:36px;height:36px;padding:0;border:none;cursor:pointer;background:none;min-height:36px">
+    <input placeholder="Release name" style="flex:1" class="rel-new-name">
+    <button class="btn btn-sm btn-danger" onclick="this.parentNode.remove()">🗑</button>`;
+  list.appendChild(div);
+  div.querySelector('.rel-new-name').focus();
+}
+function deleteRelease(rid){
+  const m=activeMap();
+  showConfirm('Delete this release? Stories will become unassigned.',()=>{
+    m.releases=m.releases.filter(r=>r.id!==rid);
+    m.activities.forEach(a=>(a.tasks||[]).forEach(t=>(t.stories||[]).forEach(s=>{if(s.releaseId===rid)s.releaseId=''})));
+    m.updatedAt=new Date().toISOString();save();render();closeModal();manageReleases();
+  });
+}
+
+// === SEARCH ===
+function globalSearch(){
+  const m=activeMap();if(!m)return;
+  openModal('Search Stories',`
+    <div class="form-group"><input id="gs-q" placeholder="Search titles, descriptions..." oninput="doGlobalSearch()"></div>
+    <div id="gs-results" style="max-height:300px;overflow-y:auto"></div>
+  `,null,'Search');
+  setTimeout(()=>document.getElementById('gs-q')?.focus(),100);
+}
+function doGlobalSearch(){
+  const m=activeMap();if(!m)return;
+  const q=(document.getElementById('gs-q')?.value||'').toLowerCase();
+  const results=document.getElementById('gs-results');
+  if(!q){results.innerHTML='<p style="color:var(--text3);font-size:13px">Type to search...</p>';return}
+  let hits=[];
+  m.activities.forEach(a=>(a.tasks||[]).forEach(t=>(t.stories||[]).forEach(s=>{
+    if(s.title.toLowerCase().includes(q)||(s.description||'').toLowerCase().includes(q)||(s.criteria||'').toLowerCase().includes(q))
+      hits.push({s,aName:a.name,tName:t.name});
+  })));
+  if(!hits.length){results.innerHTML='<p style="color:var(--text3);font-size:13px">No matches</p>';return}
+  results.innerHTML=hits.map(h=>`<div class="story-card" style="border-left-color:var(--accent)" onclick="closeModal();editStory('${h.s.id}')">
+    <div class="title">${esc(h.s.title)}</div>
+    <div class="meta"><span style="color:var(--text3)">${esc(h.aName)} → ${esc(h.tName)}</span></div>
+  </div>`).join('');
+}
+
+// === EXPORT/IMPORT ===
+function showExportMenu(){
+  openModal('Export',`
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-primary btn-full" onclick="exportJSON()">📦 Export JSON</button>
+      <button class="btn btn-ghost btn-full" onclick="exportMarkdown()">📝 Export Markdown</button>
+    </div>
+  `,null,'Export');
+}
+function exportJSON(){
+  const m=activeMap();if(!m)return;
+  const blob=new Blob([JSON.stringify(m,null,2)],{type:'application/json'});
+  dl(blob,slug(m.name)+'.json');closeModal();
+}
+function exportMarkdown(){
+  const m=activeMap();if(!m)return;
+  let md=`# ${m.name}\n\n`;
+  if(m.description)md+=`${m.description}\n\n`;
+  md+=`## Releases\n`;
+  m.releases.sort((a,b)=>a.order-b.order).forEach(r=>md+=`- **${r.name}**\n`);
+  md+=`\n`;
+  m.activities.sort((a,b)=>a.order-b.order).forEach(a=>{
+    md+=`## ${a.name}\n\n`;
+    (a.tasks||[]).sort((x,y)=>x.order-y.order).forEach(t=>{
+      md+=`### ${t.name}\n\n`;
+      (t.stories||[]).sort((x,y)=>x.order-y.order).forEach(s=>{
+        const rel=m.releases.find(r=>r.id===s.releaseId);
+        md+=`- **${s.title}**`;
+        const parts=[];
+        if(s.estimate)parts.push(s.estimate);
+        if(s.status&&s.status!=='idea')parts.push(STATUS_LABELS[s.status]);
+        if(rel)parts.push(rel.name);
+        if(parts.length)md+=` [${parts.join(' | ')}]`;
+        md+=`\n`;
+        if(s.description)md+=`  ${s.description}\n`;
+        if(s.criteria)md+=`  _Criteria:_ ${s.criteria}\n`;
+      });
+      md+=`\n`;
+    });
+  });
+  const blob=new Blob([md],{type:'text/markdown'});
+  dl(blob,slug(m.name)+'.md');closeModal();
+}
+function importData(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=()=>{
+    const f=inp.files[0];if(!f)return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{
+        const data=JSON.parse(reader.result);
+        if(!data.activities||!data.releases)throw new Error('Invalid format');
+        // Check for dupe
+        const existing=state.maps.find(m=>m.id===data.id);
+        if(existing){
+          if(confirm(`Map "${data.name}" already exists. Replace it?`)){
+            Object.assign(existing,data);existing.updatedAt=new Date().toISOString();
+          }else return;
+        }else{
+          data.id=data.id||uid();state.maps.push(data);
+        }
+        state.activeMapId=data.id;save();render();
+      }catch(e){alert('Import failed: '+e.message)}
+    };
+    reader.readAsText(f);
+  };
+  inp.click();
+}
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
+function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}
+
+// === MODAL ===
+function openModal(title,body,onSave,saveLabel){
+  const mc=document.getElementById('modalContent');
+  mc.innerHTML=`<div class="modal-header"><h2>${title}</h2><button class="btn btn-sm btn-ghost" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">${body}</div>
+    ${onSave?`<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="modal-save">${saveLabel||'Save'}</button></div>`:''}`;
+  if(onSave)document.getElementById('modal-save').onclick=onSave;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open')}
+function showConfirm(msg,onYes){
+  openModal('Confirm',`<p class="confirm-text">${msg}</p>`,()=>{onYes();closeModal()},'Delete');
+}
+function showHelp(){
+  openModal('Keyboard Shortcuts',`<div class="kbd-help">
+    <span class="kbd">N</span><span>New map</span>
+    <span class="kbd">A</span><span>Add activity</span>
+    <span class="kbd">S</span><span>Add story (first task)</span>
+    <span class="kbd">/</span><span>Search stories</span>
+    <span class="kbd">1</span><span>Map view</span>
+    <span class="kbd">2</span><span>Backlog view</span>
+    <span class="kbd">3</span><span>Dashboard view</span>
+    <span class="kbd">E</span><span>Export</span>
+    <span class="kbd">I</span><span>Import</span>
+    <span class="kbd">?</span><span>This help</span>
+    <span class="kbd">Esc</span><span>Close modal/sidebar</span>
+  </div>`,null);
+}
+
+// === KEYBOARD ===
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
+  const mo=document.getElementById('modalOverlay');
+  if(mo.classList.contains('open')){if(e.key==='Escape')closeModal();return}
+  const m=activeMap();
+  switch(e.key){
+    case'n':case'N':e.preventDefault();createMap();break;
+    case'a':case'A':if(m){e.preventDefault();addActivity()}break;
+    case's':case'S':if(m&&m.activities.length&&m.activities[0].tasks?.length){e.preventDefault();addStory(m.activities[0].id,m.activities[0].tasks[0].id)}break;
+    case'/':e.preventDefault();globalSearch();break;
+    case'1':e.preventDefault();setView('map');break;
+    case'2':e.preventDefault();setView('backlog');break;
+    case'3':e.preventDefault();setView('dashboard');break;
+    case'e':case'E':e.preventDefault();showExportMenu();break;
+    case'i':case'I':e.preventDefault();importData();break;
+    case'?':e.preventDefault();showHelp();break;
+    case'Escape':const sb=document.getElementById('sidebar');if(!sb.classList.contains('closed'))toggleSidebar();break;
+  }
+});
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// === DEMO DATA ===
+function seedDemo(){
+  const mvpId=uid(),r1Id=uid(),r2Id=uid(),futId=uid();
+  const releases=[
+    {id:mvpId,name:'MVP',color:'#00b894',order:0},
+    {id:r1Id,name:'Release 1.0',color:'#0984e3',order:1},
+    {id:r2Id,name:'Release 2.0',color:'#6c5ce7',order:2},
+    {id:futId,name:'Future',color:'#636e72',order:3}
+  ];
+  function mkStory(title,desc,est,status,relId,tags,criteria){
+    return{id:uid(),title,description:desc||'',criteria:criteria||'',estimate:est,status:status||'idea',releaseId:relId,tags:tags||[],notes:'',order:0};
+  }
+  const map={
+    id:uid(),name:'UTMStamp Product Map',description:'User story map for UTMStamp — email signature & UTM tracking platform',
+    createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
+    activities:[
+      {id:uid(),name:'Onboarding',color:'#00b894',order:0,tasks:[
+        {id:uid(),name:'Account Creation',order:0,stories:[
+          mkStory('Email/password registration','Standard signup with email verification','S','done',mvpId,['auth'],'Given a new user, when they submit the signup form, then they receive a verification email'),
+          mkStory('Google OAuth signup','One-click Google SSO','M','done',mvpId,['auth','oauth']),
+          mkStory('Microsoft OAuth signup','SSO for enterprise users','M','planned',r1Id,['auth','enterprise']),
+          mkStory('SSO/SAML integration','Enterprise SSO via SAML 2.0','XL','idea',futId,['enterprise']),
+        ].map((s,i)=>({...s,order:i}))},
+        {id:uid(),name:'Initial Setup',order:1,stories:[
+          mkStory('Onboarding wizard','Step-by-step setup for new users','L','in-progress',mvpId,['ux']),
+          mkStory('Import existing signatures','Paste or upload current email signatures','M','planned',r1Id,['import']),
+          mkStory('Team onboarding flow','Bulk invite and setup for teams','L','idea',r2Id,['team']),
+        ].map((s,i)=>({...s,order:i}))}
+      ]},
+      {id:uid(),name:'Signature Builder',color:'#e17055',order:1,tasks:[
+        {id:uid(),name:'Template System',order:0,stories:[
+          mkStory('Pre-built signature templates','Gallery of 12+ professional templates','L','done',mvpId,['design']),
+          mkStory('Custom template builder','Drag-and-drop template editor','XL','in-progress',r1Id,['editor']),
+          mkStory('Template marketplace','Community-shared templates','L','idea',futId,['marketplace']),
+        ].map((s,i)=>({...s,order:i}))},
+        {id:uid(),name:'Editor',order:1,stories:[
+          mkStory('Drag-and-drop signature editor','Visual WYSIWYG editor for signatures','XL','done',mvpId,['editor','core']),
+          mkStory('Rich text formatting','Bold, italic, links, font selection','M','done',mvpId,['editor']),
+          mkStory('Image/logo upload','Add company logo and profile photo','M','done',mvpId,['editor','media']),
+          mkStory('Social media icons','Add social links with auto-icons','S','planned',r1Id,['editor']),
+          mkStory('Banner/CTA section','Add promotional banners to signatures','M','planned',r1Id,['marketing']),
+        ].map((s,i)=>({...s,order:i}))}
+      ]},
+      {id:uid(),name:'Campaign Management',color:'#0984e3',order:2,tasks:[
+        {id:uid(),name:'UTM Builder',order:0,stories:[
+          mkStory('UTM parameter builder','Form to construct UTM-tagged URLs','M','done',mvpId,['utm','core'],'Given a base URL, when user fills UTM fields, then a tagged URL is generated'),
+          mkStory('UTM presets/templates','Save and reuse common UTM configurations','S','planned',r1Id,['utm']),
+          mkStory('Bulk URL generation','Generate multiple UTM URLs at once','M','idea',r2Id,['utm','bulk']),
+        ].map((s,i)=>({...s,order:i}))},
+        {id:uid(),name:'Campaign Scheduling',order:1,stories:[
+          mkStory('Campaign start/end dates','Schedule signature campaigns with dates','M','planned',r1Id,['campaign']),
+          mkStory('A/B testing signatures','Test two signature variants','L','idea',r2Id,['testing']),
+          mkStory('Auto-rotation rules','Rotate signatures on schedule','M','idea',futId,['automation']),
+        ].map((s,i)=>({...s,order:i}))}
+      ]},
+      {id:uid(),name:'Analytics & Reporting',color:'#fdcb6e',order:3,tasks:[
+        {id:uid(),name:'Click Tracking',order:0,stories:[
+          mkStory('Click tracking dashboard','Real-time link click analytics','L','in-progress',mvpId,['analytics','core']),
+          mkStory('Click heatmap on signature','Visual heatmap of where users click','M','idea',r2Id,['analytics','ux']),
+        ].map((s,i)=>({...s,order:i}))},
+        {id:uid(),name:'Reports',order:1,stories:[
+          mkStory('Weekly email digest','Auto-sent performance summaries','M','planned',r1Id,['reporting']),
+          mkStory('CSV/PDF export','Download analytics data','S','planned',r1Id,['export']),
+          mkStory('Team performance comparison','Compare signature performance across team','L','idea',r2Id,['team','analytics']),
+        ].map((s,i)=>({...s,order:i}))}
+      ]},
+      {id:uid(),name:'Team Administration',color:'#e84393',order:4,tasks:[
+        {id:uid(),name:'User Management',order:0,stories:[
+          mkStory('Team member invite flow','Invite users via email with role assignment','M','planned',r1Id,['team'],'Given an admin, when they send an invite, then the invitee receives an email with a join link'),
+          mkStory('Role-based permissions','Admin, Editor, Viewer roles','L','planned',r1Id,['team','rbac']),
+          mkStory('Department grouping','Organize team members by department','M','idea',r2Id,['team']),
+        ].map((s,i)=>({...s,order:i}))},
+        {id:uid(),name:'Brand Control',order:1,stories:[
+          mkStory('Brand asset library','Central repository for logos, colors, fonts','M','idea',r2Id,['brand']),
+          mkStory('Signature compliance checker','Enforce brand guidelines on signatures','L','idea',futId,['compliance']),
+          mkStory('Signature deployment via API','Push signatures to email clients via API','XL','deferred',futId,['api','enterprise']),
+        ].map((s,i)=>({...s,order:i}))}
+      ]}
+    ],
+    releases
+  };
+  state.maps=[map];
+  state.activeMapId=map.id;
+  save();
+}
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

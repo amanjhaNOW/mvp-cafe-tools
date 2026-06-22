@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-20T19:34:57.753Z",
-  "count": 88,
+  "generatedAt": "2026-06-22T19:37:53.093Z",
+  "count": 90,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -705,6 +705,22 @@
       "tagline": "Smart Calculator Notebook",
       "emoji": "📓",
       "day": 88,
+      "cluster": "personal"
+    },
+    {
+      "slug": "story-map-forge",
+      "title": "Story Map Forge",
+      "tagline": "Story Map Forge",
+      "emoji": "🧭",
+      "day": 89,
+      "cluster": "personal"
+    },
+    {
+      "slug": "quest-board",
+      "title": "Quest Board",
+      "tagline": "Gamified Task & Productivity RPG",
+      "emoji": "🔧",
+      "day": 90,
       "cluster": "personal"
     }
   ]

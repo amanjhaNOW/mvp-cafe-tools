@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Quest Board — Gamified Task & Productivity RPG</title>
+<meta name="description" content="Turn your tasks into quests. Earn XP, level up, collect gold, unlock achievements. A gamified productivity tool with RPG elements.">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f1a;--surface:#1a1a2e;--surface2:#252540;--surface3:#2f2f4f;
+  --border:#3a3a5c;--text:#e8e8f0;--text2:#a0a0c0;--text3:#6a6a8f;
+  --accent:#7c5cff;--accent2:#a855f7;--gold:#fbbf24;--gold2:#f59e0b;
+  --xp:#22d3ee;--hp:#ef4444;--success:#22c55e;--warn:#f59e0b;
+  --trivial:#6b7280;--easy:#22c55e;--medium:#3b82f6;--hard:#f59e0b;--epic:#a855f7;--legendary:#ef4444;
+  --radius:10px;--shadow:0 4px 20px rgba(0,0,0,.4);
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+html{font-size:16px}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:var(--text);font-size:14px}
+input,select,textarea{font-family:inherit;font-size:16px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0a0c0'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+
+/* Layout */
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);min-height:52px;flex-shrink:0}
+.topbar h1{font-size:18px;font-weight:700;white-space:nowrap}
+.topbar h1 span{color:var(--accent)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.hero-mini{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:var(--surface2);font-size:13px;font-weight:600}
+.hero-mini .lvl{color:var(--xp);font-weight:700}
+.hero-mini .xp-bar{width:40px;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.hero-mini .xp-fill{height:100%;background:var(--xp);border-radius:3px;transition:width .5s}
+.hero-mini .gold-count{color:var(--gold)}
+.main{flex:1;overflow-y:auto;padding:16px;padding-bottom:80px}
+@media(min-width:768px){.main{padding:20px 24px;padding-bottom:24px}}
+
+/* Bottom nav (mobile) / Tab bar */
+.nav{display:flex;background:var(--surface);border-top:1px solid var(--border);position:fixed;bottom:0;left:0;right:0;z-index:100;padding:4px 0;padding-bottom:max(4px,env(safe-area-inset-bottom))}
+.nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;font-size:11px;color:var(--text3);transition:color .2s;min-height:44px;justify-content:center}
+.nav button.active{color:var(--accent)}
+.nav button .icon{font-size:20px}
+@media(min-width:768px){
+  .nav{position:static;border-top:none;border-bottom:1px solid var(--border);padding:0 16px;justify-content:flex-start;gap:4px}
+  .nav button{flex:none;flex-direction:row;gap:6px;padding:10px 16px;font-size:14px;border-bottom:2px solid transparent;min-height:44px}
+  .nav button.active{border-bottom-color:var(--accent);color:var(--accent)}
+  .nav button .icon{font-size:16px}
+  .main{padding-bottom:24px}
+}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card:hover{border-color:var(--surface3)}
+.card-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.card-title{font-size:15px;font-weight:600;flex:1}
+.card-meta{font-size:12px;color:var(--text2);display:flex;gap:12px;flex-wrap:wrap}
+
+/* Difficulty badges */
+.diff{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.diff-trivial{background:rgba(107,114,128,.2);color:var(--trivial)}
+.diff-easy{background:rgba(34,197,94,.15);color:var(--easy)}
+.diff-medium{background:rgba(59,130,246,.15);color:var(--medium)}
+.diff-hard{background:rgba(245,158,11,.15);color:var(--hard)}
+.diff-epic{background:rgba(168,85,247,.15);color:var(--epic)}
+.diff-legendary{background:rgba(239,68,68,.15);color:var(--legendary)}
+
+/* Stat pills */
+.stat{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600}
+.stat-xp{color:var(--xp)}
+.stat-gold{color:var(--gold)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:6px;font-weight:600;font-size:14px;transition:all .2s;min-height:44px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:hover{background:#16a34a}
+.btn-danger{background:var(--hp);color:#fff}
+.btn-danger:hover{background:#dc2626}
+.btn-outline{border:1px solid var(--border);color:var(--text2)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:4px 10px;font-size:12px;min-height:32px}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1a2e;font-weight:700}
+.btn-gold:hover{filter:brightness(1.1)}
+.btn-icon{width:36px;height:36px;padding:0;border-radius:6px}
+
+/* Action bar */
+.action-bar{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.action-bar .search{flex:1;min-width:150px}
+.filter-pills{display:flex;gap:4px;flex-wrap:wrap}
+.pill{padding:4px 10px;border-radius:14px;font-size:12px;font-weight:600;background:var(--surface2);color:var(--text2);cursor:pointer;min-height:32px;display:flex;align-items:center}
+.pill.active{background:var(--accent);color:#fff}
+
+/* Quest card specific */
+.quest-card{position:relative;transition:transform .15s}
+.quest-card.completed{opacity:.6}
+.quest-card.completed .card-title{text-decoration:line-through}
+.quest-rewards{display:flex;gap:12px;margin-top:8px}
+.quest-actions{display:flex;gap:8px;margin-top:12px}
+.quest-due{font-size:11px;padding:2px 6px;border-radius:4px;background:rgba(239,68,68,.15);color:var(--hp)}
+.quest-due.soon{background:rgba(245,158,11,.15);color:var(--warn)}
+.quest-category{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--surface3);color:var(--text2)}
+
+/* Streak badge */
+.streak{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:12px;background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(245,158,11,.2));color:var(--gold);font-size:13px;font-weight:700}
+.streak .fire{font-size:16px}
+
+/* Character panel */
+.hero-card{background:linear-gradient(135deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:16px;padding:24px;text-align:center;margin-bottom:16px}
+.hero-avatar{font-size:64px;margin-bottom:8px}
+.hero-name{font-size:22px;font-weight:700;margin-bottom:2px}
+.hero-title{font-size:13px;color:var(--accent);font-weight:600;margin-bottom:4px}
+.hero-class{font-size:12px;color:var(--text3)}
+.hero-level{margin:16px 0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.hero-level .level-num{font-size:32px;font-weight:800;color:var(--xp)}
+.hero-level .level-label{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+.xp-bar-big{width:100%;max-width:300px;height:14px;background:var(--surface3);border-radius:7px;overflow:hidden;margin:0 auto}
+.xp-bar-big .fill{height:100%;background:linear-gradient(90deg,var(--xp),var(--accent));border-radius:7px;transition:width .6s}
+.xp-text{font-size:12px;color:var(--text2);margin-top:4px}
+.hero-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;max-width:300px;margin-left:auto;margin-right:auto}
+.hero-stat{background:var(--surface3);border-radius:10px;padding:12px;text-align:center}
+.hero-stat .val{font-size:24px;font-weight:700}
+.hero-stat .lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.hero-stat.gold-stat .val{color:var(--gold)}
+.hero-stat.xp-stat .val{color:var(--xp)}
+.hero-stat.quest-stat .val{color:var(--success)}
+.hero-stat.streak-stat .val{color:var(--gold)}
+
+/* Achievements */
+.achievements-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.achievement{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center;position:relative}
+.achievement.locked{opacity:.4;filter:grayscale(.8)}
+.achievement .badge{font-size:32px;margin-bottom:6px}
+.achievement .ach-name{font-size:12px;font-weight:600}
+.achievement .ach-desc{font-size:10px;color:var(--text3);margin-top:2px}
+.achievement.unlocked{border-color:var(--gold);background:linear-gradient(135deg,var(--surface),rgba(251,191,36,.05))}
+
+/* Reward cards */
+.reward-card{display:flex;align-items:center;gap:12px}
+.reward-card .emoji{font-size:32px}
+.reward-card .info{flex:1}
+.reward-card .reward-name{font-size:14px;font-weight:600}
+.reward-card .reward-desc{font-size:12px;color:var(--text2);margin-top:2px}
+.reward-card .cost{font-size:14px;font-weight:700;color:var(--gold);white-space:nowrap}
+
+/* Dashboard grid */
+.dash-grid{display:grid;gap:12px}
+@media(min-width:600px){.dash-grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:900px){.dash-grid{grid-template-columns:repeat(3,1fr)}}
+.dash-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.dash-stat .val{font-size:28px;font-weight:800}
+.dash-stat .lbl{font-size:12px;color:var(--text3);margin-top:4px}
+
+/* Activity log */
+.activity-log{max-height:400px;overflow-y:auto}
+.activity-item{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.activity-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0}
+.activity-text{font-size:13px;flex:1}
+.activity-time{font-size:11px;color:var(--text3);white-space:nowrap}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+@media(min-width:600px){.modal-overlay{align-items:center}}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px 16px 0 0;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;padding:20px;transform:translateY(20px);transition:transform .2s}
+.modal-overlay.open .modal{transform:translateY(0)}
+@media(min-width:600px){.modal{border-radius:16px}}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:16px}
+.modal .field{margin-bottom:12px}
+.modal .field label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:600}
+.modal .field-row{display:flex;gap:8px}
+.modal .actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+
+/* Level up toast */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:12px 24px;border-radius:12px;font-weight:700;font-size:16px;z-index:300;transition:transform .4s;box-shadow:0 8px 30px rgba(124,92,255,.4);text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast .sub{font-size:12px;font-weight:400;opacity:.8;margin-top:2px}
+
+/* XP animation */
+.xp-popup{position:fixed;pointer-events:none;z-index:250;font-weight:800;font-size:20px;animation:floatUp 1.5s ease-out forwards}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}50%{opacity:1;transform:translateY(-40px) scale(1.2)}100%{opacity:0;transform:translateY(-80px) scale(.8)}}
+
+/* Empty state */
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty .icon{font-size:48px;margin-bottom:12px}
+.empty p{font-size:14px;margin-bottom:16px}
+
+/* Section headers */
+.section-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;margin-top:20px}
+.section-header:first-child{margin-top:0}
+.section-header h2{font-size:16px;font-weight:700}
+.section-header .count{font-size:12px;color:var(--text3);background:var(--surface2);padding:2px 8px;border-radius:10px}
+
+/* Daily streak ring */
+.streak-ring{width:80px;height:80px;margin:0 auto 8px}
+.streak-ring svg{width:100%;height:100%}
+
+/* Help */
+.help-toggle{font-size:12px;color:var(--text3);cursor:pointer;margin-left:auto}
+.shortcuts{display:none;margin-top:12px;font-size:12px;color:var(--text2);column-count:2;column-gap:16px}
+.shortcuts.open{display:block}
+.shortcuts kbd{background:var(--surface3);padding:1px 5px;border-radius:3px;font-size:11px;font-family:monospace}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+
+/* Category colors */
+.cat-work{color:#3b82f6}.cat-personal{color:#22c55e}.cat-health{color:#ef4444}.cat-learning{color:#a855f7}.cat-creative{color:#f59e0b}.cat-social{color:#ec4899}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <h1>⚔️ <span>Quest Board</span></h1>
+    <div class="topbar-right">
+      <div class="hero-mini" id="heroMini"></div>
+    </div>
+  </div>
+  <nav class="nav" id="nav"></nav>
+  <main class="main" id="main"></main>
+</div>
+<div class="modal-overlay" id="modalOverlay"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+const SK = k => `mvpcafe:quest-board:${k}`;
+const save = (k,v) => { try { localStorage.setItem(SK(k), JSON.stringify(v)); } catch(e){} };
+const load = (k,d) => { try { const v = localStorage.getItem(SK(k)); return v ? JSON.parse(v) : d; } catch(e){ return d; } };
+
+// ── Constants ──
+const DIFFICULTIES = [
+  { id:'trivial', label:'Trivial', xp:5, gold:2, color:'var(--trivial)' },
+  { id:'easy', label:'Easy', xp:10, gold:5, color:'var(--easy)' },
+  { id:'medium', label:'Medium', xp:25, gold:12, color:'var(--medium)' },
+  { id:'hard', label:'Hard', xp:50, gold:25, color:'var(--hard)' },
+  { id:'epic', label:'Epic', xp:100, gold:50, color:'var(--epic)' },
+  { id:'legendary', label:'Legendary', xp:200, gold:100, color:'var(--legendary)' }
+];
+const CLASSES = [
+  { id:'warrior', label:'Warrior', emoji:'⚔️', desc:'Strength in brute-force productivity' },
+  { id:'mage', label:'Mage', emoji:'🧙', desc:'Wisdom through deep work & learning' },
+  { id:'rogue', label:'Rogue', emoji:'🗡️', desc:'Speed and cunning in task execution' },
+  { id:'ranger', label:'Ranger', emoji:'🏹', desc:'Balance and consistency across all domains' }
+];
+const CATEGORIES = ['Work','Personal','Health','Learning','Creative','Social'];
+const CAT_EMOJI = {Work:'💼',Personal:'🏠',Health:'❤️',Learning:'📚',Creative:'🎨',Social:'🤝'};
+const TITLES = [
+  [1,'Novice'],[3,'Apprentice'],[5,'Journeyman'],[8,'Adept'],[10,'Veteran'],
+  [13,'Expert'],[16,'Master'],[20,'Champion'],[25,'Hero'],[30,'Legend'],
+  [35,'Mythic'],[40,'Immortal'],[50,'Ascended']
+];
+const AVATARS = ['⚔️','🧙','🗡️','🏹','🐉','🦅','🐺','🦁','🔮','💎','🛡️','🌟','⭐','🔥','❄️','🌊','⚡','🌀','💀','👑','🎭','🧝','🧛','🧟','🦊','🐲'];
+
+function xpForLevel(l){ return Math.floor(50 * Math.pow(l, 1.5)); }
+function getTitle(level){ let t='Novice'; for(const [l,n] of TITLES) if(level>=l) t=n; return t; }
+function getDiff(id){ return DIFFICULTIES.find(d=>d.id===id) || DIFFICULTIES[2]; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function fmtDate(d){ if(!d) return ''; const dt=new Date(d); return dt.toLocaleDateString('en-IN',{day:'numeric',month:'short'}); }
+function relTime(ts){ const d=Date.now()-ts; if(d<60000) return 'just now'; if(d<3600000) return Math.floor(d/60000)+'m ago'; if(d<86400000) return Math.floor(d/3600000)+'h ago'; return Math.floor(d/86400000)+'d ago'; }
+function isToday(ts){ const d=new Date(ts),n=new Date(); return d.toDateString()===n.toDateString(); }
+function isYesterday(ts){ const d=new Date(ts),n=new Date(); n.setDate(n.getDate()-1); return d.toDateString()===n.toDateString(); }
+
+// ── State ──
+let hero = load('hero', null);
+let quests = load('quests', []);
+let dailies = load('dailies', []);
+let rewards = load('rewards', []);
+let activity = load('activity', []);
+let achievements = load('achievements', []);
+let view = 'quests';
+let questFilter = 'active'; // active, completed, all
+let searchText = '';
+
+// ── Achievement Definitions ──
+const ACH_DEFS = [
+  { id:'first_blood', name:'First Blood', emoji:'🩸', desc:'Complete your first quest' },
+  { id:'hat_trick', name:'Hat Trick', emoji:'🎩', desc:'Complete 3 quests in one day' },
+  { id:'ten_down', name:'Ten Down', emoji:'🔟', desc:'Complete 10 quests total' },
+  { id:'fifty_slayer', name:'Fifty Slayer', emoji:'⚔️', desc:'Complete 50 quests total' },
+  { id:'centurion', name:'Centurion', emoji:'🏛️', desc:'Complete 100 quests total' },
+  { id:'level5', name:'Rising Star', emoji:'⭐', desc:'Reach Level 5' },
+  { id:'level10', name:'Veteran', emoji:'🎖️', desc:'Reach Level 10' },
+  { id:'level20', name:'Champion', emoji:'🏆', desc:'Reach Level 20' },
+  { id:'streak3', name:'On Fire', emoji:'🔥', desc:'3-day daily streak' },
+  { id:'streak7', name:'Week Warrior', emoji:'💪', desc:'7-day daily streak' },
+  { id:'streak14', name:'Fortnight Force', emoji:'⚡', desc:'14-day daily streak' },
+  { id:'streak30', name:'Monthly Master', emoji:'👑', desc:'30-day daily streak' },
+  { id:'gold100', name:'Coin Collector', emoji:'💰', desc:'Accumulate 100 gold' },
+  { id:'gold500', name:'Treasure Hunter', emoji:'💎', desc:'Accumulate 500 gold' },
+  { id:'gold1000', name:'Dragon Hoard', emoji:'🐉', desc:'Accumulate 1000 gold' },
+  { id:'epic_slayer', name:'Epic Slayer', emoji:'🗡️', desc:'Complete an Epic quest' },
+  { id:'legendary', name:'Legend Killer', emoji:'💀', desc:'Complete a Legendary quest' },
+  { id:'reward_claim', name:'Self Care', emoji:'🎁', desc:'Claim your first reward' },
+  { id:'night_owl', name:'Night Owl', emoji:'🦉', desc:'Complete a quest after midnight' },
+  { id:'early_bird', name:'Early Bird', emoji:'🐦', desc:'Complete a quest before 7 AM' },
+  { id:'all_cats', name:'Renaissance', emoji:'🎭', desc:'Complete quests in all 6 categories' },
+  { id:'speed_demon', name:'Speed Demon', emoji:'🏎️', desc:'Complete 5 quests in one day' },
+];
+
+function unlock(achId){
+  if(achievements.includes(achId)) return;
+  achievements.push(achId);
+  save('achievements', achievements);
+  const def = ACH_DEFS.find(a=>a.id===achId);
+  if(def) showToast(`🏅 Achievement Unlocked!`, `${def.emoji} ${def.name}`);
+}
+
+function checkAchievements(){
+  const completed = quests.filter(q=>q.status==='done');
+  const totalDone = completed.length;
+  if(totalDone>=1) unlock('first_blood');
+  if(totalDone>=10) unlock('ten_down');
+  if(totalDone>=50) unlock('fifty_slayer');
+  if(totalDone>=100) unlock('centurion');
+  if(hero.level>=5) unlock('level5');
+  if(hero.level>=10) unlock('level10');
+  if(hero.level>=20) unlock('level20');
+  if(hero.totalGold>=100) unlock('gold100');
+  if(hero.totalGold>=500) unlock('gold500');
+  if(hero.totalGold>=1000) unlock('gold1000');
+  if(completed.some(q=>getDiff(q.difficulty).id==='epic')) unlock('epic_slayer');
+  if(completed.some(q=>getDiff(q.difficulty).id==='legendary')) unlock('legendary');
+  const streak = hero.streak || 0;
+  if(streak>=3) unlock('streak3');
+  if(streak>=7) unlock('streak7');
+  if(streak>=14) unlock('streak14');
+  if(streak>=30) unlock('streak30');
+  const todayDone = completed.filter(q=>isToday(q.completedAt)).length;
+  if(todayDone>=3) unlock('hat_trick');
+  if(todayDone>=5) unlock('speed_demon');
+  const cats = new Set(completed.map(q=>q.category));
+  if(cats.size>=6) unlock('all_cats');
+  const hr = new Date().getHours();
+  if(todayDone>0 && hr>=0 && hr<5) unlock('night_owl');
+  if(todayDone>0 && hr>=5 && hr<7) unlock('early_bird');
+  if(hero.rewardsClaimed>0) unlock('reward_claim');
+}
+
+// ── Hero Operations ──
+function createHero(name, cls, avatar){
+  hero = {
+    name, class: cls, avatar,
+    level:1, xp:0, gold:0, totalXp:0, totalGold:0,
+    questsDone:0, streak:0, bestStreak:0, lastDaily:null,
+    rewardsClaimed:0, createdAt:Date.now()
+  };
+  save('hero', hero);
+}
+
+function addXp(amount, source){
+  hero.xp += amount;
+  hero.totalXp += amount;
+  let leveledUp = false;
+  while(hero.xp >= xpForLevel(hero.level)){
+    hero.xp -= xpForLevel(hero.level);
+    hero.level++;
+    leveledUp = true;
+  }
+  if(leveledUp) showToast(`⚡ Level Up! Level ${hero.level}`, getTitle(hero.level));
+  save('hero', hero);
+  return leveledUp;
+}
+
+function addGold(amount){
+  hero.gold += amount;
+  hero.totalGold += amount;
+  save('hero', hero);
+}
+
+function logActivity(icon, text){
+  activity.unshift({ id:uid(), icon, text, ts:Date.now() });
+  if(activity.length>200) activity = activity.slice(0,200);
+  save('activity', activity);
+}
+
+// ── Daily Streak Logic ──
+function checkDailyStreak(){
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now()-86400000).toDateString();
+  if(hero.lastDaily === today) return; // already checked today
+  if(hero.lastDaily === yesterday){
+    // streak continues — don't reset
+  } else if(hero.lastDaily && hero.lastDaily !== today){
+    // streak broken
+    if(hero.streak>0){
+      hero.streak = 0;
+      save('hero', hero);
+    }
+  }
+}
+
+function completeDailyForStreak(){
+  const today = new Date().toDateString();
+  if(hero.lastDaily !== today){
+    const yesterday = new Date(Date.now()-86400000).toDateString();
+    if(hero.lastDaily === yesterday) hero.streak++;
+    else hero.streak = 1;
+    hero.lastDaily = today;
+    if(hero.streak > hero.bestStreak) hero.bestStreak = hero.streak;
+    save('hero', hero);
+  }
+}
+
+function getStreakMultiplier(){
+  const s = hero.streak || 0;
+  if(s>=30) return 3;
+  if(s>=14) return 2;
+  if(s>=7) return 1.5;
+  return 1;
+}
+
+// ── Quest Operations ──
+function completeQuest(id){
+  const q = quests.find(x=>x.id===id);
+  if(!q || q.status==='done') return;
+  const diff = getDiff(q.difficulty);
+  q.status = 'done';
+  q.completedAt = Date.now();
+  hero.questsDone++;
+  addXp(diff.xp, q.title);
+  addGold(diff.gold);
+  logActivity('⚔️', `Completed "${q.title}" (+${diff.xp} XP, +${diff.gold} Gold)`);
+  save('quests', quests);
+  save('hero', hero);
+  showXpPopup(`+${diff.xp} XP`);
+  checkAchievements();
+  render();
+}
+
+function deleteQuest(id){
+  quests = quests.filter(q=>q.id!==id);
+  save('quests', quests);
+  render();
+}
+
+function completeDaily(id){
+  const d = dailies.find(x=>x.id===id);
+  if(!d) return;
+  const today = new Date().toDateString();
+  if(d.completedDates && d.completedDates.includes(today)) return;
+  if(!d.completedDates) d.completedDates = [];
+  d.completedDates.push(today);
+  d.streak = (d.streak||0) + 1;
+  if(d.streak > (d.bestStreak||0)) d.bestStreak = d.streak;
+  const diff = getDiff(d.difficulty);
+  const mult = getStreakMultiplier();
+  const xp = Math.floor(diff.xp * mult);
+  const gold = Math.floor(diff.gold * mult);
+  addXp(xp, d.title);
+  addGold(gold);
+  completeDailyForStreak();
+  logActivity('🔄', `Daily "${d.title}" (+${xp} XP, +${gold} Gold)${mult>1?' ×'+mult+' streak!':''}`);
+  save('dailies', dailies);
+  save('hero', hero);
+  showXpPopup(`+${xp} XP`);
+  checkAchievements();
+  render();
+}
+
+function isDailyDoneToday(d){
+  const today = new Date().toDateString();
+  return d.completedDates && d.completedDates.includes(today);
+}
+
+function resetDailies(){
+  // Reset daily streaks if yesterday was missed
+  const yesterday = new Date(Date.now()-86400000).toDateString();
+  dailies.forEach(d=>{
+    if(d.completedDates && !d.completedDates.includes(yesterday)){
+      d.streak = 0;
+    }
+  });
+  save('dailies', dailies);
+}
+
+function claimReward(id){
+  const r = rewards.find(x=>x.id===id);
+  if(!r || hero.gold < r.cost) return;
+  hero.gold -= r.cost;
+  hero.rewardsClaimed = (hero.rewardsClaimed||0) + 1;
+  r.claimedCount = (r.claimedCount||0) + 1;
+  r.lastClaimed = Date.now();
+  logActivity('🎁', `Claimed "${r.name}" (-${r.cost} Gold)`);
+  save('rewards', rewards);
+  save('hero', hero);
+  checkAchievements();
+  render();
+}
+
+// ── UI Helpers ──
+function showToast(title, sub){
+  const t = document.getElementById('toast');
+  t.innerHTML = title + (sub ? `<div class="sub">${sub}</div>` : '');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+function showXpPopup(text){
+  const el = document.createElement('div');
+  el.className = 'xp-popup';
+  el.style.cssText = `left:${50+Math.random()*20-10}%;top:40%;color:var(--xp)`;
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 1500);
+}
+
+function openModal(html){
+  document.getElementById('modal').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Render ──
+function render(){
+  checkDailyStreak();
+  renderNav();
+  renderHeroMini();
+  const m = document.getElementById('main');
+  if(!hero){ m.innerHTML = renderSetup(); return; }
+  switch(view){
+    case 'quests': m.innerHTML = renderQuests(); break;
+    case 'dailies': m.innerHTML = renderDailies(); break;
+    case 'rewards': m.innerHTML = renderRewards(); break;
+    case 'dashboard': m.innerHTML = renderDashboard(); break;
+  }
+  bindEvents();
+}
+
+function renderNav(){
+  const tabs = [
+    { id:'quests', icon:'⚔️', label:'Quests' },
+    { id:'dailies', icon:'🔄', label:'Dailies' },
+    { id:'rewards', icon:'🎁', label:'Rewards' },
+    { id:'dashboard', icon:'📊', label:'Stats' }
+  ];
+  document.getElementById('nav').innerHTML = tabs.map(t=>
+    `<button data-view="${t.id}" class="${view===t.id?'active':''}"><span class="icon">${t.icon}</span>${t.label}</button>`
+  ).join('');
+  document.getElementById('nav').querySelectorAll('button').forEach(b=>{
+    b.onclick = () => { view = b.dataset.view; render(); };
+  });
+}
+
+function renderHeroMini(){
+  if(!hero){ document.getElementById('heroMini').innerHTML=''; return; }
+  const needed = xpForLevel(hero.level);
+  const pct = Math.min(100, (hero.xp/needed)*100);
+  document.getElementById('heroMini').innerHTML = `
+    ${hero.avatar} <span class="lvl">Lv${hero.level}</span>
+    <div class="xp-bar"><div class="xp-fill" style="width:${pct}%"></div></div>
+    <span class="gold-count">🪙${hero.gold}</span>
+  `;
+}
+
+function renderSetup(){
+  return `
+    <div style="max-width:420px;margin:40px auto;text-align:center">
+      <div style="font-size:64px;margin-bottom:16px">⚔️</div>
+      <h2 style="font-size:24px;margin-bottom:8px">Create Your Hero</h2>
+      <p style="color:var(--text2);margin-bottom:24px">Turn your tasks into quests. Earn XP, level up, collect gold.</p>
+      <div class="card" style="text-align:left">
+        <div class="field">
+          <label>Hero Name</label>
+          <input id="setupName" placeholder="Enter your name" value="">
+        </div>
+        <div class="field">
+          <label>Class</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="classGrid">
+            ${CLASSES.map(c=>`
+              <button class="card" data-class="${c.id}" style="cursor:pointer;text-align:center;padding:12px;border:2px solid var(--border);transition:border-color .2s">
+                <div style="font-size:28px">${c.emoji}</div>
+                <div style="font-weight:600;font-size:13px;margin-top:4px">${c.label}</div>
+                <div style="font-size:11px;color:var(--text3)">${c.desc}</div>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="field">
+          <label>Avatar</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px" id="avatarGrid">
+            ${AVATARS.map(a=>`<button class="pill" data-avatar="${a}" style="font-size:20px;padding:6px 10px">${a}</button>`).join('')}
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:12px" id="createHeroBtn">⚔️ Begin Your Quest</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderQuests(){
+  let filtered = quests;
+  if(questFilter==='active') filtered = filtered.filter(q=>q.status!=='done');
+  else if(questFilter==='completed') filtered = filtered.filter(q=>q.status==='done');
+  if(searchText) {
+    const s = searchText.toLowerCase();
+    filtered = filtered.filter(q=> q.title.toLowerCase().includes(s) || (q.description||'').toLowerCase().includes(s) || (q.category||'').toLowerCase().includes(s));
+  }
+  // Sort: active by difficulty desc, completed by completedAt desc
+  filtered.sort((a,b)=>{
+    if(a.status==='done' && b.status==='done') return (b.completedAt||0)-(a.completedAt||0);
+    if(a.status==='done') return 1;
+    if(b.status==='done') return -1;
+    const da = DIFFICULTIES.findIndex(d=>d.id===a.difficulty);
+    const db = DIFFICULTIES.findIndex(d=>d.id===b.difficulty);
+    return db-da;
+  });
+  return `
+    <div class="action-bar">
+      <input class="search" id="searchInput" placeholder="🔍 Search quests..." value="${esc(searchText)}">
+      <button class="btn btn-primary" onclick="QuestBoard.addQuest()">+ Quest</button>
+    </div>
+    <div class="filter-pills">
+      ${['active','completed','all'].map(f=>`<button class="pill ${questFilter===f?'active':''}" onclick="QuestBoard.setFilter('${f}')">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join('')}
+      <span style="margin-left:auto;font-size:12px;color:var(--text3)">${filtered.length} quest${filtered.length!==1?'s':''}</span>
+    </div>
+    ${filtered.length===0 ? `
+      <div class="empty">
+        <div class="icon">⚔️</div>
+        <p>${questFilter==='active'?'No active quests. Time to add some!':'No quests found.'}</p>
+        <button class="btn btn-primary" onclick="QuestBoard.addQuest()">+ Add Quest</button>
+      </div>
+    ` : filtered.map(q=>{
+      const diff = getDiff(q.difficulty);
+      const done = q.status==='done';
+      const due = q.dueDate ? new Date(q.dueDate) : null;
+      const overdue = due && !done && due < new Date();
+      const soon = due && !done && !overdue && (due - Date.now()) < 86400000*2;
+      return `
+        <div class="card quest-card ${done?'completed':''}">
+          <div class="card-header">
+            <span class="diff diff-${diff.id}">${diff.label}</span>
+            <span class="card-title">${esc(q.title)}</span>
+            ${q.category?`<span class="quest-category">${CAT_EMOJI[q.category]||''} ${q.category}</span>`:''}
+          </div>
+          ${q.description?`<div style="font-size:13px;color:var(--text2);margin-bottom:8px">${esc(q.description)}</div>`:''}
+          <div class="card-meta">
+            <span class="stat stat-xp">⚡${diff.xp} XP</span>
+            <span class="stat stat-gold">🪙${diff.gold}</span>
+            ${due?`<span class="quest-due ${overdue?'':''}${soon?'soon':''}">${overdue?'⚠️ Overdue':'📅'} ${fmtDate(q.dueDate)}</span>`:''}
+            ${done?`<span style="color:var(--success)">✅ ${relTime(q.completedAt)}</span>`:''}
+          </div>
+          ${!done?`
+            <div class="quest-actions">
+              <button class="btn btn-success btn-sm" onclick="QuestBoard.complete('${q.id}')">✅ Complete</button>
+              <button class="btn btn-outline btn-sm" onclick="QuestBoard.editQuest('${q.id}')">✏️</button>
+              <button class="btn btn-outline btn-sm" onclick="QuestBoard.deleteQuest('${q.id}')">🗑️</button>
+            </div>
+          `:`
+            <div class="quest-actions">
+              <button class="btn btn-outline btn-sm" onclick="QuestBoard.deleteQuest('${q.id}')">🗑️ Remove</button>
+            </div>
+          `}
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
+function renderDailies(){
+  const today = new Date().toDateString();
+  const doneTodayCount = dailies.filter(d=>isDailyDoneToday(d)).length;
+  const totalDailies = dailies.length;
+  const pct = totalDailies ? Math.round((doneTodayCount/totalDailies)*100) : 0;
+  const mult = getStreakMultiplier();
+  return `
+    <div class="action-bar">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          ${hero.streak>0?`<span class="streak"><span class="fire">🔥</span> ${hero.streak} day streak${mult>1?' (×'+mult+')':''}</span>`:''}
+          <span style="font-size:13px;color:var(--text2)">${doneTodayCount}/${totalDailies} done today</span>
+        </div>
+        <div style="margin-top:8px;height:8px;background:var(--surface3);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--success),var(--xp));border-radius:4px;transition:width .4s"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="QuestBoard.addDaily()">+ Daily</button>
+    </div>
+    ${dailies.length===0 ? `
+      <div class="empty">
+        <div class="icon">🔄</div>
+        <p>No daily quests yet. Add recurring tasks to build streaks!</p>
+        <button class="btn btn-primary" onclick="QuestBoard.addDaily()">+ Add Daily</button>
+      </div>
+    ` : dailies.map(d=>{
+      const diff = getDiff(d.difficulty);
+      const done = isDailyDoneToday(d);
+      return `
+        <div class="card quest-card ${done?'completed':''}">
+          <div class="card-header">
+            <span class="diff diff-${diff.id}">${diff.label}</span>
+            <span class="card-title">${esc(d.title)}</span>
+            ${d.category?`<span class="quest-category">${CAT_EMOJI[d.category]||''} ${d.category}</span>`:''}
+          </div>
+          ${d.description?`<div style="font-size:13px;color:var(--text2);margin-bottom:8px">${esc(d.description)}</div>`:''}
+          <div class="card-meta">
+            <span class="stat stat-xp">⚡${Math.floor(diff.xp*mult)} XP</span>
+            <span class="stat stat-gold">🪙${Math.floor(diff.gold*mult)}</span>
+            ${d.streak>0?`<span class="streak" style="font-size:11px;padding:2px 6px"><span class="fire">🔥</span>${d.streak}</span>`:''}
+            ${done?`<span style="color:var(--success)">✅ Done</span>`:''}
+          </div>
+          <div class="quest-actions">
+            ${!done?`<button class="btn btn-success btn-sm" onclick="QuestBoard.completeDaily('${d.id}')">✅ Check In</button>`:''}
+            <button class="btn btn-outline btn-sm" onclick="QuestBoard.editDaily('${d.id}')">✏️</button>
+            <button class="btn btn-outline btn-sm" onclick="QuestBoard.deleteDaily('${d.id}')">🗑️</button>
+          </div>
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
+function renderRewards(){
+  return `
+    <div class="section-header">
+      <h2>🎁 Reward Shop</h2>
+      <span class="count">🪙 ${hero.gold} Gold</span>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="QuestBoard.addReward()">+ Reward</button>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Define your own rewards and buy them with gold earned from quests!</p>
+    ${rewards.length===0 ? `
+      <div class="empty">
+        <div class="icon">🎁</div>
+        <p>No rewards yet. Add treats to motivate yourself!</p>
+        <button class="btn btn-primary" onclick="QuestBoard.addReward()">+ Add Reward</button>
+      </div>
+    ` : rewards.map(r=>`
+      <div class="card">
+        <div class="reward-card">
+          <div class="emoji">${r.emoji||'🎁'}</div>
+          <div class="info">
+            <div class="reward-name">${esc(r.name)}</div>
+            ${r.description?`<div class="reward-desc">${esc(r.description)}</div>`:''}
+            ${r.claimedCount?`<div style="font-size:11px;color:var(--text3);margin-top:2px">Claimed ${r.claimedCount}×${r.lastClaimed?' · Last '+relTime(r.lastClaimed):''}</div>`:''}
+          </div>
+          <div style="text-align:right">
+            <div class="cost">🪙 ${r.cost}</div>
+            <div style="display:flex;gap:4px;margin-top:4px">
+              <button class="btn ${hero.gold>=r.cost?'btn-gold':'btn-outline'} btn-sm" ${hero.gold<r.cost?'disabled':''} onclick="QuestBoard.claimReward('${r.id}')">Claim</button>
+              <button class="btn btn-outline btn-sm" onclick="QuestBoard.deleteReward('${r.id}')">🗑️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('')}
+
+    <div class="section-header" style="margin-top:24px">
+      <h2>🏅 Achievements</h2>
+      <span class="count">${achievements.length}/${ACH_DEFS.length}</span>
+    </div>
+    <div class="achievements-grid">
+      ${ACH_DEFS.map(a=>{
+        const unlocked = achievements.includes(a.id);
+        return `
+          <div class="achievement ${unlocked?'unlocked':'locked'}">
+            <div class="badge">${a.emoji}</div>
+            <div class="ach-name">${a.name}</div>
+            <div class="ach-desc">${unlocked?a.desc:'???'}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderDashboard(){
+  const completed = quests.filter(q=>q.status==='done');
+  const totalDailiesDone = dailies.reduce((s,d)=>s+(d.completedDates?d.completedDates.length:0),0);
+  const daysActive = hero.createdAt ? Math.max(1, Math.ceil((Date.now()-hero.createdAt)/86400000)) : 1;
+  const avgXpPerDay = Math.round(hero.totalXp/daysActive);
+  const needed = xpForLevel(hero.level);
+  const pct = Math.min(100, (hero.xp/needed)*100);
+  const catData = {};
+  completed.forEach(q=>{ const c=q.category||'Other'; catData[c]=(catData[c]||0)+1; });
+
+  // Heatmap data (last 90 days)
+  const heatDays = [];
+  for(let i=89;i>=0;i--){
+    const d = new Date(); d.setDate(d.getDate()-i); const ds=d.toDateString();
+    const count = completed.filter(q=>q.completedAt && new Date(q.completedAt).toDateString()===ds).length
+                + dailies.reduce((s,dl)=>s+(dl.completedDates&&dl.completedDates.includes(ds)?1:0),0);
+    heatDays.push({date:d,count});
+  }
+  const maxCount = Math.max(1,...heatDays.map(h=>h.count));
+
+  return `
+    <div class="hero-card">
+      <div class="hero-avatar">${hero.avatar}</div>
+      <div class="hero-name">${esc(hero.name)}</div>
+      <div class="hero-title">${getTitle(hero.level)}</div>
+      <div class="hero-class">${CLASSES.find(c=>c.id===hero.class)?.emoji||''} ${CLASSES.find(c=>c.id===hero.class)?.label||hero.class}</div>
+      <div class="hero-level">
+        <span class="level-label">Level</span>
+        <span class="level-num">${hero.level}</span>
+      </div>
+      <div class="xp-bar-big"><div class="fill" style="width:${pct}%"></div></div>
+      <div class="xp-text">${hero.xp} / ${needed} XP to Level ${hero.level+1}</div>
+      <div class="hero-stats">
+        <div class="hero-stat xp-stat"><div class="val">${hero.totalXp.toLocaleString('en-IN')}</div><div class="lbl">Total XP</div></div>
+        <div class="hero-stat gold-stat"><div class="val">${hero.totalGold.toLocaleString('en-IN')}</div><div class="lbl">Total Gold</div></div>
+        <div class="hero-stat quest-stat"><div class="val">${completed.length}</div><div class="lbl">Quests Done</div></div>
+        <div class="hero-stat streak-stat"><div class="val">${hero.bestStreak||0}</div><div class="lbl">Best Streak</div></div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="QuestBoard.editHero()">✏️ Edit Hero</button>
+        <button class="btn btn-outline btn-sm" onclick="QuestBoard.exportData()">📥 Export</button>
+        <button class="btn btn-outline btn-sm" onclick="QuestBoard.importData()">📤 Import</button>
+        <button class="btn btn-outline btn-sm" onclick="QuestBoard.showHelp()">❓ Help</button>
+      </div>
+    </div>
+
+    <div class="dash-grid" style="margin-bottom:16px">
+      <div class="dash-stat"><div class="val" style="color:var(--xp)">${avgXpPerDay}</div><div class="lbl">Avg XP / Day</div></div>
+      <div class="dash-stat"><div class="val" style="color:var(--success)">${totalDailiesDone}</div><div class="lbl">Dailies Done</div></div>
+      <div class="dash-stat"><div class="val" style="color:var(--accent)">${daysActive}</div><div class="lbl">Days Active</div></div>
+      <div class="dash-stat"><div class="val" style="color:var(--gold)">${hero.rewardsClaimed||0}</div><div class="lbl">Rewards Claimed</div></div>
+      <div class="dash-stat"><div class="val" style="color:var(--accent2)">${achievements.length}</div><div class="lbl">Achievements</div></div>
+      <div class="dash-stat"><div class="val" style="color:var(--xp)">🔥 ${hero.streak||0}</div><div class="lbl">Current Streak</div></div>
+    </div>
+
+    ${Object.keys(catData).length>0?`
+    <div class="card">
+      <h3 style="font-size:14px;margin-bottom:12px">📊 Quests by Category</h3>
+      ${Object.entries(catData).sort((a,b)=>b[1]-a[1]).map(([cat,count])=>{
+        const maxCat = Math.max(...Object.values(catData));
+        const w = (count/maxCat)*100;
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:12px;width:80px;color:var(--text2)">${CAT_EMOJI[cat]||''} ${cat}</span>
+          <div style="flex:1;height:18px;background:var(--surface3);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${w}%;background:var(--accent);border-radius:4px;display:flex;align-items:center;padding:0 6px">
+              <span style="font-size:10px;font-weight:700;color:#fff">${count}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    `:''}
+
+    <div class="card">
+      <h3 style="font-size:14px;margin-bottom:12px">📅 90-Day Activity</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:3px">
+        ${heatDays.map(h=>{
+          const intensity = h.count===0?0:Math.ceil((h.count/maxCount)*4);
+          const colors = ['var(--surface3)','rgba(124,92,255,.2)','rgba(124,92,255,.4)','rgba(124,92,255,.6)','rgba(124,92,255,.9)'];
+          const title = `${h.date.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}: ${h.count} actions`;
+          return `<div title="${title}" style="width:12px;height:12px;border-radius:2px;background:${colors[intensity]}"></div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size:14px;margin-bottom:12px">📜 Recent Activity</h3>
+      ${activity.length===0?'<div style="font-size:13px;color:var(--text3)">No activity yet. Complete some quests!</div>':''}
+      <div class="activity-log">
+        ${activity.slice(0,30).map(a=>`
+          <div class="activity-item">
+            <span class="activity-icon">${a.icon}</span>
+            <span class="activity-text">${esc(a.text)}</span>
+            <span class="activity-time">${relTime(a.ts)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ── Modals ──
+function questModal(quest){
+  const isEdit = !!quest;
+  const q = quest || { title:'', description:'', difficulty:'medium', category:'Work', dueDate:'' };
+  openModal(`
+    <h2>${isEdit?'Edit':'New'} Quest</h2>
+    <div class="field"><label>Title *</label><input id="mTitle" value="${esc(q.title)}" placeholder="What needs doing?"></div>
+    <div class="field"><label>Description</label><textarea id="mDesc" placeholder="Optional details...">${esc(q.description||'')}</textarea></div>
+    <div class="field-row">
+      <div class="field" style="flex:1"><label>Difficulty</label>
+        <select id="mDiff">${DIFFICULTIES.map(d=>`<option value="${d.id}" ${d.id===q.difficulty?'selected':''}>${d.label} (⚡${d.xp} 🪙${d.gold})</option>`).join('')}</select>
+      </div>
+      <div class="field" style="flex:1"><label>Category</label>
+        <select id="mCat">${CATEGORIES.map(c=>`<option value="${c}" ${c===q.category?'selected':''}>${CAT_EMOJI[c]} ${c}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="field"><label>Due Date</label><input type="date" id="mDue" value="${q.dueDate||''}"></div>
+    <div class="actions">
+      <button class="btn btn-outline" onclick="QuestBoard.closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="mSave">💾 ${isEdit?'Save':'Add Quest'}</button>
+    </div>
+  `);
+  document.getElementById('mSave').onclick = ()=>{
+    const title = document.getElementById('mTitle').value.trim();
+    if(!title) return;
+    if(isEdit){
+      quest.title = title;
+      quest.description = document.getElementById('mDesc').value.trim();
+      quest.difficulty = document.getElementById('mDiff').value;
+      quest.category = document.getElementById('mCat').value;
+      quest.dueDate = document.getElementById('mDue').value;
+    } else {
+      quests.push({
+        id:uid(), title, description:document.getElementById('mDesc').value.trim(),
+        difficulty:document.getElementById('mDiff').value,
+        category:document.getElementById('mCat').value,
+        dueDate:document.getElementById('mDue').value,
+        status:'active', createdAt:Date.now()
+      });
+    }
+    save('quests', quests);
+    closeModal(); render();
+  };
+  setTimeout(()=>document.getElementById('mTitle').focus(),100);
+}
+
+function dailyModal(daily){
+  const isEdit = !!daily;
+  const d = daily || { title:'', description:'', difficulty:'easy', category:'Personal' };
+  openModal(`
+    <h2>${isEdit?'Edit':'New'} Daily Quest</h2>
+    <div class="field"><label>Title *</label><input id="mTitle" value="${esc(d.title)}" placeholder="What to do every day?"></div>
+    <div class="field"><label>Description</label><textarea id="mDesc" placeholder="Optional details...">${esc(d.description||'')}</textarea></div>
+    <div class="field-row">
+      <div class="field" style="flex:1"><label>Difficulty</label>
+        <select id="mDiff">${DIFFICULTIES.map(df=>`<option value="${df.id}" ${df.id===d.difficulty?'selected':''}>${df.label} (⚡${df.xp} 🪙${df.gold})</option>`).join('')}</select>
+      </div>
+      <div class="field" style="flex:1"><label>Category</label>
+        <select id="mCat">${CATEGORIES.map(c=>`<option value="${c}" ${c===d.category?'selected':''}>${CAT_EMOJI[c]} ${c}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-outline" onclick="QuestBoard.closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="mSave">💾 ${isEdit?'Save':'Add Daily'}</button>
+    </div>
+  `);
+  document.getElementById('mSave').onclick = ()=>{
+    const title = document.getElementById('mTitle').value.trim();
+    if(!title) return;
+    if(isEdit){
+      daily.title = title;
+      daily.description = document.getElementById('mDesc').value.trim();
+      daily.difficulty = document.getElementById('mDiff').value;
+      daily.category = document.getElementById('mCat').value;
+    } else {
+      dailies.push({
+        id:uid(), title, description:document.getElementById('mDesc').value.trim(),
+        difficulty:document.getElementById('mDiff').value,
+        category:document.getElementById('mCat').value,
+        completedDates:[], streak:0, bestStreak:0, createdAt:Date.now()
+      });
+    }
+    save('dailies', dailies);
+    closeModal(); render();
+  };
+  setTimeout(()=>document.getElementById('mTitle').focus(),100);
+}
+
+function rewardModal(){
+  const REWARD_EMOJIS = ['🍕','☕','🎮','📺','🛒','🍫','🎬','🧖','📖','🛌','🍺','🎵','🏖️','🍦','🧁','🎧','🎾','🥂'];
+  openModal(`
+    <h2>Add Reward</h2>
+    <div class="field"><label>Name *</label><input id="mName" placeholder="e.g. Coffee break, Gaming session"></div>
+    <div class="field"><label>Description</label><input id="mRDesc" placeholder="Optional details"></div>
+    <div class="field-row">
+      <div class="field" style="flex:1"><label>Emoji</label>
+        <div style="display:flex;flex-wrap:wrap;gap:4px" id="emojiPick">
+          ${REWARD_EMOJIS.map(e=>`<button class="pill" data-emoji="${e}" style="font-size:18px;padding:4px 8px">${e}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="field"><label>Cost (Gold) *</label><input type="number" id="mCost" min="1" value="25" placeholder="25"></div>
+    <div class="actions">
+      <button class="btn btn-outline" onclick="QuestBoard.closeModal()">Cancel</button>
+      <button class="btn btn-gold" id="mSave">🎁 Add Reward</button>
+    </div>
+  `);
+  let selEmoji = '🎁';
+  document.querySelectorAll('#emojiPick .pill').forEach(b=>{
+    b.onclick = ()=>{
+      document.querySelectorAll('#emojiPick .pill').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      selEmoji = b.dataset.emoji;
+    };
+  });
+  document.getElementById('mSave').onclick = ()=>{
+    const name = document.getElementById('mName').value.trim();
+    const cost = parseInt(document.getElementById('mCost').value)||25;
+    if(!name) return;
+    rewards.push({
+      id:uid(), name, description:document.getElementById('mRDesc').value.trim(),
+      emoji:selEmoji, cost, claimedCount:0, lastClaimed:null
+    });
+    save('rewards', rewards);
+    closeModal(); render();
+  };
+  setTimeout(()=>document.getElementById('mName').focus(),100);
+}
+
+// ── Event Binding ──
+function bindEvents(){
+  const search = document.getElementById('searchInput');
+  if(search){
+    search.oninput = ()=>{ searchText=search.value; render(); setTimeout(()=>{
+      const s2=document.getElementById('searchInput'); if(s2){s2.focus();s2.selectionStart=s2.selectionEnd=searchText.length;}
+    },0); };
+  }
+  // Setup page bindings
+  const createBtn = document.getElementById('createHeroBtn');
+  if(createBtn){
+    let selClass = 'warrior', selAvatar = '⚔️';
+    document.querySelectorAll('#classGrid .card').forEach(b=>{
+      b.onclick = ()=>{
+        document.querySelectorAll('#classGrid .card').forEach(x=>x.style.borderColor='var(--border)');
+        b.style.borderColor='var(--accent)';
+        selClass = b.dataset.class;
+        selAvatar = CLASSES.find(c=>c.id===selClass)?.emoji || '⚔️';
+        // Update avatar selection
+        document.querySelectorAll('#avatarGrid .pill').forEach(x=>x.classList.remove('active'));
+        const av = document.querySelector(`#avatarGrid .pill[data-avatar="${selAvatar}"]`);
+        if(av) av.classList.add('active');
+      };
+    });
+    document.querySelectorAll('#avatarGrid .pill').forEach(b=>{
+      b.onclick = ()=>{
+        document.querySelectorAll('#avatarGrid .pill').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        selAvatar = b.dataset.avatar;
+      };
+    });
+    // Default selection
+    document.querySelector('#classGrid .card')?.click();
+    createBtn.onclick = ()=>{
+      const name = document.getElementById('setupName').value.trim() || 'Hero';
+      createHero(name, selClass, selAvatar);
+      seedDemoData();
+      render();
+    };
+  }
+}
+
+function seedDemoData(){
+  quests = [
+    { id:uid(), title:'Ship UTMStamp v2.0 landing page', description:'Redesign and deploy the new landing page with video signatures hero section', difficulty:'hard', category:'Work', dueDate:'', status:'active', createdAt:Date.now() },
+    { id:uid(), title:'Write LinkedIn post about building in public', description:'Share this week\'s progress on UTMStamp', difficulty:'easy', category:'Creative', dueDate:'', status:'active', createdAt:Date.now() },
+    { id:uid(), title:'Review FleetRobo Q3 roadmap', description:'Align with Mandeep on priorities', difficulty:'medium', category:'Work', dueDate:'', status:'active', createdAt:Date.now() },
+    { id:uid(), title:'Set up analytics pipeline for click tracking', description:'Implement proper event tracking with PostHog', difficulty:'epic', category:'Work', dueDate:'', status:'active', createdAt:Date.now() },
+    { id:uid(), title:'Cold email 10 potential UTMStamp customers', description:'Use the SaaS sales sequence from Email Craft', difficulty:'medium', category:'Social', dueDate:'', status:'active', createdAt:Date.now() },
+  ];
+  dailies = [
+    { id:uid(), title:'Morning workout', description:'30 min run or gym session', difficulty:'easy', category:'Health', completedDates:[], streak:0, bestStreak:0, createdAt:Date.now() },
+    { id:uid(), title:'Read for 20 minutes', description:'Non-fiction or product books', difficulty:'trivial', category:'Learning', completedDates:[], streak:0, bestStreak:0, createdAt:Date.now() },
+    { id:uid(), title:'Ship something', description:'At least one commit, one feature, one improvement', difficulty:'medium', category:'Work', completedDates:[], streak:0, bestStreak:0, createdAt:Date.now() },
+    { id:uid(), title:'Journal / Daily reflection', description:'5 minutes of writing', difficulty:'trivial', category:'Personal', completedDates:[], streak:0, bestStreak:0, createdAt:Date.now() },
+  ];
+  rewards = [
+    { id:uid(), name:'Coffee break', description:'Take a proper coffee break with no screens', emoji:'☕', cost:15, claimedCount:0, lastClaimed:null },
+    { id:uid(), name:'Gaming session', description:'1 hour of guilt-free gaming', emoji:'🎮', cost:50, claimedCount:0, lastClaimed:null },
+    { id:uid(), name:'Order food', description:'Treat yourself to delivery', emoji:'🍕', cost:100, claimedCount:0, lastClaimed:null },
+    { id:uid(), name:'Movie night', description:'Watch something you\'ve been wanting to see', emoji:'🎬', cost:75, claimedCount:0, lastClaimed:null },
+  ];
+  save('quests', quests);
+  save('dailies', dailies);
+  save('rewards', rewards);
+}
+
+// ── Export / Import ──
+function exportData(){
+  const data = { hero, quests, dailies, rewards, activity, achievements, exportedAt:new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `quest-board-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importData(){
+  openModal(`
+    <h2>Import Data</h2>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Upload a Quest Board JSON export. This will merge with your existing data.</p>
+    <div class="field"><label>JSON File</label><input type="file" id="mFile" accept=".json"></div>
+    <div class="actions">
+      <button class="btn btn-outline" onclick="QuestBoard.closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="mImport">📤 Import</button>
+    </div>
+  `);
+  document.getElementById('mImport').onclick = ()=>{
+    const file = document.getElementById('mFile').files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = e=>{
+      try{
+        const data = JSON.parse(e.target.result);
+        if(data.hero) { hero = data.hero; save('hero', hero); }
+        if(data.quests) { quests = data.quests; save('quests', quests); }
+        if(data.dailies) { dailies = data.dailies; save('dailies', dailies); }
+        if(data.rewards) { rewards = data.rewards; save('rewards', rewards); }
+        if(data.activity) { activity = data.activity; save('activity', activity); }
+        if(data.achievements) { achievements = data.achievements; save('achievements', achievements); }
+        closeModal(); render();
+        showToast('✅ Data imported!');
+      }catch(err){
+        showToast('❌ Invalid JSON file');
+      }
+    };
+    reader.readAsText(file);
+  };
+}
+
+function editHero(){
+  openModal(`
+    <h2>Edit Hero</h2>
+    <div class="field"><label>Name</label><input id="mName" value="${esc(hero.name)}"></div>
+    <div class="field"><label>Avatar</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px" id="avatarGrid2">
+        ${AVATARS.map(a=>`<button class="pill ${a===hero.avatar?'active':''}" data-avatar="${a}" style="font-size:20px;padding:6px 10px">${a}</button>`).join('')}
+      </div>
+    </div>
+    <div class="field"><label>Class</label>
+      <select id="mClass">${CLASSES.map(c=>`<option value="${c.id}" ${c.id===hero.class?'selected':''}>${c.emoji} ${c.label}</option>`).join('')}</select>
+    </div>
+    <div class="actions">
+      <button class="btn btn-danger btn-sm" onclick="if(confirm('Reset ALL data? This cannot be undone.')){localStorage.removeItem('${SK('hero')}');localStorage.removeItem('${SK('quests')}');localStorage.removeItem('${SK('dailies')}');localStorage.removeItem('${SK('rewards')}');localStorage.removeItem('${SK('activity')}');localStorage.removeItem('${SK('achievements')}');location.reload()}" style="margin-right:auto">🗑️ Reset All</button>
+      <button class="btn btn-outline" onclick="QuestBoard.closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="mSave">💾 Save</button>
+    </div>
+  `);
+  let selAvatar = hero.avatar;
+  document.querySelectorAll('#avatarGrid2 .pill').forEach(b=>{
+    b.onclick = ()=>{
+      document.querySelectorAll('#avatarGrid2 .pill').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      selAvatar = b.dataset.avatar;
+    };
+  });
+  document.getElementById('mSave').onclick = ()=>{
+    hero.name = document.getElementById('mName').value.trim() || hero.name;
+    hero.avatar = selAvatar;
+    hero.class = document.getElementById('mClass').value;
+    save('hero', hero);
+    closeModal(); render();
+  };
+}
+
+function showHelp(){
+  openModal(`
+    <h2>⚔️ Quest Board — Help</h2>
+    <div style="font-size:13px;color:var(--text2)">
+      <h3 style="font-size:14px;color:var(--text);margin:12px 0 6px">How It Works</h3>
+      <p>Turn your tasks into RPG quests. Complete them to earn XP and Gold. Level up your hero, build streaks, unlock achievements, and claim rewards.</p>
+      
+      <h3 style="font-size:14px;color:var(--text);margin:12px 0 6px">⚔️ Quests</h3>
+      <p>One-time tasks. Pick a difficulty to set XP/Gold reward. Higher difficulty = bigger reward.</p>
+      
+      <h3 style="font-size:14px;color:var(--text);margin:12px 0 6px">🔄 Dailies</h3>
+      <p>Recurring tasks. Check in daily to build streaks. Streak multipliers: ×1.5 at 7 days, ×2 at 14, ×3 at 30!</p>
+      
+      <h3 style="font-size:14px;color:var(--text);margin:12px 0 6px">🎁 Rewards</h3>
+      <p>Define your own rewards and "buy" them with Gold. A coffee break for 15G? A gaming session for 50G? You decide!</p>
+      
+      <h3 style="font-size:14px;color:var(--text);margin:12px 0 6px">🏅 Achievements</h3>
+      <p>${ACH_DEFS.length} achievements to unlock. Complete quests, build streaks, earn gold, and level up to discover them all.</p>
+
+      <h3 style="font-size:14px;color:var(--text);margin:12px 0 6px">⌨️ Keyboard Shortcuts</h3>
+      <div style="column-count:2;column-gap:16px">
+        <p><kbd>N</kbd> — New quest/daily</p>
+        <p><kbd>/</kbd> — Focus search</p>
+        <p><kbd>1-4</kbd> — Switch views</p>
+        <p><kbd>E</kbd> — Export data</p>
+        <p><kbd>I</kbd> — Import data</p>
+        <p><kbd>?</kbd> — This help</p>
+        <p><kbd>Esc</kbd> — Close modal</p>
+      </div>
+    </div>
+    <div class="actions"><button class="btn btn-primary" onclick="QuestBoard.closeModal()">Got it</button></div>
+  `);
+}
+
+// ── Keyboard Shortcuts ──
+document.addEventListener('keydown', e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
+  if(e.key==='Escape'){ closeModal(); return; }
+  if(!hero) return;
+  if(e.key==='1'){ view='quests'; render(); }
+  if(e.key==='2'){ view='dailies'; render(); }
+  if(e.key==='3'){ view='rewards'; render(); }
+  if(e.key==='4'){ view='dashboard'; render(); }
+  if(e.key==='n'||e.key==='N'){
+    e.preventDefault();
+    if(view==='quests') questModal();
+    else if(view==='dailies') dailyModal();
+    else if(view==='rewards') rewardModal();
+  }
+  if(e.key==='/'){e.preventDefault(); const s=document.getElementById('searchInput'); if(s) s.focus();}
+  if(e.key==='e'||e.key==='E') exportData();
+  if(e.key==='i'||e.key==='I') importData();
+  if(e.key==='?') showHelp();
+});
+
+// Modal overlay click-to-close
+document.getElementById('modalOverlay').addEventListener('click', e=>{
+  if(e.target===document.getElementById('modalOverlay')) closeModal();
+});
+
+// ── Public API ──
+window.QuestBoard = {
+  addQuest: ()=>questModal(),
+  editQuest: id=>questModal(quests.find(q=>q.id===id)),
+  deleteQuest: id=>{ if(confirm('Delete this quest?')){ deleteQuest(id); } },
+  complete: id=>completeQuest(id),
+  setFilter: f=>{ questFilter=f; render(); },
+  addDaily: ()=>dailyModal(),
+  editDaily: id=>dailyModal(dailies.find(d=>d.id===id)),
+  deleteDaily: id=>{ if(confirm('Delete this daily?')){ dailies=dailies.filter(d=>d.id!==id); save('dailies',dailies); render(); } },
+  completeDaily: id=>completeDaily(id),
+  addReward: ()=>rewardModal(),
+  deleteReward: id=>{ if(confirm('Delete this reward?')){ rewards=rewards.filter(r=>r.id!==id); save('rewards',rewards); render(); } },
+  claimReward: id=>{ if(confirm('Claim this reward?')) claimReward(id); },
+  editHero: ()=>editHero(),
+  exportData: ()=>exportData(),
+  importData: ()=>importData(),
+  showHelp: ()=>showHelp(),
+  closeModal: ()=>closeModal()
+};
+
+// ── Init ──
+resetDailies();
+render();
+
+})();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

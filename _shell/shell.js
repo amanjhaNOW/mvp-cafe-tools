@@ -107,6 +107,8 @@
     { slug: 'noise-lab', name: 'Noise Lab', emoji: '🎧', cluster: 'personal' },
     { slug: 'timezone-forge', name: 'Time Zone Forge', emoji: '🌍', cluster: 'personal' },
     { slug: 'calc-pad', name: 'Calc Pad', emoji: '🧮', cluster: 'personal' },
+    { slug: 'story-map-forge', name: 'Story Map Forge', emoji: '🗺️', cluster: 'build' },
+    { slug: 'quest-board', name: 'Quest Board', emoji: '⚔️', cluster: 'personal' },
   ];
 
   // Deduplicate (sprint-board appears in both build and team)
