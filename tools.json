@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-22T19:37:53.093Z",
-  "count": 90,
+  "generatedAt": "2026-06-23T19:37:25.328Z",
+  "count": 91,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -721,6 +721,14 @@
       "tagline": "Gamified Task & Productivity RPG",
       "emoji": "🔧",
       "day": 90,
+      "cluster": "personal"
+    },
+    {
+      "slug": "prompt-forge",
+      "title": "Prompt Forge",
+      "tagline": "AI Prompt Engineering Studio",
+      "emoji": "🔧",
+      "day": 91,
       "cluster": "personal"
     }
   ]

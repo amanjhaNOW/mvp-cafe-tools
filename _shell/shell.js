@@ -109,6 +109,7 @@
     { slug: 'calc-pad', name: 'Calc Pad', emoji: '🧮', cluster: 'personal' },
     { slug: 'story-map-forge', name: 'Story Map Forge', emoji: '🗺️', cluster: 'build' },
     { slug: 'quest-board', name: 'Quest Board', emoji: '⚔️', cluster: 'personal' },
+    { slug: 'prompt-forge', name: 'Prompt Forge', emoji: '🔮', tagline: 'AI Prompt Engineering Studio', cluster: 'build' },
   ];
 
   // Deduplicate (sprint-board appears in both build and team)
