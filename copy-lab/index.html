@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Copy Lab — UX Microcopy & UI Text Manager</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#1f6feb;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#bc8cff;--pink:#f778ba;--radius:8px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;overflow-x:hidden;min-height:100dvh}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;font-size:inherit}
+input,textarea,select{font-family:inherit;font-size:16px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;width:100%;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b949e'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.app{display:flex;height:100dvh;overflow:hidden}
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-hdr{padding:12px;border-bottom:1px solid var(--border)}
+.sidebar-hdr h1{font-size:16px;display:flex;align-items:center;gap:6px}
+.sidebar-hdr h1 span{font-size:20px}
+.sidebar-search{margin-top:8px}
+.sidebar-search input{font-size:14px;padding:6px 10px}
+.project-list{flex:1;overflow-y:auto;padding:4px 0}
+.project-item{padding:8px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-left:3px solid transparent;min-height:44px}
+.project-item:hover{background:var(--surface2)}
+.project-item.active{background:var(--surface2);border-left-color:var(--accent)}
+.project-item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.project-item .count{font-size:11px;color:var(--text2);background:var(--bg);padding:2px 6px;border-radius:10px}
+.sidebar-actions{padding:8px 12px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap}
+.sidebar-actions button{padding:6px 10px;border-radius:var(--radius);font-size:12px;min-height:44px;flex:1}
+.btn{padding:8px 16px;border-radius:var(--radius);font-weight:500;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn-primary{background:var(--accent2);color:#fff}
+.btn-primary:hover{background:var(--accent)}
+.btn-secondary{background:var(--surface2);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--border)}
+.btn-sm{padding:4px 10px;font-size:12px;min-height:32px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;min-height:48px}
+.topbar .tabs{display:flex;gap:2px;flex-wrap:wrap}
+.topbar .tab{padding:6px 14px;border-radius:var(--radius);font-size:13px;color:var(--text2);min-height:36px;display:flex;align-items:center}
+.topbar .tab:hover{color:var(--text);background:var(--surface2)}
+.topbar .tab.active{color:var(--accent);background:var(--surface)}
+.topbar-right{margin-left:auto;display:flex;gap:6px;align-items:center}
+.content{flex:1;overflow-y:auto;padding:16px}
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-bar select{width:auto;min-width:120px;font-size:13px;padding:6px 28px 6px 10px;min-height:36px}
+.filter-bar input{max-width:240px;font-size:13px;padding:6px 10px;min-height:36px}
+.copy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.copy-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:border-color .15s}
+.copy-card:hover{border-color:var(--accent)}
+.copy-card .key{font-family:'SF Mono',Consolas,monospace;font-size:12px;color:var(--accent);margin-bottom:4px;word-break:break-all}
+.copy-card .text{font-size:15px;margin-bottom:8px;line-height:1.4}
+.copy-card .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500}
+.badge-cat{background:#1f6feb22;color:var(--accent)}
+.badge-status{font-size:10px}
+.badge-draft{background:#d2992222;color:var(--orange)}
+.badge-review{background:#bc8cff22;color:var(--purple)}
+.badge-approved{background:#3fb95022;color:var(--green)}
+.badge-deprecated{background:#f8514922;color:var(--red)}
+.badge-tone{background:var(--surface2);color:var(--text2);font-size:10px}
+.char-count{font-size:11px;color:var(--text2)}
+.char-warn{color:var(--orange)}
+.char-over{color:var(--red)}
+.variant-badge{font-size:10px;background:var(--surface2);color:var(--pink);padding:1px 6px;border-radius:8px}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:600px;max-height:90dvh;display:flex;flex-direction:column}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border)}
+.modal-hdr h2{font-size:16px}
+.modal-body{padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px}
+.modal-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:12px;color:var(--text2);font-weight:500}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+/* Preview */
+.preview-container{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:center;min-height:120px}
+.prev-button{padding:10px 24px;border-radius:var(--radius);background:var(--accent2);color:#fff;font-weight:500;font-size:14px;cursor:default}
+.prev-error{background:#f8514922;border:1px solid #f8514944;border-radius:var(--radius);padding:12px 16px;display:flex;align-items:flex-start;gap:10px;color:var(--red);font-size:13px;max-width:380px}
+.prev-error::before{content:'⚠';font-size:16px;flex-shrink:0}
+.prev-success{background:#3fb95022;border:1px solid #3fb95044;border-radius:var(--radius);padding:12px 16px;display:flex;align-items:flex-start;gap:10px;color:var(--green);font-size:13px;max-width:380px}
+.prev-success::before{content:'✓';font-size:16px;flex-shrink:0;font-weight:bold}
+.prev-empty{text-align:center;color:var(--text2);max-width:260px}
+.prev-empty .icon{font-size:40px;margin-bottom:8px;opacity:.5}
+.prev-empty .title{font-size:14px;font-weight:500;margin-bottom:4px;color:var(--text)}
+.prev-empty .desc{font-size:13px}
+.prev-tooltip{position:relative;display:inline-block;padding:4px 8px;background:var(--text);color:var(--bg);border-radius:6px;font-size:13px;max-width:240px}
+.prev-tooltip::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);border-width:6px 6px 0;border-style:solid;border-color:var(--text) transparent transparent}
+.prev-toast{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:10px;max-width:360px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.prev-toast .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.prev-modal-frame{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:380px;overflow:hidden}
+.prev-modal-frame .hdr{padding:14px 16px;border-bottom:1px solid var(--border);font-weight:600;font-size:14px}
+.prev-modal-frame .body{padding:16px;font-size:13px;color:var(--text2)}
+.prev-placeholder{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;color:var(--text2);font-size:14px;min-width:260px;font-style:italic}
+.prev-label{font-size:12px;color:var(--text2);font-weight:500;margin-bottom:4px}
+.prev-loading{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--text2)}
+.prev-loading .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Variants */
+.variant-row{display:flex;gap:8px;align-items:flex-start}
+.variant-row textarea{flex:1}
+.variant-row button{flex-shrink:0;min-height:44px}
+/* Dashboard */
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+.stat-card .value{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-card .label{font-size:11px;color:var(--text2);margin-top:2px}
+.chart-section{margin-bottom:20px}
+.chart-section h3{font-size:14px;margin-bottom:10px;color:var(--text2)}
+.bar-chart{display:flex;flex-direction:column;gap:6px}
+.bar-row{display:flex;align-items:center;gap:8px}
+.bar-label{width:100px;font-size:12px;color:var(--text2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;min-width:2px;transition:width .3s}
+.bar-val{font-size:11px;color:var(--text2);width:30px}
+/* Preview tab all entries */
+.preview-list{display:flex;flex-direction:column;gap:12px}
+.preview-entry{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.preview-entry-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);cursor:pointer}
+.preview-entry-body{padding:16px}
+.copy-btn{padding:4px 10px;border-radius:6px;font-size:12px;background:var(--surface);border:1px solid var(--border);min-height:32px}
+.copy-btn:hover{background:var(--border)}
+/* Table view */
+.copy-table{width:100%;border-collapse:collapse;font-size:13px}
+.copy-table th{text-align:left;padding:8px 10px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);position:sticky;top:0;z-index:1}
+.copy-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.copy-table tr:hover td{background:var(--surface)}
+.copy-table .key-col{font-family:'SF Mono',Consolas,monospace;font-size:11px;color:var(--accent);max-width:160px;word-break:break-all}
+.copy-table .text-col{max-width:300px}
+/* Mobile */
+.mobile-menu-btn{display:none;padding:8px;font-size:20px;min-height:44px;min-width:44px;align-items:center;justify-content:center}
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
+@media(max-width:700px){
+  .sidebar{position:fixed;left:-280px;top:0;bottom:0;z-index:50;width:270px;transition:left .2s}
+  .sidebar.open{left:0}
+  .sidebar-backdrop.show{display:block}
+  .mobile-menu-btn{display:flex}
+  .copy-grid{grid-template-columns:1fr}
+  .form-row,.form-row-3{grid-template-columns:1fr}
+  .filter-bar{flex-direction:column;align-items:stretch}
+  .filter-bar select,.filter-bar input{max-width:none;width:100%}
+  .topbar{flex-wrap:wrap}
+  .topbar-right{margin-left:0;width:100%;justify-content:flex-end}
+  .stat-cards{grid-template-columns:repeat(2,1fr)}
+  .copy-table{display:block;overflow-x:auto}
+}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text2)}
+.empty-state .icon{font-size:48px;margin-bottom:12px;opacity:.4}
+.empty-state h3{color:var(--text);margin-bottom:8px}
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
+.help-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:480px;width:100%;max-height:80dvh;overflow-y:auto}
+.help-box h2{margin-bottom:12px}
+.help-box .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+.help-box kbd{background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px;border:1px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebar()"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-hdr">
+      <h1><span>✏️</span> Copy Lab</h1>
+      <div class="sidebar-search"><input type="text" placeholder="Search projects..." id="projSearch" oninput="renderProjects()"></div>
+    </div>
+    <div class="project-list" id="projList"></div>
+    <div class="sidebar-actions">
+      <button class="btn btn-primary" onclick="addProject()" style="flex:2">+ Project</button>
+      <button class="btn btn-secondary" onclick="showImport()">Import</button>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="tabs" id="tabs"></div>
+      <div class="topbar-right">
+        <button class="btn btn-sm btn-secondary" onclick="exportAll()" title="Export JSON">💾</button>
+        <button class="btn btn-sm btn-secondary" onclick="showHelp()" title="Help">?</button>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<script>
+const SK = k => `mvpcafe:copy-lab:${k}`;
+const CATS = ['Button/CTA','Error','Success','Empty State','Loading','Tooltip','Placeholder','Notification','Onboarding','Modal','Navigation','Label','Heading','Description'];
+const TONES = ['Friendly','Professional','Urgent','Playful','Neutral'];
+const STATUSES = ['Draft','Review','Approved','Deprecated'];
+const STATUS_CLS = {Draft:'draft',Review:'review',Approved:'approved',Deprecated:'deprecated'};
+const CAT_EMOJI = {'Button/CTA':'🔘','Error':'⚠️','Success':'✅','Empty State':'📭','Loading':'⏳','Tooltip':'💬','Placeholder':'✍️','Notification':'🔔','Onboarding':'👋','Modal':'🪟','Navigation':'🧭','Label':'🏷️','Heading':'📌','Description':'📝'};
+
+let state = JSON.parse(localStorage.getItem(SK('state')) || 'null') || {projects:{},activeProject:null};
+let view = 'entries';
+let editingId = null;
+let helpOpen = false;
+
+function save(){ localStorage.setItem(SK('state'), JSON.stringify(state)); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function proj(){ return state.projects[state.activeProject]; }
+function entries(){ const p=proj(); return p ? Object.values(p.entries||{}) : []; }
+
+// Init seed
+if(!Object.keys(state.projects).length){
+  const pid = uid();
+  state.projects[pid] = {
+    id:pid, name:'UTMStamp UI Copy', created:Date.now(),
+    entries: seedData()
+  };
+  state.activeProject = pid;
+  save();
+}
+
+function seedData(){
+  const e = {};
+  const items = [
+    {key:'btn.create_signature',text:'Create Signature',category:'Button/CTA',context:'Dashboard',maxLen:25,tone:'Professional',status:'Approved',notes:'Primary CTA on dashboard'},
+    {key:'btn.track_clicks',text:'Start Tracking',category:'Button/CTA',context:'Onboarding',maxLen:20,tone:'Friendly',status:'Approved',notes:'Onboarding step 2'},
+    {key:'btn.upgrade',text:'Upgrade to Pro',category:'Button/CTA',context:'Pricing modal',maxLen:20,tone:'Professional',status:'Approved',variants:['Go Pro','Unlock Pro Features']},
+    {key:'err.signature_limit',text:'You\'ve reached your signature limit. Upgrade to create more.',category:'Error',context:'Dashboard',maxLen:80,tone:'Professional',status:'Approved'},
+    {key:'err.invalid_url',text:'That URL doesn\'t look right. Check for typos and try again.',category:'Error',context:'Campaign editor',maxLen:70,tone:'Friendly',status:'Review',variants:['Invalid URL format. Please enter a valid link.']},
+    {key:'err.network',text:'Something went wrong. Check your connection and try again.',category:'Error',context:'Global',maxLen:70,tone:'Friendly',status:'Approved'},
+    {key:'success.signature_created',text:'Signature created! Copy the code to start tracking clicks.',category:'Success',context:'Signature builder',maxLen:80,tone:'Friendly',status:'Approved'},
+    {key:'success.campaign_saved',text:'Campaign saved successfully.',category:'Success',context:'Campaign editor',maxLen:40,tone:'Professional',status:'Approved'},
+    {key:'empty.no_signatures',text:'No signatures yet',category:'Empty State',context:'Dashboard',maxLen:30,tone:'Friendly',status:'Approved',notes:'Shows with illustration',variants:['Create your first signature']},
+    {key:'empty.no_clicks',text:'No clicks recorded yet. Share your signature to start tracking.',category:'Empty State',context:'Analytics',maxLen:70,tone:'Friendly',status:'Approved'},
+    {key:'loading.analytics',text:'Crunching your numbers...',category:'Loading',context:'Analytics page',maxLen:30,tone:'Playful',status:'Approved',variants:['Loading analytics...','Fetching your data...']},
+    {key:'tooltip.utm_source',text:'Where the traffic comes from (e.g., newsletter, linkedin)',category:'Tooltip',context:'Campaign editor',maxLen:70,tone:'Friendly',status:'Approved'},
+    {key:'tooltip.click_heatmap',text:'See which links in your signature get the most clicks',category:'Tooltip',context:'Analytics',maxLen:60,tone:'Friendly',status:'Review'},
+    {key:'placeholder.search',text:'Search signatures, campaigns...',category:'Placeholder',context:'Global search',maxLen:35,tone:'Neutral',status:'Approved'},
+    {key:'placeholder.campaign_name',text:'e.g., Q3 Product Launch',category:'Placeholder',context:'Campaign editor',maxLen:30,tone:'Neutral',status:'Approved'},
+    {key:'notif.new_clicks',text:'🎉 Your signature got 12 new clicks today!',category:'Notification',context:'Email digest',maxLen:60,tone:'Playful',status:'Draft'},
+    {key:'onboarding.welcome',text:'Welcome to UTMStamp! Let\'s set up your first tracked signature in under 2 minutes.',category:'Onboarding',context:'First launch',maxLen:100,tone:'Friendly',status:'Approved'},
+    {key:'onboarding.step2',text:'Pick a template or start from scratch. Your call.',category:'Onboarding',context:'Setup wizard',maxLen:60,tone:'Playful',status:'Approved'},
+    {key:'modal.delete_confirm',text:'Delete this signature? This can\'t be undone.',category:'Modal',context:'Signature detail',maxLen:50,tone:'Professional',status:'Approved'},
+    {key:'modal.upgrade_title',text:'Unlock the full toolkit',category:'Modal',context:'Upgrade modal',maxLen:30,tone:'Friendly',status:'Review',variants:['Go unlimited','Level up your signatures']},
+    {key:'nav.dashboard',text:'Dashboard',category:'Navigation',context:'Main nav',maxLen:15,tone:'Neutral',status:'Approved'},
+    {key:'nav.analytics',text:'Analytics',category:'Navigation',context:'Main nav',maxLen:15,tone:'Neutral',status:'Approved'},
+    {key:'label.click_rate',text:'Click Rate',category:'Label',context:'Analytics card',maxLen:15,tone:'Professional',status:'Approved'},
+    {key:'heading.getting_started',text:'Get started in 3 steps',category:'Heading',context:'Onboarding',maxLen:30,tone:'Friendly',status:'Approved'},
+    {key:'desc.utm_tracking',text:'Every click on your email signature is tracked with UTM parameters — so you know exactly what\'s working.',category:'Description',context:'Landing page',maxLen:120,tone:'Professional',status:'Draft'},
+  ];
+  items.forEach(it => {
+    const id = uid();
+    e[id] = {id, ...it, variants: it.variants||[], created: Date.now()-Math.random()*86400000*30};
+  });
+  return e;
+}
+
+const VIEWS = [
+  {id:'entries',label:'📋 Entries',shortLabel:'📋'},
+  {id:'preview',label:'👁 Preview',shortLabel:'👁'},
+  {id:'table',label:'📊 Table',shortLabel:'📊'},
+  {id:'dashboard',label:'📈 Dashboard',shortLabel:'📈'},
+  {id:'export',label:'💾 Export',shortLabel:'💾'},
+];
+
+function render(){
+  renderProjects();
+  renderTabs();
+  renderContent();
+}
+
+function renderProjects(){
+  const q = (document.getElementById('projSearch')?.value||'').toLowerCase();
+  const list = document.getElementById('projList');
+  const pids = Object.keys(state.projects).filter(id => {
+    if(!q) return true;
+    return state.projects[id].name.toLowerCase().includes(q);
+  });
+  list.innerHTML = pids.length ? pids.map(id => {
+    const p = state.projects[id];
+    const cnt = Object.keys(p.entries||{}).length;
+    return `<div class="project-item ${id===state.activeProject?'active':''}" onclick="selectProject('${id}')" ondblclick="renameProject('${id}')">
+      <span class="name">${esc(p.name)}</span>
+      <span class="count">${cnt}</span>
+    </div>`;
+  }).join('') : '<div style="padding:16px;color:var(--text2);text-align:center;font-size:13px">No projects</div>';
+}
+
+function renderTabs(){
+  document.getElementById('tabs').innerHTML = VIEWS.map(v =>
+    `<button class="tab ${v.id===view?'active':''}" onclick="switchView('${v.id}')">${v.label}</button>`
+  ).join('');
+}
+
+function renderContent(){
+  const c = document.getElementById('content');
+  if(!state.activeProject || !proj()){
+    c.innerHTML = '<div class="empty-state"><div class="icon">✏️</div><h3>No project selected</h3><p>Create or select a project to start managing copy.</p></div>';
+    return;
+  }
+  switch(view){
+    case 'entries': renderEntries(c); break;
+    case 'preview': renderPreviews(c); break;
+    case 'table': renderTable(c); break;
+    case 'dashboard': renderDashboard(c); break;
+    case 'export': renderExport(c); break;
+  }
+}
+
+// ── Entries View ──
+let filterCat='', filterStatus='', filterTone='', filterText='';
+function renderEntries(c){
+  const all = entries();
+  const filtered = all.filter(e => {
+    if(filterCat && e.category!==filterCat) return false;
+    if(filterStatus && e.status!==filterStatus) return false;
+    if(filterTone && e.tone!==filterTone) return false;
+    if(filterText){
+      const q=filterText.toLowerCase();
+      if(!e.key.toLowerCase().includes(q) && !e.text.toLowerCase().includes(q) && !(e.context||'').toLowerCase().includes(q)) return false;
+    }
+    return true;
+  }).sort((a,b)=>b.created-a.created);
+
+  c.innerHTML = `
+    <div class="filter-bar">
+      <input type="text" placeholder="Search copy..." value="${esc(filterText)}" oninput="filterText=this.value;renderContent()" style="flex:1">
+      <select onchange="filterCat=this.value;renderContent()">
+        <option value="">All Categories</option>
+        ${CATS.map(cat=>`<option value="${cat}" ${filterCat===cat?'selected':''}>${CAT_EMOJI[cat]||''} ${cat}</option>`).join('')}
+      </select>
+      <select onchange="filterStatus=this.value;renderContent()">
+        <option value="">All Statuses</option>
+        ${STATUSES.map(s=>`<option value="${s}" ${filterStatus===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+      <select onchange="filterTone=this.value;renderContent()">
+        <option value="">All Tones</option>
+        ${TONES.map(t=>`<option value="${t}" ${filterTone===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="openEditor()">+ Add</button>
+    </div>
+    ${filtered.length ? `<div class="copy-grid">${filtered.map(e=>renderCard(e)).join('')}</div>` :
+      '<div class="empty-state"><div class="icon">📭</div><h3>No copy entries</h3><p>Add your first piece of microcopy.</p></div>'}
+  `;
+}
+
+function renderCard(e){
+  const overLimit = e.maxLen && e.text.length > e.maxLen;
+  const charClass = overLimit ? 'char-over' : (e.maxLen && e.text.length > e.maxLen*0.9 ? 'char-warn' : '');
+  return `<div class="copy-card" onclick="openEditor('${e.id}')">
+    <div class="key">${esc(e.key)}</div>
+    <div class="text">${esc(e.text)}</div>
+    <div class="meta">
+      <span class="badge badge-cat">${CAT_EMOJI[e.category]||''} ${e.category}</span>
+      <span class="badge badge-status badge-${STATUS_CLS[e.status]}">${e.status}</span>
+      ${e.tone?`<span class="badge badge-tone">${e.tone}</span>`:''}
+      ${e.maxLen?`<span class="char-count ${charClass}">${e.text.length}/${e.maxLen}</span>`:''}
+      ${e.variants&&e.variants.length?`<span class="variant-badge">${e.variants.length} variant${e.variants.length>1?'s':''}</span>`:''}
+    </div>
+  </div>`;
+}
+
+// ── Preview View ──
+function renderPreviews(c){
+  const all = entries().filter(e=>e.status!=='Deprecated').sort((a,b)=>a.category.localeCompare(b.category)||a.key.localeCompare(b.key));
+  const grouped = {};
+  all.forEach(e=>{ (grouped[e.category]=grouped[e.category]||[]).push(e); });
+  c.innerHTML = `<div class="preview-list">${Object.keys(grouped).sort().map(cat=>`
+    <div class="preview-entry">
+      <div class="preview-entry-hdr" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        <span>${CAT_EMOJI[cat]||''} ${cat} (${grouped[cat].length})</span>
+        <span style="color:var(--text2)">▾</span>
+      </div>
+      <div class="preview-entry-body">
+        ${grouped[cat].map(e=>`
+          <div style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <span style="font-family:monospace;font-size:11px;color:var(--accent)">${esc(e.key)}</span>
+              <button class="copy-btn" onclick="event.stopPropagation();copyText('${esc(e.text).replace(/'/g,"\\'")}')">Copy</button>
+            </div>
+            <div class="preview-container">${renderMockup(e)}</div>
+            ${e.variants&&e.variants.length?`<div style="margin-top:8px;font-size:12px;color:var(--text2)">Variants: ${e.variants.map(v=>`<span style="display:inline-block;background:var(--surface2);padding:2px 8px;border-radius:4px;margin:2px">${esc(v)}</span>`).join('')}</div>`:''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('')}</div>`;
+  if(!Object.keys(grouped).length) c.innerHTML='<div class="empty-state"><div class="icon">👁</div><h3>No entries to preview</h3></div>';
+}
+
+function renderMockup(e){
+  const t = esc(e.text);
+  switch(e.category){
+    case 'Button/CTA': return `<div class="prev-button">${t}</div>`;
+    case 'Error': return `<div class="prev-error">${t}</div>`;
+    case 'Success': return `<div class="prev-success">${t}</div>`;
+    case 'Empty State': return `<div class="prev-empty"><div class="icon">📭</div><div class="title">${t}</div><div class="desc">Looks like there's nothing here yet.</div></div>`;
+    case 'Loading': return `<div class="prev-loading"><div class="spinner"></div><div>${t}</div></div>`;
+    case 'Tooltip': return `<div class="prev-tooltip">${t}</div>`;
+    case 'Placeholder': return `<div class="prev-placeholder">${t}</div>`;
+    case 'Notification': return `<div class="prev-toast"><div class="dot" style="background:var(--accent)"></div><div>${t}</div></div>`;
+    case 'Onboarding': return `<div class="prev-toast" style="max-width:400px"><div class="dot" style="background:var(--green)"></div><div>${t}</div></div>`;
+    case 'Modal': return `<div class="prev-modal-frame"><div class="hdr">${t}</div><div class="body">Modal content would go here.</div></div>`;
+    case 'Navigation': return `<div style="display:flex;gap:16px;padding:8px 16px;background:var(--surface);border-radius:var(--radius)">${['Dashboard',t,'Settings'].map((n,i)=>`<span style="color:${i===1?'var(--accent)':'var(--text2)'};font-size:13px;font-weight:${i===1?'600':'400'}">${n}</span>`).join('')}</div>`;
+    case 'Label': return `<div><div class="prev-label">${t}</div><div style="font-size:20px;font-weight:600">42.3%</div></div>`;
+    case 'Heading': return `<div style="font-size:20px;font-weight:700">${t}</div>`;
+    case 'Description': return `<div style="max-width:400px;color:var(--text2);font-size:14px;line-height:1.6">${t}</div>`;
+    default: return `<div style="padding:12px;font-size:14px">${t}</div>`;
+  }
+}
+
+// ── Table View ──
+function renderTable(c){
+  const all = entries().sort((a,b)=>a.key.localeCompare(b.key));
+  if(!all.length){ c.innerHTML='<div class="empty-state"><div class="icon">📊</div><h3>No entries</h3></div>'; return; }
+  c.innerHTML=`<div style="overflow-x:auto"><table class="copy-table">
+    <thead><tr><th>Key</th><th>Text</th><th>Category</th><th>Status</th><th>Tone</th><th>Len</th><th>Context</th></tr></thead>
+    <tbody>${all.map(e=>{
+      const over=e.maxLen&&e.text.length>e.maxLen;
+      return `<tr onclick="openEditor('${e.id}')" style="cursor:pointer">
+        <td class="key-col">${esc(e.key)}</td>
+        <td class="text-col">${esc(e.text)}${e.variants&&e.variants.length?` <span class="variant-badge">${e.variants.length}v</span>`:''}</td>
+        <td><span class="badge badge-cat">${e.category}</span></td>
+        <td><span class="badge badge-status badge-${STATUS_CLS[e.status]}">${e.status}</span></td>
+        <td style="font-size:12px;color:var(--text2)">${e.tone||'—'}</td>
+        <td class="${over?'char-over':''}" style="font-size:12px">${e.text.length}${e.maxLen?'/'+e.maxLen:''}</td>
+        <td style="font-size:12px;color:var(--text2)">${esc(e.context||'—')}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+// ── Dashboard ──
+function renderDashboard(c){
+  const all = entries();
+  const total = all.length;
+  const approved = all.filter(e=>e.status==='Approved').length;
+  const drafts = all.filter(e=>e.status==='Draft').length;
+  const review = all.filter(e=>e.status==='Review').length;
+  const withVariants = all.filter(e=>e.variants&&e.variants.length).length;
+  const overLimit = all.filter(e=>e.maxLen&&e.text.length>e.maxLen).length;
+  // Category breakdown
+  const catCounts={};
+  all.forEach(e=>catCounts[e.category]=(catCounts[e.category]||0)+1);
+  const maxCat = Math.max(...Object.values(catCounts),1);
+  // Tone breakdown
+  const toneCounts={};
+  all.forEach(e=>{ if(e.tone) toneCounts[e.tone]=(toneCounts[e.tone]||0)+1; });
+  const maxTone = Math.max(...Object.values(toneCounts),1);
+  // Status breakdown
+  const statusCounts={};
+  STATUSES.forEach(s=>statusCounts[s]=all.filter(e=>e.status===s).length);
+  const maxStatus = Math.max(...Object.values(statusCounts),1);
+  const statusColors={Draft:'var(--orange)',Review:'var(--purple)',Approved:'var(--green)',Deprecated:'var(--red)'};
+
+  c.innerHTML=`
+    <div class="stat-cards">
+      <div class="stat-card"><div class="value">${total}</div><div class="label">Total Entries</div></div>
+      <div class="stat-card"><div class="value" style="color:var(--green)">${approved}</div><div class="label">Approved</div></div>
+      <div class="stat-card"><div class="value" style="color:var(--orange)">${drafts}</div><div class="label">Drafts</div></div>
+      <div class="stat-card"><div class="value" style="color:var(--purple)">${review}</div><div class="label">In Review</div></div>
+      <div class="stat-card"><div class="value" style="color:var(--pink)">${withVariants}</div><div class="label">With Variants</div></div>
+      <div class="stat-card"><div class="value" style="color:${overLimit?'var(--red)':'var(--text2)'}">${overLimit}</div><div class="label">Over Limit</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px">
+      <div class="chart-section">
+        <h3>By Category</h3>
+        <div class="bar-chart">${Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([cat,n])=>`
+          <div class="bar-row">
+            <span class="bar-label">${CAT_EMOJI[cat]||''} ${cat}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${n/maxCat*100}%;background:var(--accent)"></div></div>
+            <span class="bar-val">${n}</span>
+          </div>
+        `).join('')}</div>
+      </div>
+      <div class="chart-section">
+        <h3>By Status</h3>
+        <div class="bar-chart">${STATUSES.map(s=>`
+          <div class="bar-row">
+            <span class="bar-label">${s}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${(statusCounts[s]||0)/maxStatus*100}%;background:${statusColors[s]}"></div></div>
+            <span class="bar-val">${statusCounts[s]||0}</span>
+          </div>
+        `).join('')}</div>
+      </div>
+      <div class="chart-section">
+        <h3>By Tone</h3>
+        <div class="bar-chart">${Object.entries(toneCounts).sort((a,b)=>b[1]-a[1]).map(([tone,n])=>`
+          <div class="bar-row">
+            <span class="bar-label">${tone}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${n/maxTone*100}%;background:var(--purple)"></div></div>
+            <span class="bar-val">${n}</span>
+          </div>
+        `).join('')}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Export View ──
+function renderExport(c){
+  const all = entries();
+  c.innerHTML=`
+    <h3 style="margin-bottom:16px">Export Copy</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px">
+      <button class="btn btn-secondary" onclick="exportJSON()" style="flex-direction:column;padding:20px">
+        <span style="font-size:24px">📦</span>
+        <span>JSON (Dev-Ready)</span>
+        <span style="font-size:11px;color:var(--text2)">Key-value pairs for i18n</span>
+      </button>
+      <button class="btn btn-secondary" onclick="exportCSV()" style="flex-direction:column;padding:20px">
+        <span style="font-size:24px">📊</span>
+        <span>CSV Spreadsheet</span>
+        <span style="font-size:11px;color:var(--text2)">For Google Sheets / Excel</span>
+      </button>
+      <button class="btn btn-secondary" onclick="exportMD()" style="flex-direction:column;padding:20px">
+        <span style="font-size:24px">📝</span>
+        <span>Markdown Doc</span>
+        <span style="font-size:11px;color:var(--text2)">For PRDs & handoffs</span>
+      </button>
+      <button class="btn btn-secondary" onclick="exportFlat()" style="flex-direction:column;padding:20px">
+        <span style="font-size:24px">🔑</span>
+        <span>Flat JSON Keys</span>
+        <span style="font-size:11px;color:var(--text2)">key: value map</span>
+      </button>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h4 style="font-size:13px;color:var(--text2)">Preview</h4>
+        <button class="copy-btn" onclick="copyExportPreview()">Copy</button>
+      </div>
+      <pre id="exportPreview" style="background:var(--bg);padding:12px;border-radius:var(--radius);overflow-x:auto;font-size:12px;font-family:monospace;max-height:400px;overflow-y:auto;white-space:pre-wrap">${esc(generateFlatJSON())}</pre>
+    </div>
+  `;
+}
+
+function generateFlatJSON(){
+  const all = entries().filter(e=>e.status!=='Deprecated').sort((a,b)=>a.key.localeCompare(b.key));
+  const obj={};
+  all.forEach(e=>obj[e.key]=e.text);
+  return JSON.stringify(obj,null,2);
+}
+
+function exportJSON(){
+  const all = entries().filter(e=>e.status!=='Deprecated').sort((a,b)=>a.key.localeCompare(b.key));
+  const obj={};
+  all.forEach(e=>{
+    obj[e.key]={text:e.text,category:e.category};
+    if(e.maxLen) obj[e.key].maxLength=e.maxLen;
+    if(e.variants&&e.variants.length) obj[e.key].variants=e.variants;
+  });
+  downloadFile(`${proj().name.replace(/\s+/g,'-').toLowerCase()}-copy.json`, JSON.stringify(obj,null,2));
+  updatePreview(JSON.stringify(obj,null,2));
+}
+function exportCSV(){
+  const all = entries().sort((a,b)=>a.key.localeCompare(b.key));
+  let csv='Key,Text,Category,Status,Tone,Max Length,Context,Variants\n';
+  all.forEach(e=>{
+    csv+=`${csvEsc(e.key)},${csvEsc(e.text)},${csvEsc(e.category)},${csvEsc(e.status)},${csvEsc(e.tone||'')},${e.maxLen||''},${csvEsc(e.context||'')},${csvEsc((e.variants||[]).join('; '))}\n`;
+  });
+  downloadFile(`${proj().name.replace(/\s+/g,'-').toLowerCase()}-copy.csv`, csv);
+  updatePreview(csv);
+}
+function exportMD(){
+  const all = entries().sort((a,b)=>a.category.localeCompare(b.category)||a.key.localeCompare(b.key));
+  const grouped={};
+  all.forEach(e=>(grouped[e.category]=grouped[e.category]||[]).push(e));
+  let md=`# ${proj().name} — UI Copy\n\n`;
+  Object.keys(grouped).sort().forEach(cat=>{
+    md+=`## ${CAT_EMOJI[cat]||''} ${cat}\n\n`;
+    md+='| Key | Text | Status | Tone |\n|-----|------|--------|------|\n';
+    grouped[cat].forEach(e=>{
+      md+=`| \`${e.key}\` | ${e.text} | ${e.status} | ${e.tone||'—'} |\n`;
+    });
+    md+='\n';
+  });
+  downloadFile(`${proj().name.replace(/\s+/g,'-').toLowerCase()}-copy.md`, md);
+  updatePreview(md);
+}
+function exportFlat(){
+  const json = generateFlatJSON();
+  downloadFile(`${proj().name.replace(/\s+/g,'-').toLowerCase()}-keys.json`, json);
+  updatePreview(json);
+}
+function updatePreview(text){ const el=document.getElementById('exportPreview'); if(el) el.textContent=text; }
+function copyExportPreview(){ const el=document.getElementById('exportPreview'); if(el) copyText(el.textContent); }
+
+// ── Editor Modal ──
+function openEditor(id){
+  editingId = id||null;
+  const e = id ? proj().entries[id] : null;
+  const isNew = !e;
+  const html=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-hdr">
+        <h2>${isNew?'Add Copy Entry':'Edit Copy Entry'}</h2>
+        <button onclick="closeModal()" style="font-size:20px;min-height:44px;min-width:44px">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Key (dot notation)</label>
+            <input id="ed-key" placeholder="e.g., btn.submit" value="${esc(e?.key||'')}">
+          </div>
+          <div class="form-group">
+            <label>Context / Screen</label>
+            <input id="ed-context" placeholder="e.g., Checkout page" value="${esc(e?.context||'')}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Copy Text</label>
+          <textarea id="ed-text" rows="2" placeholder="The actual UI text..." oninput="updateCharCount()">${esc(e?.text||'')}</textarea>
+          <div id="ed-char" style="font-size:11px;color:var(--text2)"></div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Category</label>
+            <select id="ed-cat">${CATS.map(cat=>`<option value="${cat}" ${e?.category===cat?'selected':''}>${CAT_EMOJI[cat]||''} ${cat}</option>`).join('')}</select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="ed-status">${STATUSES.map(s=>`<option value="${s}" ${e?.status===s?'selected':''}>${s}</option>`).join('')}</select>
+          </div>
+          <div class="form-group">
+            <label>Tone</label>
+            <select id="ed-tone"><option value="">—</option>${TONES.map(t=>`<option value="${t}" ${e?.tone===t?'selected':''}>${t}</option>`).join('')}</select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Max Character Limit (optional)</label>
+          <input id="ed-maxlen" type="number" min="0" placeholder="e.g., 50" value="${e?.maxLen||''}">
+        </div>
+        <div class="form-group">
+          <label>A/B Variants</label>
+          <div id="ed-variants"></div>
+          <button class="btn btn-sm btn-secondary" onclick="addVariantField()" style="margin-top:6px">+ Add Variant</button>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="ed-notes" rows="2" placeholder="Design context, rationale...">${esc(e?.notes||'')}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Preview</label>
+          <div class="preview-container" id="ed-preview"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        ${!isNew?`<button class="btn btn-secondary" onclick="duplicateEntry('${id}')" style="margin-right:auto">Duplicate</button>
+        <button class="btn" style="color:var(--red)" onclick="deleteEntry('${id}')">Delete</button>`:''}
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEntry()">Save</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+  // Populate variants
+  const variants = e?.variants||[];
+  variants.forEach(v=>addVariantField(v));
+  updateCharCount();
+  updateEditorPreview();
+  // Live preview
+  ['ed-text','ed-cat'].forEach(id2=>{
+    document.getElementById(id2)?.addEventListener('input',updateEditorPreview);
+    document.getElementById(id2)?.addEventListener('change',updateEditorPreview);
+  });
+}
+
+function addVariantField(val){
+  const div = document.getElementById('ed-variants');
+  const row = document.createElement('div');
+  row.className='variant-row';
+  row.style.marginBottom='6px';
+  row.innerHTML=`<textarea rows="1" class="variant-input" placeholder="Alternative copy...">${esc(val||'')}</textarea><button class="btn btn-sm" onclick="this.parentElement.remove()" style="color:var(--red)">✕</button>`;
+  div.appendChild(row);
+}
+
+function updateCharCount(){
+  const text = document.getElementById('ed-text')?.value||'';
+  const max = parseInt(document.getElementById('ed-maxlen')?.value)||0;
+  const el = document.getElementById('ed-char');
+  if(!el) return;
+  if(max){
+    const cls = text.length>max?'char-over':(text.length>max*0.9?'char-warn':'');
+    el.innerHTML=`<span class="${cls}">${text.length}/${max} characters</span>`;
+  } else {
+    el.textContent=`${text.length} characters`;
+  }
+}
+
+function updateEditorPreview(){
+  const text = document.getElementById('ed-text')?.value||'Preview text';
+  const cat = document.getElementById('ed-cat')?.value||'Button/CTA';
+  const el = document.getElementById('ed-preview');
+  if(el) el.innerHTML = renderMockup({text,category:cat});
+}
+
+function saveEntry(){
+  const p = proj();
+  const key = document.getElementById('ed-key').value.trim();
+  const text = document.getElementById('ed-text').value.trim();
+  if(!key||!text){ alert('Key and text are required.'); return; }
+  const variants = [...document.querySelectorAll('.variant-input')].map(el=>el.value.trim()).filter(Boolean);
+  const entry = {
+    id: editingId || uid(),
+    key,
+    text,
+    category: document.getElementById('ed-cat').value,
+    status: document.getElementById('ed-status').value,
+    tone: document.getElementById('ed-tone').value||'',
+    context: document.getElementById('ed-context').value.trim(),
+    maxLen: parseInt(document.getElementById('ed-maxlen').value)||0,
+    variants,
+    notes: document.getElementById('ed-notes').value.trim(),
+    created: editingId ? (p.entries[editingId]?.created||Date.now()) : Date.now()
+  };
+  p.entries[entry.id] = entry;
+  save();
+  closeModal();
+  renderContent();
+}
+
+function deleteEntry(id){
+  if(!confirm('Delete this copy entry?')) return;
+  delete proj().entries[id];
+  save(); closeModal(); renderContent(); renderProjects();
+}
+
+function duplicateEntry(id){
+  const e = {...proj().entries[id], id:uid(), key:proj().entries[id].key+'_copy', created:Date.now(), variants:[...(proj().entries[id].variants||[])]};
+  proj().entries[e.id]=e;
+  save(); closeModal(); renderContent(); renderProjects();
+}
+
+function closeModal(){
+  const overlay = document.querySelector('.modal-overlay');
+  if(overlay) overlay.remove();
+  editingId=null;
+}
+
+// ── Projects ──
+function addProject(){
+  const name = prompt('Project name:');
+  if(!name) return;
+  const id=uid();
+  state.projects[id]={id,name,created:Date.now(),entries:{}};
+  state.activeProject=id;
+  save(); render(); toggleSidebar(false);
+}
+function selectProject(id){
+  state.activeProject=id;
+  save(); render(); toggleSidebar(false);
+}
+function renameProject(id){
+  const name=prompt('Rename project:',state.projects[id].name);
+  if(!name) return;
+  state.projects[id].name=name;
+  save(); renderProjects();
+}
+
+// ── Import/Export ──
+function exportAll(){
+  downloadFile('copy-lab-backup.json', JSON.stringify(state,null,2));
+}
+function showImport(){
+  const input=document.createElement('input');
+  input.type='file'; input.accept='.json';
+  input.onchange=e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const d=JSON.parse(ev.target.result);
+        if(d.projects){
+          Object.keys(d.projects).forEach(id=>{
+            if(!state.projects[id]) state.projects[id]=d.projects[id];
+            else {
+              const existing=state.projects[id];
+              Object.keys(d.projects[id].entries||{}).forEach(eid=>{
+                if(!existing.entries[eid]) existing.entries[eid]=d.projects[id].entries[eid];
+              });
+            }
+          });
+          if(!state.activeProject) state.activeProject=Object.keys(state.projects)[0];
+          save(); render();
+        }
+      }catch(err){ alert('Invalid JSON'); }
+    };
+    r.readAsText(f);
+  };
+  input.click();
+}
+
+// ── Utilities ──
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function csvEsc(s){ return `"${String(s||'').replace(/"/g,'""')}"`; }
+function copyText(t){
+  navigator.clipboard.writeText(t).then(()=>{
+    const toast=document.createElement('div');
+    toast.textContent='Copied!';
+    toast.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:999;animation:fadeOut 1.5s forwards';
+    document.body.appendChild(toast);
+    setTimeout(()=>toast.remove(),1600);
+  });
+}
+function downloadFile(name,content){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:'text/plain'}));
+  a.download=name; a.click(); URL.revokeObjectURL(a.href);
+}
+function switchView(v){ view=v; renderTabs(); renderContent(); }
+function toggleSidebar(open){
+  const sb=document.getElementById('sidebar');
+  const bd=document.getElementById('backdrop');
+  if(open===undefined) open=!sb.classList.contains('open');
+  sb.classList.toggle('open',open);
+  bd.classList.toggle('show',open);
+}
+
+// ── Help ──
+function showHelp(){
+  if(helpOpen) return;
+  helpOpen=true;
+  document.body.insertAdjacentHTML('beforeend',`<div class="help-overlay" onclick="if(event.target===this){this.remove();helpOpen=false}">
+    <div class="help-box">
+      <h2>⌨️ Keyboard Shortcuts</h2>
+      <div class="row"><span>New entry</span><kbd>N</kbd></div>
+      <div class="row"><span>Search</span><kbd>/</kbd></div>
+      <div class="row"><span>Views 1-5</span><kbd>1</kbd>–<kbd>5</kbd></div>
+      <div class="row"><span>Export backup</span><kbd>E</kbd></div>
+      <div class="row"><span>Import</span><kbd>I</kbd></div>
+      <div class="row"><span>Help</span><kbd>?</kbd></div>
+      <div class="row"><span>Close modal</span><kbd>Esc</kbd></div>
+      <hr style="border-color:var(--border);margin:12px 0">
+      <h3 style="font-size:14px;margin-bottom:8px">About</h3>
+      <p style="font-size:13px;color:var(--text2)">Copy Lab helps you manage all the small pieces of UI text that make or break user experience. Organize buttons, errors, empty states, tooltips, and more — preview them in context, track variants, and export for devs.</p>
+    </div>
+  </div>`);
+}
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
+  if(document.querySelector('.modal-overlay')){ if(e.key==='Escape') closeModal(); return; }
+  if(helpOpen && e.key==='Escape'){ document.querySelector('.help-overlay')?.remove(); helpOpen=false; return; }
+  switch(e.key){
+    case 'n': case 'N': e.preventDefault(); openEditor(); break;
+    case '/': e.preventDefault(); document.querySelector('.filter-bar input')?.focus(); break;
+    case '1': switchView('entries'); break;
+    case '2': switchView('preview'); break;
+    case '3': switchView('table'); break;
+    case '4': switchView('dashboard'); break;
+    case '5': switchView('export'); break;
+    case 'e': case 'E': exportAll(); break;
+    case 'i': case 'I': showImport(); break;
+    case '?': showHelp(); break;
+    case 'Escape': toggleSidebar(false); break;
+  }
+});
+
+// CSS animation
+const style=document.createElement('style');
+style.textContent='@keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0}}';
+document.head.appendChild(style);
+
+// Init
+render();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

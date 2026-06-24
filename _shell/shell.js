@@ -110,6 +110,7 @@
     { slug: 'story-map-forge', name: 'Story Map Forge', emoji: '🗺️', cluster: 'build' },
     { slug: 'quest-board', name: 'Quest Board', emoji: '⚔️', cluster: 'personal' },
     { slug: 'prompt-forge', name: 'Prompt Forge', emoji: '🔮', tagline: 'AI Prompt Engineering Studio', cluster: 'build' },
+    { slug: 'copy-lab', name: 'Copy Lab', emoji: '✏️', tagline: 'UX Microcopy & UI Text Manager', cluster: 'build' },
   ];
 
   // Deduplicate (sprint-board appears in both build and team)

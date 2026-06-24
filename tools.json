@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-23T19:37:25.328Z",
-  "count": 91,
+  "generatedAt": "2026-06-24T19:36:35.984Z",
+  "count": 92,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -729,6 +729,14 @@
       "tagline": "AI Prompt Engineering Studio",
       "emoji": "🔧",
       "day": 91,
+      "cluster": "personal"
+    },
+    {
+      "slug": "copy-lab",
+      "title": "Copy Lab",
+      "tagline": "UX Microcopy & UI Text Manager",
+      "emoji": "🔧",
+      "day": 92,
       "cluster": "personal"
     }
   ]
