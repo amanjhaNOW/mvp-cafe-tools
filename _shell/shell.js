@@ -111,6 +111,7 @@
     { slug: 'quest-board', name: 'Quest Board', emoji: '⚔️', cluster: 'personal' },
     { slug: 'prompt-forge', name: 'Prompt Forge', emoji: '🔮', tagline: 'AI Prompt Engineering Studio', cluster: 'build' },
     { slug: 'copy-lab', name: 'Copy Lab', emoji: '✏️', tagline: 'UX Microcopy & UI Text Manager', cluster: 'build' },
+    { slug: 'regex-forge', name: 'Regex Forge', emoji: '🔮', tagline: 'Visual Regex Builder & Tester', cluster: 'personal' },
   ];
 
   // Deduplicate (sprint-board appears in both build and team)

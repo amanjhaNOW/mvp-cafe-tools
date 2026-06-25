@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-24T19:36:35.984Z",
-  "count": 92,
+  "generatedAt": "2026-06-25T19:37:02.917Z",
+  "count": 93,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -737,6 +737,14 @@
       "tagline": "UX Microcopy & UI Text Manager",
       "emoji": "🔧",
       "day": 92,
+      "cluster": "personal"
+    },
+    {
+      "slug": "regex-forge",
+      "title": "Regex Forge",
+      "tagline": "Visual Regex Builder & Tester",
+      "emoji": "🔧",
+      "day": 93,
       "cluster": "personal"
     }
   ]

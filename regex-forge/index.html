@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>Regex Forge — Visual Regex Builder & Tester</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#388bfd;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff;--orange:#f0883e;--cyan:#39d2c0;--pink:#f778ba;--radius:8px;--font:system-ui,-apple-system,sans-serif;--mono:'SF Mono',SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace}
+html{background:var(--bg);color:var(--text);font-family:var(--font);font-size:16px;-webkit-text-size-adjust:100%}
+body{min-height:100dvh;display:flex;flex-direction:column;overflow-x:hidden}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;outline:none;font-size:16px}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;font-family:var(--mono);font-size:14px;line-height:1.6}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.header h1{font-size:18px;white-space:nowrap}
+.header h1 span{color:var(--accent)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;flex:1;justify-content:flex-end}
+.tabs button{padding:6px 14px;border-radius:var(--radius);font-size:13px;color:var(--text2);transition:.15s;min-height:44px}
+.tabs button:hover{color:var(--text);background:var(--surface2)}
+.tabs button.active{color:var(--accent);background:rgba(88,166,255,.12)}
+.main{flex:1;padding:16px;max-width:1200px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-header h3{font-size:14px;color:var(--text2);font-weight:500}
+.card-body{padding:16px}
+.regex-input-wrap{display:flex;align-items:stretch;background:var(--surface2);border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:.15s}
+.regex-input-wrap:focus-within{border-color:var(--accent)}
+.regex-delim{padding:8px 4px 8px 12px;font-family:var(--mono);font-size:18px;color:var(--text2);display:flex;align-items:center;user-select:none}
+.regex-input{flex:1;border:none;background:transparent;font-family:var(--mono);font-size:16px;padding:10px 4px;min-width:0}
+.regex-input:focus{border:none;outline:none}
+.flags-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.flag-btn{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius);border:1px solid var(--border);font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text2);transition:.15s;user-select:none}
+.flag-btn.on{color:var(--accent);border-color:var(--accent);background:rgba(88,166,255,.1)}
+.flag-btn:hover{border-color:var(--text2)}
+.test-area{font-family:var(--mono);width:100%;min-height:120px;line-height:1.7;font-size:14px;white-space:pre-wrap;word-break:break-all}
+.match-hl{padding:1px 0;border-radius:3px}
+.match-hl:nth-of-type(odd){background:rgba(88,166,255,.25);border-bottom:2px solid var(--accent)}
+.match-hl:nth-of-type(even){background:rgba(188,140,255,.25);border-bottom:2px solid var(--purple)}
+.match-list{max-height:300px;overflow-y:auto;font-family:var(--mono);font-size:13px}
+.match-item{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.match-item:last-child{border-bottom:none}
+.match-idx{color:var(--text2);font-size:11px;min-width:32px}
+.match-val{color:var(--green);word-break:break-all}
+.match-group{color:var(--purple);font-size:12px}
+.match-group-label{color:var(--text2)}
+.explain-list{font-size:14px;line-height:1.8}
+.explain-item{padding:4px 0;display:flex;gap:8px;align-items:flex-start}
+.explain-token{font-family:var(--mono);color:var(--accent);background:var(--surface2);padding:2px 6px;border-radius:4px;white-space:nowrap;font-size:13px}
+.explain-desc{color:var(--text)}
+.diagram-wrap{overflow-x:auto;padding:16px 8px;-webkit-overflow-scrolling:touch}
+.diagram-wrap svg{display:block;margin:0 auto}
+.replace-row{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.replace-row input{flex:1;min-width:200px}
+.replace-preview{font-family:var(--mono);font-size:14px;line-height:1.7;background:var(--surface2);padding:12px;border-radius:var(--radius);white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto}
+.replace-ins{color:var(--green);background:rgba(63,185,80,.15);padding:1px 2px;border-radius:2px}
+.replace-del{color:var(--red);background:rgba(248,81,73,.15);text-decoration:line-through;padding:1px 2px;border-radius:2px}
+.lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.lib-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer;transition:.15s}
+.lib-card:hover{border-color:var(--accent)}
+.lib-card h4{font-size:14px;margin-bottom:4px}
+.lib-card .lib-regex{font-family:var(--mono);font-size:12px;color:var(--accent);word-break:break-all;margin-bottom:4px}
+.lib-card .lib-desc{font-size:12px;color:var(--text2)}
+.lib-cat{font-size:11px;color:var(--text2);background:var(--surface);padding:2px 8px;border-radius:10px;display:inline-block;margin-bottom:8px}
+.cat-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.cat-pill{padding:6px 12px;border-radius:20px;font-size:13px;color:var(--text2);border:1px solid var(--border);min-height:44px;display:flex;align-items:center;transition:.15s}
+.cat-pill:hover,.cat-pill.active{color:var(--accent);border-color:var(--accent);background:rgba(88,166,255,.08)}
+.ref-section{margin-bottom:16px}
+.ref-section h3{font-size:14px;color:var(--accent);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.ref-table{width:100%;border-collapse:collapse;font-size:13px}
+.ref-table th{text-align:left;padding:6px 8px;color:var(--text2);font-weight:500;border-bottom:1px solid var(--border)}
+.ref-table td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.ref-table td:first-child{font-family:var(--mono);color:var(--accent);white-space:nowrap}
+.saved-list{display:flex;flex-direction:column;gap:8px}
+.saved-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.saved-item .si-name{font-weight:600;flex:1;min-width:100px}
+.saved-item .si-regex{font-family:var(--mono);font-size:12px;color:var(--accent);word-break:break-all;width:100%}
+.saved-item .si-desc{font-size:12px;color:var(--text2);width:100%}
+.saved-item .si-tags{display:flex;gap:4px;flex-wrap:wrap;width:100%}
+.saved-item .si-tag{font-size:11px;color:var(--purple);background:rgba(188,140,255,.1);padding:2px 8px;border-radius:10px}
+.btn{padding:8px 16px;border-radius:var(--radius);font-size:13px;min-height:44px;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#000;font-weight:600}
+.btn-primary:hover{background:var(--accent2)}
+.btn-outline{border:1px solid var(--border);color:var(--text2)}
+.btn-outline:hover{border-color:var(--text2);color:var(--text)}
+.btn-sm{padding:4px 10px;font-size:12px;min-height:36px}
+.btn-danger{color:var(--red);border:1px solid var(--border)}
+.btn-danger:hover{border-color:var(--red);background:rgba(248,81,73,.1)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center}
+.stat-card .sc-val{font-size:24px;font-weight:700;color:var(--accent)}
+.stat-card .sc-label{font-size:11px;color:var(--text2);margin-top:2px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:500px;max-height:90dvh;overflow-y:auto}
+.modal-head{padding:16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.modal-foot{padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:13px;color:var(--text2)}
+.hidden{display:none!important}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:10px 20px;border-radius:var(--radius);font-size:13px;font-weight:600;z-index:200;animation:toastIn .3s}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty-state .es-emoji{font-size:48px;margin-bottom:12px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.toolbar .search-input{flex:1;min-width:150px}
+.match-count{font-size:13px;color:var(--text2);padding:4px 0}
+.split-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){
+  .split-row{grid-template-columns:1fr}
+  .header{padding:10px 12px}
+  .header h1{font-size:16px}
+  .tabs button{padding:6px 10px;font-size:12px}
+  .main{padding:12px}
+  .lib-grid{grid-template-columns:1fr}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .replace-row{flex-direction:column}
+  .replace-row input{min-width:0}
+}
+@media(max-width:400px){
+  .stat-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <h1>🔮 Regex <span>Forge</span></h1>
+  <div class="tabs" id="tabs">
+    <button data-view="test" class="active">Test</button>
+    <button data-view="replace">Replace</button>
+    <button data-view="library">Library</button>
+    <button data-view="saved">Saved</button>
+    <button data-view="reference">Reference</button>
+  </div>
+</header>
+<main class="main" id="app"></main>
+<script>
+(function(){
+'use strict';
+const SK = k => `mvpcafe:regex-forge:${k}`;
+const load = k => { try { return JSON.parse(localStorage.getItem(SK(k))); } catch { return null; } };
+const save = (k, v) => localStorage.setItem(SK(k), JSON.stringify(v));
+
+let state = {
+  pattern: '(\\d{3})[-.]?(\\d{3})[-.]?(\\d{4})',
+  flags: 'g',
+  testText: 'Call me at 555-867-5309 or 123.456.7890.\nAlso try 9876543210 — it should match too!\nBut abc-def-ghij won\'t match.',
+  replaceWith: '($1) $2-$3',
+  view: 'test',
+  saved: load('saved') || [],
+  stats: load('stats') || { tests: 0, saves: 0, copies: 0, libraryUses: 0 }
+};
+
+// ── Pattern Library ──
+const LIBRARY = [
+  { cat: 'Validation', name: 'Email Address', pattern: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}', flags: 'gi', desc: 'Matches standard email addresses', test: 'user@example.com, test.user+tag@sub.domain.co.uk, invalid@, @no.com' },
+  { cat: 'Validation', name: 'URL', pattern: 'https?:\\/\\/[\\w.-]+(?:\\.[a-z]{2,})(?:[/\\w.?&=#%-]*)*', flags: 'gi', desc: 'Matches HTTP and HTTPS URLs', test: 'Visit https://example.com/path?q=1 or http://sub.domain.co.uk/page' },
+  { cat: 'Validation', name: 'IPv4 Address', pattern: '(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)', flags: 'g', desc: 'Matches valid IPv4 addresses (0.0.0.0 to 255.255.255.255)', test: '192.168.1.1, 10.0.0.255, 999.999.999.999 (invalid)' },
+  { cat: 'Validation', name: 'Hex Color', pattern: '#(?:[0-9a-fA-F]{3}){1,2}\\b', flags: 'g', desc: 'Matches 3 or 6-digit hex colors', test: '#fff, #1a2b3c, #AABB, #12345G (invalid)' },
+  { cat: 'Validation', name: 'MAC Address', pattern: '([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}', flags: 'g', desc: 'Matches MAC addresses with : or - separators', test: '00:1A:2B:3C:4D:5E, AA-BB-CC-DD-EE-FF' },
+  { cat: 'Validation', name: 'UUID v4', pattern: '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}', flags: 'gi', desc: 'Matches UUID v4 format', test: '550e8400-e29b-41d4-a716-446655440000, 6ba7b810-9dad-41d4-80b4-00c04fd430c8' },
+  { cat: 'Numbers', name: 'Integer', pattern: '-?\\d+', flags: 'g', desc: 'Matches positive and negative integers', test: '42, -7, 0, 1000, abc' },
+  { cat: 'Numbers', name: 'Decimal Number', pattern: '-?\\d+\\.\\d+', flags: 'g', desc: 'Matches decimal numbers', test: '3.14, -0.5, 100.00, .5, 42' },
+  { cat: 'Numbers', name: 'Currency (USD)', pattern: '\\$[\\d,]+(?:\\.\\d{2})?', flags: 'g', desc: 'Matches US dollar amounts', test: '$100, $1,250.50, $0.99, $1,000,000' },
+  { cat: 'Numbers', name: 'Currency (INR)', pattern: '₹[\\d,]+(?:\\.\\d{2})?', flags: 'g', desc: 'Matches Indian Rupee amounts', test: '₹100, ₹1,250.50, ₹12,50,000' },
+  { cat: 'Numbers', name: 'Percentage', pattern: '\\d+(?:\\.\\d+)?%', flags: 'g', desc: 'Matches percentage values', test: '50%, 3.14%, 100%, 0.5%' },
+  { cat: 'Phone', name: 'US Phone', pattern: '(?:\\+1[-.\\s]?)?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}', flags: 'g', desc: 'Matches US phone numbers in various formats', test: '+1 (555) 867-5309, 555-867-5309, 5558675309, (555) 867.5309' },
+  { cat: 'Phone', name: 'Indian Phone', pattern: '(?:\\+91[-.\\s]?)?[6-9]\\d{4}[-.\\s]?\\d{5}', flags: 'g', desc: 'Matches Indian mobile numbers', test: '+91 98765 43210, 9876543210, +91-70215-41588' },
+  { cat: 'Phone', name: 'International Phone', pattern: '\\+\\d{1,3}[-.\\s]?\\d{1,4}[-.\\s]?\\d{3,4}[-.\\s]?\\d{3,4}', flags: 'g', desc: 'Matches international phone numbers with country code', test: '+1-555-867-5309, +44 20 7946 0958, +91 98765 43210' },
+  { cat: 'Date & Time', name: 'Date (YYYY-MM-DD)', pattern: '\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])', flags: 'g', desc: 'Matches ISO 8601 dates', test: '2026-06-26, 2024-01-15, 2023-12-31' },
+  { cat: 'Date & Time', name: 'Date (DD/MM/YYYY)', pattern: '(?:0[1-9]|[12]\\d|3[01])\\/(?:0[1-9]|1[0-2])\\/\\d{4}', flags: 'g', desc: 'Matches dates in DD/MM/YYYY format', test: '26/06/2026, 01/01/2024, 31/12/2023' },
+  { cat: 'Date & Time', name: 'Time (HH:MM)', pattern: '(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d)?', flags: 'g', desc: 'Matches 24-hour time', test: '14:30, 00:00, 23:59:59, 25:00 (invalid)' },
+  { cat: 'Date & Time', name: 'ISO 8601 DateTime', pattern: '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})', flags: 'g', desc: 'Matches ISO 8601 datetime with timezone', test: '2026-06-25T19:30:00Z, 2026-06-26T01:00:00+05:30' },
+  { cat: 'Text', name: 'Words Only', pattern: '\\b[a-zA-Z]+\\b', flags: 'g', desc: 'Matches English words (letters only)', test: 'Hello World 123! How are you?' },
+  { cat: 'Text', name: 'Capitalized Words', pattern: '\\b[A-Z][a-z]+\\b', flags: 'g', desc: 'Matches words starting with a capital letter', test: 'Hello World is a Great Place' },
+  { cat: 'Text', name: 'Quoted Strings', pattern: '"[^"]*"|\'[^\']*\'', flags: 'g', desc: 'Matches single or double quoted strings', test: 'He said "hello" and she said \'goodbye\'' },
+  { cat: 'Text', name: 'HTML Tags', pattern: '<\\/?[a-z][a-z0-9]*(?:\\s[^>]*)?\\/?>',  flags: 'gi', desc: 'Matches HTML tags', test: '<div class="test">content</div><br/><img src="x">' },
+  { cat: 'Text', name: 'Markdown Headers', pattern: '^#{1,6}\\s+.+$', flags: 'gm', desc: 'Matches Markdown headers (# to ######)', test: '# Title\n## Subtitle\n### Section\nNot a header' },
+  { cat: 'Text', name: 'Hashtags', pattern: '#[a-zA-Z]\\w*', flags: 'g', desc: 'Matches social media hashtags', test: '#BuildInPublic #startup #100DaysOfCode #42 (not a tag)' },
+  { cat: 'Text', name: 'Mentions (@user)', pattern: '@[a-zA-Z]\\w*', flags: 'g', desc: 'Matches social media @mentions', test: 'Hey @amanjha check out @utmstamp' },
+  { cat: 'Code', name: 'JS Variable Name', pattern: '\\b[a-zA-Z_$][a-zA-Z0-9_$]*\\b', flags: 'g', desc: 'Matches valid JavaScript identifiers', test: 'const myVar = _private + $jquery + 123invalid' },
+  { cat: 'Code', name: 'CSS Class', pattern: '\\.[a-zA-Z_-][a-zA-Z0-9_-]*', flags: 'g', desc: 'Matches CSS class selectors', test: '.container .btn-primary .my_class .123invalid' },
+  { cat: 'Code', name: 'Import Statement', pattern: "import\\s+(?:\\{[^}]+\\}|\\w+)\\s+from\\s+['\"][^'\"]+['\"]", flags: 'gm', desc: 'Matches JS/TS import statements', test: "import React from 'react'\nimport { useState } from 'react'" },
+  { cat: 'Code', name: 'console.log', pattern: 'console\\.(?:log|warn|error|info)\\([^)]*\\)', flags: 'g', desc: 'Matches console method calls', test: "console.log('debug'), console.error('oops'), console.info(data)" },
+  { cat: 'Code', name: 'TODO/FIXME Comments', pattern: '(?:\\/\\/|#)\\s*(?:TODO|FIXME|HACK|BUG|XXX)[:.]?\\s*.*', flags: 'gm', desc: 'Matches TODO/FIXME comments in code', test: '// TODO: refactor this\n# FIXME: broken\n// HACK: temporary' },
+  { cat: 'Security', name: 'JWT Token', pattern: 'eyJ[A-Za-z0-9_-]+\\.eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+', flags: 'g', desc: 'Matches JWT token patterns', test: 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abc123' },
+  { cat: 'Security', name: 'API Key Pattern', pattern: '(?:api[_-]?key|apikey|token|secret|password)\\s*[:=]\\s*["\']?[\\w-]+["\']?', flags: 'gi', desc: 'Matches potential API key assignments', test: 'api_key: "abc123", token=sk-123456, SECRET="mypass"' },
+  { cat: 'Data', name: 'CSV Line', pattern: '(?:"[^"]*"|[^,\\n]*)(?:,(?:"[^"]*"|[^,\\n]*))*', flags: 'gm', desc: 'Matches CSV rows including quoted fields', test: 'name,age,"city, state"\nJohn,30,"New York, NY"' },
+  { cat: 'Data', name: 'JSON Key-Value', pattern: '"[^"]+?"\\s*:\\s*(?:"[^"]*?"|-?\\d+(?:\\.\\d+)?|true|false|null)', flags: 'g', desc: 'Matches JSON key-value pairs', test: '{"name": "AJ", "age": 30, "active": true, "score": null}' },
+  { cat: 'Data', name: 'Log Timestamp', pattern: '\\d{4}-\\d{2}-\\d{2}[T\\s]\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?', flags: 'g', desc: 'Matches log-style timestamps', test: '2026-06-26 01:00:00.123 [INFO] Server started\n2026-06-25T19:30:00Z event' },
+  { cat: 'Data', name: 'Semantic Version', pattern: '\\bv?\\d+\\.\\d+\\.\\d+(?:-[a-zA-Z0-9.]+)?(?:\\+[a-zA-Z0-9.]+)?\\b', flags: 'g', desc: 'Matches semantic versioning (semver)', test: 'v1.0.0, 2.3.1-beta.1, 0.1.0+build.123' },
+  { cat: 'Data', name: 'File Path (Unix)', pattern: '(?:\\/[\\w.-]+)+\\/?', flags: 'g', desc: 'Matches Unix file paths', test: '/usr/local/bin/node, /home/user/.bashrc, /var/log/' },
+  { cat: 'Text', name: 'Emoji', pattern: '[\\u{1F600}-\\u{1F64F}\\u{1F300}-\\u{1F5FF}\\u{1F680}-\\u{1F6FF}\\u{2600}-\\u{26FF}\\u{2700}-\\u{27BF}]', flags: 'gu', desc: 'Matches common emoji characters', test: 'Hello 😀 World 🚀 Test ⭐ Done ✅' },
+];
+
+const REFERENCE = [
+  { section: 'Character Classes', items: [
+    ['.', 'Any character except newline'],
+    ['\\d', 'Digit [0-9]'],
+    ['\\D', 'Non-digit [^0-9]'],
+    ['\\w', 'Word character [a-zA-Z0-9_]'],
+    ['\\W', 'Non-word character'],
+    ['\\s', 'Whitespace (space, tab, newline)'],
+    ['\\S', 'Non-whitespace'],
+    ['[abc]', 'Any of a, b, or c'],
+    ['[^abc]', 'Not a, b, or c'],
+    ['[a-z]', 'Range: a to z'],
+    ['[a-zA-Z]', 'Any letter'],
+    ['[0-9]', 'Any digit'],
+  ]},
+  { section: 'Anchors', items: [
+    ['^', 'Start of string (or line with m flag)'],
+    ['$', 'End of string (or line with m flag)'],
+    ['\\b', 'Word boundary'],
+    ['\\B', 'Non-word boundary'],
+  ]},
+  { section: 'Quantifiers', items: [
+    ['*', 'Zero or more (greedy)'],
+    ['+', 'One or more (greedy)'],
+    ['?', 'Zero or one (optional)'],
+    ['{n}', 'Exactly n times'],
+    ['{n,}', 'n or more times'],
+    ['{n,m}', 'Between n and m times'],
+    ['*?', 'Zero or more (lazy)'],
+    ['+?', 'One or more (lazy)'],
+    ['??', 'Zero or one (lazy)'],
+  ]},
+  { section: 'Groups & Alternation', items: [
+    ['(abc)', 'Capturing group'],
+    ['(?:abc)', 'Non-capturing group'],
+    ['(?<name>abc)', 'Named capturing group'],
+    ['a|b', 'Alternation (a or b)'],
+    ['\\1', 'Backreference to group 1'],
+    ['\\k<name>', 'Backreference to named group'],
+  ]},
+  { section: 'Lookaround', items: [
+    ['(?=abc)', 'Positive lookahead'],
+    ['(?!abc)', 'Negative lookahead'],
+    ['(?<=abc)', 'Positive lookbehind'],
+    ['(?<!abc)', 'Negative lookbehind'],
+  ]},
+  { section: 'Flags', items: [
+    ['g', 'Global — find all matches'],
+    ['i', 'Case insensitive'],
+    ['m', 'Multiline — ^ and $ match line boundaries'],
+    ['s', 'Dotall — . matches newline'],
+    ['u', 'Unicode — enable Unicode features'],
+    ['d', 'Indices — include match indices'],
+  ]},
+  { section: 'Escape Sequences', items: [
+    ['\\n', 'Newline'],
+    ['\\r', 'Carriage return'],
+    ['\\t', 'Tab'],
+    ['\\0', 'Null character'],
+    ['\\\\', 'Literal backslash'],
+    ['\\.', 'Literal dot (escape special chars)'],
+  ]},
+];
+
+// ── Regex Explainer ──
+function explainRegex(pattern) {
+  const parts = [];
+  let i = 0;
+  while (i < pattern.length) {
+    const ch = pattern[i];
+    if (ch === '\\' && i + 1 < pattern.length) {
+      const next = pattern[i+1];
+      const map = { d: 'digit [0-9]', D: 'non-digit', w: 'word char [a-zA-Z0-9_]', W: 'non-word char', s: 'whitespace', S: 'non-whitespace', b: 'word boundary', B: 'non-word boundary', n: 'newline', r: 'carriage return', t: 'tab', '0': 'null char' };
+      if (map[next]) { parts.push({ token: '\\' + next, desc: map[next] }); i += 2; }
+      else if (next >= '1' && next <= '9') { parts.push({ token: '\\' + next, desc: `backreference to group ${next}` }); i += 2; }
+      else if (next === 'k' && pattern[i+2] === '<') {
+        const end = pattern.indexOf('>', i+3);
+        const name = end > 0 ? pattern.slice(i+3, end) : '?';
+        parts.push({ token: pattern.slice(i, end+1), desc: `backreference to named group "${name}"` });
+        i = end + 1;
+      }
+      else { parts.push({ token: '\\' + next, desc: `literal "${next}"` }); i += 2; }
+    } else if (ch === '[') {
+      const end = pattern.indexOf(']', i+1);
+      if (end < 0) { parts.push({ token: ch, desc: 'character class (unclosed)' }); i++; continue; }
+      const cls = pattern.slice(i, end + 1);
+      const neg = pattern[i+1] === '^';
+      const inner = cls.slice(neg ? 2 : 1, -1);
+      parts.push({ token: cls, desc: (neg ? 'NOT any of: ' : 'any of: ') + `"${inner}"` });
+      i = end + 1;
+    } else if (ch === '(') {
+      let label = 'capturing group';
+      let skip = 1;
+      if (pattern.slice(i+1, i+3) === '?:') { label = 'non-capturing group'; skip = 3; }
+      else if (pattern.slice(i+1, i+4) === '?<=') { label = 'positive lookbehind'; skip = 4; }
+      else if (pattern.slice(i+1, i+4) === '?<!') { label = 'negative lookbehind'; skip = 4; }
+      else if (pattern.slice(i+1, i+3) === '?=') { label = 'positive lookahead'; skip = 3; }
+      else if (pattern.slice(i+1, i+3) === '?!') { label = 'negative lookahead'; skip = 3; }
+      else if (pattern.slice(i+1, i+3) === '?<' && pattern[i+3] !== '=' && pattern[i+3] !== '!') {
+        const ne = pattern.indexOf('>', i+3);
+        const gn = ne > 0 ? pattern.slice(i+3, ne) : '?';
+        label = `named group "${gn}"`;
+        skip = ne - i + 1;
+      }
+      parts.push({ token: pattern.slice(i, i + skip), desc: `start ${label}` });
+      i += skip;
+    } else if (ch === ')') {
+      parts.push({ token: ')', desc: 'end group' });
+      i++;
+    } else if (ch === '^') { parts.push({ token: '^', desc: 'start of string/line' }); i++; }
+    else if (ch === '$') { parts.push({ token: '$', desc: 'end of string/line' }); i++; }
+    else if (ch === '.') { parts.push({ token: '.', desc: 'any character (except newline)' }); i++; }
+    else if (ch === '|') { parts.push({ token: '|', desc: 'OR (alternation)' }); i++; }
+    else if (ch === '*') {
+      const lazy = pattern[i+1] === '?';
+      parts.push({ token: lazy ? '*?' : '*', desc: `zero or more${lazy ? ' (lazy)' : ' (greedy)'}` });
+      i += lazy ? 2 : 1;
+    } else if (ch === '+') {
+      const lazy = pattern[i+1] === '?';
+      parts.push({ token: lazy ? '+?' : '+', desc: `one or more${lazy ? ' (lazy)' : ' (greedy)'}` });
+      i += lazy ? 2 : 1;
+    } else if (ch === '?' && (parts.length === 0 || !['*','+','?','}'].some(q => parts[parts.length-1]?.token?.endsWith(q)))) {
+      const lazy = pattern[i+1] === '?';
+      parts.push({ token: lazy ? '??' : '?', desc: `optional (zero or one)${lazy ? ' (lazy)' : ''}` });
+      i += lazy ? 2 : 1;
+    } else if (ch === '{') {
+      const end = pattern.indexOf('}', i);
+      if (end < 0) { parts.push({ token: ch, desc: `literal "{"` }); i++; continue; }
+      const q = pattern.slice(i, end + 1);
+      const lazy = pattern[end + 1] === '?';
+      const inner = q.slice(1, -1);
+      let desc;
+      if (inner.includes(',')) {
+        const [min, max] = inner.split(',').map(s => s.trim());
+        desc = max ? `between ${min} and ${max} times` : `${min} or more times`;
+      } else {
+        desc = `exactly ${inner} times`;
+      }
+      parts.push({ token: lazy ? q + '?' : q, desc: desc + (lazy ? ' (lazy)' : '') });
+      i = end + 1 + (lazy ? 1 : 0);
+    } else {
+      parts.push({ token: ch, desc: `literal "${ch}"` });
+      i++;
+    }
+  }
+  return parts;
+}
+
+// ── Railroad Diagram Generator ──
+function buildDiagram(pattern) {
+  const tokens = explainRegex(pattern);
+  if (!tokens.length) return '';
+  const nodeH = 32, nodeGap = 8, padX = 20, padY = 20;
+  const startX = 40, trackY = 60;
+  const nodes = [];
+  let x = startX;
+  // Start node
+  nodes.push({ type: 'start', x, y: trackY, w: 12 });
+  x += 24;
+  for (const t of tokens) {
+    if (t.token === ')') continue; // skip group-end for simpler viz
+    const label = t.token;
+    const w = Math.max(label.length * 9 + 20, 40);
+    const isQuantifier = ['*', '+', '?', '*?', '+?', '??'].includes(t.token) || t.token.startsWith('{');
+    const isGroup = t.desc.startsWith('start ');
+    const isAnchor = ['^', '$'].includes(t.token) || t.desc.includes('boundary');
+    const isAlt = t.token === '|';
+    let fill = '#1c2333', stroke = '#58a6ff', textColor = '#e6edf3';
+    if (isQuantifier) { fill = '#1a1a2e'; stroke = '#d29922'; textColor = '#d29922'; }
+    else if (isGroup) { fill = '#1a2e1a'; stroke = '#3fb950'; textColor = '#3fb950'; }
+    else if (isAnchor) { fill = '#2e1a2e'; stroke = '#bc8cff'; textColor = '#bc8cff'; }
+    else if (isAlt) { fill = '#2e2a1a'; stroke = '#f0883e'; textColor = '#f0883e'; }
+    else if (t.desc.startsWith('literal')) { fill = '#161b22'; stroke = '#30363d'; textColor = '#e6edf3'; }
+    nodes.push({ type: 'node', x, y: trackY, w, h: nodeH, label, desc: t.desc, fill, stroke, textColor, isQuantifier, round: isGroup || isAnchor || isAlt || isQuantifier });
+    x += w + nodeGap;
+  }
+  // End node
+  nodes.push({ type: 'end', x, y: trackY, w: 12 });
+  x += 24;
+  const svgW = x + padX;
+  const svgH = trackY + nodeH + padY + 20;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">`;
+  // Track line
+  svg += `<line x1="${startX}" y1="${trackY + nodeH/2}" x2="${x - 12}" y2="${trackY + nodeH/2}" stroke="#30363d" stroke-width="2"/>`;
+  for (const n of nodes) {
+    if (n.type === 'start') {
+      svg += `<circle cx="${n.x + 6}" cy="${trackY + nodeH/2}" r="6" fill="#3fb950" stroke="#3fb950"/>`;
+      svg += `<line x1="${n.x + 12}" y1="${trackY + nodeH/2}" x2="${n.x + 24}" y2="${trackY + nodeH/2}" stroke="#3fb950" stroke-width="2" marker-end="url(#arrow)"/>`;
+    } else if (n.type === 'end') {
+      svg += `<circle cx="${n.x + 6}" cy="${trackY + nodeH/2}" r="6" fill="none" stroke="#f85149" stroke-width="2"/>`;
+      svg += `<circle cx="${n.x + 6}" cy="${trackY + nodeH/2}" r="3" fill="#f85149"/>`;
+    } else {
+      const r = n.round ? nodeH/2 : 4;
+      svg += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="${r}" fill="${n.fill}" stroke="${n.stroke}" stroke-width="1.5"/>`;
+      const esc = n.label.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      svg += `<text x="${n.x + n.w/2}" y="${n.y + n.h/2 + 5}" fill="${n.textColor}" font-family="SF Mono,Consolas,monospace" font-size="13" text-anchor="middle">${esc}</text>`;
+      // Description below for quantifiers
+      if (n.isQuantifier) {
+        const descEsc = n.desc.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        svg += `<text x="${n.x + n.w/2}" y="${n.y + n.h + 14}" fill="#8b949e" font-family="system-ui,sans-serif" font-size="10" text-anchor="middle">${descEsc}</text>`;
+      }
+    }
+  }
+  svg += `<defs><marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#3fb950"/></marker></defs>`;
+  svg += `</svg>`;
+  return svg;
+}
+
+// ── Match Engine ──
+function getMatches(pattern, flags, text) {
+  try {
+    const re = new RegExp(pattern, flags);
+    const matches = [];
+    if (flags.includes('g')) {
+      let m;
+      let guard = 0;
+      while ((m = re.exec(text)) !== null && guard < 5000) {
+        matches.push({ index: m.index, match: m[0], groups: [...m].slice(1), namedGroups: m.groups || null });
+        if (m[0].length === 0) re.lastIndex++;
+        guard++;
+      }
+    } else {
+      const m = re.exec(text);
+      if (m) matches.push({ index: m.index, match: m[0], groups: [...m].slice(1), namedGroups: m.groups || null });
+    }
+    return { matches, error: null };
+  } catch (e) {
+    return { matches: [], error: e.message };
+  }
+}
+
+function highlightText(text, matches) {
+  if (!matches.length) return escHtml(text);
+  const sorted = [...matches].sort((a, b) => a.index - b.index);
+  let result = '';
+  let last = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    const m = sorted[i];
+    if (m.index < last) continue;
+    result += escHtml(text.slice(last, m.index));
+    result += `<span class="match-hl">${escHtml(m.match)}</span>`;
+    last = m.index + m.match.length;
+  }
+  result += escHtml(text.slice(last));
+  return result;
+}
+
+function doReplace(pattern, flags, text, replacement) {
+  try {
+    const re = new RegExp(pattern, flags);
+    const replaced = text.replace(re, replacement);
+    // Build diff-style preview
+    const parts = [];
+    let src = text, res = replaced;
+    // Simple approach: show removed and inserted
+    const matches = getMatches(pattern, flags, text).matches;
+    if (!matches.length) return { result: text, preview: escHtml(text), error: null };
+    const sorted = [...matches].sort((a, b) => a.index - b.index);
+    let preview = '';
+    let last = 0;
+    let offset = 0;
+    for (const m of sorted) {
+      if (m.index < last) continue;
+      preview += escHtml(text.slice(last, m.index));
+      const rep = m.match.replace(new RegExp(pattern, flags.replace('g', '')), replacement);
+      preview += `<span class="replace-del">${escHtml(m.match)}</span><span class="replace-ins">${escHtml(rep)}</span>`;
+      last = m.index + m.match.length;
+      if (!flags.includes('g')) break;
+    }
+    preview += escHtml(text.slice(last));
+    return { result: replaced, preview, error: null };
+  } catch (e) {
+    return { result: text, preview: escHtml(text), error: e.message };
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Render ──
+function render() {
+  const app = document.getElementById('app');
+  const v = state.view;
+  if (v === 'test') renderTest(app);
+  else if (v === 'replace') renderReplace(app);
+  else if (v === 'library') renderLibrary(app);
+  else if (v === 'saved') renderSaved(app);
+  else if (v === 'reference') renderReference(app);
+}
+
+function renderRegexEditor() {
+  return `
+    <div class="card">
+      <div class="card-header"><h3>Pattern</h3>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-outline" onclick="RF.savePattern()" title="Save pattern">💾 Save</button>
+          <button class="btn btn-sm btn-outline" onclick="RF.clearPattern()" title="Clear">🗑️</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="regex-input-wrap">
+          <span class="regex-delim">/</span>
+          <input class="regex-input" id="patternInput" value="${escHtml(state.pattern)}" placeholder="Enter regex pattern..." oninput="RF.updatePattern(this.value)" spellcheck="false" autocomplete="off">
+          <span class="regex-delim">/</span>
+          <span class="regex-delim" style="color:var(--accent);font-weight:600;padding-right:12px">${escHtml(state.flags)}</span>
+        </div>
+        <div class="flags-row">
+          ${['g','i','m','s','u','d'].map(f =>
+            `<button class="flag-btn ${state.flags.includes(f) ? 'on' : ''}" onclick="RF.toggleFlag('${f}')" title="${flagTitle(f)}">${f}</button>`
+          ).join('')}
+          <span style="font-size:12px;color:var(--text2);margin-left:8px" id="errorMsg"></span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function flagTitle(f) {
+  return { g: 'Global', i: 'Case Insensitive', m: 'Multiline', s: 'Dotall', u: 'Unicode', d: 'Indices' }[f] || f;
+}
+
+function renderTest(app) {
+  const { matches, error } = getMatches(state.pattern, state.flags, state.testText);
+  const explained = explainRegex(state.pattern);
+  const diagram = buildDiagram(state.pattern);
+  state.stats.tests++;
+  save('stats', state.stats);
+
+  app.innerHTML = renderRegexEditor() + `
+    <div class="card">
+      <div class="card-header"><h3>Diagram</h3></div>
+      <div class="card-body diagram-wrap">${state.pattern ? diagram : '<div class="empty-state"><div class="es-emoji">📊</div>Enter a pattern to see the diagram</div>'}</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Explanation</h3></div>
+      <div class="card-body">
+        ${explained.length ? `<div class="explain-list">${explained.map(e => `<div class="explain-item"><span class="explain-token">${escHtml(e.token)}</span><span class="explain-desc">${escHtml(e.desc)}</span></div>`).join('')}</div>` : '<div style="color:var(--text2);font-size:13px">Enter a pattern above</div>'}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Test String</h3>
+        <span class="match-count">${error ? `<span style="color:var(--red)">⚠ ${escHtml(error)}</span>` : `${matches.length} match${matches.length !== 1 ? 'es' : ''}`}</span>
+      </div>
+      <div class="card-body">
+        <div style="margin-bottom:12px">
+          <textarea id="testInput" class="test-area" oninput="RF.updateTest(this.value)" placeholder="Enter test text...">${escHtml(state.testText)}</textarea>
+        </div>
+        <div style="font-family:var(--mono);font-size:14px;line-height:1.7;background:var(--surface2);padding:12px;border-radius:var(--radius);white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto">${highlightText(state.testText, matches)}</div>
+      </div>
+    </div>
+    ${matches.length ? `
+    <div class="card">
+      <div class="card-header"><h3>Match Details</h3>
+        <button class="btn btn-sm btn-outline" onclick="RF.copyMatches()">📋 Copy</button>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div class="match-list">
+          ${matches.map((m, idx) => `
+            <div class="match-item">
+              <span class="match-idx">#${idx + 1}</span>
+              <span class="match-val">"${escHtml(m.match)}"</span>
+              <span style="color:var(--text2);font-size:11px">index ${m.index}</span>
+              ${m.groups.filter(g => g != null).length ? m.groups.map((g, gi) => g != null ? `<span class="match-group"><span class="match-group-label">$${gi + 1}:</span> "${escHtml(g)}"</span>` : '').join('') : ''}
+              ${m.namedGroups ? Object.entries(m.namedGroups).map(([k, v]) => v != null ? `<span class="match-group"><span class="match-group-label">${escHtml(k)}:</span> "${escHtml(v)}"</span>` : '').join('') : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>` : ''}`;
+
+  if (error) document.getElementById('errorMsg').innerHTML = `<span style="color:var(--red)">⚠ ${escHtml(error)}</span>`;
+}
+
+function renderReplace(app) {
+  const { result, preview, error } = doReplace(state.pattern, state.flags, state.testText, state.replaceWith);
+
+  app.innerHTML = renderRegexEditor() + `
+    <div class="card">
+      <div class="card-header"><h3>Replace</h3></div>
+      <div class="card-body">
+        <div class="replace-row">
+          <input id="replaceInput" value="${escHtml(state.replaceWith)}" placeholder="Replacement string... ($1, $2, $&, etc.)" oninput="RF.updateReplace(this.value)">
+          <button class="btn btn-primary btn-sm" onclick="RF.copyReplaceResult()">📋 Copy Result</button>
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text2)">
+          Use $1, $2... for groups, $& for full match, $\` for before, $' for after, $$  for literal $
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Test String</h3></div>
+      <div class="card-body">
+        <textarea class="test-area" oninput="RF.updateTest(this.value)" placeholder="Enter test text...">${escHtml(state.testText)}</textarea>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Preview</h3>
+        ${error ? `<span style="color:var(--red);font-size:12px">⚠ ${escHtml(error)}</span>` : ''}
+      </div>
+      <div class="card-body">
+        <div class="replace-preview">${preview}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Result</h3></div>
+      <div class="card-body">
+        <div style="font-family:var(--mono);font-size:14px;line-height:1.7;background:var(--surface2);padding:12px;border-radius:var(--radius);white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto">${escHtml(result)}</div>
+      </div>
+    </div>`;
+}
+
+let libFilter = 'All';
+function renderLibrary(app) {
+  const cats = ['All', ...new Set(LIBRARY.map(l => l.cat))];
+  const filtered = libFilter === 'All' ? LIBRARY : LIBRARY.filter(l => l.cat === libFilter);
+
+  app.innerHTML = `
+    <div class="card">
+      <div class="card-header"><h3>Pattern Library</h3><span style="font-size:12px;color:var(--text2)">${LIBRARY.length} patterns</span></div>
+      <div class="card-body">
+        <div class="cat-pills">
+          ${cats.map(c => `<button class="cat-pill ${libFilter === c ? 'active' : ''}" onclick="RF.filterLib('${escHtml(c)}')">${escHtml(c)}</button>`).join('')}
+        </div>
+        <div class="lib-grid">
+          ${filtered.map((l, i) => `
+            <div class="lib-card" onclick="RF.useLibPattern(${LIBRARY.indexOf(l)})">
+              <span class="lib-cat">${escHtml(l.cat)}</span>
+              <h4>${escHtml(l.name)}</h4>
+              <div class="lib-regex">/${escHtml(l.pattern)}/${l.flags}</div>
+              <div class="lib-desc">${escHtml(l.desc)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSaved(app) {
+  app.innerHTML = `
+    <div class="card">
+      <div class="card-header"><h3>Saved Patterns</h3>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-outline" onclick="RF.exportAll()">📤 Export</button>
+          <button class="btn btn-sm btn-outline" onclick="document.getElementById('importFile').click()">📥 Import</button>
+          <input type="file" id="importFile" accept=".json" style="display:none" onchange="RF.importAll(this)">
+        </div>
+      </div>
+      <div class="card-body">
+        ${state.saved.length ? `
+          <div class="saved-list">
+            ${state.saved.map((s, i) => `
+              <div class="saved-item">
+                <span class="si-name">${escHtml(s.name)}</span>
+                <div style="display:flex;gap:4px;margin-left:auto">
+                  <button class="btn btn-sm btn-outline" onclick="RF.loadSaved(${i})" title="Load">▶️</button>
+                  <button class="btn btn-sm btn-outline" onclick="RF.copySaved(${i})" title="Copy regex">📋</button>
+                  <button class="btn btn-sm btn-danger" onclick="RF.deleteSaved(${i})" title="Delete">🗑️</button>
+                </div>
+                <div class="si-regex">/${escHtml(s.pattern)}/${s.flags}</div>
+                ${s.desc ? `<div class="si-desc">${escHtml(s.desc)}</div>` : ''}
+                ${s.tags && s.tags.length ? `<div class="si-tags">${s.tags.map(t => `<span class="si-tag">${escHtml(t)}</span>`).join('')}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        ` : '<div class="empty-state"><div class="es-emoji">📁</div><p>No saved patterns yet</p><p style="font-size:13px;margin-top:4px">Use 💾 Save in the editor to save patterns</p></div>'}
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-header"><h3>Stats</h3></div>
+      <div class="card-body">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="sc-val">${state.saved.length}</div><div class="sc-label">Saved</div></div>
+          <div class="stat-card"><div class="sc-val">${state.stats.tests}</div><div class="sc-label">Tests Run</div></div>
+          <div class="stat-card"><div class="sc-val">${state.stats.saves}</div><div class="sc-label">Saves</div></div>
+          <div class="stat-card"><div class="sc-val">${state.stats.copies}</div><div class="sc-label">Copies</div></div>
+          <div class="stat-card"><div class="sc-val">${state.stats.libraryUses}</div><div class="sc-label">Library Uses</div></div>
+          <div class="stat-card"><div class="sc-val">${LIBRARY.length}</div><div class="sc-label">Library Patterns</div></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderReference(app) {
+  app.innerHTML = `
+    <div class="card">
+      <div class="card-header"><h3>Regex Cheat Sheet</h3></div>
+      <div class="card-body">
+        ${REFERENCE.map(sec => `
+          <div class="ref-section">
+            <h3>${escHtml(sec.section)}</h3>
+            <table class="ref-table">
+              <thead><tr><th>Pattern</th><th>Description</th></tr></thead>
+              <tbody>
+                ${sec.items.map(([p, d]) => `<tr><td>${escHtml(p)}</td><td>${escHtml(d)}</td></tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-header"><h3>Quick Tips</h3></div>
+      <div class="card-body" style="font-size:14px;line-height:1.8;color:var(--text2)">
+        <p>🔹 <strong>Greedy vs Lazy:</strong> <code>.*</code> matches as much as possible. <code>.*?</code> matches as little as possible.</p>
+        <p>🔹 <strong>Escape special chars:</strong> <code>. * + ? ^ $ { } [ ] ( ) | \\</code> — prefix with <code>\\</code> for literals.</p>
+        <p>🔹 <strong>Named groups:</strong> Use <code>(?&lt;name&gt;...)</code> to name capture groups, then reference with <code>\\k&lt;name&gt;</code>.</p>
+        <p>🔹 <strong>Non-capturing:</strong> Use <code>(?:...)</code> when you need grouping but don't need to capture.</p>
+        <p>🔹 <strong>Lookahead/behind:</strong> <code>(?=...)</code> matches position before, <code>(?&lt;=...)</code> matches position after — without consuming characters.</p>
+        <p>🔹 <strong>Word boundaries:</strong> <code>\\bword\\b</code> matches "word" but not "sword" or "wording".</p>
+        <p>🔹 <strong>Multiline mode:</strong> With <code>m</code> flag, <code>^</code> and <code>$</code> match start/end of each line, not just the string.</p>
+      </div>
+    </div>`;
+}
+
+// ── Save Modal ──
+let saveModalOpen = false;
+function showSaveModal() {
+  saveModalOpen = true;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'saveModal';
+  overlay.onclick = e => { if (e.target === overlay) closeSaveModal(); };
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal-head"><h3>Save Pattern</h3><button onclick="RF.closeSaveModal()" style="font-size:20px">&times;</button></div>
+      <div class="modal-body">
+        <div class="form-group"><label>Name *</label><input id="saveName" placeholder="e.g., Email Validator" value=""></div>
+        <div class="form-group"><label>Description</label><input id="saveDesc" placeholder="What does this pattern do?"></div>
+        <div class="form-group"><label>Tags (comma-separated)</label><input id="saveTags" placeholder="e.g., email, validation"></div>
+        <div class="form-group"><label>Pattern</label><input value="/${escHtml(state.pattern)}/${state.flags}" readonly style="color:var(--accent)"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" onclick="RF.closeSaveModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="RF.confirmSave()">Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('saveName')?.focus(), 100);
+}
+
+function closeSaveModal() {
+  saveModalOpen = false;
+  document.getElementById('saveModal')?.remove();
+}
+
+function confirmSave() {
+  const name = document.getElementById('saveName')?.value.trim();
+  if (!name) { toast('Name is required'); return; }
+  const desc = document.getElementById('saveDesc')?.value.trim() || '';
+  const tags = (document.getElementById('saveTags')?.value || '').split(',').map(t => t.trim()).filter(Boolean);
+  state.saved.push({
+    id: Date.now().toString(36),
+    name, desc, tags,
+    pattern: state.pattern,
+    flags: state.flags,
+    testText: state.testText,
+    createdAt: new Date().toISOString()
+  });
+  save('saved', state.saved);
+  state.stats.saves++;
+  save('stats', state.stats);
+  closeSaveModal();
+  toast('Pattern saved!');
+  if (state.view === 'saved') render();
+}
+
+// ── Actions ──
+const RF = window.RF = {
+  updatePattern(v) { state.pattern = v; render(); },
+  updateTest(v) { state.testText = v; render(); },
+  updateReplace(v) { state.replaceWith = v; render(); },
+  toggleFlag(f) {
+    state.flags = state.flags.includes(f) ? state.flags.replace(f, '') : state.flags + f;
+    render();
+  },
+  clearPattern() { state.pattern = ''; state.testText = ''; render(); },
+  savePattern() {
+    if (!state.pattern) { toast('Enter a pattern first'); return; }
+    showSaveModal();
+  },
+  closeSaveModal() { closeSaveModal(); },
+  confirmSave() { confirmSave(); },
+  loadSaved(i) {
+    const s = state.saved[i];
+    if (!s) return;
+    state.pattern = s.pattern;
+    state.flags = s.flags;
+    if (s.testText) state.testText = s.testText;
+    state.view = 'test';
+    updateTabs();
+    render();
+    toast(`Loaded: ${s.name}`);
+  },
+  copySaved(i) {
+    const s = state.saved[i];
+    if (!s) return;
+    navigator.clipboard.writeText(`/${s.pattern}/${s.flags}`).then(() => {
+      state.stats.copies++;
+      save('stats', state.stats);
+      toast('Copied!');
+    });
+  },
+  deleteSaved(i) {
+    state.saved.splice(i, 1);
+    save('saved', state.saved);
+    render();
+    toast('Deleted');
+  },
+  copyMatches() {
+    const { matches } = getMatches(state.pattern, state.flags, state.testText);
+    const text = matches.map((m, i) => {
+      let line = `#${i+1}: "${m.match}" (index ${m.index})`;
+      if (m.groups.filter(g => g != null).length) {
+        line += '\n  Groups: ' + m.groups.map((g, gi) => `$${gi+1}="${g}"`).join(', ');
+      }
+      if (m.namedGroups) {
+        line += '\n  Named: ' + Object.entries(m.namedGroups).map(([k, v]) => `${k}="${v}"`).join(', ');
+      }
+      return line;
+    }).join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      state.stats.copies++;
+      save('stats', state.stats);
+      toast('Matches copied!');
+    });
+  },
+  copyReplaceResult() {
+    const { result } = doReplace(state.pattern, state.flags, state.testText, state.replaceWith);
+    navigator.clipboard.writeText(result).then(() => {
+      state.stats.copies++;
+      save('stats', state.stats);
+      toast('Result copied!');
+    });
+  },
+  filterLib(cat) { libFilter = cat; render(); },
+  useLibPattern(i) {
+    const l = LIBRARY[i];
+    state.pattern = l.pattern;
+    state.flags = l.flags;
+    state.testText = l.test;
+    state.view = 'test';
+    state.stats.libraryUses++;
+    save('stats', state.stats);
+    updateTabs();
+    render();
+    toast(`Loaded: ${l.name}`);
+  },
+  exportAll() {
+    const data = { saved: state.saved, stats: state.stats, exportedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `regex-forge-export-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Exported!');
+  },
+  importAll(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data.saved) {
+          const existIds = new Set(state.saved.map(s => s.id));
+          let added = 0;
+          for (const s of data.saved) {
+            if (!existIds.has(s.id)) {
+              state.saved.push(s);
+              added++;
+            }
+          }
+          save('saved', state.saved);
+          toast(`Imported ${added} pattern${added !== 1 ? 's' : ''}`);
+          render();
+        }
+      } catch { toast('Invalid JSON file'); }
+    };
+    reader.readAsText(file);
+    input.value = '';
+  },
+  switchView(v) {
+    state.view = v;
+    updateTabs();
+    render();
+  }
+};
+
+function updateTabs() {
+  document.querySelectorAll('#tabs button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === state.view);
+  });
+}
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+// ── Keyboard Shortcuts ──
+document.addEventListener('keydown', e => {
+  if (saveModalOpen) {
+    if (e.key === 'Escape') closeSaveModal();
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') confirmSave();
+    return;
+  }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    if (e.key === 'Escape') e.target.blur();
+    return;
+  }
+  if (e.key === '1') RF.switchView('test');
+  else if (e.key === '2') RF.switchView('replace');
+  else if (e.key === '3') RF.switchView('library');
+  else if (e.key === '4') RF.switchView('saved');
+  else if (e.key === '5') RF.switchView('reference');
+  else if (e.key === 's' || e.key === 'S') { e.preventDefault(); RF.savePattern(); }
+  else if (e.key === '/') {
+    e.preventDefault();
+    document.getElementById('patternInput')?.focus();
+  }
+});
+
+// ── Tab Clicks ──
+document.querySelectorAll('#tabs button').forEach(b => {
+  b.addEventListener('click', () => RF.switchView(b.dataset.view));
+});
+
+// ── Init ──
+render();
+})();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>
