@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-25T19:37:02.917Z",
-  "count": 93,
+  "generatedAt": "2026-06-26T19:36:34.182Z",
+  "count": 94,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -745,6 +745,14 @@
       "tagline": "Visual Regex Builder & Tester",
       "emoji": "🔧",
       "day": 93,
+      "cluster": "personal"
+    },
+    {
+      "slug": "font-tester",
+      "title": "Font Tester",
+      "tagline": "Typography Comparison & Pairing Tool",
+      "emoji": "🔧",
+      "day": 94,
       "cluster": "personal"
     }
   ]

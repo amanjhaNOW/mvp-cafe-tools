@@ -112,6 +112,7 @@
     { slug: 'prompt-forge', name: 'Prompt Forge', emoji: '🔮', tagline: 'AI Prompt Engineering Studio', cluster: 'build' },
     { slug: 'copy-lab', name: 'Copy Lab', emoji: '✏️', tagline: 'UX Microcopy & UI Text Manager', cluster: 'build' },
     { slug: 'regex-forge', name: 'Regex Forge', emoji: '🔮', tagline: 'Visual Regex Builder & Tester', cluster: 'personal' },
+    { slug: 'font-tester', name: 'Font Tester', emoji: '🔤', tagline: 'Typography Comparison & Pairing Tool', cluster: 'build' },
   ];
 
   // Deduplicate (sprint-board appears in both build and team)

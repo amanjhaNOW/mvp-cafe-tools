@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Font Tester — Typography Comparison & Pairing Tool</title>
+<meta name="description" content="Compare fonts side by side, discover perfect pairings, calculate type scales, and preview typography in real UI contexts.">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#242836;--border:#2e3345;--text:#e4e6ed;--text2:#9ca0b0;--accent:#6c8cff;--accent2:#4a6cf7;--green:#34d399;--amber:#fbbf24;--red:#f87171;--radius:10px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+html{font-size:16px}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;font-size:inherit}
+input,select,textarea{font-family:inherit;font-size:16px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239ca0b0'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+/* Layout */
+.app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+.topbar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;z-index:100;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.topbar h1{font-size:18px;font-weight:700;white-space:nowrap}
+.topbar h1 span{color:var(--accent)}
+.tabs{display:flex;gap:4px;margin-left:auto;flex-shrink:0}
+.tab{padding:8px 14px;border-radius:6px;font-size:13px;font-weight:500;white-space:nowrap;min-height:44px;display:flex;align-items:center;transition:background .15s}
+.tab:hover{background:var(--surface2)}
+.tab.active{background:var(--accent);color:#fff}
+.main{flex:1;padding:16px;overflow-y:auto}
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card h3{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text2)}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:6px;font-size:13px;font-weight:500;min-height:44px;transition:background .15s,transform .1s}
+.btn:active{transform:scale(0.97)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-outline{border:1px solid var(--border);color:var(--text2)}
+.btn-outline:hover{background:var(--surface2);color:var(--text)}
+.btn-sm{padding:6px 12px;font-size:12px;min-height:36px}
+.btn-danger{background:var(--red);color:#fff}
+/* Form Controls */
+.control{margin-bottom:12px}
+.control label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px}
+.control input,.control select{width:100%}
+.range-row{display:flex;align-items:center;gap:8px}
+.range-row input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:6px;background:var(--surface2);border-radius:3px;border:none;outline:none}
+.range-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer}
+.range-row span{font-size:12px;color:var(--text2);min-width:40px;text-align:right}
+/* Font Search */
+.font-search{position:relative}
+.font-search input{width:100%;padding-right:30px}
+.font-dropdown{position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--surface2);border:1px solid var(--border);border-radius:0 0 6px 6px;z-index:50;display:none}
+.font-dropdown.open{display:block}
+.font-opt{padding:10px 12px;cursor:pointer;font-size:14px;min-height:44px;display:flex;align-items:center;gap:8px}
+.font-opt:hover,.font-opt.hl{background:var(--border)}
+.font-opt .cat{font-size:10px;color:var(--text2);margin-left:auto;text-transform:uppercase}
+/* Compare */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:600px){.compare-grid{grid-template-columns:1fr}}
+.compare-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;min-height:200px}
+.compare-col .sample{word-wrap:break-word;overflow-wrap:break-word;line-height:1.5;transition:font-family .2s}
+.swap-row{display:flex;justify-content:center;gap:12px;margin:12px 0;flex-wrap:wrap}
+.text-input{width:100%;margin-bottom:12px}
+.text-input textarea{width:100%;min-height:60px;resize:vertical}
+/* Pairings */
+.pairings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+@media(max-width:400px){.pairings-grid{grid-template-columns:1fr}}
+.pairing-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:border-color .15s}
+.pairing-card:hover{border-color:var(--accent)}
+.pairing-card .heading-sample{font-size:22px;font-weight:700;margin-bottom:6px}
+.pairing-card .body-sample{font-size:14px;line-height:1.6;color:var(--text2);margin-bottom:10px}
+.pairing-card .meta{display:flex;gap:6px;flex-wrap:wrap}
+.pairing-tag{font-size:10px;padding:3px 8px;border-radius:4px;background:var(--surface2);color:var(--text2);text-transform:uppercase;letter-spacing:0.5px}
+.pairing-tag.active{background:var(--accent);color:#fff}
+/* Type Scale */
+.scale-list{display:flex;flex-direction:column;gap:8px}
+.scale-item{display:flex;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.scale-item:last-child{border:none}
+.scale-label{font-size:12px;color:var(--text2);min-width:50px;text-align:right}
+.scale-size{font-size:11px;color:var(--accent);min-width:50px}
+.scale-preview{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+/* Preview */
+.preview-frame{background:#fff;color:#1a1a2e;border-radius:var(--radius);padding:24px;margin-top:12px;transition:all .3s}
+.preview-frame.dark{background:#1a1a2e;color:#e4e6ed}
+.preview-hero{text-align:center;padding:40px 20px;margin-bottom:20px}
+.preview-hero h1{font-size:clamp(28px,5vw,48px);margin-bottom:12px;line-height:1.2}
+.preview-hero p{font-size:clamp(14px,2vw,18px);opacity:0.7;max-width:500px;margin:0 auto;line-height:1.6}
+.preview-article{max-width:600px;margin:0 auto}
+.preview-article h2{font-size:clamp(22px,4vw,32px);margin-bottom:12px;line-height:1.3}
+.preview-article p{font-size:clamp(14px,2vw,16px);line-height:1.8;margin-bottom:16px;opacity:0.8}
+.preview-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+.preview-card-item{border:1px solid rgba(0,0,0,0.1);border-radius:8px;padding:16px}
+.preview-frame.dark .preview-card-item{border-color:rgba(255,255,255,0.1)}
+.preview-card-item h3{font-size:18px;margin-bottom:6px}
+.preview-card-item p{font-size:13px;opacity:0.7;line-height:1.5}
+.preview-card-item .num{font-size:28px;font-weight:700;margin-bottom:4px}
+.preview-nav{display:flex;gap:20px;padding:12px 0;border-bottom:1px solid rgba(0,0,0,0.1);margin-bottom:20px;flex-wrap:wrap;font-size:14px;font-weight:500}
+.preview-frame.dark .preview-nav{border-color:rgba(255,255,255,0.1)}
+.preview-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+/* Saved */
+.saved-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+@media(max-width:400px){.saved-grid{grid-template-columns:1fr}}
+.saved-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.saved-card .hd{font-size:20px;font-weight:700;margin-bottom:4px}
+.saved-card .bd{font-size:14px;color:var(--text2);margin-bottom:10px;line-height:1.5}
+.saved-card .actions{display:flex;gap:8px;flex-wrap:wrap}
+/* Code Block */
+.code-block{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:'SFMono-Regular',Consolas,monospace;font-size:12px;line-height:1.6;color:var(--green);overflow-x:auto;position:relative;white-space:pre-wrap;word-break:break-all}
+.code-block .copy-btn{position:absolute;top:8px;right:8px;font-size:11px;padding:4px 10px;background:var(--surface2);border-radius:4px;color:var(--text2);min-height:30px}
+.code-block .copy-btn:hover{color:var(--text)}
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+/* Empty */
+.empty{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty .icon{font-size:48px;margin-bottom:12px}
+.empty p{margin-bottom:16px}
+/* Filter bar */
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-bar .search-input{flex:1;min-width:150px}
+/* Help modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:18px;margin-bottom:16px}
+.modal .close-modal{float:right;font-size:20px;min-height:44px;min-width:44px}
+.shortcut-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.shortcut-row:last-child{border:none}
+.kbd{background:var(--surface2);padding:2px 8px;border-radius:4px;font-size:12px;font-family:monospace}
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+.stat-card .num{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-card .label{font-size:11px;color:var(--text2);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px}
+/* Responsive */
+@media(max-width:600px){
+  .topbar{padding:10px 12px;gap:8px}
+  .topbar h1{font-size:16px}
+  .tabs{gap:2px}
+  .tab{padding:8px 10px;font-size:12px}
+  .main{padding:12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <h1>🔤 <span>Font Tester</span></h1>
+    <div class="tabs">
+      <button class="tab active" data-view="compare">Compare</button>
+      <button class="tab" data-view="pairings">Pairings</button>
+      <button class="tab" data-view="scale">Scale</button>
+      <button class="tab" data-view="preview">Preview</button>
+      <button class="tab" data-view="saved">Saved</button>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="showHelp()" title="Help">?</button>
+  </div>
+  <div class="main" id="main"></div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal-overlay" id="helpModal">
+  <div class="modal">
+    <button class="close-modal" onclick="closeHelp()">✕</button>
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="shortcut-row"><span>Switch views</span><span class="kbd">1-5</span></div>
+    <div class="shortcut-row"><span>Swap fonts</span><span class="kbd">S</span></div>
+    <div class="shortcut-row"><span>Save pairing</span><span class="kbd">⌘ Enter</span></div>
+    <div class="shortcut-row"><span>Export CSS</span><span class="kbd">E</span></div>
+    <div class="shortcut-row"><span>Toggle dark/light preview</span><span class="kbd">D</span></div>
+    <div class="shortcut-row"><span>Random pairing</span><span class="kbd">R</span></div>
+    <div class="shortcut-row"><span>Help</span><span class="kbd">?</span></div>
+    <div class="shortcut-row"><span>Close modal</span><span class="kbd">Esc</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+// ── Font Database ──
+const FONTS = [
+  // Sans-serif
+  {name:'Inter',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'Roboto',cat:'sans',weights:[300,400,500,700]},
+  {name:'Open Sans',cat:'sans',weights:[300,400,600,700]},
+  {name:'Lato',cat:'sans',weights:[300,400,700,900]},
+  {name:'Montserrat',cat:'sans',weights:[300,400,500,600,700,800]},
+  {name:'Poppins',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'Nunito',cat:'sans',weights:[300,400,600,700]},
+  {name:'Source Sans 3',cat:'sans',weights:[300,400,600,700]},
+  {name:'Raleway',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'Work Sans',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'DM Sans',cat:'sans',weights:[400,500,700]},
+  {name:'Rubik',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'Outfit',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'Plus Jakarta Sans',cat:'sans',weights:[400,500,600,700,800]},
+  {name:'Figtree',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'Manrope',cat:'sans',weights:[300,400,500,600,700,800]},
+  {name:'Sora',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'Space Grotesk',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'Lexend',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'Archivo',cat:'sans',weights:[400,500,600,700]},
+  {name:'Urbanist',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'Albert Sans',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'Cabin',cat:'sans',weights:[400,500,600,700]},
+  {name:'Karla',cat:'sans',weights:[300,400,500,600,700]},
+  {name:'Josefin Sans',cat:'sans',weights:[300,400,600,700]},
+  // Serif
+  {name:'Playfair Display',cat:'serif',weights:[400,500,600,700,800]},
+  {name:'Merriweather',cat:'serif',weights:[300,400,700,900]},
+  {name:'Lora',cat:'serif',weights:[400,500,600,700]},
+  {name:'Noto Serif',cat:'serif',weights:[400,700]},
+  {name:'PT Serif',cat:'serif',weights:[400,700]},
+  {name:'Libre Baskerville',cat:'serif',weights:[400,700]},
+  {name:'Crimson Text',cat:'serif',weights:[400,600,700]},
+  {name:'Source Serif 4',cat:'serif',weights:[300,400,600,700]},
+  {name:'DM Serif Display',cat:'serif',weights:[400]},
+  {name:'Cormorant Garamond',cat:'serif',weights:[300,400,500,600,700]},
+  {name:'EB Garamond',cat:'serif',weights:[400,500,600,700]},
+  {name:'Bitter',cat:'serif',weights:[400,500,600,700]},
+  {name:'Spectral',cat:'serif',weights:[300,400,500,600,700]},
+  {name:'Vollkorn',cat:'serif',weights:[400,500,600,700]},
+  {name:'Cardo',cat:'serif',weights:[400,700]},
+  {name:'Libre Caslon Text',cat:'serif',weights:[400,700]},
+  // Mono
+  {name:'JetBrains Mono',cat:'mono',weights:[300,400,500,600,700]},
+  {name:'Fira Code',cat:'mono',weights:[300,400,500,600,700]},
+  {name:'Source Code Pro',cat:'mono',weights:[300,400,500,600,700]},
+  {name:'IBM Plex Mono',cat:'mono',weights:[300,400,500,600,700]},
+  {name:'Roboto Mono',cat:'mono',weights:[300,400,500,700]},
+  {name:'Space Mono',cat:'mono',weights:[400,700]},
+  {name:'Ubuntu Mono',cat:'mono',weights:[400,700]},
+  // Display
+  {name:'Abril Fatface',cat:'display',weights:[400]},
+  {name:'Bebas Neue',cat:'display',weights:[400]},
+  {name:'Righteous',cat:'display',weights:[400]},
+  {name:'Oswald',cat:'display',weights:[300,400,500,600,700]},
+  {name:'Anton',cat:'display',weights:[400]},
+  {name:'Fredoka',cat:'display',weights:[300,400,500,600,700]},
+  {name:'Comfortaa',cat:'display',weights:[300,400,500,600,700]},
+  {name:'Pacifico',cat:'display',weights:[400]},
+  {name:'Permanent Marker',cat:'display',weights:[400]},
+  {name:'Caveat',cat:'display',weights:[400,500,600,700]},
+];
+
+const CAT_LABELS = {sans:'Sans-Serif',serif:'Serif',mono:'Monospace',display:'Display'};
+
+// ── Curated Pairings ──
+const PAIRINGS = [
+  {heading:'Inter',body:'Merriweather',tags:['modern','clean'],why:'Neutral geometric heading with a warm, readable serif body. The gold standard for SaaS.'},
+  {heading:'Montserrat',body:'Lora',tags:['elegant','balanced'],why:'Geometric sans meets literary serif. Great for editorial or brand sites.'},
+  {heading:'Playfair Display',body:'Source Sans 3',tags:['classic','editorial'],why:'High-contrast display serif paired with a clean humanist sans. Perfect for magazines and portfolios.'},
+  {heading:'Poppins',body:'Nunito',tags:['friendly','soft'],why:'Both rounded and approachable. Great for consumer apps and landing pages.'},
+  {heading:'DM Serif Display',body:'DM Sans',tags:['matched','modern'],why:'Same type family, different genres. Instant harmony with zero effort.'},
+  {heading:'Space Grotesk',body:'Space Mono',tags:['tech','matched'],why:'Matched grotesk + mono pair. Built for developer tools and tech brands.'},
+  {heading:'Work Sans',body:'Source Serif 4',tags:['professional','readable'],why:'Clean geometric heading with a scholarly serif body. Ideal for documentation and reports.'},
+  {heading:'Raleway',body:'Crimson Text',tags:['thin','classic'],why:'Elegant thin heading with a traditional text serif. Great for luxury and editorial.'},
+  {heading:'Outfit',body:'EB Garamond',tags:['contemporary','timeless'],why:'Modern geometric meets old-style garalde. A striking time-contrast pairing.'},
+  {heading:'Plus Jakarta Sans',body:'Libre Baskerville',tags:['soft','traditional'],why:'Soft contemporary sans with a sturdy transitional serif. Warm and trustworthy.'},
+  {heading:'Bebas Neue',body:'Roboto',tags:['bold','impact'],why:'Ultra-condensed display for punchy headlines with neutral Roboto body. Sports, news, promos.'},
+  {heading:'Sora',body:'Cormorant Garamond',tags:['tech','refined'],why:'Futuristic geometric heading meets refined old-style serif. Sophisticated contrast.'},
+  {heading:'Archivo',body:'Spectral',tags:['industrial','elegant'],why:'Grotesque industrial heading with elegant text serif. Great for architecture and design studios.'},
+  {heading:'Manrope',body:'Vollkorn',tags:['geometric','organic'],why:'Sharp geometric sans with organic, warm serif. Good for hybrid brands.'},
+  {heading:'Oswald',body:'Open Sans',tags:['impact','neutral'],why:'Condensed display heading with neutral body. A reliable workhorse combo for any content site.'},
+  {heading:'Abril Fatface',body:'Poppins',tags:['display','modern'],why:'Fat display serif for huge headlines with geometric sans body. Maximum visual impact.'},
+  {heading:'Rubik',body:'Bitter',tags:['rounded','sturdy'],why:'Rounded geometric sans with a slab-ish serif. Friendly yet grounded.'},
+  {heading:'Figtree',body:'Cardo',tags:['clean','academic'],why:'Clean variable sans with an old-style academic serif. Scholarly but modern.'},
+];
+
+// ── Type Scales ──
+const SCALES = [
+  {name:'Minor Second',ratio:1.067},
+  {name:'Major Second',ratio:1.125},
+  {name:'Minor Third',ratio:1.200},
+  {name:'Major Third',ratio:1.250},
+  {name:'Perfect Fourth',ratio:1.333},
+  {name:'Aug. Fourth',ratio:1.414},
+  {name:'Perfect Fifth',ratio:1.500},
+  {name:'Golden Ratio',ratio:1.618},
+];
+
+// ── State ──
+const SK = k => `mvpcafe:font-tester:${k}`;
+let state = {
+  view: 'compare',
+  fontA: 'Inter', fontB: 'Playfair Display',
+  weightA: 400, weightB: 700,
+  sizeA: 32, sizeB: 32,
+  lineHeightA: 1.4, lineHeightB: 1.3,
+  letterSpacingA: 0, letterSpacingB: 0,
+  sampleText: 'The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.',
+  scaleBase: 16, scaleRatio: 1.250, scaleFont: 'Inter',
+  previewHeading: 'Playfair Display', previewBody: 'Inter', previewDark: false,
+  saved: [],
+};
+
+function loadState() {
+  try {
+    const s = localStorage.getItem(SK('state'));
+    if (s) { const p = JSON.parse(s); Object.assign(state, p); }
+  } catch(e) {}
+}
+function saveState() {
+  try { localStorage.setItem(SK('state'), JSON.stringify(state)); } catch(e) {}
+}
+
+// ── Font Loading ──
+const loadedFonts = new Set();
+function loadFont(name) {
+  if (loadedFonts.has(name)) return;
+  loadedFonts.add(name);
+  const f = FONTS.find(f => f.name === name);
+  if (!f) return;
+  const weights = f.weights.join(';');
+  const family = name.replace(/ /g, '+');
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${family}:wght@${weights}&display=swap`;
+  document.head.appendChild(link);
+}
+
+// ── Utilities ──
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const mainEl = () => $('#main');
+
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => toast('Copied!')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta); toast('Copied!');
+  });
+}
+
+// ── Font Search Component ──
+function fontSearchHTML(id, current, label) {
+  return `<div class="control font-search" data-fsid="${id}">
+    <label>${label}</label>
+    <input type="text" value="${current}" placeholder="Search fonts..." 
+      onfocus="openFontDropdown('${id}')" oninput="filterFonts('${id}',this.value)">
+    <div class="font-dropdown" id="fd-${id}"></div>
+  </div>`;
+}
+
+let activeFD = null;
+function openFontDropdown(id) {
+  closeFontDropdowns();
+  activeFD = id;
+  filterFonts(id, '');
+  $(`#fd-${id}`).classList.add('open');
+}
+function closeFontDropdowns() {
+  $$('.font-dropdown').forEach(d => d.classList.remove('open'));
+  activeFD = null;
+}
+function filterFonts(id, q) {
+  const dd = $(`#fd-${id}`);
+  const lq = q.toLowerCase();
+  const filtered = FONTS.filter(f => f.name.toLowerCase().includes(lq)).slice(0, 30);
+  dd.innerHTML = filtered.map(f => 
+    `<div class="font-opt" onclick="selectFont('${id}','${f.name}')" style="font-family:'${f.name}',${f.cat === 'serif' ? 'serif' : f.cat === 'mono' ? 'monospace' : 'sans-serif'}">
+      ${f.name}<span class="cat">${CAT_LABELS[f.cat]}</span>
+    </div>`
+  ).join('');
+  // preload visible
+  filtered.slice(0, 10).forEach(f => loadFont(f.name));
+}
+function selectFont(id, name) {
+  loadFont(name);
+  const input = $(`[data-fsid="${id}"] input`);
+  if (input) input.value = name;
+  closeFontDropdowns();
+  // Update state
+  if (id === 'fontA') { state.fontA = name; }
+  else if (id === 'fontB') { state.fontB = name; }
+  else if (id === 'scaleFont') { state.scaleFont = name; }
+  else if (id === 'previewHeading') { state.previewHeading = name; }
+  else if (id === 'previewBody') { state.previewBody = name; }
+  saveState();
+  renderCurrentView();
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.font-search')) closeFontDropdowns();
+});
+
+// ── Views ──
+function switchView(v) {
+  state.view = v;
+  $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+  saveState();
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  const m = mainEl();
+  switch(state.view) {
+    case 'compare': renderCompare(m); break;
+    case 'pairings': renderPairings(m); break;
+    case 'scale': renderScale(m); break;
+    case 'preview': renderPreview(m); break;
+    case 'saved': renderSaved(m); break;
+  }
+}
+
+// ── Compare View ──
+function renderCompare(el) {
+  loadFont(state.fontA);
+  loadFont(state.fontB);
+  const fA = FONTS.find(f => f.name === state.fontA) || FONTS[0];
+  const fB = FONTS.find(f => f.name === state.fontB) || FONTS[25];
+  
+  el.innerHTML = `
+    <div class="text-input">
+      <textarea id="sampleText" placeholder="Type your sample text...">${state.sampleText}</textarea>
+    </div>
+    <div class="compare-grid">
+      <div class="compare-col">
+        ${fontSearchHTML('fontA', state.fontA, 'Heading / Font A')}
+        <div class="control"><label>Weight</label>
+          <select id="weightA" onchange="state.weightA=+this.value;saveState();renderCurrentView()">
+            ${fA.weights.map(w => `<option value="${w}"${w===state.weightA?' selected':''}>${w}</option>`).join('')}
+          </select>
+        </div>
+        <div class="control"><label>Size: ${state.sizeA}px</label>
+          <div class="range-row"><input type="range" min="10" max="96" value="${state.sizeA}" oninput="state.sizeA=+this.value;saveState();renderCurrentView()"><span>${state.sizeA}px</span></div>
+        </div>
+        <div class="control"><label>Line Height: ${state.lineHeightA}</label>
+          <div class="range-row"><input type="range" min="0.8" max="2.5" step="0.05" value="${state.lineHeightA}" oninput="state.lineHeightA=+this.value;saveState();renderCurrentView()"><span>${state.lineHeightA}</span></div>
+        </div>
+        <div class="control"><label>Letter Spacing: ${state.letterSpacingA}px</label>
+          <div class="range-row"><input type="range" min="-3" max="10" step="0.5" value="${state.letterSpacingA}" oninput="state.letterSpacingA=+this.value;saveState();renderCurrentView()"><span>${state.letterSpacingA}px</span></div>
+        </div>
+        <div class="sample" style="font-family:'${state.fontA}',${fA.cat==='serif'?'serif':fA.cat==='mono'?'monospace':'sans-serif'};font-size:${state.sizeA}px;font-weight:${state.weightA};line-height:${state.lineHeightA};letter-spacing:${state.letterSpacingA}px">${state.sampleText}</div>
+      </div>
+      <div class="compare-col">
+        ${fontSearchHTML('fontB', state.fontB, 'Body / Font B')}
+        <div class="control"><label>Weight</label>
+          <select id="weightB" onchange="state.weightB=+this.value;saveState();renderCurrentView()">
+            ${fB.weights.map(w => `<option value="${w}"${w===state.weightB?' selected':''}>${w}</option>`).join('')}
+          </select>
+        </div>
+        <div class="control"><label>Size: ${state.sizeB}px</label>
+          <div class="range-row"><input type="range" min="10" max="96" value="${state.sizeB}" oninput="state.sizeB=+this.value;saveState();renderCurrentView()"><span>${state.sizeB}px</span></div>
+        </div>
+        <div class="control"><label>Line Height: ${state.lineHeightB}</label>
+          <div class="range-row"><input type="range" min="0.8" max="2.5" step="0.05" value="${state.lineHeightB}" oninput="state.lineHeightB=+this.value;saveState();renderCurrentView()"><span>${state.lineHeightB}</span></div>
+        </div>
+        <div class="control"><label>Letter Spacing: ${state.letterSpacingB}px</label>
+          <div class="range-row"><input type="range" min="-3" max="10" step="0.5" value="${state.letterSpacingB}" oninput="state.letterSpacingB=+this.value;saveState();renderCurrentView()"><span>${state.letterSpacingB}px</span></div>
+        </div>
+        <div class="sample" style="font-family:'${state.fontB}',${fB.cat==='serif'?'serif':fB.cat==='mono'?'monospace':'sans-serif'};font-size:${state.sizeB}px;font-weight:${state.weightB};line-height:${state.lineHeightB};letter-spacing:${state.letterSpacingB}px">${state.sampleText}</div>
+      </div>
+    </div>
+    <div class="swap-row">
+      <button class="btn btn-outline" onclick="swapFonts()">↔ Swap</button>
+      <button class="btn btn-outline" onclick="randomPair()">🎲 Random</button>
+      <button class="btn btn-primary" onclick="savePairing()">💾 Save Pairing</button>
+      <button class="btn btn-outline" onclick="copyCSS()">📋 Copy CSS</button>
+    </div>
+    <div class="card">
+      <h3>CSS Import</h3>
+      <div class="code-block" id="cssImport"><button class="copy-btn" onclick="copyText(document.getElementById('cssImport').firstChild.textContent)">Copy</button>${generateImport()}</div>
+    </div>
+    <div class="card">
+      <h3>CSS Variables</h3>
+      <div class="code-block" id="cssVars"><button class="copy-btn" onclick="copyText(document.getElementById('cssVars').firstChild.textContent)">Copy</button>${generateCSS()}</div>
+    </div>`;
+
+  $('#sampleText').addEventListener('input', e => {
+    state.sampleText = e.target.value;
+    saveState();
+    $$('.sample').forEach(s => s.textContent = state.sampleText);
+  });
+}
+
+function swapFonts() {
+  [state.fontA, state.fontB] = [state.fontB, state.fontA];
+  [state.weightA, state.weightB] = [state.weightB, state.weightA];
+  [state.sizeA, state.sizeB] = [state.sizeB, state.sizeA];
+  [state.lineHeightA, state.lineHeightB] = [state.lineHeightB, state.lineHeightA];
+  [state.letterSpacingA, state.letterSpacingB] = [state.letterSpacingB, state.letterSpacingA];
+  saveState(); renderCurrentView();
+}
+
+function randomPair() {
+  const sans = FONTS.filter(f => f.cat === 'sans');
+  const serifs = FONTS.filter(f => f.cat === 'serif' || f.cat === 'display');
+  state.fontA = serifs[Math.floor(Math.random() * serifs.length)].name;
+  state.fontB = sans[Math.floor(Math.random() * sans.length)].name;
+  state.weightA = 700; state.weightB = 400;
+  state.sizeA = 32; state.sizeB = 16;
+  saveState(); renderCurrentView();
+  toast('🎲 Random pairing loaded');
+}
+
+function savePairing() {
+  const p = {
+    id: Date.now(),
+    heading: state.fontA, body: state.fontB,
+    weightH: state.weightA, weightB: state.weightB,
+    date: new Date().toISOString().slice(0,10),
+  };
+  state.saved.push(p);
+  saveState();
+  toast('💾 Pairing saved!');
+}
+
+function generateImport() {
+  const fA = state.fontA.replace(/ /g, '+');
+  const fB = state.fontB.replace(/ /g, '+');
+  const wA = (FONTS.find(f=>f.name===state.fontA)||{weights:[400]}).weights.join(';');
+  const wB = (FONTS.find(f=>f.name===state.fontB)||{weights:[400]}).weights.join(';');
+  return `@import url('https://fonts.googleapis.com/css2?family=${fA}:wght@${wA}&family=${fB}:wght@${wB}&display=swap');`;
+}
+
+function generateCSS() {
+  const fA = FONTS.find(f=>f.name===state.fontA);
+  const fB = FONTS.find(f=>f.name===state.fontB);
+  const fallA = fA ? (fA.cat==='serif'?'serif':fA.cat==='mono'?'monospace':'sans-serif') : 'sans-serif';
+  const fallB = fB ? (fB.cat==='serif'?'serif':fB.cat==='mono'?'monospace':'sans-serif') : 'sans-serif';
+  return `:root {
+  --font-heading: '${state.fontA}', ${fallA};
+  --font-body: '${state.fontB}', ${fallB};
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: ${state.weightA};
+}
+
+body, p, li, td {
+  font-family: var(--font-body);
+  font-weight: ${state.weightB};
+  line-height: ${state.lineHeightB};
+}`;
+}
+
+function copyCSS() {
+  copyText(generateImport() + '\n\n' + generateCSS());
+}
+
+// ── Pairings View ──
+function renderPairings(el) {
+  const allTags = [...new Set(PAIRINGS.flatMap(p => p.tags))];
+  let filterTag = null;
+
+  function render() {
+    const filtered = filterTag ? PAIRINGS.filter(p => p.tags.includes(filterTag)) : PAIRINGS;
+    el.innerHTML = `
+      <div class="filter-bar">
+        <button class="pairing-tag ${!filterTag?'active':''}" onclick="window._pairFilter(null)">All</button>
+        ${allTags.map(t => `<button class="pairing-tag ${filterTag===t?'active':''}" onclick="window._pairFilter('${t}')">${t}</button>`).join('')}
+      </div>
+      <div class="pairings-grid">
+        ${filtered.map((p,i) => {
+          loadFont(p.heading); loadFont(p.body);
+          const fH = FONTS.find(f=>f.name===p.heading);
+          const fB = FONTS.find(f=>f.name===p.body);
+          const fallH = fH ? (fH.cat==='serif'?'serif':'sans-serif') : 'sans-serif';
+          const fallB = fB ? (fB.cat==='serif'?'serif':'sans-serif') : 'sans-serif';
+          return `<div class="pairing-card" onclick="loadPairing(${i})">
+            <div class="heading-sample" style="font-family:'${p.heading}',${fallH}">${p.heading}</div>
+            <div class="body-sample" style="font-family:'${p.body}',${fallB}">${p.why}</div>
+            <div class="meta">
+              <span style="font-size:11px;color:var(--text2)">${p.heading} + ${p.body}</span>
+              ${p.tags.map(t => `<span class="pairing-tag">${t}</span>`).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  window._pairFilter = t => { filterTag = t; render(); };
+  render();
+}
+
+function loadPairing(idx) {
+  const p = PAIRINGS[idx];
+  if (!p) return;
+  state.fontA = p.heading;
+  state.fontB = p.body;
+  state.weightA = 700;
+  state.weightB = 400;
+  state.sizeA = 32;
+  state.sizeB = 16;
+  state.lineHeightA = 1.2;
+  state.lineHeightB = 1.6;
+  state.previewHeading = p.heading;
+  state.previewBody = p.body;
+  saveState();
+  switchView('compare');
+  toast(`Loaded: ${p.heading} + ${p.body}`);
+}
+
+// ── Type Scale View ──
+function renderScale(el) {
+  loadFont(state.scaleFont);
+  const scale = SCALES.find(s => s.ratio === state.scaleRatio) || SCALES[3];
+  const levels = [
+    {label:'sm',name:'Small',exp:-1},
+    {label:'base',name:'Body',exp:0},
+    {label:'lg',name:'Large',exp:1},
+    {label:'xl',name:'XL',exp:2},
+    {label:'2xl',name:'2XL / H4',exp:3},
+    {label:'3xl',name:'3XL / H3',exp:4},
+    {label:'4xl',name:'4XL / H2',exp:5},
+    {label:'5xl',name:'5XL / H1',exp:6},
+  ];
+
+  const sizes = levels.map(l => ({
+    ...l,
+    px: Math.round(state.scaleBase * Math.pow(state.scaleRatio, l.exp) * 100) / 100,
+  }));
+
+  const f = FONTS.find(f=>f.name===state.scaleFont);
+  const fall = f ? (f.cat==='serif'?'serif':f.cat==='mono'?'monospace':'sans-serif') : 'sans-serif';
+
+  el.innerHTML = `
+    <div class="card">
+      <h3>Type Scale Calculator</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px">
+        ${fontSearchHTML('scaleFont', state.scaleFont, 'Font Family')}
+        <div class="control"><label>Base Size: ${state.scaleBase}px</label>
+          <div class="range-row">
+            <input type="range" min="10" max="24" value="${state.scaleBase}" oninput="state.scaleBase=+this.value;saveState();renderCurrentView()">
+            <span>${state.scaleBase}px</span>
+          </div>
+        </div>
+        <div class="control"><label>Scale Ratio</label>
+          <select onchange="state.scaleRatio=+this.value;saveState();renderCurrentView()">
+            ${SCALES.map(s => `<option value="${s.ratio}"${s.ratio===state.scaleRatio?' selected':''}>${s.name} (${s.ratio})</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Preview</h3>
+      <div class="scale-list">
+        ${sizes.reverse().map(s => `
+          <div class="scale-item">
+            <span class="scale-label">${s.label}</span>
+            <span class="scale-size">${s.px}px</span>
+            <span class="scale-preview" style="font-family:'${state.scaleFont}',${fall};font-size:${Math.min(s.px,64)}px;font-weight:${s.exp>=3?700:400};line-height:1.3">${state.sampleText.split('.')[0]}.</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <h3>CSS Output</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyScaleCSS()">Copy</button>${generateScaleCSS(sizes)}</div>
+    </div>
+    <div class="card">
+      <h3>Tailwind Config</h3>
+      <div class="code-block"><button class="copy-btn" onclick="copyScaleTW()">Copy</button>${generateScaleTW(sizes)}</div>
+    </div>`;
+}
+
+function generateScaleCSS(sizes) {
+  if (!sizes) {
+    const levels = [{label:'sm',exp:-1},{label:'base',exp:0},{label:'lg',exp:1},{label:'xl',exp:2},{label:'2xl',exp:3},{label:'3xl',exp:4},{label:'4xl',exp:5},{label:'5xl',exp:6}];
+    sizes = levels.map(l => ({...l, px: Math.round(state.scaleBase * Math.pow(state.scaleRatio, l.exp) * 100) / 100}));
+  }
+  return `:root {\n${sizes.map(s => `  --text-${s.label}: ${s.px}px;`).join('\n')}\n}`;
+}
+function generateScaleTW(sizes) {
+  if (!sizes) {
+    const levels = [{label:'sm',exp:-1},{label:'base',exp:0},{label:'lg',exp:1},{label:'xl',exp:2},{label:'2xl',exp:3},{label:'3xl',exp:4},{label:'4xl',exp:5},{label:'5xl',exp:6}];
+    sizes = levels.map(l => ({...l, px: Math.round(state.scaleBase * Math.pow(state.scaleRatio, l.exp) * 100) / 100}));
+  }
+  const rem = px => (Math.round(px / 16 * 1000) / 1000);
+  return `fontSize: {\n${sizes.map(s => `  '${s.label}': '${rem(s.px)}rem', /* ${s.px}px */`).join('\n')}\n}`;
+}
+window.copyScaleCSS = () => copyText(generateScaleCSS());
+window.copyScaleTW = () => copyText(generateScaleTW());
+
+// ── Preview View ──
+function renderPreview(el) {
+  loadFont(state.previewHeading);
+  loadFont(state.previewBody);
+  const fH = FONTS.find(f=>f.name===state.previewHeading);
+  const fB = FONTS.find(f=>f.name===state.previewBody);
+  const fallH = fH ? (fH.cat==='serif'?'serif':fH.cat==='mono'?'monospace':'sans-serif') : 'sans-serif';
+  const fallB = fB ? (fB.cat==='serif'?'serif':fB.cat==='mono'?'monospace':'sans-serif') : 'sans-serif';
+  const hStyle = `font-family:'${state.previewHeading}',${fallH}`;
+  const bStyle = `font-family:'${state.previewBody}',${fallB}`;
+  const dark = state.previewDark;
+
+  el.innerHTML = `
+    <div class="card">
+      <h3>Preview Settings</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+        ${fontSearchHTML('previewHeading', state.previewHeading, 'Heading Font')}
+        ${fontSearchHTML('previewBody', state.previewBody, 'Body Font')}
+      </div>
+      <div class="preview-controls" style="margin-top:12px">
+        <button class="btn btn-sm ${dark?'btn-primary':'btn-outline'}" onclick="state.previewDark=!state.previewDark;saveState();renderCurrentView()">
+          ${dark?'🌙 Dark':'☀️ Light'} Preview
+        </button>
+        <button class="btn btn-sm btn-outline" onclick="copyPreviewCSS()">📋 Copy CSS</button>
+        <button class="btn btn-sm btn-outline" onclick="state.previewHeading=state.fontA;state.previewBody=state.fontB;saveState();renderCurrentView()">↩ Use Compare Fonts</button>
+      </div>
+    </div>
+
+    <div class="preview-frame${dark?' dark':''}">
+      <!-- Nav -->
+      <div class="preview-nav" style="${bStyle}">
+        <span style="${hStyle};font-weight:700;font-size:18px">Brand</span>
+        <span>Features</span>
+        <span>Pricing</span>
+        <span>Blog</span>
+        <span>Contact</span>
+      </div>
+
+      <!-- Hero -->
+      <div class="preview-hero">
+        <h1 style="${hStyle};font-weight:700">Ship Faster.<br>Grow Smarter.</h1>
+        <p style="${bStyle}">The all-in-one platform for product teams who want to build great things without the overhead.</p>
+      </div>
+
+      <!-- Cards -->
+      <div class="preview-card-grid" style="margin-bottom:24px">
+        <div class="preview-card-item">
+          <div class="num" style="${hStyle};color:${dark?'#6c8cff':'#4a6cf7'}">2.4K</div>
+          <h3 style="${hStyle};font-weight:600">Active Users</h3>
+          <p style="${bStyle}">↑ 12% from last week</p>
+        </div>
+        <div class="preview-card-item">
+          <div class="num" style="${hStyle};color:${dark?'#34d399':'#059669'}">$18K</div>
+          <h3 style="${hStyle};font-weight:600">Monthly Revenue</h3>
+          <p style="${bStyle}">↑ 8% from last month</p>
+        </div>
+        <div class="preview-card-item">
+          <div class="num" style="${hStyle};color:${dark?'#fbbf24':'#d97706'}">94%</div>
+          <h3 style="${hStyle};font-weight:600">Satisfaction</h3>
+          <p style="${bStyle}">Based on 847 reviews</p>
+        </div>
+      </div>
+
+      <!-- Article -->
+      <div class="preview-article">
+        <h2 style="${hStyle};font-weight:700">Why Typography Matters More Than You Think</h2>
+        <p style="${bStyle}">Good typography is invisible. Bad typography is everywhere. The fonts you choose communicate before a single word is read — they set the tone, establish trust, and guide the reader's eye.</p>
+        <p style="${bStyle}">When heading and body fonts work in harmony, the entire page breathes. <strong>Contrast creates hierarchy</strong>, while consistency creates rhythm. A geometric sans for structure paired with a humanist serif for warmth — that's the kind of pairing that makes content sing.</p>
+        <p style="${bStyle};font-style:italic;opacity:0.6;border-left:3px solid ${dark?'#6c8cff':'#4a6cf7'};padding-left:16px">"Typography is the craft of endowing human language with a durable visual form." — Robert Bringhurst</p>
+        <p style="${bStyle}">The right type scale brings mathematical beauty to your layout. Each size relates to the next through a consistent ratio — whether that's the harmonious Major Third (1.250) or the dramatic Perfect Fifth (1.500).</p>
+      </div>
+    </div>`;
+}
+
+window.copyPreviewCSS = function() {
+  const fH = FONTS.find(f=>f.name===state.previewHeading);
+  const fB = FONTS.find(f=>f.name===state.previewBody);
+  const fallH = fH?(fH.cat==='serif'?'serif':fH.cat==='mono'?'monospace':'sans-serif'):'sans-serif';
+  const fallB = fB?(fB.cat==='serif'?'serif':fB.cat==='mono'?'monospace':'sans-serif'):'sans-serif';
+  const hF = state.previewHeading.replace(/ /g,'+');
+  const bF = state.previewBody.replace(/ /g,'+');
+  copyText(`@import url('https://fonts.googleapis.com/css2?family=${hF}:wght@400;500;600;700&family=${bF}:wght@400;500;600;700&display=swap');
+
+:root {
+  --font-heading: '${state.previewHeading}', ${fallH};
+  --font-body: '${state.previewBody}', ${fallB};
+}
+
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); }
+body, p, li { font-family: var(--font-body); line-height: 1.6; }`);
+};
+
+// ── Saved View ──
+function renderSaved(el) {
+  if (!state.saved.length) {
+    el.innerHTML = `<div class="empty"><div class="icon">💾</div><p>No saved pairings yet.</p><p>Use the Compare view to find and save font pairings.</p>
+    <button class="btn btn-primary" onclick="switchView('compare')">Start Comparing</button></div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="num">${state.saved.length}</div><div class="label">Saved Pairings</div></div>
+      <div class="stat-card"><div class="num">${new Set(state.saved.flatMap(s=>[s.heading,s.body])).size}</div><div class="label">Unique Fonts</div></div>
+      <div class="stat-card"><div class="num">${state.saved.filter(s=>{const f=FONTS.find(x=>x.name===s.heading);return f&&f.cat==='serif'}).length}</div><div class="label">Serif Headings</div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="exportSaved()">📦 Export JSON</button>
+      <button class="btn btn-outline btn-sm" onclick="exportSavedCSS()">📋 Export All CSS</button>
+      <label class="btn btn-outline btn-sm">📂 Import<input type="file" accept=".json" style="display:none" onchange="importSaved(event)"></label>
+    </div>
+    <div class="saved-grid">
+      ${state.saved.map((s,i) => {
+        loadFont(s.heading); loadFont(s.body);
+        const fH = FONTS.find(f=>f.name===s.heading);
+        const fB = FONTS.find(f=>f.name===s.body);
+        const fallH = fH?(fH.cat==='serif'?'serif':'sans-serif'):'sans-serif';
+        const fallB = fB?(fB.cat==='serif'?'serif':'sans-serif'):'sans-serif';
+        return `<div class="saved-card">
+          <div class="hd" style="font-family:'${s.heading}',${fallH};font-weight:${s.weightH||700}">${s.heading}</div>
+          <div class="bd" style="font-family:'${s.body}',${fallB}">${s.body} — saved ${s.date}</div>
+          <div class="actions">
+            <button class="btn btn-sm btn-outline" onclick="loadSaved(${i})">↩ Load</button>
+            <button class="btn btn-sm btn-outline" onclick="copySavedCSS(${i})">📋 CSS</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteSaved(${i})">🗑</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+window.loadSaved = function(i) {
+  const s = state.saved[i];
+  if (!s) return;
+  state.fontA = s.heading; state.fontB = s.body;
+  state.weightA = s.weightH || 700; state.weightB = s.weightB || 400;
+  saveState(); switchView('compare');
+  toast(`Loaded: ${s.heading} + ${s.body}`);
+};
+
+window.deleteSaved = function(i) {
+  state.saved.splice(i, 1);
+  saveState(); renderCurrentView();
+  toast('Pairing deleted');
+};
+
+window.copySavedCSS = function(i) {
+  const s = state.saved[i];
+  if (!s) return;
+  const fH = FONTS.find(f=>f.name===s.heading);
+  const fB = FONTS.find(f=>f.name===s.body);
+  const fallH = fH?(fH.cat==='serif'?'serif':'sans-serif'):'sans-serif';
+  const fallB = fB?(fB.cat==='serif'?'serif':'sans-serif'):'sans-serif';
+  copyText(`/* ${s.heading} + ${s.body} */\n:root {\n  --font-heading: '${s.heading}', ${fallH};\n  --font-body: '${s.body}', ${fallB};\n}`);
+};
+
+window.exportSaved = function() {
+  const blob = new Blob([JSON.stringify({pairings:state.saved},null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'font-pairings.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Exported!');
+};
+
+window.exportSavedCSS = function() {
+  const css = state.saved.map(s => {
+    const fH = FONTS.find(f=>f.name===s.heading);
+    const fB = FONTS.find(f=>f.name===s.body);
+    const fallH = fH?(fH.cat==='serif'?'serif':'sans-serif'):'sans-serif';
+    const fallB = fB?(fB.cat==='serif'?'serif':'sans-serif'):'sans-serif';
+    return `/* ${s.heading} + ${s.body} */\n--font-heading: '${s.heading}', ${fallH};\n--font-body: '${s.body}', ${fallB};`;
+  }).join('\n\n');
+  copyText(css);
+};
+
+window.importSaved = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (d.pairings && Array.isArray(d.pairings)) {
+        const existing = new Set(state.saved.map(s => s.heading+'+'+s.body));
+        let added = 0;
+        d.pairings.forEach(p => {
+          if (!existing.has(p.heading+'+'+p.body)) {
+            state.saved.push(p); added++;
+          }
+        });
+        saveState(); renderCurrentView();
+        toast(`Imported ${added} pairing(s)`);
+      }
+    } catch(err) { toast('Invalid JSON file'); }
+  };
+  reader.readAsText(file);
+};
+
+// ── Keyboard Shortcuts ──
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') { e.target.blur(); closeFontDropdowns(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); savePairing(); }
+    return;
+  }
+  if (e.key === 'Escape') { closeHelp(); closeFontDropdowns(); return; }
+  if (e.key === '?') { e.preventDefault(); showHelp(); return; }
+  const viewKeys = {'1':'compare','2':'pairings','3':'scale','4':'preview','5':'saved'};
+  if (viewKeys[e.key]) { switchView(viewKeys[e.key]); return; }
+  if (e.key === 's' || e.key === 'S') { if (!e.metaKey && !e.ctrlKey) { e.preventDefault(); swapFonts(); } return; }
+  if (e.key === 'r' || e.key === 'R') { if (!e.metaKey && !e.ctrlKey) { e.preventDefault(); randomPair(); } return; }
+  if (e.key === 'e' || e.key === 'E') { if (!e.metaKey && !e.ctrlKey) { e.preventDefault(); copyCSS(); } return; }
+  if (e.key === 'd' || e.key === 'D') { e.preventDefault(); state.previewDark=!state.previewDark; saveState(); if(state.view==='preview') renderCurrentView(); return; }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); savePairing(); }
+});
+
+// ── Tab Clicks ──
+document.addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (tab && tab.dataset.view) switchView(tab.dataset.view);
+});
+
+// ── Help ──
+window.showHelp = () => $('#helpModal').classList.add('open');
+window.closeHelp = () => $('#helpModal').classList.remove('open');
+
+// ── Expose globals ──
+window.switchView = switchView;
+window.swapFonts = swapFonts;
+window.randomPair = randomPair;
+window.savePairing = savePairing;
+window.copyCSS = copyCSS;
+window.loadPairing = loadPairing;
+window.selectFont = selectFont;
+window.openFontDropdown = openFontDropdown;
+window.filterFonts = filterFonts;
+window.copyText = copyText;
+window.state = state;
+
+// ── Init ──
+loadState();
+loadFont(state.fontA);
+loadFont(state.fontB);
+loadFont(state.scaleFont);
+loadFont(state.previewHeading);
+loadFont(state.previewBody);
+renderCurrentView();
+
+})();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>
