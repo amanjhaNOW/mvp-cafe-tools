@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-26T19:36:34.182Z",
-  "count": 94,
+  "generatedAt": "2026-06-27T19:38:29.495Z",
+  "count": 95,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -754,6 +754,14 @@
       "emoji": "🔧",
       "day": 94,
       "cluster": "personal"
+    },
+    {
+      "slug": "funnel-clinic",
+      "title": "Funnel Clinic",
+      "tagline": "SaaS Funnel Leak Diagnostic",
+      "emoji": "🩺",
+      "day": 95,
+      "cluster": "product"
     }
   ]
 }

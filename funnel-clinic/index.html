@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Funnel Clinic — SaaS Funnel Leak Diagnostic</title>
+  <meta name="description" content="Diagnose SaaS funnel leaks, prioritize bottlenecks, and generate a copyable experiment plan from stage metrics.">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1114;
+      --panel: #111b1f;
+      --panel-2: #152329;
+      --line: #24383f;
+      --text: #edf7f6;
+      --muted: #98aaa9;
+      --soft: #c7d8d5;
+      --accent: #2dd4bf;
+      --accent-2: #fbbf24;
+      --danger: #fb7185;
+      --good: #86efac;
+      --blue: #7dd3fc;
+      --shadow: 0 18px 60px rgba(0, 0, 0, .28);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { overflow-x: hidden; }
+    button, input, textarea, select { font: inherit; font-size: 16px; }
+    button { min-height: 44px; border: 0; cursor: pointer; }
+    a { color: inherit; }
+
+    .app {
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(45, 212, 191, .10), transparent 270px),
+        radial-gradient(circle at 86% 18%, rgba(251, 191, 36, .12), transparent 280px),
+        var(--bg);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: max(14px, env(safe-area-inset-top)) 18px 14px;
+      background: rgba(11, 17, 20, .86);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .mark {
+      width: 42px; height: 42px; border-radius: 8px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, #2dd4bf, #7dd3fc);
+      color: #061112; font-weight: 900; box-shadow: var(--shadow);
+      flex: 0 0 auto;
+    }
+    .brand h1 { margin: 0; font-size: 18px; letter-spacing: 0; line-height: 1.1; }
+    .brand p { margin: 3px 0 0; color: var(--muted); font-size: 13px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .btn {
+      border-radius: 8px;
+      padding: 0 13px;
+      color: var(--text);
+      background: #17252b;
+      border: 1px solid var(--line);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn:hover { border-color: rgba(45, 212, 191, .8); }
+    .btn.primary { background: var(--accent); color: #061112; border-color: transparent; font-weight: 800; }
+    .btn.warn { background: rgba(251, 191, 36, .15); border-color: rgba(251, 191, 36, .45); color: #fde68a; }
+    .btn.icon { width: 44px; min-width: 44px; min-height: 44px; padding: 0; flex: 0 0 44px; }
+
+    .shell {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 290px minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .sidebar, .card, .panel {
+      background: rgba(17, 27, 31, .92);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .sidebar { padding: 14px; align-self: start; position: sticky; top: 84px; max-height: calc(100vh - 104px); overflow: auto; }
+    .side-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+    .side-head strong { font-size: 14px; }
+    .small { color: var(--muted); font-size: 12px; }
+    .scenario-list { display: grid; gap: 8px; }
+    .scenario {
+      width: 100%;
+      text-align: left;
+      padding: 11px;
+      border-radius: 8px;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid transparent;
+      min-height: 58px;
+    }
+    .scenario.active { background: #17252b; border-color: rgba(45, 212, 191, .55); }
+    .scenario b { display: block; font-size: 14px; line-height: 1.2; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .scenario span { color: var(--muted); font-size: 12px; }
+
+    .main { display: grid; gap: 18px; min-width: 0; }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+    .intro { padding: 22px; background: linear-gradient(135deg, rgba(21, 35, 41, .96), rgba(11, 17, 20, .9)); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .intro h2 { margin: 0; font-size: clamp(28px, 4vw, 50px); line-height: 1; letter-spacing: 0; max-width: 720px; }
+    .intro p { color: var(--soft); margin: 14px 0 0; font-size: 16px; max-width: 760px; }
+    .health-card { padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+    .score-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .score { font-size: 54px; font-weight: 900; line-height: 1; letter-spacing: 0; }
+    .badge { display: inline-flex; min-height: 28px; align-items: center; padding: 4px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; border: 1px solid currentColor; }
+    .badge.good { color: var(--good); background: rgba(134, 239, 172, .1); }
+    .badge.warn { color: var(--accent-2); background: rgba(251, 191, 36, .1); }
+    .badge.bad { color: var(--danger); background: rgba(251, 113, 133, .1); }
+    .meter { height: 12px; border-radius: 999px; background: #0b1518; border: 1px solid var(--line); overflow: hidden; margin-top: 16px; }
+    .meter > span { display: block; height: 100%; width: 50%; background: linear-gradient(90deg, var(--danger), var(--accent-2), var(--good)); border-radius: inherit; transition: width .2s ease; }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: rgba(17, 27, 31, .72);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 8px;
+      position: sticky;
+      top: 72px;
+      z-index: 8;
+      backdrop-filter: blur(12px);
+    }
+    .tab {
+      min-height: 44px;
+      padding: 0 13px;
+      border-radius: 8px;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid transparent;
+      font-weight: 700;
+    }
+    .tab.active { color: #061112; background: var(--accent); }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .grid { display: grid; gap: 14px; }
+    .two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card, .panel { padding: 16px; }
+    .card h3, .panel h3 { margin: 0 0 12px; font-size: 15px; letter-spacing: 0; }
+    .section-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .section-title h3 { margin: 0; }
+
+    label { display: grid; gap: 7px; color: var(--soft); font-size: 13px; font-weight: 700; }
+    input, textarea, select {
+      width: 100%;
+      min-height: 44px;
+      color: var(--text);
+      background: #0d171a;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 11px;
+      outline: none;
+    }
+    textarea { min-height: 98px; resize: vertical; line-height: 1.5; }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45, 212, 191, .12); }
+
+    .stage-grid { display: grid; gap: 10px; }
+    .stage-row {
+      display: grid;
+      grid-template-columns: 1.1fr minmax(94px, .5fr) minmax(80px, .4fr) minmax(80px, .4fr);
+      gap: 10px;
+      align-items: end;
+      padding: 10px;
+      background: rgba(21, 35, 41, .72);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .stage-name { font-weight: 800; margin-bottom: 4px; }
+    .stage-help { color: var(--muted); font-size: 12px; line-height: 1.25; }
+    .rate { font-size: 18px; font-weight: 900; }
+    .delta { font-size: 12px; color: var(--muted); }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .stat {
+      background: #0d171a;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 82px;
+    }
+    .stat span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 7px; }
+    .stat b { font-size: 22px; line-height: 1; }
+
+    .funnel-chart { display: grid; gap: 10px; }
+    .bar-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 86px; gap: 10px; align-items: center; }
+    .bar-label { color: var(--soft); font-size: 13px; font-weight: 800; }
+    .bar-track { height: 32px; background: #0d171a; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .bar-fill { height: 100%; min-width: 3px; background: linear-gradient(90deg, #2dd4bf, #7dd3fc); border-radius: inherit; }
+    .bar-value { text-align: right; color: var(--muted); font-size: 12px; font-weight: 800; }
+
+    .leak-card { display: grid; gap: 9px; background: #0d171a; border: 1px solid var(--line); border-radius: 8px; padding: 13px; }
+    .leak-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .leak-top b { font-size: 15px; }
+    .leak-card p { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.45; }
+    .impact { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
+
+    .experiment { display: grid; gap: 10px; background: #0d171a; border: 1px solid var(--line); border-radius: 8px; padding: 13px; }
+    .experiment header { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+    .experiment h4 { margin: 0; font-size: 15px; }
+    .experiment p { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.45; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 7px; }
+    .pill { color: var(--muted); border: 1px solid var(--line); background: rgba(255,255,255,.03); border-radius: 999px; padding: 5px 8px; font-size: 12px; font-weight: 700; }
+    .pill.good { color: var(--good); border-color: rgba(134, 239, 172, .38); }
+    .pill.warn { color: var(--accent-2); border-color: rgba(251, 191, 36, .38); }
+    .pill.bad { color: var(--danger); border-color: rgba(251, 113, 133, .38); }
+
+    .checklist { display: grid; gap: 8px; }
+    .check {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #0d171a;
+    }
+    .check button { border-radius: 8px; border: 1px solid var(--line); background: #17252b; color: var(--text); width: 44px; padding: 0; }
+    .check.done { opacity: .72; }
+    .check.done .check-text { text-decoration: line-through; color: var(--muted); }
+    .check-text { font-size: 14px; line-height: 1.4; }
+    .check-meta { color: var(--muted); font-size: 12px; margin-top: 3px; }
+
+    .report {
+      white-space: pre-wrap;
+      background: #071113;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      color: var(--soft);
+      line-height: 1.5;
+      max-height: 520px;
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(16px);
+      background: #edf7f6;
+      color: #071113;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-weight: 800;
+      opacity: 0;
+      pointer-events: none;
+      transition: .18s ease;
+      z-index: 99;
+      box-shadow: var(--shadow);
+      max-width: calc(100vw - 24px);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .mobile-only { display: none; }
+    .empty { color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 16px; text-align: center; }
+
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 1fr; padding: 12px; }
+      .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: min(330px, calc(100vw - 42px));
+        z-index: 30;
+        top: 0;
+        max-height: none;
+        border-radius: 0;
+        transform: translateX(-105%);
+        transition: transform .18s ease;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 25; }
+      .backdrop.open { display: block; }
+      .mobile-only { display: inline-flex; }
+      .hero { grid-template-columns: 1fr; }
+      .two, .three, .four { grid-template-columns: 1fr; }
+      .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .tabs { top: 71px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 8px; }
+      .tab { flex: 0 0 auto; }
+      .topbar { align-items: flex-start; }
+      .actions .optional { display: none; }
+    }
+
+    @media (max-width: 620px) {
+      .topbar { padding-left: 12px; padding-right: 12px; }
+      .brand p { max-width: 160px; }
+      .intro, .health-card, .card, .panel { padding: 14px; }
+      .stage-row {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+      }
+      .bar-row { grid-template-columns: 1fr; gap: 6px; }
+      .bar-value { text-align: left; }
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+      .score { font-size: 44px; }
+      .actions { gap: 6px; }
+      .btn { padding: 0 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <button class="btn icon mobile-only" id="openSidebar" aria-label="Open scenarios">☰</button>
+        <div class="mark">FC</div>
+        <div>
+          <h1>Funnel Clinic</h1>
+          <p>SaaS funnel leak diagnostic</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn optional" id="demoBtn">Demo</button>
+        <button class="btn" id="copyBtn">Copy</button>
+        <button class="btn primary" id="exportBtn">Export</button>
+      </div>
+    </div>
+
+    <div class="backdrop" id="backdrop"></div>
+    <div class="shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="side-head">
+          <div>
+            <strong>Scenarios</strong>
+            <div class="small" id="scenarioCount"></div>
+          </div>
+          <button class="btn icon" id="newScenario" title="New scenario">+</button>
+        </div>
+        <div class="scenario-list" id="scenarioList"></div>
+      </aside>
+
+      <main class="main">
+        <section class="hero">
+          <div class="intro">
+            <h2>Find the funnel stage quietly stealing your growth.</h2>
+            <p>Enter stage counts, benchmark the conversion rates, then turn the worst leak into a short experiment plan you can paste into Slack, Notion, or a product review.</p>
+          </div>
+          <div class="card health-card">
+            <div>
+              <div class="score-row">
+                <div>
+                  <div class="small">Funnel health</div>
+                  <div class="score" id="healthScore">0</div>
+                </div>
+                <span class="badge warn" id="healthBadge">Needs Data</span>
+              </div>
+              <div class="meter"><span id="healthMeter"></span></div>
+            </div>
+            <p class="small" id="healthSummary">Add funnel numbers to see the diagnosis.</p>
+          </div>
+        </section>
+
+        <nav class="tabs" aria-label="Views">
+          <button class="tab active" data-view="diagnose">Diagnose</button>
+          <button class="tab" data-view="experiments">Experiments</button>
+          <button class="tab" data-view="checklist">Checklist</button>
+          <button class="tab" data-view="report">Report</button>
+        </nav>
+
+        <section class="view active" id="diagnose">
+          <div class="grid two">
+            <div class="panel">
+              <div class="section-title">
+                <h3>Funnel Inputs</h3>
+                <button class="btn warn" id="addStage">Add stage</button>
+              </div>
+              <div class="grid two" style="margin-bottom:12px">
+                <label>Scenario name <input id="scenarioName" placeholder="UTMStamp acquisition funnel"></label>
+                <label>Monthly traffic source <input id="trafficSource" placeholder="LinkedIn, SEO, referrals"></label>
+              </div>
+              <div class="stage-grid" id="stageGrid"></div>
+            </div>
+            <div class="grid">
+              <div class="panel">
+                <h3>Funnel Shape</h3>
+                <div class="funnel-chart" id="funnelChart"></div>
+              </div>
+              <div class="panel">
+                <h3>Key Numbers</h3>
+                <div class="stat-grid" id="statGrid"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-top:14px">
+            <div class="section-title">
+              <h3>Leak Diagnosis</h3>
+              <span class="small">Ranked by impact against sane SaaS defaults</span>
+            </div>
+            <div class="grid three" id="leakGrid"></div>
+          </div>
+        </section>
+
+        <section class="view" id="experiments">
+          <div class="grid two">
+            <div class="panel">
+              <div class="section-title">
+                <h3>Recommended Experiments</h3>
+                <button class="btn" id="regenExperiments">Regenerate</button>
+              </div>
+              <div class="grid" id="experimentList"></div>
+            </div>
+            <div class="panel">
+              <h3>Custom Experiment</h3>
+              <div class="grid">
+                <label>Title <input id="customTitle" placeholder="Example: rewrite onboarding empty state"></label>
+                <label>Stage <select id="customStage"></select></label>
+                <label>Hypothesis <textarea id="customHypothesis" placeholder="We believe that..."></textarea></label>
+                <div class="grid three">
+                  <label>Impact <input id="customImpact" type="number" min="1" max="5" value="3"></label>
+                  <label>Confidence <input id="customConfidence" type="number" min="1" max="5" value="3"></label>
+                  <label>Ease <input id="customEase" type="number" min="1" max="5" value="3"></label>
+                </div>
+                <button class="btn primary" id="addExperiment">Add experiment</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="checklist">
+          <div class="grid two">
+            <div class="panel">
+              <div class="section-title">
+                <h3>Diagnostic Checklist</h3>
+                <button class="btn" id="resetChecks">Reset</button>
+              </div>
+              <div class="checklist" id="checklistItems"></div>
+            </div>
+            <div class="panel">
+              <h3>Next 7 Days</h3>
+              <div id="nextSeven" class="grid"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="report">
+          <div class="grid two">
+            <div class="panel">
+              <div class="section-title">
+                <h3>Action Plan</h3>
+                <button class="btn primary" id="copyReport">Copy report</button>
+              </div>
+              <div class="report" id="reportText"></div>
+            </div>
+            <div class="panel">
+              <h3>Backup</h3>
+              <div class="grid">
+                <button class="btn" id="downloadJson">Download JSON</button>
+                <label>Import JSON <input type="file" id="importJson" accept="application/json"></label>
+                <button class="btn warn" id="deleteScenario">Delete current scenario</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const KEY = 'mvpcafe:funnel-clinic:state';
+    const DEFAULT_STAGES = [
+      { id: cryptoId(), name: 'Visitors', help: 'People landing on the first meaningful surface', count: 12000, benchmark: 100 },
+      { id: cryptoId(), name: 'Signups', help: 'Accounts or qualified leads created', count: 780, benchmark: 8 },
+      { id: cryptoId(), name: 'Activated', help: 'Users reaching the first value moment', count: 210, benchmark: 35 },
+      { id: cryptoId(), name: 'Paid', help: 'Users or teams converting to revenue', count: 34, benchmark: 18 },
+      { id: cryptoId(), name: 'Retained M2', help: 'Paid users still active next month', count: 25, benchmark: 78 }
+    ];
+
+    const CHECKS = [
+      ['Tracking', 'Every stage has an event definition and owner. No spreadsheet archaeology.'],
+      ['Source quality', 'Break the first stage by source before touching landing copy.'],
+      ['First value', 'Define activation as a user outcome, not account creation.'],
+      ['Friction', 'Record the top three rage-clicks, dead ends, or support questions.'],
+      ['Objection', 'Write down why users hesitate before the paid step.'],
+      ['Retention', 'Check if users have a weekly reason to come back.'],
+      ['Experiment size', 'Pick one bottleneck and one metric. Do not boil the ocean.'],
+      ['Review date', 'Schedule a readout before the experiment starts.']
+    ];
+
+    const PLAYBOOK = {
+      signup: [
+        ['Sharpen the promise above the fold', 'Replace feature language with one measurable user outcome and mirror the acquisition source language.', 'Landing conversion', 4, 4, 4],
+        ['Remove one form field', 'Cut the least useful signup field for one week and compare signup rate plus downstream activation quality.', 'Signup completion', 3, 5, 5],
+        ['Add proof near CTA', 'Place one quantified customer proof point beside the primary CTA instead of below the fold.', 'CTA click rate', 3, 4, 4]
+      ],
+      activation: [
+        ['Redesign the first value path', 'Move users from signup to first meaningful output in under 90 seconds, with sample data if needed.', 'Activation rate', 5, 4, 3],
+        ['Trigger one contextual nudge', 'Send a helpful prompt only when the user stalls before the activation event.', 'Activation rate', 4, 3, 3],
+        ['Preload a starter template', 'Replace blank state anxiety with a ready-to-edit example matching the user segment.', 'Time to value', 4, 4, 4]
+      ],
+      paid: [
+        ['Add a usage-based upgrade moment', 'Show the paid CTA immediately after a high-intent action, not only inside settings.', 'Trial-to-paid', 4, 4, 3],
+        ['Clarify pricing risk reversal', 'Test a shorter pricing block with guarantee, cancellation, or free forever boundaries visible.', 'Paid conversion', 3, 4, 4],
+        ['Sales assist for hot accounts', 'Route accounts with repeated high-intent behavior to a manual follow-up within 24 hours.', 'Paid conversion', 4, 3, 3]
+      ],
+      retention: [
+        ['Create a weekly success loop', 'Add one recurring reason to return: digest, alert, report, score, or unfinished workflow.', 'M2 retention', 5, 4, 3],
+        ['Recover silent accounts', 'Trigger a useful recovery message after inactivity, using their last unfinished job as context.', 'Reactivation', 3, 4, 4],
+        ['Instrument habit moments', 'Measure which action predicts return usage, then redesign onboarding around that action.', 'Retention predictor', 4, 3, 3]
+      ],
+      generic: [
+        ['Interview five drop-offs', 'Talk to users who reached the leaking stage but did not progress. Capture exact words.', 'Learning quality', 4, 5, 3],
+        ['Segment the leak', 'Split the leaking stage by source, persona, device, and plan intent before changing product.', 'Leak clarity', 3, 5, 4],
+        ['Fix the handoff copy', 'Rewrite the microcopy between the two leaking stages so the next action is obvious.', 'Step conversion', 3, 4, 5]
+      ]
+    };
+
+    let state = load();
+    let currentId = state.currentId || state.scenarios[0].id;
+
+    const $ = (id) => document.getElementById(id);
+
+    function cryptoId() {
+      return 'id_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+    }
+
+    function seededScenario() {
+      return {
+        id: cryptoId(),
+        name: 'UTMStamp self-serve funnel',
+        trafficSource: 'LinkedIn + organic search',
+        stages: structuredClone(DEFAULT_STAGES),
+        experiments: [],
+        checks: {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      const first = seededScenario();
+      return { version: 1, currentId: first.id, scenarios: [first] };
+    }
+
+    function save() {
+      const scenario = current();
+      if (scenario) scenario.updatedAt = new Date().toISOString();
+      state.currentId = currentId;
+      localStorage.setItem(KEY, JSON.stringify(state));
+    }
+
+    function current() {
+      return state.scenarios.find(s => s.id === currentId) || state.scenarios[0];
+    }
+
+    function fmt(n) {
+      if (!Number.isFinite(n)) return '0';
+      return Math.round(n).toLocaleString('en-IN');
+    }
+
+    function pct(n) {
+      if (!Number.isFinite(n)) return '0%';
+      return `${n.toFixed(n >= 10 ? 1 : 2)}%`;
+    }
+
+    function conversion(stages, index) {
+      if (index === 0) return 100;
+      const prev = Number(stages[index - 1].count) || 0;
+      const val = Number(stages[index].count) || 0;
+      return prev ? (val / prev) * 100 : 0;
+    }
+
+    function analyze(s = current()) {
+      const stages = s.stages || [];
+      const first = Number(stages[0]?.count) || 0;
+      const last = Number(stages.at(-1)?.count) || 0;
+      const total = first ? (last / first) * 100 : 0;
+      const leaks = stages.slice(1).map((stage, i) => {
+        const idx = i + 1;
+        const actual = conversion(stages, idx);
+        const benchmark = Number(stage.benchmark) || 1;
+        const gap = Math.max(0, benchmark - actual);
+        const gapRatio = gap / benchmark;
+        const previous = Number(stages[idx - 1].count) || 0;
+        const expected = Math.round(previous * benchmark / 100);
+        const missing = Math.max(0, expected - (Number(stage.count) || 0));
+        return {
+          id: stage.id,
+          stage: stage.name,
+          from: stages[idx - 1].name,
+          actual,
+          benchmark,
+          gap,
+          gapRatio,
+          missing,
+          severity: gapRatio > .45 ? 'bad' : gapRatio > .18 ? 'warn' : 'good',
+          type: classify(stage.name)
+        };
+      }).sort((a, b) => (b.gapRatio * Math.max(1, b.missing)) - (a.gapRatio * Math.max(1, a.missing)));
+      const avgGap = leaks.length ? leaks.reduce((sum, l) => sum + Math.min(1, l.gapRatio), 0) / leaks.length : 1;
+      const health = Math.max(0, Math.min(100, Math.round(100 - avgGap * 100)));
+      return { stages, first, last, total, leaks, health, topLeak: leaks[0] };
+    }
+
+    function classify(name) {
+      const n = name.toLowerCase();
+      if (/sign|lead|account|visitor|traffic/.test(n)) return 'signup';
+      if (/activ|setup|onboard|aha|value/.test(n)) return 'activation';
+      if (/paid|pay|trial|revenue|subscr|demo/.test(n)) return 'paid';
+      if (/retain|return|active|m2|month|renew/.test(n)) return 'retention';
+      return 'generic';
+    }
+
+    function render() {
+      const s = current();
+      if (!s) return;
+      renderSidebar();
+      $('scenarioName').value = s.name || '';
+      $('trafficSource').value = s.trafficSource || '';
+      renderStages(s);
+      renderDerived(s);
+      save();
+    }
+
+    function renderDerived(s = current()) {
+      renderHealth(s);
+      renderChart(s);
+      renderStats(s);
+      renderLeaks(s);
+      renderExperiments(s);
+      renderChecks(s);
+      renderReport(s);
+    }
+
+    function renderSidebar() {
+      $('scenarioCount').textContent = `${state.scenarios.length} saved`;
+      $('scenarioList').innerHTML = state.scenarios.map(s => {
+        const a = analyze(s);
+        return `<button class="scenario ${s.id === currentId ? 'active' : ''}" data-id="${s.id}">
+          <b>${escapeHtml(s.name || 'Untitled scenario')}</b>
+          <span>${a.health}/100 health · ${escapeHtml(a.topLeak?.stage || 'No leak')}</span>
+        </button>`;
+      }).join('');
+    }
+
+    function renderStages(s) {
+      $('stageGrid').innerHTML = s.stages.map((stage, i) => {
+        const rate = conversion(s.stages, i);
+        const delta = i === 0 ? 'Base stage' : `${pct(rate - (Number(stage.benchmark) || 0))} vs benchmark`;
+        return `<div class="stage-row" data-stage="${stage.id}">
+          <div class="grid">
+            <label>Stage <input data-field="name" value="${escapeHtml(stage.name)}"></label>
+            <label>Meaning <input data-field="help" value="${escapeHtml(stage.help || '')}"></label>
+          </div>
+          <label>Count <input type="number" min="0" data-field="count" value="${Number(stage.count) || 0}"></label>
+          <label>Benchmark % <input type="number" min="0" max="100" step="0.1" data-field="benchmark" value="${Number(stage.benchmark) || 0}" ${i === 0 ? 'disabled' : ''}></label>
+          <div>
+            <div class="rate">${pct(rate)}</div>
+            <div class="delta">${delta}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderHealth(s) {
+      const a = analyze(s);
+      $('healthScore').textContent = a.health;
+      $('healthMeter').style.width = `${a.health}%`;
+      const badge = $('healthBadge');
+      badge.className = 'badge ' + (a.health >= 78 ? 'good' : a.health >= 52 ? 'warn' : 'bad');
+      badge.textContent = a.health >= 78 ? 'Healthy' : a.health >= 52 ? 'Leaky' : 'Critical';
+      $('healthSummary').textContent = a.topLeak ? `Biggest leak: ${a.topLeak.from} → ${a.topLeak.stage}. Fixing it to benchmark could add about ${fmt(a.topLeak.missing)} users at that step.` : 'Add stages to see the diagnosis.';
+    }
+
+    function renderChart(s) {
+      const max = Math.max(...s.stages.map(st => Number(st.count) || 0), 1);
+      $('funnelChart').innerHTML = s.stages.map(st => {
+        const val = Number(st.count) || 0;
+        const w = Math.max(2, (val / max) * 100);
+        return `<div class="bar-row">
+          <div class="bar-label">${escapeHtml(st.name)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${w}%"></div></div>
+          <div class="bar-value">${fmt(val)}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderStats(s) {
+      const a = analyze(s);
+      const top = a.topLeak;
+      const activated = s.stages.find(st => classify(st.name) === 'activation');
+      $('statGrid').innerHTML = [
+        ['End-to-end', pct(a.total)],
+        ['Final users', fmt(a.last)],
+        ['Top leak', top ? top.stage : 'None'],
+        ['Activation', activated ? pct(conversion(s.stages, s.stages.indexOf(activated))) : 'n/a']
+      ].map(([k, v]) => `<div class="stat"><span>${k}</span><b>${v}</b></div>`).join('');
+    }
+
+    function renderLeaks(s) {
+      const leaks = analyze(s).leaks;
+      $('leakGrid').innerHTML = leaks.length ? leaks.map(l => `<div class="leak-card">
+        <div class="leak-top">
+          <b>${escapeHtml(l.from)} → ${escapeHtml(l.stage)}</b>
+          <span class="badge ${l.severity}">${l.severity === 'good' ? 'OK' : l.severity === 'warn' ? 'Watch' : 'Fix'}</span>
+        </div>
+        <p>${diagnosisText(l)}</p>
+        <div class="impact">
+          <span>Actual ${pct(l.actual)}</span>
+          <span>Benchmark ${pct(l.benchmark)}</span>
+          <span>Missing ${fmt(l.missing)}</span>
+        </div>
+      </div>`).join('') : '<div class="empty">Add at least two stages.</div>';
+    }
+
+    function diagnosisText(l) {
+      if (l.severity === 'good') return 'This step is close to or above the benchmark. Keep monitoring it while fixing larger leaks.';
+      if (l.type === 'signup') return 'The promise, source quality, or first CTA is probably underperforming. Check message match before redesigning everything.';
+      if (l.type === 'activation') return 'Users are arriving but not reaching value. This is usually onboarding friction, unclear first action, or blank-state anxiety.';
+      if (l.type === 'paid') return 'Users understand some value but the upgrade moment is weak. Look for pricing anxiety, missing proof, or CTA timing.';
+      if (l.type === 'retention') return 'The product may solve a one-time job without a return loop. Add recurring value before spending more on acquisition.';
+      return 'This step underperforms its benchmark. Segment the drop-off, then test the smallest change that removes friction.';
+    }
+
+    function ensureExperiments(s) {
+      if (s.experiments && s.experiments.length) return;
+      s.experiments = suggestedExperiments(s);
+    }
+
+    function suggestedExperiments(s) {
+      const leaks = analyze(s).leaks.filter(l => l.severity !== 'good').slice(0, 2);
+      const source = leaks.length ? leaks : analyze(s).leaks.slice(0, 1);
+      const list = [];
+      source.forEach(leak => {
+        (PLAYBOOK[leak.type] || PLAYBOOK.generic).forEach(([title, hypothesis, metric, impact, confidence, ease]) => {
+          list.push({ id: cryptoId(), title, stage: leak.stage, hypothesis, metric, impact, confidence, ease, status: 'Idea' });
+        });
+      });
+      return list.slice(0, 6);
+    }
+
+    function renderExperiments(s) {
+      ensureExperiments(s);
+      $('customStage').innerHTML = s.stages.slice(1).map(st => `<option>${escapeHtml(st.name)}</option>`).join('');
+      $('experimentList').innerHTML = s.experiments.length ? s.experiments
+        .sort((a, b) => ice(b) - ice(a))
+        .map(ex => `<article class="experiment" data-ex="${ex.id}">
+          <header>
+            <div>
+              <h4>${escapeHtml(ex.title)}</h4>
+              <div class="small">${escapeHtml(ex.stage)} · ${escapeHtml(ex.metric || 'Step conversion')}</div>
+            </div>
+            <span class="badge ${ice(ex) >= 4 ? 'good' : ice(ex) >= 3 ? 'warn' : 'bad'}">${ice(ex).toFixed(1)} ICE</span>
+          </header>
+          <p>${escapeHtml(ex.hypothesis)}</p>
+          <div class="pill-row">
+            <span class="pill">Impact ${ex.impact}/5</span>
+            <span class="pill">Confidence ${ex.confidence}/5</span>
+            <span class="pill">Ease ${ex.ease}/5</span>
+            <button class="btn" data-action="cycle">${escapeHtml(ex.status)}</button>
+            <button class="btn" data-action="delete">Delete</button>
+          </div>
+        </article>`).join('') : '<div class="empty">No experiments yet.</div>';
+    }
+
+    function ice(ex) {
+      return ((Number(ex.impact) || 0) + (Number(ex.confidence) || 0) + (Number(ex.ease) || 0)) / 3;
+    }
+
+    function renderChecks(s) {
+      $('checklistItems').innerHTML = CHECKS.map(([group, text], i) => {
+        const done = !!s.checks[i];
+        return `<div class="check ${done ? 'done' : ''}">
+          <button data-check="${i}">${done ? '✓' : ''}</button>
+          <div><div class="check-text">${escapeHtml(text)}</div><div class="check-meta">${escapeHtml(group)}</div></div>
+        </div>`;
+      }).join('');
+      const a = analyze(s);
+      const leak = a.topLeak;
+      const best = (s.experiments || []).sort((x,y) => ice(y)-ice(x)).slice(0, 3);
+      $('nextSeven').innerHTML = [
+        `Day 1: Validate tracking for ${leak ? leak.from + ' → ' + leak.stage : 'the main funnel'}.`,
+        `Day 2: Segment the leak by source and device.`,
+        `Day 3: Interview or inspect five drop-offs.`,
+        ...best.map((ex, i) => `Day ${i + 4}: Ship "${ex.title}".`)
+      ].slice(0, 7).map(t => `<div class="leak-card"><p>${escapeHtml(t)}</p></div>`).join('');
+    }
+
+    function reportText(s = current()) {
+      const a = analyze(s);
+      const lines = [];
+      lines.push(`# Funnel Clinic: ${s.name}`);
+      lines.push('');
+      lines.push(`Traffic source: ${s.trafficSource || 'Not specified'}`);
+      lines.push(`Funnel health: ${a.health}/100`);
+      lines.push(`End-to-end conversion: ${pct(a.total)} (${fmt(a.first)} → ${fmt(a.last)})`);
+      lines.push('');
+      lines.push('## Stage Metrics');
+      s.stages.forEach((st, i) => {
+        lines.push(`- ${st.name}: ${fmt(Number(st.count) || 0)} (${i === 0 ? 'base' : pct(conversion(s.stages, i)) + ' vs ' + pct(Number(st.benchmark) || 0) + ' benchmark'})`);
+      });
+      lines.push('');
+      lines.push('## Top Leaks');
+      a.leaks.slice(0, 4).forEach((l, i) => {
+        lines.push(`${i + 1}. ${l.from} → ${l.stage}: actual ${pct(l.actual)}, benchmark ${pct(l.benchmark)}, missing ~${fmt(l.missing)} users.`);
+      });
+      lines.push('');
+      lines.push('## Recommended Experiments');
+      (s.experiments || []).sort((x,y) => ice(y)-ice(x)).slice(0, 5).forEach((ex, i) => {
+        lines.push(`${i + 1}. ${ex.title} (${ex.stage}, ICE ${ice(ex).toFixed(1)})`);
+        lines.push(`   Hypothesis: ${ex.hypothesis}`);
+      });
+      lines.push('');
+      lines.push('## Next Move');
+      lines.push(a.topLeak ? `Fix ${a.topLeak.from} → ${a.topLeak.stage} first. It is the highest-impact constraint right now.` : 'Add more data before deciding.');
+      return lines.join('\n');
+    }
+
+    function renderReport(s) {
+      $('reportText').textContent = reportText(s);
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function toast(msg) {
+      $('toast').textContent = msg;
+      $('toast').classList.add('show');
+      setTimeout(() => $('toast').classList.remove('show'), 1700);
+    }
+
+    async function copyText(text) {
+      await navigator.clipboard.writeText(text);
+      toast('Copied');
+    }
+
+    function download(name, text, type = 'application/json') {
+      const blob = new Blob([text], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.addEventListener('input', (e) => {
+      const s = current();
+      if (e.target.id === 'scenarioName') {
+        s.name = e.target.value;
+        renderSidebar();
+        renderReport(s);
+        save();
+        return;
+      }
+      if (e.target.id === 'trafficSource') {
+        s.trafficSource = e.target.value;
+        renderReport(s);
+        save();
+        return;
+      }
+      const row = e.target.closest('.stage-row');
+      if (row && e.target.dataset.field) {
+        const st = s.stages.find(x => x.id === row.dataset.stage);
+        const field = e.target.dataset.field;
+        st[field] = ['count', 'benchmark'].includes(field) ? (Number(e.target.value) || 0) : e.target.value;
+        s.experiments = [];
+        renderDerived(s);
+        save();
+        return;
+      }
+    });
+
+    $('stageGrid').addEventListener('change', () => render());
+
+    document.addEventListener('click', (e) => {
+      const scenarioBtn = e.target.closest('.scenario');
+      if (scenarioBtn) {
+        currentId = scenarioBtn.dataset.id;
+        closeSidebar();
+        render();
+      }
+      const tab = e.target.closest('.tab');
+      if (tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+        document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === tab.dataset.view));
+      }
+      const checkBtn = e.target.closest('[data-check]');
+      if (checkBtn) {
+        const s = current();
+        const key = checkBtn.dataset.check;
+        s.checks[key] = !s.checks[key];
+        render();
+      }
+      const exCard = e.target.closest('.experiment');
+      if (exCard && e.target.dataset.action) {
+        const s = current();
+        const ex = s.experiments.find(x => x.id === exCard.dataset.ex);
+        if (e.target.dataset.action === 'cycle') {
+          const states = ['Idea', 'Running', 'Won', 'Lost'];
+          ex.status = states[(states.indexOf(ex.status) + 1) % states.length];
+        }
+        if (e.target.dataset.action === 'delete') {
+          s.experiments = s.experiments.filter(x => x.id !== exCard.dataset.ex);
+        }
+        render();
+      }
+    });
+
+    $('newScenario').onclick = () => {
+      const s = seededScenario();
+      s.name = 'New funnel scenario';
+      s.stages.forEach((st, i) => st.count = i ? 0 : 1000);
+      state.scenarios.unshift(s);
+      currentId = s.id;
+      closeSidebar();
+      render();
+    };
+
+    $('addStage').onclick = () => {
+      current().stages.push({ id: cryptoId(), name: 'New stage', help: 'Rename this stage in the code-free template later', count: 0, benchmark: 50 });
+      render();
+    };
+
+    $('demoBtn').onclick = () => {
+      const s = seededScenario();
+      state.scenarios.unshift(s);
+      currentId = s.id;
+      render();
+      toast('Demo loaded');
+    };
+
+    $('regenExperiments').onclick = () => {
+      current().experiments = suggestedExperiments(current());
+      render();
+      toast('Experiments regenerated');
+    };
+
+    $('addExperiment').onclick = () => {
+      const s = current();
+      s.experiments.push({
+        id: cryptoId(),
+        title: $('customTitle').value || 'Untitled experiment',
+        stage: $('customStage').value,
+        hypothesis: $('customHypothesis').value || 'We believe this will improve the leaking step because it removes one user objection.',
+        metric: 'Step conversion',
+        impact: Number($('customImpact').value) || 3,
+        confidence: Number($('customConfidence').value) || 3,
+        ease: Number($('customEase').value) || 3,
+        status: 'Idea'
+      });
+      $('customTitle').value = '';
+      $('customHypothesis').value = '';
+      render();
+    };
+
+    $('resetChecks').onclick = () => { current().checks = {}; render(); };
+    $('copyBtn').onclick = () => copyText(reportText());
+    $('copyReport').onclick = () => copyText(reportText());
+    $('exportBtn').onclick = () => download(`funnel-clinic-${Date.now()}.md`, reportText(), 'text/markdown');
+    $('downloadJson').onclick = () => download('funnel-clinic-backup.json', JSON.stringify(state, null, 2));
+    $('deleteScenario').onclick = () => {
+      if (state.scenarios.length === 1) return toast('Keep at least one scenario');
+      state.scenarios = state.scenarios.filter(s => s.id !== currentId);
+      currentId = state.scenarios[0].id;
+      render();
+    };
+    $('importJson').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const imported = JSON.parse(await file.text());
+      if (imported.scenarios) {
+        state = imported;
+        currentId = state.currentId || state.scenarios[0].id;
+      }
+      render();
+      toast('Imported');
+    };
+    $('openSidebar').onclick = () => { $('sidebar').classList.add('open'); $('backdrop').classList.add('open'); };
+    $('backdrop').onclick = closeSidebar;
+    function closeSidebar() { $('sidebar').classList.remove('open'); $('backdrop').classList.remove('open'); }
+
+    render();
+  </script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>
