@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Retention Lab - Cohort Retention Simulator | mvp.cafe</title>
+<meta name="description" content="Model activation, monthly retention, expansion revenue, CAC payback, and LTV from simple cohort assumptions.">
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --panel: #ffffff;
+    --panel-2: #eef3f8;
+    --ink: #172033;
+    --muted: #657287;
+    --line: #dce4ee;
+    --brand: #0f766e;
+    --brand-2: #2563eb;
+    --warn: #b45309;
+    --bad: #be123c;
+    --good: #15803d;
+    --shadow: 0 18px 46px rgba(23, 32, 51, 0.09);
+    --radius: 8px;
+    --tap: 44px;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; overflow-x: hidden; }
+  body {
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      linear-gradient(180deg, rgba(15, 118, 110, 0.08), transparent 340px),
+      var(--bg);
+    color: var(--ink);
+    line-height: 1.45;
+  }
+  button, input, select, textarea { font: inherit; }
+  button {
+    min-height: var(--tap);
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 0 14px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  button:hover { border-color: #a9b8ca; }
+  button.primary { background: var(--brand); color: white; border-color: var(--brand); }
+  button.secondary { background: #e9f7f5; color: #0f5f59; border-color: #bce3dd; }
+  button.danger { background: #fff1f2; color: var(--bad); border-color: #fecdd3; }
+  input, select, textarea {
+    width: 100%;
+    min-height: var(--tap);
+    border: 1px solid var(--line);
+    background: white;
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 16px;
+  }
+  textarea { min-height: 84px; resize: vertical; }
+  label { display: grid; gap: 6px; color: var(--muted); font-size: 0.82rem; font-weight: 700; }
+  .app { width: min(1220px, 100%); margin: 0 auto; padding: 22px; }
+  .topbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .title h1 { margin: 0; font-size: clamp(1.65rem, 4.4vw, 3rem); letter-spacing: 0; line-height: 1.05; }
+  .title p { margin: 9px 0 0; color: var(--muted); max-width: 720px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 0 14px;
+    scrollbar-width: thin;
+  }
+  .tab {
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.76);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .tab.active { background: var(--ink); color: white; border-color: var(--ink); }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr); gap: 16px; align-items: start; }
+  .panel {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(220, 228, 238, 0.9);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .panel-head h2, .panel-head h3 { margin: 0; font-size: 1rem; }
+  .panel-head span { color: var(--muted); font-size: 0.82rem; font-weight: 700; }
+  .panel-body { padding: 16px; }
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .metric {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px;
+    min-width: 0;
+  }
+  .metric .label { color: var(--muted); font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
+  .metric .value { margin-top: 6px; font-size: clamp(1.15rem, 3vw, 1.65rem); font-weight: 900; line-height: 1.05; overflow-wrap: anywhere; }
+  .metric .hint { margin-top: 6px; color: var(--muted); font-size: 0.78rem; }
+  .chart-wrap { width: 100%; height: 310px; position: relative; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .form-grid .wide { grid-column: 1 / -1; }
+  .cohort-list { display: grid; gap: 10px; }
+  .cohort-row {
+    display: grid;
+    grid-template-columns: 1fr 92px 92px 44px;
+    gap: 8px;
+    align-items: end;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px;
+    background: #fbfdff;
+  }
+  .cohort-row button { padding: 0; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; min-width: 680px; background: white; }
+  th, td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: white; z-index: 1; }
+  th { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; background: #f8fafc; }
+  th:first-child { background: #f8fafc; }
+  tr:last-child td { border-bottom: 0; }
+  .insights { display: grid; gap: 10px; }
+  .insight {
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--brand-2);
+    background: white;
+    border-radius: var(--radius);
+    padding: 12px;
+  }
+  .insight.good { border-left-color: var(--good); }
+  .insight.warn { border-left-color: var(--warn); }
+  .insight.bad { border-left-color: var(--bad); }
+  .insight strong { display: block; margin-bottom: 4px; }
+  .scenario-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .scenario {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: white;
+    padding: 12px;
+  }
+  .scenario h3 { margin: 0 0 10px; font-size: 1rem; }
+  .scenario dl { display: grid; gap: 8px; margin: 0; }
+  .scenario div { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 0.9rem; }
+  .scenario dt { font-weight: 700; }
+  .scenario dd { margin: 0; color: var(--ink); font-weight: 900; }
+  .summary-box {
+    min-height: 190px;
+    background: #0f172a;
+    color: #e5eefb;
+    border-radius: var(--radius);
+    padding: 14px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .empty { padding: 24px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: var(--radius); }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: white;
+    border-radius: 999px;
+    padding: 10px 16px;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    transition: 0.18s ease;
+    z-index: 20;
+    max-width: min(92vw, 620px);
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .view { display: none; }
+  .view.active { display: block; }
+  @media (max-width: 880px) {
+    .app { padding: 14px; }
+    .topbar { display: grid; }
+    .actions { justify-content: stretch; }
+    .actions button { flex: 1 1 140px; }
+    .grid { grid-template-columns: 1fr; }
+    .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .chart-wrap { height: 260px; }
+    .scenario-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    .app { padding: 12px; }
+    .panel-head { align-items: flex-start; flex-direction: column; }
+    .panel-body { padding: 12px; }
+    .metrics { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .cohort-row { grid-template-columns: 1fr 1fr; }
+    .cohort-row label:first-child { grid-column: 1 / -1; }
+    .cohort-row button { grid-column: 1 / -1; }
+    .tabs button { min-width: 122px; }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="topbar">
+    <div class="title">
+      <h1>Retention Lab</h1>
+      <p>Model cohorts, churn, expansion, CAC payback, and LTV before you promise growth that the product cannot hold.</p>
+    </div>
+    <div class="actions">
+      <button class="secondary" id="copySummary">Copy Summary</button>
+      <button id="exportCsv">Export CSV</button>
+      <button class="danger" id="resetDemo">Reset Demo</button>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Tool sections">
+    <button class="tab active" data-view="dashboard">Dashboard</button>
+    <button class="tab" data-view="cohorts">Cohorts</button>
+    <button class="tab" data-view="scenarios">Scenarios</button>
+    <button class="tab" data-view="summary">Snapshot</button>
+  </nav>
+
+  <section id="dashboard" class="view active">
+    <div class="metrics" id="metrics"></div>
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Revenue and retained accounts</h2>
+            <span>12-month blended cohort projection</span>
+          </div>
+          <select id="chartMode" aria-label="Chart metric">
+            <option value="mrr">MRR</option>
+            <option value="accounts">Retained accounts</option>
+            <option value="retention">Retention rate</option>
+          </select>
+        </div>
+        <div class="panel-body">
+          <div class="chart-wrap"><canvas id="mainChart" width="900" height="360"></canvas></div>
+        </div>
+      </section>
+      <aside class="panel">
+        <div class="panel-head"><h3>Product readout</h3><span id="healthLabel">Live</span></div>
+        <div class="panel-body"><div class="insights" id="insights"></div></div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="cohorts" class="view">
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Cohort planner</h2>
+          <button class="primary" id="addCohort">Add Cohort</button>
+        </div>
+        <div class="panel-body">
+          <div class="cohort-list" id="cohortList"></div>
+        </div>
+      </section>
+      <aside class="panel">
+        <div class="panel-head"><h3>Assumptions</h3><span>Saved locally</span></div>
+        <div class="panel-body">
+          <div class="form-grid" id="assumptionForm"></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="scenarios" class="view">
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Scenario comparison</h2>
+          <span>Base case vs retention upside and downside</span>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="scenario-grid" id="scenarioGrid"></div>
+      </div>
+    </section>
+  </section>
+
+  <section id="summary" class="view">
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Board-ready snapshot</h2>
+            <span>Copy this into a review doc or investor update</span>
+          </div>
+          <button class="primary" id="copySummary2">Copy</button>
+        </div>
+        <div class="panel-body">
+          <div class="summary-box" id="summaryText"></div>
+        </div>
+      </section>
+      <aside class="panel">
+        <div class="panel-head"><h3>Monthly matrix</h3><span>Scroll inside on phone</span></div>
+        <div class="panel-body">
+          <div class="table-wrap"><table id="projectionTable"></table></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(() => {
+  const STORAGE_KEY = 'mvpcafe:retention-lab:state';
+  const months = ['M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11','M12'];
+  const defaultState = {
+    assumptions: {
+      activation: 68,
+      monthlyChurn: 5.2,
+      expansion: 1.4,
+      arpa: 2200,
+      grossMargin: 82,
+      cac: 3600,
+      targetPayback: 8
+    },
+    cohorts: [
+      { id: crypto.randomUUID(), name: 'Jan founder-led beta', signups: 120, paid: 38 },
+      { id: crypto.randomUUID(), name: 'Feb content launch', signups: 180, paid: 56 },
+      { id: crypto.randomUUID(), name: 'Mar partner push', signups: 260, paid: 74 },
+      { id: crypto.randomUUID(), name: 'Apr paid tests', signups: 330, paid: 88 }
+    ]
+  };
+  let state = load();
+  let chartMode = 'mrr';
+
+  const $ = (sel) => document.querySelector(sel);
+  const fmt = new Intl.NumberFormat('en-IN');
+  const money = (n) => 'Rs ' + fmt.format(Math.round(n));
+  const pct = (n) => (Math.round(n * 10) / 10) + '%';
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : structuredClone(defaultState);
+    } catch (err) {
+      return structuredClone(defaultState);
+    }
+  }
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+  function toast(message) {
+    const el = $('#toast');
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => el.classList.remove('show'), 1800);
+  }
+  function model(custom = {}) {
+    const a = { ...state.assumptions, ...custom };
+    const churn = a.monthlyChurn / 100;
+    const expansion = a.expansion / 100;
+    const activation = a.activation / 100;
+    const rows = months.map((month, idx) => {
+      let accounts = 0;
+      let activeSignups = 0;
+      state.cohorts.forEach((c, cIdx) => {
+        const age = idx - cIdx;
+        if (age < 0) return;
+        const paid = Number(c.paid) || 0;
+        const signups = Number(c.signups) || 0;
+        activeSignups += signups * activation * Math.pow(1 - churn, age);
+        accounts += paid * Math.pow(1 - churn, age);
+      });
+      const arpa = a.arpa * Math.pow(1 + expansion, idx);
+      const mrr = accounts * arpa;
+      const revenue = mrr;
+      const margin = revenue * (a.grossMargin / 100);
+      const acquisitionSpend = idx < state.cohorts.length ? (Number(state.cohorts[idx].paid) || 0) * a.cac : 0;
+      const retention = activeSignups ? (accounts / activeSignups) * 100 : 0;
+      return { month, accounts, activeSignups, arpa, mrr, revenue, margin, acquisitionSpend, retention };
+    });
+    const totalSpend = rows.reduce((sum, r) => sum + r.acquisitionSpend, 0);
+    const totalMargin = rows.reduce((sum, r) => sum + r.margin, 0);
+    const latest = rows[rows.length - 1];
+    const startMrr = rows.find(r => r.mrr > 0)?.mrr || 1;
+    const ltv = a.arpa * (a.grossMargin / 100) / Math.max(churn, 0.005);
+    const payback = a.cac / Math.max(a.arpa * (a.grossMargin / 100), 1);
+    return { assumptions: a, rows, latest, totalSpend, totalMargin, startMrr, ltv, payback };
+  }
+  function renderMetrics(m) {
+    const growth = ((m.latest.mrr - m.startMrr) / Math.max(m.startMrr, 1)) * 100;
+    const ratio = m.ltv / Math.max(m.assumptions.cac, 1);
+    $('#metrics').innerHTML = [
+      ['Month 12 MRR', money(m.latest.mrr), pct(growth) + ' vs first active month'],
+      ['Retained accounts', fmt.format(m.latest.accounts), pct(m.latest.retention) + ' paid/active retained'],
+      ['LTV:CAC', ratio.toFixed(1) + 'x', 'Payback ' + m.payback.toFixed(1) + ' months'],
+      ['Gross margin run', money(m.totalMargin), '12-month modeled margin']
+    ].map(([label, value, hint]) => `<article class="metric"><div class="label">${label}</div><div class="value">${value}</div><div class="hint">${hint}</div></article>`).join('');
+  }
+  function renderAssumptions() {
+    const fields = [
+      ['activation', 'Activation %', 0, 100, 1],
+      ['monthlyChurn', 'Monthly churn %', 0.1, 35, 0.1],
+      ['expansion', 'Monthly expansion %', -10, 20, 0.1],
+      ['arpa', 'ARPA / month (Rs)', 100, 500000, 100],
+      ['grossMargin', 'Gross margin %', 1, 99, 1],
+      ['cac', 'CAC per paid account (Rs)', 0, 200000, 100],
+      ['targetPayback', 'Target payback months', 1, 36, 1]
+    ];
+    $('#assumptionForm').innerHTML = fields.map(([key, label, min, max, step]) => `
+      <label>${label}
+        <input data-assumption="${key}" type="number" min="${min}" max="${max}" step="${step}" value="${state.assumptions[key]}">
+      </label>
+    `).join('');
+  }
+  function renderCohorts() {
+    const list = $('#cohortList');
+    if (!state.cohorts.length) {
+      list.innerHTML = '<div class="empty">No cohorts yet. Add one to start modeling retention.</div>';
+      return;
+    }
+    list.innerHTML = state.cohorts.map((c) => `
+      <div class="cohort-row" data-id="${c.id}">
+        <label>Cohort <input data-field="name" value="${escapeHtml(c.name)}"></label>
+        <label>Signups <input data-field="signups" type="number" min="0" step="1" value="${c.signups}"></label>
+        <label>Paid <input data-field="paid" type="number" min="0" step="1" value="${c.paid}"></label>
+        <button class="danger" data-remove="${c.id}" aria-label="Remove cohort">x</button>
+      </div>
+    `).join('');
+  }
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (s) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  }
+  function renderInsights(m) {
+    const ltvRatio = m.ltv / Math.max(m.assumptions.cac, 1);
+    const finalRetention = m.latest.retention;
+    const notes = [];
+    notes.push({
+      tone: ltvRatio >= 3 ? 'good' : ltvRatio >= 1.5 ? 'warn' : 'bad',
+      title: ltvRatio >= 3 ? 'Unit economics look fundable' : 'Unit economics need attention',
+      body: `LTV:CAC is ${ltvRatio.toFixed(1)}x with CAC at ${money(m.assumptions.cac)}.`
+    });
+    notes.push({
+      tone: m.payback <= m.assumptions.targetPayback ? 'good' : 'warn',
+      title: m.payback <= m.assumptions.targetPayback ? 'Payback is inside target' : 'Payback misses target',
+      body: `Modeled payback is ${m.payback.toFixed(1)} months against a ${m.assumptions.targetPayback}-month target.`
+    });
+    notes.push({
+      tone: finalRetention >= 45 ? 'good' : finalRetention >= 25 ? 'warn' : 'bad',
+      title: finalRetention >= 45 ? 'Retention is doing the heavy lifting' : 'Retention is the bottleneck',
+      body: `Month 12 paid retention over active signups lands at ${pct(finalRetention)}.`
+    });
+    $('#healthLabel').textContent = notes.some(n => n.tone === 'bad') ? 'Risky' : notes.some(n => n.tone === 'warn') ? 'Watch' : 'Healthy';
+    $('#insights').innerHTML = notes.map(n => `<article class="insight ${n.tone}"><strong>${n.title}</strong><span>${n.body}</span></article>`).join('');
+  }
+  function drawChart(m) {
+    const canvas = $('#mainChart');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    const pad = { l: 54, r: 22, t: 24, b: 46 };
+    const values = m.rows.map(r => chartMode === 'accounts' ? r.accounts : chartMode === 'retention' ? r.retention : r.mrr);
+    const max = Math.max(...values, 10) * 1.12;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#dce4ee';
+    ctx.lineWidth = 1;
+    ctx.fillStyle = '#657287';
+    ctx.font = '13px Inter, system-ui, sans-serif';
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.t + (h - pad.t - pad.b) * (i / 4);
+      ctx.beginPath();
+      ctx.moveTo(pad.l, y);
+      ctx.lineTo(w - pad.r, y);
+      ctx.stroke();
+      const v = max * (1 - i / 4);
+      ctx.fillText(chartMode === 'mrr' ? shortMoney(v) : Math.round(v), 8, y + 4);
+    }
+    const step = (w - pad.l - pad.r) / (values.length - 1);
+    ctx.beginPath();
+    values.forEach((v, i) => {
+      const x = pad.l + i * step;
+      const y = pad.t + (h - pad.t - pad.b) * (1 - v / max);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = '#0f766e';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    values.forEach((v, i) => {
+      const x = pad.l + i * step;
+      const y = pad.t + (h - pad.t - pad.b) * (1 - v / max);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#0f766e'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.fillStyle = '#657287';
+      ctx.fillText(months[i], x - 10, h - 18);
+    });
+  }
+  function shortMoney(n) {
+    if (n >= 10000000) return 'Rs ' + (n / 10000000).toFixed(1) + 'Cr';
+    if (n >= 100000) return 'Rs ' + (n / 100000).toFixed(1) + 'L';
+    if (n >= 1000) return 'Rs ' + Math.round(n / 1000) + 'K';
+    return 'Rs ' + Math.round(n);
+  }
+  function renderScenarios() {
+    const cases = [
+      ['Downside', { monthlyChurn: state.assumptions.monthlyChurn * 1.35, activation: Math.max(10, state.assumptions.activation - 10), expansion: state.assumptions.expansion - 0.5 }],
+      ['Base', {}],
+      ['Upside', { monthlyChurn: Math.max(0.2, state.assumptions.monthlyChurn * 0.72), activation: Math.min(98, state.assumptions.activation + 8), expansion: state.assumptions.expansion + 0.8 }]
+    ];
+    $('#scenarioGrid').innerHTML = cases.map(([name, custom]) => {
+      const m = model(custom);
+      const ratio = m.ltv / Math.max(m.assumptions.cac, 1);
+      return `<article class="scenario">
+        <h3>${name}</h3>
+        <dl>
+          <div><dt>Month 12 MRR</dt><dd>${money(m.latest.mrr)}</dd></div>
+          <div><dt>Accounts</dt><dd>${fmt.format(m.latest.accounts)}</dd></div>
+          <div><dt>LTV:CAC</dt><dd>${ratio.toFixed(1)}x</dd></div>
+          <div><dt>Payback</dt><dd>${m.payback.toFixed(1)} mo</dd></div>
+          <div><dt>Churn</dt><dd>${pct(m.assumptions.monthlyChurn)}</dd></div>
+        </dl>
+      </article>`;
+    }).join('');
+  }
+  function summary(m) {
+    const ratio = m.ltv / Math.max(m.assumptions.cac, 1);
+    return `Retention Lab Snapshot
+
+Month 12 MRR: ${money(m.latest.mrr)}
+Retained accounts: ${fmt.format(m.latest.accounts)}
+LTV:CAC: ${ratio.toFixed(1)}x
+CAC payback: ${m.payback.toFixed(1)} months
+Monthly churn: ${pct(m.assumptions.monthlyChurn)}
+Activation: ${pct(m.assumptions.activation)}
+ARPA: ${money(m.assumptions.arpa)}
+
+Readout: ${ratio >= 3 ? 'Scale can be justified if acquisition quality holds.' : ratio >= 1.5 ? 'Promising, but tighten retention or CAC before aggressive spend.' : 'Do not scale acquisition yet. Fix retention and payback first.'}
+
+Next experiment: improve activation by 5-10 points or reduce monthly churn by 20%, then rerun this model.`;
+  }
+  function renderSummary(m) {
+    $('#summaryText').textContent = summary(m);
+    const head = '<thead><tr><th>Month</th>' + m.rows.map(r => `<th>${r.month}</th>`).join('') + '</tr></thead>';
+    const rows = [
+      ['MRR', r => money(r.mrr)],
+      ['Accounts', r => fmt.format(r.accounts)],
+      ['Retention', r => pct(r.retention)],
+      ['ARPA', r => money(r.arpa)]
+    ].map(([label, fn]) => `<tr><td>${label}</td>${m.rows.map(r => `<td>${fn(r)}</td>`).join('')}</tr>`).join('');
+    $('#projectionTable').innerHTML = head + '<tbody>' + rows + '</tbody>';
+  }
+  function render() {
+    save();
+    renderAssumptions();
+    renderCohorts();
+    updateOutputs();
+  }
+  function updateOutputs() {
+    save();
+    const m = model();
+    renderMetrics(m);
+    renderInsights(m);
+    drawChart(m);
+    renderScenarios();
+    renderSummary(m);
+  }
+  function exportCsv() {
+    const m = model();
+    const lines = [['month','mrr','accounts','retention_percent','arpa','gross_margin','acquisition_spend']];
+    m.rows.forEach(r => lines.push([r.month, Math.round(r.mrr), Math.round(r.accounts), r.retention.toFixed(2), Math.round(r.arpa), Math.round(r.margin), Math.round(r.acquisitionSpend)]));
+    const csv = lines.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'retention-lab-projection.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('CSV exported');
+  }
+  async function copySummary() {
+    await navigator.clipboard.writeText(summary(model()));
+    toast('Summary copied');
+  }
+  document.addEventListener('click', (e) => {
+    const tab = e.target.closest('.tab');
+    if (tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+      document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === tab.dataset.view));
+      setTimeout(() => drawChart(model()), 40);
+    }
+    if (e.target.id === 'addCohort') {
+      state.cohorts.push({ id: crypto.randomUUID(), name: 'New cohort', signups: 100, paid: 30 });
+      render();
+    }
+    if (e.target.dataset.remove) {
+      state.cohorts = state.cohorts.filter(c => c.id !== e.target.dataset.remove);
+      render();
+    }
+  });
+  document.addEventListener('input', (e) => {
+    if (e.target.dataset.assumption) {
+      state.assumptions[e.target.dataset.assumption] = Number(e.target.value);
+      updateOutputs();
+    }
+    if (e.target.dataset.field) {
+      const row = e.target.closest('.cohort-row');
+      const c = state.cohorts.find(item => item.id === row.dataset.id);
+      c[e.target.dataset.field] = e.target.dataset.field === 'name' ? e.target.value : Number(e.target.value);
+      updateOutputs();
+    }
+  });
+  $('#chartMode').addEventListener('change', (e) => { chartMode = e.target.value; drawChart(model()); });
+  $('#exportCsv').addEventListener('click', exportCsv);
+  $('#copySummary').addEventListener('click', copySummary);
+  $('#copySummary2').addEventListener('click', copySummary);
+  $('#resetDemo').addEventListener('click', () => {
+    state = structuredClone(defaultState);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    render();
+    toast('Demo restored');
+  });
+  window.addEventListener('resize', () => drawChart(model()));
+  render();
+})();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-27T19:38:29.495Z",
-  "count": 95,
+  "generatedAt": "2026-06-28T19:35:14.999Z",
+  "count": 96,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -761,6 +761,14 @@
       "tagline": "SaaS Funnel Leak Diagnostic",
       "emoji": "🩺",
       "day": 95,
+      "cluster": "product"
+    },
+    {
+      "slug": "retention-lab",
+      "title": "Retention Lab",
+      "tagline": "Cohort Retention Simulator",
+      "emoji": "📈",
+      "day": 96,
       "cluster": "product"
     }
   ]
