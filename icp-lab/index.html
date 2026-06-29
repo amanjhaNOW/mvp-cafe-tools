@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ICP Lab - Ideal Customer Profile Scorer | mvp.cafe</title>
+<meta name="description" content="Score customer segments by pain, urgency, budget, reach, edge, and sales friction to pick a sharper ideal customer profile.">
+<style>
+  :root {
+    --bg: #f7f4ee;
+    --panel: #fffdf8;
+    --panel-2: #f0ebe1;
+    --ink: #1d2430;
+    --muted: #667085;
+    --line: #dfd6c9;
+    --brand: #0d9488;
+    --brand-2: #7c3aed;
+    --good: #15803d;
+    --warn: #b45309;
+    --bad: #be123c;
+    --shadow: 0 18px 50px rgba(29, 36, 48, 0.1);
+    --radius: 8px;
+    --tap: 44px;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; overflow-x: hidden; }
+  body {
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      linear-gradient(180deg, rgba(13, 148, 136, 0.12), transparent 320px),
+      linear-gradient(90deg, rgba(124, 58, 237, 0.08), transparent 540px),
+      var(--bg);
+    color: var(--ink);
+    line-height: 1.45;
+  }
+  button, input, select, textarea { font: inherit; }
+  button {
+    min-height: var(--tap);
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    border-radius: var(--radius);
+    padding: 0 14px;
+    cursor: pointer;
+    font-weight: 800;
+  }
+  button:hover { border-color: #b8ad9d; }
+  button.primary { background: var(--brand); color: white; border-color: var(--brand); }
+  button.secondary { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe; }
+  button.danger { background: #fff1f2; color: var(--bad); border-color: #fecdd3; }
+  input, select, textarea {
+    width: 100%;
+    min-height: var(--tap);
+    border: 1px solid var(--line);
+    background: white;
+    color: var(--ink);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 16px;
+  }
+  textarea { min-height: 84px; resize: vertical; }
+  label { display: grid; gap: 6px; color: var(--muted); font-size: 0.82rem; font-weight: 800; }
+  .app { width: min(1220px, 100%); margin: 0 auto; padding: 22px; }
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .title h1 {
+    margin: 0;
+    font-size: clamp(1.65rem, 4.3vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: 0;
+  }
+  .title p { margin: 9px 0 0; color: var(--muted); max-width: 760px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 0 14px;
+    scrollbar-width: thin;
+  }
+  .tab { flex: 0 0 auto; color: var(--muted); background: rgba(255, 253, 248, 0.82); white-space: nowrap; }
+  .tab.active { color: white; background: var(--ink); border-color: var(--ink); }
+  .view { display: none; }
+  .view.active { display: block; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(310px, 0.75fr); gap: 16px; align-items: start; }
+  .panel {
+    background: rgba(255, 253, 248, 0.94);
+    border: 1px solid rgba(223, 214, 201, 0.92);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .panel-head h2, .panel-head h3 { margin: 0; font-size: 1rem; }
+  .panel-head span { color: var(--muted); font-size: 0.82rem; font-weight: 800; }
+  .panel-body { padding: 16px; }
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .metric {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px;
+    min-width: 0;
+  }
+  .metric .label { color: var(--muted); font-size: 0.74rem; font-weight: 900; text-transform: uppercase; }
+  .metric .value { margin-top: 6px; font-size: clamp(1.1rem, 3vw, 1.62rem); font-weight: 950; line-height: 1.05; overflow-wrap: anywhere; }
+  .metric .hint { margin-top: 6px; color: var(--muted); font-size: 0.78rem; }
+  .rank-list { display: grid; gap: 10px; }
+  .rank-card {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    border: 1px solid var(--line);
+    background: white;
+    border-radius: var(--radius);
+    padding: 12px;
+  }
+  .rank-num {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: #ccfbf1;
+    color: #115e59;
+    font-weight: 950;
+  }
+  .rank-card h3 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+  .rank-card p { margin: 5px 0 0; color: var(--muted); font-size: 0.88rem; }
+  .score-pill {
+    min-width: 76px;
+    text-align: center;
+    border-radius: 999px;
+    padding: 8px 10px;
+    background: #111827;
+    color: white;
+    font-weight: 950;
+  }
+  .bars { display: grid; gap: 9px; }
+  .bar-row { display: grid; grid-template-columns: 92px 1fr 34px; gap: 8px; align-items: center; font-size: 0.82rem; color: var(--muted); font-weight: 800; }
+  .bar-track { height: 10px; background: #ede7dd; border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); border-radius: 999px; }
+  .segment-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .segment-card {
+    display: grid;
+    gap: 10px;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px;
+  }
+  .segment-card h3 { margin: 0; font-size: 1rem; }
+  .segment-card p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    border-radius: 999px;
+    padding: 4px 9px;
+    font-size: 0.78rem;
+    font-weight: 850;
+    color: #344054;
+    background: #f2eee7;
+    border: 1px solid var(--line);
+  }
+  .card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .card-actions button { flex: 1 1 88px; }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .wide { grid-column: 1 / -1; }
+  .slider-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 42px;
+    gap: 10px;
+    align-items: center;
+  }
+  input[type="range"] { padding: 0; min-height: var(--tap); accent-color: var(--brand); }
+  .matrix {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .quadrant {
+    min-height: 210px;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px;
+  }
+  .quadrant h3 { margin: 0 0 8px; font-size: 0.96rem; }
+  .quadrant p { margin: 0 0 10px; color: var(--muted); font-size: 0.82rem; }
+  .mini-seg {
+    border-left: 4px solid var(--brand);
+    background: #f8fafc;
+    border-radius: var(--radius);
+    padding: 9px;
+    margin-top: 8px;
+  }
+  .mini-seg strong { display: block; font-size: 0.9rem; }
+  .mini-seg span { display: block; color: var(--muted); font-size: 0.78rem; margin-top: 3px; }
+  .brief-box {
+    min-height: 360px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    border-radius: var(--radius);
+    background: #111827;
+    color: #e5e7eb;
+    padding: 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.86rem;
+  }
+  .interview-list { display: grid; gap: 10px; counter-reset: question; }
+  .question {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: white;
+    padding: 12px 12px 12px 46px;
+  }
+  .question::before {
+    counter-increment: question;
+    content: counter(question);
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: #ede9fe;
+    color: #5b21b6;
+    font-weight: 900;
+    font-size: 0.78rem;
+  }
+  .question strong { display: block; margin-bottom: 4px; }
+  .question span { color: var(--muted); font-size: 0.84rem; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+  table { width: 100%; min-width: 760px; border-collapse: collapse; background: white; }
+  th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+  th { background: #f8f4ee; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; }
+  td.num, th.num { text-align: right; }
+  tr:last-child td { border-bottom: 0; }
+  .empty { padding: 24px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: var(--radius); }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: white;
+    border-radius: 999px;
+    padding: 10px 16px;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    transition: 0.18s ease;
+    z-index: 20;
+    max-width: min(92vw, 640px);
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @media (max-width: 900px) {
+    .app { padding: 14px; }
+    .topbar { display: grid; }
+    .actions { justify-content: stretch; }
+    .actions button { flex: 1 1 140px; }
+    .grid { grid-template-columns: 1fr; }
+    .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .segment-grid, .matrix { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 540px) {
+    .app { padding: 12px; }
+    .panel-head { align-items: flex-start; flex-direction: column; }
+    .panel-body { padding: 12px; }
+    .metrics, .form-grid { grid-template-columns: 1fr; }
+    .rank-card { grid-template-columns: 40px minmax(0, 1fr); }
+    .score-pill { grid-column: 1 / -1; border-radius: var(--radius); }
+    .tabs button { min-width: 118px; }
+    .bar-row { grid-template-columns: 80px 1fr 30px; }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="topbar">
+    <div class="title">
+      <h1>ICP Lab</h1>
+      <p>Score customer segments by pain, urgency, budget, reach, product edge, and sales friction. Pick the ICP worth chasing before you burn weeks selling to everyone.</p>
+    </div>
+    <div class="actions">
+      <button class="secondary" id="copyBriefBtn">Copy Brief</button>
+      <button id="exportBtn">Export JSON</button>
+      <button class="primary" id="newSegmentBtn">New Segment</button>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Views">
+    <button class="tab active" data-view="scoreboard">Scoreboard</button>
+    <button class="tab" data-view="segments">Segments</button>
+    <button class="tab" data-view="matrix">Matrix</button>
+    <button class="tab" data-view="research">Research Plan</button>
+    <button class="tab" data-view="export">Export</button>
+  </nav>
+
+  <section class="view active" id="scoreboard"></section>
+  <section class="view" id="segments"></section>
+  <section class="view" id="matrix"></section>
+  <section class="view" id="research"></section>
+  <section class="view" id="export"></section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<template id="segmentFormTemplate">
+  <div class="panel">
+    <div class="panel-head">
+      <h2 id="formTitle">Segment</h2>
+      <span>1 = weak, 5 = excellent</span>
+    </div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <label class="wide">Segment name
+          <input id="segName" maxlength="70" placeholder="Example: B2B SaaS marketing teams">
+        </label>
+        <label class="wide">Situation
+          <textarea id="segSituation" maxlength="240" placeholder="What is happening in their world?"></textarea>
+        </label>
+        <label>Pain intensity
+          <div class="slider-row"><input id="segPain" type="range" min="1" max="5" step="1"><strong id="segPainVal">3</strong></div>
+        </label>
+        <label>Urgency
+          <div class="slider-row"><input id="segUrgency" type="range" min="1" max="5" step="1"><strong id="segUrgencyVal">3</strong></div>
+        </label>
+        <label>Budget access
+          <div class="slider-row"><input id="segBudget" type="range" min="1" max="5" step="1"><strong id="segBudgetVal">3</strong></div>
+        </label>
+        <label>Reachability
+          <div class="slider-row"><input id="segReach" type="range" min="1" max="5" step="1"><strong id="segReachVal">3</strong></div>
+        </label>
+        <label>Product edge
+          <div class="slider-row"><input id="segEdge" type="range" min="1" max="5" step="1"><strong id="segEdgeVal">3</strong></div>
+        </label>
+        <label>Sales friction
+          <div class="slider-row"><input id="segFriction" type="range" min="1" max="5" step="1"><strong id="segFrictionVal">3</strong></div>
+        </label>
+        <label>Buyer
+          <input id="segBuyer" maxlength="90" placeholder="Who signs off?">
+        </label>
+        <label>Channel
+          <input id="segChannel" maxlength="90" placeholder="Where can you reach them?">
+        </label>
+        <label class="wide">Proof needed
+          <textarea id="segProof" maxlength="220" placeholder="What would make them believe?"></textarea>
+        </label>
+        <label class="wide">First experiment
+          <textarea id="segExperiment" maxlength="220" placeholder="Smallest test to validate this segment"></textarea>
+        </label>
+      </div>
+      <div class="card-actions" style="margin-top:12px">
+        <button class="primary" id="saveSegmentBtn">Save Segment</button>
+        <button id="resetFormBtn">Clear</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+(() => {
+  'use strict';
+  const STORAGE_KEY = 'mvpcafe:icp-lab:state';
+  const views = ['scoreboard', 'segments', 'matrix', 'research', 'export'];
+  let state = loadState();
+  let activeView = 'scoreboard';
+  let editingId = state.segments[0]?.id || null;
+
+  const els = {
+    toast: document.getElementById('toast'),
+    copyBriefBtn: document.getElementById('copyBriefBtn'),
+    exportBtn: document.getElementById('exportBtn'),
+    newSegmentBtn: document.getElementById('newSegmentBtn')
+  };
+
+  function seedState() {
+    return {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      segments: [
+        {
+          id: uid(),
+          name: 'Early B2B SaaS founders',
+          situation: 'They have a working product, scattered traction, and need sharper focus before hiring growth or sales.',
+          pain: 5,
+          urgency: 5,
+          budget: 3,
+          reach: 4,
+          edge: 5,
+          friction: 2,
+          buyer: 'Founder or CEO',
+          channel: 'LinkedIn, founder communities, warm intros, build-in-public posts',
+          proof: 'A clear before/after teardown that finds leaks in their current funnel or positioning.',
+          experiment: 'Offer five free ICP audits from public websites and ask for a 20-minute debrief.'
+        },
+        {
+          id: uid(),
+          name: 'Marketing teams at 50-200 person SaaS',
+          situation: 'They run campaigns across email, paid, content, and sales, but attribution and message consistency are messy.',
+          pain: 4,
+          urgency: 4,
+          budget: 4,
+          reach: 3,
+          edge: 4,
+          friction: 3,
+          buyer: 'Head of Marketing / Growth',
+          channel: 'LinkedIn search, marketing ops Slack groups, newsletter sponsorships',
+          proof: 'Benchmark against their current campaign tracking gaps and show time saved for the team.',
+          experiment: 'Run a landing-page and signature-tracking teardown for 20 target accounts.'
+        },
+        {
+          id: uid(),
+          name: 'Productized service agencies',
+          situation: 'They need repeatable client diagnostics, faster proposals, and proof that their process is not random.',
+          pain: 4,
+          urgency: 3,
+          budget: 4,
+          reach: 5,
+          edge: 4,
+          friction: 2,
+          buyer: 'Agency owner / delivery head',
+          channel: 'Founder Twitter, agency newsletters, communities, direct outbound',
+          proof: 'Reusable client report template and faster discovery workflow.',
+          experiment: 'Package ICP Lab output into an agency-branded audit and sell 3 pilot seats.'
+        },
+        {
+          id: uid(),
+          name: 'D2C brand operators',
+          situation: 'They care about acquisition efficiency and repeat purchase but often chase tactics without a segment thesis.',
+          pain: 3,
+          urgency: 3,
+          budget: 3,
+          reach: 3,
+          edge: 2,
+          friction: 3,
+          buyer: 'Founder / Growth lead',
+          channel: 'Instagram, Shopify groups, performance marketing agencies',
+          proof: 'Revenue-lift case studies and channel-specific examples.',
+          experiment: 'Interview 10 operators about customer segment decisions before campaign launches.'
+        }
+      ]
+    };
+  }
+
+  function uid() {
+    return 'seg_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return seedState();
+      const parsed = JSON.parse(raw);
+      if (!parsed.segments?.length) return seedState();
+      return parsed;
+    } catch (err) {
+      return seedState();
+    }
+  }
+
+  function saveState() {
+    state.updatedAt = new Date().toISOString();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function score(segment) {
+    const positive = (segment.pain * 2) + (segment.urgency * 1.5) + (segment.budget * 1.2) + segment.reach + (segment.edge * 1.4);
+    const penalty = segment.friction * 1.15;
+    return Math.max(0, Math.round(((positive - penalty) / 30.35) * 100));
+  }
+
+  function fitLabel(value) {
+    if (value >= 78) return 'Prime ICP';
+    if (value >= 64) return 'Strong bet';
+    if (value >= 50) return 'Needs proof';
+    return 'Weak fit';
+  }
+
+  function sortedSegments() {
+    return [...state.segments].sort((a, b) => score(b) - score(a));
+  }
+
+  function topSegment() {
+    return sortedSegments()[0] || null;
+  }
+
+  function avg(key) {
+    if (!state.segments.length) return 0;
+    return state.segments.reduce((sum, segment) => sum + Number(segment[key] || 0), 0) / state.segments.length;
+  }
+
+  function render() {
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.view === activeView);
+    });
+    views.forEach(view => document.getElementById(view).classList.toggle('active', view === activeView));
+    renderScoreboard();
+    renderSegments();
+    renderMatrix();
+    renderResearch();
+    renderExport();
+  }
+
+  function renderScoreboard() {
+    const top = topSegment();
+    const ranked = sortedSegments();
+    const html = `
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Ranked ICP Candidates</h2>
+            <span>${state.segments.length} segments</span>
+          </div>
+          <div class="panel-body">
+            <div class="metrics">
+              <div class="metric"><div class="label">Top Score</div><div class="value">${top ? score(top) : 0}</div><div class="hint">${top ? top.name : 'No segment'}</div></div>
+              <div class="metric"><div class="label">Avg Pain</div><div class="value">${avg('pain').toFixed(1)}</div><div class="hint">Intensity across segments</div></div>
+              <div class="metric"><div class="label">Avg Reach</div><div class="value">${avg('reach').toFixed(1)}</div><div class="hint">Can you access buyers?</div></div>
+              <div class="metric"><div class="label">Low Friction</div><div class="value">${state.segments.filter(s => s.friction <= 2).length}</div><div class="hint">Fast sales motion candidates</div></div>
+            </div>
+            <div class="rank-list">
+              ${ranked.map((segment, index) => rankCard(segment, index)).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>${top ? 'Best Bet' : 'Best Bet'}</h2>
+            <span>${top ? fitLabel(score(top)) : 'Add segments'}</span>
+          </div>
+          <div class="panel-body">
+            ${top ? detailPanel(top) : '<div class="empty">Add a segment to see a recommendation.</div>'}
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('scoreboard').innerHTML = html;
+  }
+
+  function rankCard(segment, index) {
+    return `
+      <article class="rank-card">
+        <div class="rank-num">${index + 1}</div>
+        <div>
+          <h3>${escapeHtml(segment.name)}</h3>
+          <p>${escapeHtml(segment.situation)}</p>
+          <div class="chip-row" style="margin-top:8px">
+            <span class="chip">${fitLabel(score(segment))}</span>
+            <span class="chip">Buyer: ${escapeHtml(segment.buyer || 'Unknown')}</span>
+          </div>
+        </div>
+        <div class="score-pill">${score(segment)}/100</div>
+      </article>
+    `;
+  }
+
+  function detailPanel(segment) {
+    return `
+      <div class="bars">
+        ${bar('Pain', segment.pain)}
+        ${bar('Urgency', segment.urgency)}
+        ${bar('Budget', segment.budget)}
+        ${bar('Reach', segment.reach)}
+        ${bar('Edge', segment.edge)}
+        ${bar('Friction', 6 - segment.friction, 'Lower is better')}
+      </div>
+      <div class="segment-card" style="margin-top:14px">
+        <h3>Why this segment wins</h3>
+        <p>${recommendation(segment)}</p>
+        <div class="chip-row">
+          <span class="chip">Channel: ${escapeHtml(segment.channel || 'TBD')}</span>
+          <span class="chip">Buyer: ${escapeHtml(segment.buyer || 'TBD')}</span>
+        </div>
+      </div>
+      <div class="segment-card" style="margin-top:10px">
+        <h3>First validation move</h3>
+        <p>${escapeHtml(segment.experiment || 'Run five customer interviews and compare stated urgency to willingness to pay.')}</p>
+      </div>
+    `;
+  }
+
+  function bar(label, value, hint = '') {
+    return `
+      <div class="bar-row">
+        <span>${label}</span>
+        <div class="bar-track" title="${hint}"><div class="bar-fill" style="width:${Math.max(0, Math.min(100, value * 20))}%"></div></div>
+        <strong>${value}</strong>
+      </div>
+    `;
+  }
+
+  function recommendation(segment) {
+    const positives = [];
+    if (segment.pain >= 4) positives.push('high pain');
+    if (segment.urgency >= 4) positives.push('clear urgency');
+    if (segment.reach >= 4) positives.push('reachable buyers');
+    if (segment.edge >= 4) positives.push('strong product edge');
+    if (segment.friction <= 2) positives.push('low sales friction');
+    if (!positives.length) return 'The score is not screaming yet. Tighten the use case or find a more painful niche before scaling outreach.';
+    return `This looks promising because it combines ${positives.join(', ')}. Validate willingness to pay before widening the segment.`;
+  }
+
+  function renderSegments() {
+    const form = buildForm();
+    const cards = state.segments.map(segment => `
+      <article class="segment-card">
+        <h3>${escapeHtml(segment.name)}</h3>
+        <p>${escapeHtml(segment.situation)}</p>
+        <div class="chip-row">
+          <span class="chip">Score ${score(segment)}/100</span>
+          <span class="chip">${fitLabel(score(segment))}</span>
+          <span class="chip">Friction ${segment.friction}/5</span>
+        </div>
+        <div class="card-actions">
+          <button data-edit="${segment.id}">Edit</button>
+          <button class="danger" data-delete="${segment.id}">Delete</button>
+        </div>
+      </article>
+    `).join('');
+    document.getElementById('segments').innerHTML = `
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Segment Library</h2>
+            <span>Tap edit to tune scores</span>
+          </div>
+          <div class="panel-body">
+            <div class="segment-grid">${cards}</div>
+          </div>
+        </div>
+        <div id="formMount">${form}</div>
+      </div>
+    `;
+    hydrateForm();
+  }
+
+  function buildForm() {
+    return document.getElementById('segmentFormTemplate').innerHTML;
+  }
+
+  function currentSegment() {
+    return state.segments.find(segment => segment.id === editingId) || state.segments[0] || null;
+  }
+
+  function hydrateForm() {
+    const segment = currentSegment() || {
+      name: '',
+      situation: '',
+      pain: 3,
+      urgency: 3,
+      budget: 3,
+      reach: 3,
+      edge: 3,
+      friction: 3,
+      buyer: '',
+      channel: '',
+      proof: '',
+      experiment: ''
+    };
+    const byId = id => document.getElementById(id);
+    byId('formTitle').textContent = editingId ? 'Edit Segment' : 'New Segment';
+    byId('segName').value = segment.name || '';
+    byId('segSituation').value = segment.situation || '';
+    byId('segBuyer').value = segment.buyer || '';
+    byId('segChannel').value = segment.channel || '';
+    byId('segProof').value = segment.proof || '';
+    byId('segExperiment').value = segment.experiment || '';
+    ['Pain', 'Urgency', 'Budget', 'Reach', 'Edge', 'Friction'].forEach(key => {
+      const prop = key.toLowerCase();
+      byId(`seg${key}`).value = segment[prop] || 3;
+      byId(`seg${key}Val`).textContent = segment[prop] || 3;
+      byId(`seg${key}`).addEventListener('input', event => {
+        byId(`seg${key}Val`).textContent = event.target.value;
+      });
+    });
+  }
+
+  function readForm() {
+    const byId = id => document.getElementById(id);
+    return {
+      id: editingId || uid(),
+      name: byId('segName').value.trim() || 'Untitled segment',
+      situation: byId('segSituation').value.trim(),
+      pain: Number(byId('segPain').value),
+      urgency: Number(byId('segUrgency').value),
+      budget: Number(byId('segBudget').value),
+      reach: Number(byId('segReach').value),
+      edge: Number(byId('segEdge').value),
+      friction: Number(byId('segFriction').value),
+      buyer: byId('segBuyer').value.trim(),
+      channel: byId('segChannel').value.trim(),
+      proof: byId('segProof').value.trim(),
+      experiment: byId('segExperiment').value.trim()
+    };
+  }
+
+  function saveSegment() {
+    const segment = readForm();
+    const index = state.segments.findIndex(item => item.id === segment.id);
+    if (index >= 0) state.segments[index] = segment;
+    else state.segments.push(segment);
+    editingId = segment.id;
+    saveState();
+    render();
+    showToast('Segment saved');
+  }
+
+  function renderMatrix() {
+    const quadrants = {
+      prime: { title: 'Prime ICP', hint: 'High score, lower friction. Start here.', items: [] },
+      nurture: { title: 'Nurture Later', hint: 'Strong need, but slower sales or harder reach.', items: [] },
+      test: { title: 'Needs Proof', hint: 'Some signal, not enough to prioritize yet.', items: [] },
+      avoid: { title: 'Avoid For Now', hint: 'Weak pain or high friction. Do not build around this.', items: [] }
+    };
+    state.segments.forEach(segment => {
+      const s = score(segment);
+      if (s >= 72 && segment.friction <= 3) quadrants.prime.items.push(segment);
+      else if (s >= 62) quadrants.nurture.items.push(segment);
+      else if (s >= 48) quadrants.test.items.push(segment);
+      else quadrants.avoid.items.push(segment);
+    });
+    document.getElementById('matrix').innerHTML = `
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Segment Decision Matrix</h2>
+          <span>Score × sales friction</span>
+        </div>
+        <div class="panel-body">
+          <div class="matrix">
+            ${Object.values(quadrants).map(q => `
+              <section class="quadrant">
+                <h3>${q.title}</h3>
+                <p>${q.hint}</p>
+                ${q.items.length ? q.items.sort((a,b) => score(b) - score(a)).map(miniSegment).join('') : '<div class="empty">No segments here.</div>'}
+              </section>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function miniSegment(segment) {
+    return `<div class="mini-seg"><strong>${escapeHtml(segment.name)}</strong><span>Score ${score(segment)}/100 · Pain ${segment.pain}/5 · Friction ${segment.friction}/5</span></div>`;
+  }
+
+  function renderResearch() {
+    const top = topSegment();
+    const questions = top ? interviewQuestions(top) : [];
+    document.getElementById('research').innerHTML = `
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Customer Research Plan</h2>
+            <span>${top ? top.name : 'No ICP selected'}</span>
+          </div>
+          <div class="panel-body">
+            ${top ? `
+              <div class="metrics">
+                <div class="metric"><div class="label">Target</div><div class="value">${score(top)}</div><div class="hint">${fitLabel(score(top))}</div></div>
+                <div class="metric"><div class="label">Buyer</div><div class="value" style="font-size:1rem">${escapeHtml(top.buyer || 'TBD')}</div><div class="hint">Decision maker</div></div>
+                <div class="metric"><div class="label">Channel</div><div class="value" style="font-size:1rem">${escapeHtml(top.channel || 'TBD')}</div><div class="hint">First reach</div></div>
+                <div class="metric"><div class="label">Proof</div><div class="value" style="font-size:1rem">${escapeHtml(top.proof || 'TBD')}</div><div class="hint">Belief trigger</div></div>
+              </div>
+              <div class="interview-list">${questions.map(q => `<div class="question"><strong>${q.title}</strong><span>${q.hint}</span></div>`).join('')}</div>
+            ` : '<div class="empty">Add a segment to generate research questions.</div>'}
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Outreach Opener</h2>
+            <span>Copy-ready</span>
+          </div>
+          <div class="panel-body">
+            <div class="brief-box">${escapeHtml(top ? outreach(top) : 'No segment selected yet.')}</div>
+            <div class="card-actions" style="margin-top:12px"><button class="primary" data-copy-outreach>Copy Opener</button></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function interviewQuestions(segment) {
+    return [
+      { title: 'What triggered you to care about this problem now?', hint: `Listen for urgency beyond "nice to have" in ${segment.name}.` },
+      { title: 'How do you solve this today?', hint: 'Map spreadsheets, tools, agencies, manual work, and workarounds.' },
+      { title: 'What happens if this stays broken for another quarter?', hint: 'Quantify loss, missed revenue, time cost, or leadership pressure.' },
+      { title: 'Who else needs to approve a solution?', hint: `Validate whether ${segment.buyer || 'the buyer'} is really the buyer.` },
+      { title: 'What would make you trust a new product here?', hint: segment.proof || 'Look for proof requirements, security blockers, and success criteria.' },
+      { title: 'What would you pay if this worked?', hint: 'Ask after pain is established, not at the start.' },
+      { title: 'Can I show you a rough solution next week?', hint: 'A soft commitment is better than polite praise.' }
+    ];
+  }
+
+  function outreach(segment) {
+    return `Hey [Name] — quick question.
+
+I am studying how ${segment.name.toLowerCase()} handle this:
+"${segment.situation}"
+
+My hunch is the real pain is ${segment.pain >= 4 ? 'urgent enough to deserve a focused workflow' : 'still unclear and needs sharper validation'}.
+
+Would you be open to a 15-minute teardown? No pitch. I will share a short note on:
+1. where the current workflow leaks time or money
+2. what proof would make a solution believable
+3. whether this is worth solving now or later
+
+If useful, I can send the teardown first.`;
+  }
+
+  function renderExport() {
+    document.getElementById('export').innerHTML = `
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Markdown Brief</h2>
+            <span>Paste into Notion, Docs, or a memo</span>
+          </div>
+          <div class="panel-body">
+            <div class="brief-box" id="briefBox">${escapeHtml(markdownBrief())}</div>
+            <div class="card-actions" style="margin-top:12px">
+              <button class="primary" data-copy-brief>Copy Markdown</button>
+              <button data-download-md>Download .md</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Raw Score Table</h2>
+            <span>Transparent formula</span>
+          </div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Segment</th><th class="num">Score</th><th class="num">Pain</th><th class="num">Urgency</th><th class="num">Budget</th><th class="num">Reach</th><th class="num">Edge</th><th class="num">Friction</th></tr></thead>
+                <tbody>
+                  ${sortedSegments().map(segment => `
+                    <tr><td>${escapeHtml(segment.name)}</td><td class="num">${score(segment)}</td><td class="num">${segment.pain}</td><td class="num">${segment.urgency}</td><td class="num">${segment.budget}</td><td class="num">${segment.reach}</td><td class="num">${segment.edge}</td><td class="num">${segment.friction}</td></tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+            <div class="card-actions" style="margin-top:12px">
+              <button data-download-json>Download JSON</button>
+              <label style="display:block">
+                <input type="file" id="importFile" accept="application/json" style="display:none">
+                <button type="button" id="importBtn" style="width:100%">Import JSON</button>
+              </label>
+              <button class="danger" data-reset>Reset Demo</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function markdownBrief() {
+    const top = topSegment();
+    const rows = sortedSegments().map((segment, index) => `| ${index + 1} | ${segment.name} | ${score(segment)} | ${fitLabel(score(segment))} | ${segment.buyer || 'TBD'} | ${segment.channel || 'TBD'} |`).join('\n');
+    return `# ICP Lab Brief
+
+Updated: ${new Date(state.updatedAt).toLocaleString()}
+
+## Recommendation
+
+${top ? `Prioritize **${top.name}** with a score of **${score(top)}/100** (${fitLabel(score(top))}).
+
+Why: ${recommendation(top)}
+
+First validation move: ${top.experiment || 'Run five interviews and ask for commitment, not praise.'}` : 'No segments scored yet.'}
+
+## Ranked Segments
+
+| Rank | Segment | Score | Fit | Buyer | Channel |
+| --- | --- | ---: | --- | --- | --- |
+${rows}
+
+## Score Formula
+
+Pain is weighted 2x, urgency 1.5x, product edge 1.4x, budget 1.2x, reach 1x, and sales friction is subtracted.
+
+## Interview Questions
+
+${top ? interviewQuestions(top).map((q, index) => `${index + 1}. ${q.title} — ${q.hint}`).join('\n') : '- Add a segment first.'}
+`;
+  }
+
+  function download(filename, content, type = 'text/plain') {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function copyText(text, message) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(message);
+    } catch (err) {
+      const area = document.createElement('textarea');
+      area.value = text;
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand('copy');
+      area.remove();
+      showToast(message);
+    }
+  }
+
+  function showToast(message) {
+    els.toast.textContent = message;
+    els.toast.classList.add('show');
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(() => els.toast.classList.remove('show'), 1800);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[char]));
+  }
+
+  document.addEventListener('click', event => {
+    const tab = event.target.closest('.tab');
+    if (tab) {
+      activeView = tab.dataset.view;
+      render();
+      return;
+    }
+    const edit = event.target.closest('[data-edit]');
+    if (edit) {
+      editingId = edit.dataset.edit;
+      activeView = 'segments';
+      render();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    const del = event.target.closest('[data-delete]');
+    if (del) {
+      if (state.segments.length <= 1) {
+        showToast('Keep at least one segment');
+        return;
+      }
+      state.segments = state.segments.filter(segment => segment.id !== del.dataset.delete);
+      if (editingId === del.dataset.delete) editingId = state.segments[0]?.id || null;
+      saveState();
+      render();
+      showToast('Segment deleted');
+      return;
+    }
+    if (event.target.closest('#saveSegmentBtn')) saveSegment();
+    if (event.target.closest('#resetFormBtn')) {
+      editingId = null;
+      hydrateForm();
+      showToast('Form cleared');
+    }
+    if (event.target.closest('[data-copy-brief]')) copyText(markdownBrief(), 'Markdown copied');
+    if (event.target.closest('[data-download-md]')) download('icp-lab-brief.md', markdownBrief(), 'text/markdown');
+    if (event.target.closest('[data-download-json]')) download('icp-lab-data.json', JSON.stringify(state, null, 2), 'application/json');
+    if (event.target.closest('[data-copy-outreach]')) copyText(outreach(topSegment()), 'Outreach opener copied');
+    if (event.target.closest('#importBtn')) document.getElementById('importFile')?.click();
+    if (event.target.closest('[data-reset]')) {
+      state = seedState();
+      editingId = state.segments[0]?.id || null;
+      saveState();
+      render();
+      showToast('Demo restored');
+    }
+  });
+
+  document.addEventListener('change', event => {
+    if (event.target.id === 'importFile') {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          if (!Array.isArray(parsed.segments)) throw new Error('Missing segments');
+          state = { version: 1, updatedAt: new Date().toISOString(), segments: parsed.segments };
+          editingId = state.segments[0]?.id || null;
+          saveState();
+          render();
+          showToast('JSON imported');
+        } catch (err) {
+          showToast('Import failed');
+        }
+      };
+      reader.readAsText(file);
+    }
+  });
+
+  els.copyBriefBtn.addEventListener('click', () => copyText(markdownBrief(), 'Brief copied'));
+  els.exportBtn.addEventListener('click', () => download('icp-lab-data.json', JSON.stringify(state, null, 2), 'application/json'));
+  els.newSegmentBtn.addEventListener('click', () => {
+    editingId = null;
+    activeView = 'segments';
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.target.matches('input, textarea, select')) return;
+    const keyMap = { '1': 'scoreboard', '2': 'segments', '3': 'matrix', '4': 'research', '5': 'export' };
+    if (keyMap[event.key]) {
+      activeView = keyMap[event.key];
+      render();
+    }
+    if (event.key.toLowerCase() === 'n') els.newSegmentBtn.click();
+    if (event.key.toLowerCase() === 'e') els.exportBtn.click();
+    if (event.key.toLowerCase() === 'c') els.copyBriefBtn.click();
+  });
+
+  render();
+})();
+</script>
+<!-- MVPC_BRIDGE -->
+<script src="/_shell/bridge.js"></script>
+</body>
+</html>

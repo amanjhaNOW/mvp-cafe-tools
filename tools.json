@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-28T19:35:14.999Z",
-  "count": 96,
+  "generatedAt": "2026-06-29T19:35:50.068Z",
+  "count": 97,
   "baseUrl": "https://tools.mvp.cafe/",
   "tools": [
     {
@@ -769,6 +769,14 @@
       "tagline": "Cohort Retention Simulator",
       "emoji": "📈",
       "day": 96,
+      "cluster": "product"
+    },
+    {
+      "slug": "icp-lab",
+      "title": "ICP Lab",
+      "tagline": "Ideal Customer Profile Scorer",
+      "emoji": "🎯",
+      "day": 97,
       "cluster": "product"
     }
   ]

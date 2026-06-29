@@ -50,6 +50,7 @@
     { slug: 'seo-forge', name: 'SEO Forge', emoji: '🔍', cluster: 'product' },
     { slug: 'funnel-clinic', name: 'Funnel Clinic', emoji: '🩺', tagline: 'SaaS Funnel Leak Diagnostic', cluster: 'product' },
     { slug: 'retention-lab', name: 'Retention Lab', emoji: '📈', tagline: 'Cohort Retention Simulator', cluster: 'product' },
+    { slug: 'icp-lab', name: 'ICP Lab', emoji: '🎯', tagline: 'Ideal Customer Profile Scorer', cluster: 'product' },
     // 👥 Run a Team
     { slug: 'sprint-board', name: 'Sprint Board', emoji: '🏃', cluster: 'team', aliasOf: 'build' },
     { slug: 'retro-board', name: 'Retro Board', emoji: '🔄', cluster: 'team' },
